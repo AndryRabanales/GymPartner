@@ -1,0 +1,60 @@
+# 🚀 GYM INTEL: CEO MANUAL (README)
+
+> **Este documento es TU manual de operaciones.** Aquí está la estrategia exacta para ejecutar el plan, atacar el mercado y monetizar.
+
+---
+
+## 🧠 PARTE 1: EL MOTOR DE ADICCIÓN (USUARIOS)
+**Objetivo:** Que la gente use la app NO porque quiere informar, sino porque quiere **GANAR**.
+
+### 1. La Psicología de Dominación
+Atacamos el **EGO**. Todo el sistema está diseñado para que los "Gymbros" midan su estatus.
+*   **Ranking "King of the Hill":** El usuario con más actividad se convierte en el "Dueño" virtual del gym.
+*   **Niveles de Estatus:** 
+    *   *Novato* (Nadie).
+    *   *Gym Rat* (Respetable).
+    *   *Gym God* (Leyenda - tiene beneficios reales).
+*   **FOMO (Miedo a perderse algo):** "¿Quién está entrenando ahora? ¿Me perdí la clase llena?".
+
+### 2. Tu Plan de Ataque (Tus 4000 Seguidores)
+No lances la app "suave". Lanza una **COMPETICIÓN**.
+
+*   **Fase 1: El Reto Alpha (Día 1)**
+    *   **Mensaje:** "Estoy buscando a los 50 tipos más serios de [Tu Ciudad] para una misión secreta. Solo 50. DM para entrar."
+    *   **Acción:** Les das acceso. Su misión es cargar los 5 gyms principales.
+    *   **Premio:** Badge exclusivo de "FOUNDER" en su perfil para siempre.
+*   **Fase 2: La Guerra Civil (Día 7)**
+    *   **Mensaje:** Publicas en IG el Leaderboard del gimnasio más famoso. "Parece que @usuario1 es el dueño de Gold's Gym. ¿Nadie puede bajarlo?".
+    *   **Efecto:** Sus amigos entrarán solo para competir.
+*   **Fase 3: Viralidad Local (Mes 1)**
+    *   Creas "Premios GymIntel": "Mejor Gym", "Peor A/C", "Música más fea". La gente vota en la app.
+
+---
+
+## 💰 PARTE 2: LA MÁQUINA DE DINERO (GIMNASIOS)
+**Objetivo:** Usar los datos de los usuarios para obligar (amablemente) a los dueños a pagar.
+
+### 1. La Estrategia de "Extorsión Pacífica" 
+Nunca vendas la app. **Vende el miedo a perder clientes.**
+
+*   **Paso 1: Recopilar Data (El Cebo)**
+    *   Espera a tener 50 usuarios y 10 quejas/reviews en un gym específico.
+*   **Paso 2: El Contacto Frío**
+    *   Vas al dueño (o email): "Hola, soy el fundador de GymIntel. 300 personas vieron tu perfil esta semana. Tienes 5 quejas sobre el aire acondicionado que están afectando tu ranking. ¿Quieres responderles?".
+*   **Paso 3: El Cierre (SaaS)**
+    *   "Por $50/mes, puedes reclamar tu perfil, borrar fotos viejas, subir las oficiales y mandar notificaciones de ofertas cuando el gym esté vacío."
+
+### 2. El "Upsell" de Inteligencia
+*   **Venta:** "Tu competencia a 2 cuadras tiene una máquina de Hip Thrust y tú no. Mis datos dicen que 40 personas buscaron esa máquina ayer. Si la compras, te robo esos clientes."
+
+---
+
+## 🛠️ RESUMEN DE EJECUCIÓN TÉCNICA
+Lo que ya tienes construido hoy:
+1.  **Mapas de Guerra:** Buscador visual oscuro y premium.
+2.  **Perfiles de Ego:** Página de usuario con medallas y XP.
+3.  **Herramienta de Espionaje:** Botón "Add Intel" para que tus usuarios trabajen gratis para ti.
+4.  **Tablas de Clasificación:** Leaderboards funcionales por gimnasio.
+
+### Próximo Paso Crítico:
+**Desplegar en Vercel** (Gratis) para que puedas mandar el link HOY MISMO a tus 50 "Alphas".
