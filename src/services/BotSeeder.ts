@@ -161,7 +161,7 @@ export const BotSeeder = {
         }
 
         try {
-            const { data, error } = await supabase
+            const { error } = await supabase
                 .from('profiles')
                 .insert(bots)
                 .select();
