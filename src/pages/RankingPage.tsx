@@ -1,4 +1,6 @@
+// Add static import at top
 import { useEffect, useState } from 'react';
+import { BotSeeder } from '../services/BotSeeder';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Trophy, Shield, MapPin } from 'lucide-react';
@@ -47,8 +49,7 @@ export const RankingPage = () => {
                 let allPlayers = [...realUsers];
                 if (allPlayers.length < 50) {
                     const missing = 50 - allPlayers.length;
-                    // Dynamic import to avoid heavy load if not needed (though tiny)
-                    const { BotSeeder } = await import('../services/BotSeeder');
+                    // Static Call - Guaranteed to work if file exists
                     const bots = BotSeeder.generateMockProfiles(missing);
 
                     const mappedBots = bots.map(b => ({
