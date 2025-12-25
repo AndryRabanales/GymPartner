@@ -1,53 +1,110 @@
 import { supabase } from '../lib/supabase';
 
-// Bot Usernames pool
-// Bot Usernames pool (Mix of Nicknames and Real-ish names)
-const BOT_NAMES = [
-    "IronTitan", "SarahFits", "GymRat_99", "MuscleMike", "FitQueen_88",
-    "CardioKing", "LiftHeavy", "SquatMaster", "BenchPresser", "DeadliftDiva",
-    "Carlos Ruiz", "Ana Morales", "Juan Pablo", "Sofia Lima", "Diego Torres",
-    "Valentina Roa", "Mateo Silva", "Isabella Gomez", "Lucas Fernandez", "Camila Diaz",
-    "Alex Chen", "Jordan Lee", "Casey Jones", "Taylor Swift_Fan", "Morgan Stark",
-    "ProteinPapi", "GainsGoblin", "WheyWarrior", "RepReaper", "SetSlayer",
-    "Javier Mendez", "Lucia Herrero", "Fernando Vega", "Gabriela Solis", "Ricardo Montiel"
+// Mexican Names Pool (No numbers, purely realistic)
+const FIRST_NAMES = [
+    "Santiago", "Mateo", "Sebastián", "Leonardo", "Matías", "Emiliano", "Diego", "Daniel", "Miguel Ángel", "Alejandro",
+    "Jesús", "Gael", "Tadeo", "Antonio", "Eduardo", "Isaac", "Javier", "Carlos", "Fernando", "Ricardo",
+    "Sofía", "Valentina", "Regina", "María José", "Ximena", "Camila", "María Fernanda", "Victoria", "Renata", "Natalia",
+    "Daniela", "Valeria", "Fernanda", "Andrea", "Ana Paula", "Melanie", "Romina", "Mariana", "Laura", "Gabriela"
 ];
 
-// Random Avatar pool (using UI Avatars for consistency)
+const LAST_NAMES = [
+    "Hernández", "García", "Martínez", "López", "González", "Pérez", "Rodríguez", "Sánchez", "Ramírez", "Cruz",
+    "Flores", "Gómez", "Morales", "Vázquez", "Jiménez", "Reyes", "Díaz", "Torres", "Gutiérrez", "Ruiz",
+    "Mendoza", "Aguilar", "Ortiz", "Moreno", "Castillo", "Romero", "Álvarez", "Méndez", "Chávez", "Rivera",
+    "Juárez", "Ramos", "Domínguez", "Herrera", "Medina", "Castro", "Vargas", "Guzmán", "Velázquez", "Rojas"
+];
+
 const getAvatar = (name: string) => `https://ui-avatars.com/api/?name=${name}&background=random&color=fff&size=128`;
 
-// Cool Banner Images (Cyberpunk / Gym aesthetic)
-const BANNERS = [
-    "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop", // Dark Gym
-    "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=1470&auto=format&fit=crop", // Weights
-    "https://images.unsplash.com/photo-1599058945522-28d584b6f0ff?q=80&w=1469&auto=format&fit=crop", // Neon
-    "https://images.unsplash.com/photo-1574680096145-d05b474e2155?q=80&w=1469&auto=format&fit=crop", // Fitness
-    "https://images.unsplash.com/photo-1623874514711-0f321325f318?q=80&w=1470&auto=format&fit=crop", // Abstract Tech
-    "https://images.unsplash.com/photo-1550345332-09e3ac987658?q=80&w=1374&auto=format&fit=crop"  // Cyberpunk City
+// Abstract / Cartoon / Gradient / Texture Banners (No people)
+const ABSTRACT_BANNERS = [
+    // Gradients & Neon
+    "https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=1415&auto=format&fit=crop", // Gradient Blue/Purple
+    "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=1470&auto=format&fit=crop", // Neon Fluid
+    "https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?q=80&w=1374&auto=format&fit=crop", // Abstract Lines
+    "https://images.unsplash.com/photo-1541701494587-cb58502866ab?q=80&w=1470&auto=format&fit=crop", // Abstract Paint
+    "https://images.unsplash.com/photo-1550684847-75bdda21cc95?q=80&w=1374&auto=format&fit=crop", // Dark Fluid
+
+    // Geometric & Forms
+    "https://images.unsplash.com/photo-1550100136-e074fa714874?q=80&w=1470&auto=format&fit=crop", // Black Geometric
+    "https://images.unsplash.com/photo-1497290756760-23ac55edf0d6?q=80&w=1374&auto=format&fit=crop", // Pink Minimal
+    "https://images.unsplash.com/photo-1507090960745-b32f65d3113a?q=80&w=1470&auto=format&fit=crop", // Blue Circles
+    "https://images.unsplash.com/photo-1554189097-ffe88e998a2b?q=80&w=1374&auto=format&fit=crop", // Abstract Geometric
+
+    // Anime / Cyber / Art Style
+    "https://images.unsplash.com/photo-1534972195531-d756b9bfa9f2?q=80&w=1470&auto=format&fit=crop", // Cyberpunk Building
+    "https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=80&w=1374&auto=format&fit=crop", // Purple Gradient
+    "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1364&auto=format&fit=crop", // Abstract Fluid Art
+    "https://images.unsplash.com/photo-1614850523459-c2f4c699c52e?q=80&w=1470&auto=format&fit=crop", // Pink Liquid
+    "https://images.unsplash.com/photo-1634152962476-4b8a00e1915c?q=80&w=1376&auto=format&fit=crop", // Dark Mesh
+
+    // Textures
+    "https://images.unsplash.com/photo-1618588507085-c79565432917?q=80&w=1374&auto=format&fit=crop", // Holo
+    "https://images.unsplash.com/photo-1558470598-a5dda9640f6b?q=80&w=1471&auto=format&fit=crop", // Colorful Powder
+    "https://images.unsplash.com/photo-1563089145-599997674d42?q=80&w=1470&auto=format&fit=crop", // Neon Lights
+    "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=1470&auto=format&fit=crop"  // Glitter/Dark
 ];
+
+const GYM_NAMES = ["Smart Fit", "Sports World", "Anytime Fitness", "Gimnasio Municipal", "Zona Fitness", "Iron Gym", "Spartan Gym", "Fit Center", "Body Tech", "Hércules Gym"];
+
+// CACHE KEY for Persistence
+const CACHE_KEY = 'gym_partner_mock_bots_v3_static';
 
 export const BotSeeder = {
     /**
      * Generates a list of mock profiles in memory (for UI fallback)
+     * PERSISTENT: Caches results to localStorage so they don't change on reload.
      */
     generateMockProfiles(count: number = 50) {
-        const bots = [];
-        for (let i = 0; i < count; i++) {
-            const name = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)] + `_${Math.floor(Math.random() * 99)}`;
-            const xp = Math.floor(Math.random() * 15000) + 500; // 500 to 15.5k XP
-            const id = crypto.randomUUID();
-            const banner = Math.random() > 0.3 ? BANNERS[Math.floor(Math.random() * BANNERS.length)] : null;
+        // 1. Try Load from Cache
+        const cached = localStorage.getItem(CACHE_KEY);
+        if (cached) {
+            try {
+                const parsed = JSON.parse(cached);
+                if (Array.isArray(parsed) && parsed.length >= count) {
+                    console.log("✅ Loaded Cached Bots (Static)", parsed.length);
+                    return parsed.slice(0, count);
+                }
+            } catch (e) {
+                console.warn('Cache invalid, regenerating bots...');
+            }
+        }
 
-            // Mock gym names if DB is empty
-            const gymName = Math.random() > 0.5 ? 'Iron Paradise' : 'Metroflex Gym';
+        // 2. Generate New
+        const bots = [];
+
+        // Shuffle banners to ensure uniqueness
+        let availableBanners = [...ABSTRACT_BANNERS].sort(() => 0.5 - Math.random());
+
+        for (let i = 0; i < count; i++) {
+            const firstName = FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)];
+            const lastName = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
+            const name = `${firstName} ${lastName}`;
+
+            // Strict XP: 100, 200, 300, 400, 500
+            const xpOptions = [100, 200, 300, 400, 500];
+            const xp = xpOptions[Math.floor(Math.random() * xpOptions.length)];
+
+            const id = crypto.randomUUID();
+
+            // Unique & Optional Banners (Mostly Abstract/Colors)
+            let banner = null;
+            // 70% chance to have a banner, BUT only if we have unique ones left
+            if (availableBanners.length > 0 && Math.random() < 0.7) {
+                banner = availableBanners.pop();
+            }
+
+            const gymName = GYM_NAMES[Math.floor(Math.random() * GYM_NAMES.length)];
 
             bots.push({
                 id: id,
                 username: name,
-                avatar_url: getAvatar(name),
+                avatar_url: getAvatar(firstName),
                 xp: xp,
-                checkins_count: Math.floor(Math.random() * 50),
-                photos_count: Math.floor(Math.random() * 10),
-                description: "AI Generated Gym Partner",
+                checkins_count: Math.floor(Math.random() * 20),
+                photos_count: Math.floor(Math.random() * 5),
+                description: "Entrenando duro",
                 home_gym: { name: gymName },
                 custom_settings: {
                     banner_url: banner
@@ -55,34 +112,47 @@ export const BotSeeder = {
                 is_bot: true
             });
         }
+
+        // 3. Save to Cache
+        localStorage.setItem(CACHE_KEY, JSON.stringify(bots));
         return bots;
     },
 
     async seedBots(count: number = 50) {
-        console.log(`🤖 Starting Bot Invasion 2.0: Generating ${count} realistic clones...`);
-
-        // 1. Fetch available gyms to assign homes
+        // DB Injection logic (kept for fallback/admin usage)
+        console.log(`🤖 Starting Abstract Bot Invasion...`);
         const { data: gyms } = await supabase.from('gyms').select('id').limit(10);
         const gymIds = gyms?.map(g => g.id) || [];
+
+        let shuffledBanners = [...ABSTRACT_BANNERS].sort(() => 0.5 - Math.random());
 
         const bots = [];
 
         for (let i = 0; i < count; i++) {
-            const name = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)] + `_${Math.floor(Math.random() * 100)}`;
-            const xp = Math.floor(Math.random() * 25000); // 0 to 25k XP
+            const firstName = FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)];
+            const lastName = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
+            const name = `${firstName} ${lastName}`;
+
+            const xpOptions = [100, 200, 300, 400, 500];
+            const xp = xpOptions[Math.floor(Math.random() * xpOptions.length)];
             const id = crypto.randomUUID();
-            const banner = Math.random() > 0.3 ? BANNERS[Math.floor(Math.random() * BANNERS.length)] : null;
-            const homeGym = gymIds.length > 0 && Math.random() > 0.2 ? gymIds[Math.floor(Math.random() * gymIds.length)] : null;
+
+            let banner = null;
+            if (shuffledBanners.length > 0 && Math.random() < 0.7) {
+                banner = shuffledBanners.pop();
+            }
+
+            const homeGym = gymIds.length > 0 ? gymIds[Math.floor(Math.random() * gymIds.length)] : null;
 
             bots.push({
                 id: id,
                 username: name,
-                avatar_url: getAvatar(name),
+                avatar_url: getAvatar(firstName),
                 xp: xp,
-                checkins_count: Math.floor(Math.random() * 50),
-                photos_count: Math.floor(Math.random() * 10),
-                description: "AI Generated Gym Partner",
-                home_gym_id: homeGym, // Assigning territory
+                checkins_count: 0,
+                photos_count: 0,
+                description: "AI Gym Partner",
+                home_gym_id: homeGym,
                 custom_settings: {
                     banner_url: banner
                 },
@@ -95,22 +165,7 @@ export const BotSeeder = {
                 .from('profiles')
                 .insert(bots)
                 .select();
-
-            if (error) {
-                console.error("❌ Bot Invasion Failed:", error);
-                if (error.code === '23503') {
-                    alert("⚠️ Error: Strict FK Constraint on Auth Users.");
-                    return { success: false, error: 'Strict FK Constraint' };
-                }
-                throw error;
-            }
-
-            console.log("✅ Bot Invasion Successful!", data?.length);
-            return { success: true, count: data?.length };
-
-        } catch (err: any) {
-            console.error("Critical Seeder Error:", err);
-            return { success: false, error: err.message };
-        }
+            if (error) console.error("Seeding Error:", error);
+        } catch (e) { console.error(e) }
     }
 };
