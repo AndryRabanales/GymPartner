@@ -26,6 +26,38 @@ const BANNERS = [
 ];
 
 export const BotSeeder = {
+    /**
+     * Generates a list of mock profiles in memory (for UI fallback)
+     */
+    generateMockProfiles(count: number = 50) {
+        const bots = [];
+        for (let i = 0; i < count; i++) {
+            const name = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)] + `_${Math.floor(Math.random() * 99)}`;
+            const xp = Math.floor(Math.random() * 15000) + 500; // 500 to 15.5k XP
+            const id = crypto.randomUUID();
+            const banner = Math.random() > 0.3 ? BANNERS[Math.floor(Math.random() * BANNERS.length)] : null;
+
+            // Mock gym names if DB is empty
+            const gymName = Math.random() > 0.5 ? 'Iron Paradise' : 'Metroflex Gym';
+
+            bots.push({
+                id: id,
+                username: name,
+                avatar_url: getAvatar(name),
+                xp: xp,
+                checkins_count: Math.floor(Math.random() * 50),
+                photos_count: Math.floor(Math.random() * 10),
+                description: "AI Generated Gym Partner",
+                home_gym: { name: gymName },
+                custom_settings: {
+                    banner_url: banner
+                },
+                is_bot: true
+            });
+        }
+        return bots;
+    },
+
     async seedBots(count: number = 50) {
         console.log(`🤖 Starting Bot Invasion 2.0: Generating ${count} realistic clones...`);
 

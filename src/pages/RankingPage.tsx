@@ -24,28 +24,52 @@ export const RankingPage = () => {
             if (!user) return;
 
             try {
-                // 1. Fetch ALL profiles sorted by XP
+                // 1. Fetch ALL real profiles
                 const { data: profiles, error } = await supabase
                     .from('profiles')
                     .select('id, username, avatar_url, xp, custom_settings, home_gym:gyms(name)')
                     .order('xp', { ascending: false })
                     .limit(50);
 
-                if (error) throw error;
+                if (error) console.error("Error fetching real profiles:", error);
 
-                // 2. Map Update to State (Obfuscating IDs)
-                const rankedPlayers: RankedUser[] = (profiles || []).map((p: any, index: number) => ({
-                    // id: p.id, // HIDDEN: We don't store the raw UUID to prevent scraping
+                // 2. Prepare Real Users
+                const realUsers = (profiles || []).map((p: any) => ({
                     username: p.username || 'Usuario GymPartner',
                     avatar_url: p.avatar_url || `https://ui-avatars.com/api/?name=${p.username || 'User'}&background=random`,
                     xp: p.xp || 0,
-                    rank: index + 1,
                     gym_name: p.home_gym?.name || 'Nómada',
-                    is_current_user: p.id === user.id, // Checked here, but ID not saved
+                    is_current_user: p.id === user.id,
                     banner_url: p.custom_settings?.banner_url
                 }));
 
-                setLeaderboard(rankedPlayers);
+                // 3. HYBRID STRATEGY: Fill gaps with Bots
+                let allPlayers = [...realUsers];
+                if (allPlayers.length < 50) {
+                    const missing = 50 - allPlayers.length;
+                    // Dynamic import to avoid heavy load if not needed (though tiny)
+                    const { BotSeeder } = await import('../services/BotSeeder');
+                    const bots = BotSeeder.generateMockProfiles(missing);
+
+                    const mappedBots = bots.map(b => ({
+                        username: b.username,
+                        avatar_url: b.avatar_url,
+                        xp: b.xp,
+                        gym_name: b.home_gym.name,
+                        is_current_user: false,
+                        banner_url: b.custom_settings.banner_url
+                    }));
+
+                    allPlayers = [...allPlayers, ...mappedBots];
+                }
+
+                // 4. Sort Final List by XP
+                const successLeaderboard = allPlayers
+                    .sort((a, b) => b.xp - a.xp)
+                    .map((p, index) => ({ ...p, rank: index + 1 }));
+
+                setLeaderboard(successLeaderboard);
+
             } catch (err) {
                 console.error('Error fetching leaderboard:', err);
             }
