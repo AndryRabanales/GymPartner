@@ -138,6 +138,23 @@ class UserService {
                     .eq('id', userId);
             }
 
+            // 5. REFERRAL CHECK (One-time check when joining first gym/profile setup)
+            if (isFirstGym) {
+                const refId = sessionStorage.getItem('gym_referral_id');
+                if (refId && refId !== userId) {
+                    console.log("🎁 Processing Referral Reward for:", refId);
+
+                    // Reward Referrer (500 XP)
+                    await supabase.rpc('increment_xp', {
+                        u_id: refId,
+                        amount: 500
+                    });
+
+                    // Consume Referral
+                    sessionStorage.removeItem('gym_referral_id');
+                }
+            }
+
             return { success: true, gym_id: gymId, xp_gained: xpReward };
 
         } catch (error: any) {

@@ -39,6 +39,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setLoading(false);
         });
 
+        // REFERRAL LOGIC: Capture ?ref= from URL
+        const params = new URLSearchParams(window.location.search);
+        const refId = params.get('ref');
+        if (refId) {
+            console.log("🔗 Referral Detected:", refId);
+            sessionStorage.setItem('gym_referral_id', refId);
+        }
+
         // Listen for changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             setSession(session);
@@ -52,10 +60,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (!isSupabaseConfigured() || !supabase) {
             throw new Error("Supabase no está configurado.");
         }
+        // Use window.location.origin but ensure it doesn't have trailing slash
+        const redirectUrl = window.location.origin; // e.g. https://gympartner...
+
         await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: window.location.origin
+                redirectTo: redirectUrl
             }
         });
     };

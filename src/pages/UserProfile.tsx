@@ -535,7 +535,8 @@ export const UserProfile = () => {
             )}
 
 
-            <div className="flex justify-center mt-12 pb-12 opacity-50 hover:opacity-100 transition-opacity">
+            <div className="flex flex-col items-center gap-4 mt-12 pb-12 opacity-50 hover:opacity-100 transition-opacity">
+                {/* 1. TUTORIAL RESET */}
                 <button
                     onClick={() => {
                         setForceMission(true);
@@ -544,6 +545,36 @@ export const UserProfile = () => {
                     className="flex items-center gap-2 px-6 py-2 rounded-full border border-neutral-800 bg-neutral-900/50 text-neutral-500 text-xs font-medium hover:bg-neutral-800 hover:text-white hover:border-neutral-700 transition-all"
                 >
                     <span>Ver Tutorial de Inicio</span>
+                </button>
+
+                {/* 2. ADMIN: BOT SEEDER (Hidden unless hovered/active) */}
+                <button
+                    onClick={async () => {
+                        if (confirm('⚠️ ¿ACTIVAR PROTOCOLO GHOST? Esto creará 50 usuarios bot.')) {
+                            // Dynamic import to avoid bloating bundle if not needed
+                            const { BotSeeder } = await import('../services/BotSeeder');
+                            await BotSeeder.seedBots(50);
+                            alert('Protocolo Ghost Ejecutado. Recarga para ver el ranking.');
+                        }
+                    }}
+                    className="text-[10px] text-neutral-800 hover:text-red-900 font-mono uppercase tracking-widest"
+                >
+                    [ADMIN: SEED GHOST PROTOCOL]
+                </button>
+            </div>
+
+            {/* 3. FLOAT: REFERRAL REWARD BUTTON */}
+            <div className="fixed bottom-6 right-6 z-40">
+                <button
+                    onClick={() => {
+                        const link = `${window.location.origin}/login?ref=${user.id}`;
+                        navigator.clipboard.writeText(link);
+                        alert('✅ Enlace de reclutamiento copiado: ' + link);
+                    }}
+                    className="bg-yellow-500 text-black font-black p-4 rounded-full shadow-[0_0_30px_rgba(234,179,8,0.4)] hover:scale-110 active:scale-95 transition-all flex items-center justify-center gap-0 border-4 border-black group"
+                    title="Invitar Reclutas (+500 XP)"
+                >
+                    <Plus size={24} className="group-hover:rotate-90 transition-transform duration-500" strokeWidth={3} />
                 </button>
             </div>
         </div>
