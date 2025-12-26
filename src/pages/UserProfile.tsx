@@ -676,12 +676,14 @@ export const UserProfile = () => {
             <div className="fixed bottom-6 right-6 z-40">
                 <button
                     onClick={() => setShowReferralModal(true)}
-                    className="bg-yellow-500 text-black font-black py-3 px-6 rounded-full shadow-[0_0_30px_rgba(234,179,8,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 border-4 border-black group animate-in slide-in-from-bottom-10 duration-700"
+                    className="bg-yellow-500 text-black font-black py-2 px-5 rounded-3xl shadow-[0_0_30px_rgba(234,179,8,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3 border-4 border-black group animate-in slide-in-from-bottom-10 duration-700"
                     title="Invitar Reclutas (+250 XP)"
                 >
-                    <UserPlus size={24} className="group-hover:rotate-12 transition-transform duration-300" strokeWidth={3} />
-                    <span className="text-sm uppercase tracking-wider hidden sm:inline">RECLUTAR (+250 XP)</span>
-                    <span className="text-xs uppercase tracking-wider sm:hidden">INVITAR</span>
+                    <UserPlus size={28} className="group-hover:rotate-12 transition-transform duration-300" strokeWidth={2.5} />
+                    <div className="flex flex-col items-start leading-none">
+                        <span className="text-sm md:text-base uppercase tracking-wider font-black">RECLUTAR</span>
+                        <span className="text-[10px] md:text-xs font-bold text-black/70 uppercase tracking-tight">Gana +250 XP</span>
+                    </div>
                 </button>
             </div>
 
