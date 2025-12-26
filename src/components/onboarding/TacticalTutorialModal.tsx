@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Dumbbell, LineChart, History, ChevronRight, Check, X, MapPin } from 'lucide-react';
+import { Dumbbell, LineChart, History, ChevronRight, Check, X, MapPin, Trophy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface TutorialProps {
@@ -29,6 +29,39 @@ export const TacticalTutorialModal = ({ onClose, showMapMission = false }: Tutor
             title: "BITÁCORA",
             description: "Tu historial de batalla. Revisa sesiones pasadas, récords personales y la consistencia de tu disciplina.",
             color: "border-orange-500/30 bg-orange-500/10"
+        },
+        {
+            icon: <Trophy size={48} className="text-yellow-500" />,
+            title: "GANA XP & RECOMPENSAS",
+            description: (
+                <div className="text-left space-y-2 text-sm md:text-base">
+                    <p className="font-bold text-center mb-4">Acumula experiencia para futuros premios:</p>
+                    <ul className="space-y-3">
+                        <li className="flex items-center gap-3 bg-white/5 p-2 rounded-lg border border-white/10">
+                            <span className="text-2xl">🗺️</span>
+                            <div>
+                                <strong className="text-yellow-400 block">+500 XP</strong>
+                                <span className="text-xs text-neutral-400">Desbloquear nuevo Gym</span>
+                            </div>
+                        </li>
+                        <li className="flex items-center gap-3 bg-white/5 p-2 rounded-lg border border-white/10">
+                            <span className="text-2xl">🔥</span>
+                            <div>
+                                <strong className="text-orange-400 block">+100 XP</strong>
+                                <span className="text-xs text-neutral-400">Entrenamiento Diario Completado</span>
+                            </div>
+                        </li>
+                        <li className="flex items-center gap-3 bg-white/5 p-2 rounded-lg border border-white/10">
+                            <span className="text-2xl">🤝</span>
+                            <div>
+                                <strong className="text-blue-400 block">+250 XP</strong>
+                                <span className="text-xs text-neutral-400">Reclutar (Compartir App)</span>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            ),
+            color: "border-yellow-500/30 bg-yellow-500/10"
         }
     ];
 
@@ -100,8 +133,8 @@ export const TacticalTutorialModal = ({ onClose, showMapMission = false }: Tutor
                         <button
                             onClick={handleNext}
                             className={`w-full font-black text-lg py-4 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 uppercase italic tracking-wide ${(steps[step] as any).isMission
-                                    ? 'bg-red-600 text-white hover:bg-red-500 shadow-lg shadow-red-900/40'
-                                    : 'bg-white text-black hover:bg-gym-primary'
+                                ? 'bg-red-600 text-white hover:bg-red-500 shadow-lg shadow-red-900/40'
+                                : 'bg-white text-black hover:bg-gym-primary'
                                 }`}
                         >
                             {isLastStep ? (
