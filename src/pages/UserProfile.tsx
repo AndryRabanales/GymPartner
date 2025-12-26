@@ -547,20 +547,7 @@ export const UserProfile = () => {
                     <span>Ver Tutorial de Inicio</span>
                 </button>
 
-                {/* 2. ADMIN: BOT SEEDER (Hidden unless hovered/active) */}
-                <button
-                    onClick={async () => {
-                        if (confirm('⚠️ ¿ACTIVAR PROTOCOLO GHOST? Esto creará 50 usuarios bot.')) {
-                            // Dynamic import to avoid bloating bundle if not needed
-                            const { BotSeeder } = await import('../services/BotSeeder');
-                            await BotSeeder.seedBots(50);
-                            alert('Protocolo Ghost Ejecutado. Recarga para ver el ranking.');
-                        }
-                    }}
-                    className="text-[10px] text-neutral-800 hover:text-red-900 font-mono uppercase tracking-widest"
-                >
-                    [ADMIN: SEED GHOST PROTOCOL]
-                </button>
+
             </div>
 
             {/* 3. FLOAT: REFERRAL REWARD BUTTON */}
