@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Trophy, MapPin, Edit2, LogIn, Loader, Swords, Dumbbell, Plus, LineChart, History, Star, Search, ArrowLeft } from 'lucide-react';
+import { Trophy, MapPin, Edit2, LogIn, Loader, Swords, Dumbbell, Plus, LineChart, History, Star, Search, ArrowLeft, UserPlus } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getXPProgress, getRankFromXP } from '../types/user';
 import type { UserRank } from '../types/user';
@@ -676,10 +676,12 @@ export const UserProfile = () => {
             <div className="fixed bottom-6 right-6 z-40">
                 <button
                     onClick={() => setShowReferralModal(true)}
-                    className="bg-yellow-500 text-black font-black p-4 rounded-full shadow-[0_0_30px_rgba(234,179,8,0.4)] hover:scale-110 active:scale-95 transition-all flex items-center justify-center gap-0 border-4 border-black group"
-                    title="Invitar Reclutas (+500 XP)"
+                    className="bg-yellow-500 text-black font-black py-3 px-6 rounded-full shadow-[0_0_30px_rgba(234,179,8,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 border-4 border-black group animate-in slide-in-from-bottom-10 duration-700"
+                    title="Invitar Reclutas (+250 XP)"
                 >
-                    <Plus size={24} className="group-hover:rotate-90 transition-transform duration-500" strokeWidth={3} />
+                    <UserPlus size={24} className="group-hover:rotate-12 transition-transform duration-300" strokeWidth={3} />
+                    <span className="text-sm uppercase tracking-wider hidden sm:inline">RECLUTAR (+250 XP)</span>
+                    <span className="text-xs uppercase tracking-wider sm:hidden">INVITAR</span>
                 </button>
             </div>
 
