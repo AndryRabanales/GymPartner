@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Trophy, MapPin, Edit2, LogIn, Loader, Swords, Dumbbell, Plus, LineChart, History, Star, Search, ArrowLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { getXPProgress, getRankFromXP } from '../types/user';
 import type { UserRank } from '../types/user';
 // 1. Add import
@@ -40,6 +40,9 @@ export const UserProfile = () => {
     const [skipOnboarding, setSkipOnboarding] = useState(true); // Default to TRUE: Profile is the main page
     const hasSeededRef = useRef(false); // Track if we've run the seeder
 
+    const navigate = useNavigate();
+    const [verifyingLocation, setVerifyingLocation] = useState<string | null>(null); // Gym ID being verified
+
     useEffect(() => {
         if (user) {
             loadUserData();
@@ -64,6 +67,64 @@ export const UserProfile = () => {
     const handleCloseTutorial = () => {
         setShowTutorial(false);
         localStorage.setItem('hasSeenTutorial', 'true');
+    };
+
+    /**
+     * GEOLOCATION SECURITY CHECK
+     * Users must be within range (e.g. 200m) of the gym to start a workout.
+     */
+    const handleStartWorkout = async (gym: UserPrimaryGym) => {
+        // 1. Bypass check for "Personal Gym" (lat/lng 0) or if coords missing (legacy)
+        if (!gym.lat || !gym.lng || (gym.lat === 0 && gym.lng === 0)) {
+            // alert("⚠️ Gym sin coordenadas. Acceso permitido (Modo Legacy).");
+            navigate(`/territory/${gym.gym_id}/workout`);
+            return;
+        }
+
+        setVerifyingLocation(gym.gym_id);
+
+        if (!navigator.geolocation) {
+            alert("❌ Tu dispositivo no soporta geolocalización. No se puede verificar la ubicación.");
+            setVerifyingLocation(null);
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const userLat = position.coords.latitude;
+                const userLng = position.coords.longitude;
+
+                // Calculate Distance
+                const distanceKm = getDistanceFromLatLonInKm(userLat, userLng, gym.lat!, gym.lng!);
+                const distanceMeters = distanceKm * 1000;
+
+                console.log(`[Location Check] Gym: ${gym.gym_name}, Dist: ${distanceMeters.toFixed(2)}m`);
+
+                // Threshold: 200 meters (generous for GPS drift / large gyms)
+                const ALLOWED_RADIUS_METERS = 200;
+
+                if (distanceMeters <= ALLOWED_RADIUS_METERS) {
+                    // SUCCESS
+                    navigate(`/territory/${gym.gym_id}/workout`);
+                } else {
+                    // FAIL
+                    alert(`🚫 ACCESO DENEGADO 🚫\n\nEstás a ${(distanceMeters / 1000).toFixed(2)}km del gimnasio.\nDebes estar FÍSICAMENTE en "${gym.gym_name}" para iniciar la misión.\n\n¡Muévete soldado!`);
+                }
+                setVerifyingLocation(null);
+            },
+            (error) => {
+                console.error("Geolocation Error:", error);
+
+                let msg = "No se pudo obtener tu ubicación.";
+                if (error.code === 1) msg = "⚠️ Permiso de ubicación denegado. Habilítalo para entrenar.";
+                else if (error.code === 2) msg = "⚠️ Señal GPS débil o no disponible.";
+                else if (error.code === 3) msg = "⚠️ Tiempo de espera agotado buscando GPS.";
+
+                alert(msg);
+                setVerifyingLocation(null);
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
     };
 
     const loadUserData = async () => {
@@ -468,15 +529,22 @@ export const UserProfile = () => {
                                 <div className="flex items-center gap-2 shrink-0">
                                     {hasArsenal ? (
                                         <>
-                                            {/* 1. START WORKOUT */}
-                                            <Link
-                                                to={`/territory/${gym.gym_id}/workout`}
-                                                className="bg-gym-primary text-black p-2 md:px-4 md:py-3 rounded-lg md:rounded-xl transition-all hover:scale-105 font-bold text-xs md:text-sm flex items-center gap-2 shadow-[0_0_10px_rgba(250,204,21,0.2)]"
-                                                title="Iniciar Entrenamiento"
+                                            {/* 1. START WORKOUT (Location Locked) */}
+                                            <button
+                                                onClick={() => handleStartWorkout(gym)}
+                                                disabled={verifyingLocation === gym.gym_id}
+                                                className={`bg-gym-primary text-black p-2 md:px-4 md:py-3 rounded-lg md:rounded-xl transition-all hover:scale-105 font-bold text-xs md:text-sm flex items-center gap-2 shadow-[0_0_10px_rgba(250,204,21,0.2)] ${verifyingLocation === gym.gym_id ? 'opacity-80 cursor-wait' : ''}`}
+                                                title="Iniciar Entrenamiento (Requiere Ubicación)"
                                             >
-                                                <Swords size={16} strokeWidth={2.5} />
-                                                <span className="hidden md:inline">INICIAR</span>
-                                            </Link>
+                                                {verifyingLocation === gym.gym_id ? (
+                                                    <Loader size={16} className="animate-spin" />
+                                                ) : (
+                                                    <Swords size={16} strokeWidth={2.5} />
+                                                )}
+                                                <span className="hidden md:inline">
+                                                    {verifyingLocation === gym.gym_id ? 'VERIFICANDO...' : 'INICIAR'}
+                                                </span>
+                                            </button>
 
                                             {/* 2. CONFIGURE ARSENAL */}
                                             <Link
@@ -567,3 +635,23 @@ export const UserProfile = () => {
         </div>
     );
 };
+
+// --- HELPER FUNCTIONS ---
+
+function getDistanceFromLatLonInKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+    const R = 6371; // Radius of the earth in km
+    const dLat = deg2rad(lat2 - lat1);  // deg2rad below
+    const dLon = deg2rad(lon2 - lon1);
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2)
+        ;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const d = R * c; // Distance in km
+    return d;
+}
+
+function deg2rad(deg: number) {
+    return deg * (Math.PI / 180)
+}
