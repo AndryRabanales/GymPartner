@@ -8,6 +8,7 @@ import type { UserRank } from '../types/user';
 // 1. Add import
 import { EditProfileModal } from '../components/profile/EditProfileModal';
 import { TacticalTutorialModal } from '../components/onboarding/TacticalTutorialModal';
+import { LocationAccessModal } from '../components/common/LocationAccessModal';
 
 
 import { userService } from '../services/UserService';
@@ -42,6 +43,14 @@ export const UserProfile = () => {
 
     const navigate = useNavigate();
     const [verifyingLocation, setVerifyingLocation] = useState<string | null>(null); // Gym ID being verified
+
+    // Modal State
+    const [locationError, setLocationError] = useState<{
+        isOpen: boolean;
+        gymName: string;
+        distanceMeters: number | null;
+        errorType: 'DISTANCE' | 'NO_COORDS' | 'GPS_ERROR';
+    }>({ isOpen: false, gymName: '', distanceMeters: null, errorType: 'GPS_ERROR' });
 
     useEffect(() => {
         if (user) {
@@ -87,14 +96,24 @@ export const UserProfile = () => {
         // 2. ERROR CASE: MISSING COORDINATES -> BLOCK
         // If it's a real gym but has no coords, we CANNOT verify, so we must DENY access.
         if (!gym.lat || !gym.lng) {
-            alert(`⚠️ ERROR DE DATOS DE GIMNASIO ⚠️\n\nEl gimnasio "${gym.gym_name}" no tiene coordenadas GPS registradas.\n\nPor seguridad, no se puede iniciar el entrenamiento. Contacta al soporte o actualiza el gimnasio.`);
+            setLocationError({
+                isOpen: true,
+                gymName: gym.gym_name,
+                distanceMeters: null,
+                errorType: 'NO_COORDS'
+            });
             return;
         }
 
         setVerifyingLocation(gym.gym_id);
 
         if (!navigator.geolocation) {
-            alert("❌ Tu dispositivo no soporta geolocalización. No se puede verificar la ubicación.");
+            setLocationError({
+                isOpen: true,
+                gymName: gym.gym_name,
+                distanceMeters: null,
+                errorType: 'GPS_ERROR'
+            });
             setVerifyingLocation(null);
             return;
         }
@@ -118,20 +137,23 @@ export const UserProfile = () => {
                     navigate(`/territory/${gym.gym_id}/workout`);
                 } else {
                     // FAIL
-                    // DEV NOTE: For debugging, we show the calculated distance in the alert
-                    alert(`🚫 ACCESO DENEGADO 🚫\n\nEstás a ${distanceMeters.toFixed(0)}m del gimnasio (Máx: 200m).\nDebes estar FÍSICAMENTE en "${gym.gym_name}" para iniciar la misión.\n\n¡Muévete soldado!`);
+                    setLocationError({
+                        isOpen: true,
+                        gymName: gym.gym_name,
+                        distanceMeters: distanceMeters,
+                        errorType: 'DISTANCE'
+                    });
                 }
                 setVerifyingLocation(null);
             },
             (error) => {
                 console.error("Geolocation Error:", error);
-
-                let msg = "No se pudo obtener tu ubicación.";
-                if (error.code === 1) msg = "⚠️ Permiso de ubicación denegado. Habilítalo para entrenar.";
-                else if (error.code === 2) msg = "⚠️ Señal GPS débil o no disponible.";
-                else if (error.code === 3) msg = "⚠️ Tiempo de espera agotado buscando GPS.";
-
-                alert(msg);
+                setLocationError({
+                    isOpen: true,
+                    gymName: gym.gym_name,
+                    distanceMeters: null,
+                    errorType: 'GPS_ERROR'
+                });
                 setVerifyingLocation(null);
             },
             { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
@@ -642,6 +664,16 @@ export const UserProfile = () => {
                 >
                     <Plus size={24} className="group-hover:rotate-90 transition-transform duration-500" strokeWidth={3} />
                 </button>
+                {/* LOCATION ACCESS MODAL */}
+                <LocationAccessModal
+                    isOpen={locationError.isOpen}
+                    onClose={() => setLocationError(prev => ({ ...prev, isOpen: false }))}
+                    gymName={locationError.gymName}
+                    distanceMeters={locationError.distanceMeters}
+                    maxDistance={200}
+                    errorType={locationError.errorType}
+                />
+
             </div>
         </div>
     );
