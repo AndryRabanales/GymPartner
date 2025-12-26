@@ -8,7 +8,6 @@ import type { UserRank } from '../types/user';
 // 1. Add import
 import { EditProfileModal } from '../components/profile/EditProfileModal';
 import { TacticalTutorialModal } from '../components/onboarding/TacticalTutorialModal';
-import { TacticalTutorialModal } from '../components/onboarding/TacticalTutorialModal';
 import { LocationAccessModal } from '../components/common/LocationAccessModal';
 import { ReferralModal } from '../components/common/ReferralModal';
 
