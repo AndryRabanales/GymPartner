@@ -8,7 +8,9 @@ import type { UserRank } from '../types/user';
 // 1. Add import
 import { EditProfileModal } from '../components/profile/EditProfileModal';
 import { TacticalTutorialModal } from '../components/onboarding/TacticalTutorialModal';
+import { TacticalTutorialModal } from '../components/onboarding/TacticalTutorialModal';
 import { LocationAccessModal } from '../components/common/LocationAccessModal';
+import { ReferralModal } from '../components/common/ReferralModal';
 
 
 import { userService } from '../services/UserService';
@@ -27,6 +29,7 @@ interface ProfileData {
     custom_settings?: {
         banner_url?: string;
     };
+    referred_by?: string;
 }
 
 export const UserProfile = () => {
@@ -45,6 +48,7 @@ export const UserProfile = () => {
     const [verifyingLocation, setVerifyingLocation] = useState<string | null>(null); // Gym ID being verified
 
     // Modal State
+    const [showReferralModal, setShowReferralModal] = useState(false);
     const [locationError, setLocationError] = useState<{
         isOpen: boolean;
         gymName: string;
@@ -172,6 +176,23 @@ export const UserProfile = () => {
 
             if (error) throw error;
             if (data) setProfile(data);
+
+            // REFERRAL CHECK: If user has a pending referral code and hasn't been referred yet
+            const pendingRef = sessionStorage.getItem('gym_referral_id');
+            if (pendingRef && data && !data.referred_by && pendingRef !== user!.id) {
+                console.log("🔗 Processing Referral:", pendingRef);
+                const { error: refError } = await supabase
+                    .from('profiles')
+                    .update({ referred_by: pendingRef })
+                    .eq('id', user!.id);
+
+                if (!refError) {
+                    sessionStorage.removeItem('gym_referral_id');
+                    alert("🎖️ ¡Has sido reclutado con éxito! Tu comandante recibirá su recompensa pronto.");
+                } else {
+                    console.error("Referral Error:", refError);
+                }
+            }
 
             const loadGyms = async () => {
                 if (!user) return;
@@ -360,6 +381,7 @@ export const UserProfile = () => {
 
     return (
         <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-8">
+            {/* ... content ... */}
             {/* Header Profile Card - LoL/Gymrat Design - FIXED LAYOUT */}
             <div
                 className="bg-neutral-900 border border-neutral-800 rounded-3xl p-2 sm:p-6 flex flex-col sm:flex-row items-center sm:items-start gap-2 sm:gap-6 relative overflow-hidden transition-all shadow-2xl group"
@@ -654,27 +676,29 @@ export const UserProfile = () => {
             {/* 3. FLOAT: REFERRAL REWARD BUTTON */}
             <div className="fixed bottom-6 right-6 z-40">
                 <button
-                    onClick={() => {
-                        const link = `${window.location.origin}/login?ref=${user.id}`;
-                        navigator.clipboard.writeText(link);
-                        alert('✅ Enlace de reclutamiento copiado: ' + link);
-                    }}
+                    onClick={() => setShowReferralModal(true)}
                     className="bg-yellow-500 text-black font-black p-4 rounded-full shadow-[0_0_30px_rgba(234,179,8,0.4)] hover:scale-110 active:scale-95 transition-all flex items-center justify-center gap-0 border-4 border-black group"
                     title="Invitar Reclutas (+500 XP)"
                 >
                     <Plus size={24} className="group-hover:rotate-90 transition-transform duration-500" strokeWidth={3} />
                 </button>
-                {/* LOCATION ACCESS MODAL */}
-                <LocationAccessModal
-                    isOpen={locationError.isOpen}
-                    onClose={() => setLocationError(prev => ({ ...prev, isOpen: false }))}
-                    gymName={locationError.gymName}
-                    distanceMeters={locationError.distanceMeters}
-                    maxDistance={200}
-                    errorType={locationError.errorType}
-                />
-
             </div>
+
+            {/* MODALS */}
+            <ReferralModal
+                isOpen={showReferralModal}
+                onClose={() => setShowReferralModal(false)}
+                user={user}
+            />    {/* LOCATION ACCESS MODAL */}
+            <LocationAccessModal
+                isOpen={locationError.isOpen}
+                onClose={() => setLocationError(prev => ({ ...prev, isOpen: false }))}
+                gymName={locationError.gymName}
+                distanceMeters={locationError.distanceMeters}
+                maxDistance={200}
+                errorType={locationError.errorType}
+            />
+
         </div>
     );
 };
