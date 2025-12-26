@@ -74,10 +74,20 @@ export const UserProfile = () => {
      * Users must be within range (e.g. 200m) of the gym to start a workout.
      */
     const handleStartWorkout = async (gym: UserPrimaryGym) => {
-        // 1. Bypass check for "Personal Gym" (lat/lng 0) or if coords missing (legacy)
-        if (!gym.lat || !gym.lng || (gym.lat === 0 && gym.lng === 0)) {
-            // alert("⚠️ Gym sin coordenadas. Acceso permitido (Modo Legacy).");
+        console.log("📍 Verificando Ubicación para:", gym.gym_name, { lat: gym.lat, lng: gym.lng });
+
+        // 1. SPECIAL CASE: PERSONAL GYM (Intentionally 0,0) -> ALLOW
+        // We use lat=0, lng=0 as the signature for the Personal Arsenal
+        if (gym.lat === 0 && gym.lng === 0) {
+            console.log("🏠 Personal Gym Detected - Bypassing Location Check");
             navigate(`/territory/${gym.gym_id}/workout`);
+            return;
+        }
+
+        // 2. ERROR CASE: MISSING COORDINATES -> BLOCK
+        // If it's a real gym but has no coords, we CANNOT verify, so we must DENY access.
+        if (!gym.lat || !gym.lng) {
+            alert(`⚠️ ERROR DE DATOS DE GIMNASIO ⚠️\n\nEl gimnasio "${gym.gym_name}" no tiene coordenadas GPS registradas.\n\nPor seguridad, no se puede iniciar el entrenamiento. Contacta al soporte o actualiza el gimnasio.`);
             return;
         }
 
@@ -108,7 +118,8 @@ export const UserProfile = () => {
                     navigate(`/territory/${gym.gym_id}/workout`);
                 } else {
                     // FAIL
-                    alert(`🚫 ACCESO DENEGADO 🚫\n\nEstás a ${(distanceMeters / 1000).toFixed(2)}km del gimnasio.\nDebes estar FÍSICAMENTE en "${gym.gym_name}" para iniciar la misión.\n\n¡Muévete soldado!`);
+                    // DEV NOTE: For debugging, we show the calculated distance in the alert
+                    alert(`🚫 ACCESO DENEGADO 🚫\n\nEstás a ${distanceMeters.toFixed(0)}m del gimnasio (Máx: 200m).\nDebes estar FÍSICAMENTE en "${gym.gym_name}" para iniciar la misión.\n\n¡Muévete soldado!`);
                 }
                 setVerifyingLocation(null);
             },
