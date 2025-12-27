@@ -297,6 +297,9 @@ class UserService {
 
     // Get all public routines for a user (Profile Inspector - All Decks)
     async getUserPublicRoutines(userId: string): Promise<any[]> {
+        // Safety check for Bots or invalid IDs
+        if (!userId || userId.startsWith('bot-')) return [];
+
         try {
             const { data, error } = await supabase
                 .from('routines')
