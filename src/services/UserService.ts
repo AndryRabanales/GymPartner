@@ -258,7 +258,7 @@ class UserService {
                 .insert({
                     user_id: targetUserId,
                     name: `Copia de ${source.name}`,
-                    public: false
+                    is_public: true
                 })
                 .select()
                 .single();
@@ -300,7 +300,7 @@ class UserService {
         try {
             const { data, error } = await supabase
                 .from('routines')
-                .select('*')
+                .select('*, routine_exercises(id)')
                 .eq('user_id', userId)
                 .eq('is_public', true)
                 .order('created_at', { ascending: false });
