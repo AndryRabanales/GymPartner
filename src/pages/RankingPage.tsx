@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Trophy, Shield, MapPin, Swords } from 'lucide-react';
 import { PublicTeaser } from '../components/common/PublicTeaser';
+import { PlayerProfileModal } from '../components/profile/PlayerProfileModal';
 
 interface RankedUser {
     // id: string; // Removed for privacy
@@ -21,6 +22,7 @@ interface RankedUser {
 export const RankingPage = () => {
     const { user } = useAuth();
     const [leaderboard, setLeaderboard] = useState<RankedUser[]>([]);
+    const [selectedPlayer, setSelectedPlayer] = useState<RankedUser | null>(null);
 
     useEffect(() => {
         const fetchLeaderboard = async () => {
@@ -44,7 +46,7 @@ export const RankingPage = () => {
                     gym_name: p.home_gym?.name || 'Nómada',
                     is_current_user: p.id === user.id,
                     banner_url: p.custom_settings?.banner_url,
-                    featured_routine_id: p.featured_routine_id // Map it
+                    featured_routine_id: p.featured_routine_id, // Now it exists properly
                 }));
 
                 // 3. HYBRID STRATEGY: Fill gaps with Bots
@@ -94,6 +96,10 @@ export const RankingPage = () => {
         if (rank === 2) return <div className="w-8 h-8 flex items-center justify-center bg-slate-300 text-black font-black rounded-lg shadow-sm skew-x-[-10deg]">2</div>;
         if (rank === 3) return <div className="w-8 h-8 flex items-center justify-center bg-orange-600 text-white font-black rounded-lg shadow-sm skew-x-[-10deg]">3</div>;
         return <div className="w-8 h-8 flex items-center justify-center text-neutral-500 font-bold">{rank}</div>;
+    };
+
+    const handlePlayerClick = (player: RankedUser) => {
+        setSelectedPlayer(player);
     };
 
     if (!user) {
@@ -156,9 +162,10 @@ export const RankingPage = () => {
 
             <div className="max-w-7xl mx-auto p-4 space-y-2 mt-2">
                 {leaderboard.map((player) => (
-                    <div
+                    <button
                         key={player.rank}
-                        className={`relative flex items-center gap-4 p-3 rounded-xl border transition-all overflow-hidden ${getRankStyle(player.rank)} ${player.is_current_user ? 'ring-2 ring-gym-primary ring-offset-2 ring-offset-neutral-950 scale-[1.02] shadow-2xl z-10' : ''}`}
+                        onClick={() => handlePlayerClick(player)}
+                        className={`w-full text-left relative flex items-center gap-4 p-3 rounded-xl border transition-all overflow-hidden hover:brightness-110 active:scale-[0.98] cursor-pointer ${getRankStyle(player.rank)} ${player.is_current_user ? 'ring-2 ring-gym-primary ring-offset-2 ring-offset-neutral-950 scale-[1.02] shadow-2xl z-10' : ''}`}
                         style={player.banner_url ? {
                             backgroundImage: `url(${player.banner_url})`,
                             backgroundSize: 'cover',
@@ -216,11 +223,19 @@ export const RankingPage = () => {
                             <Trophy size={14} className="text-yellow-500" />
                             <span className="font-black text-white text-sm tabular-nums">{player.xp}</span>
                         </div>
-                    </div>
+                    </button>
                 ))}
             </div>
 
             {/* User Floating Dock if not visible? (Optional, skipping for now) */}
+
+            {/* PLAYER PROFILE INSPECTOR (Clash Royale Style) */}
+            {selectedPlayer && (
+                <PlayerProfileModal
+                    player={selectedPlayer}
+                    onClose={() => setSelectedPlayer(null)}
+                />
+            )}
         </div>
     );
 };

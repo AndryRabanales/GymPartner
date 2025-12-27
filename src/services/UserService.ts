@@ -189,6 +189,35 @@ class UserService {
         return data || [];
     }
 
+    // Get full details of a specific routine (for Profile Inspector)
+    async getRoutineDetails(routineId: string): Promise<any | null> {
+        try {
+            // 1. Get Routine Metadata
+            const { data: routine, error: rError } = await supabase
+                .from('routines')
+                .select('*')
+                .eq('id', routineId)
+                .single();
+
+            if (rError) throw rError;
+
+            // 2. Get Exercises
+            const { data: exercises, error: eError } = await supabase
+                .from('routine_exercises')
+                .select('*')
+                .eq('routine_id', routineId)
+                .order('order_index', { ascending: true });
+
+            if (eError) throw eError;
+
+            return { ...routine, exercises: exercises || [] };
+
+        } catch (error) {
+            console.error('Error fetching routine details:', error);
+            return null;
+        }
+    }
+
     // Update user profile
     async updateProfile(userId: string, updates: { username?: string; avatar_url?: string; custom_settings?: any; featured_routine_id?: string | null }): Promise<{ success: boolean; error?: string }> {
         try {
