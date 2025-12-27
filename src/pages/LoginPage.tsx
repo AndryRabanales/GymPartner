@@ -50,19 +50,7 @@ export const LoginPage = () => {
                 {import.meta.env.DEV && (
                     <div className="mt-4 pt-4 border-t border-white/10">
                         <button
-                            // @ts-ignore
-                            onClick={() => signInWithGoogle().catch(() => signInAsDev && signInAsDev())}
-                            // Better: Explicitly use our new function
-                            onClickCapture={(e) => {
-                                e.stopPropagation();
-                                const { signInAsDev } = useAuth(); // We can't use hook inside callback, assume it's available via closure if we refactor, but here we are inside component.
-                                // Actually, useAuth is at top level.
-                            }}
-                            // Correct implementation:
-                            onClick={() => {
-                                const auth = useAuth() as any;
-                                if (auth.signInAsDev) auth.signInAsDev();
-                            }}
+                            onClick={() => signInAsDev && signInAsDev()}
                             className="w-full bg-neutral-800 text-neutral-400 font-bold py-3 rounded-xl hover:bg-neutral-700 hover:text-white transition-all flex items-center justify-center gap-2 text-sm border border-neutral-700 border-dashed"
                         >
                             <span>🛠️ Modo Desarrollo (Localhost Bypass)</span>
