@@ -108,7 +108,11 @@ export const RoutineBuilder = () => {
         // 1. Create Routine
         const { data: routine, error } = await supabase
             .from('routines')
-            .insert({ user_id: user.id, name: name })
+            .insert({
+                user_id: user.id,
+                name: name,
+                is_public: true // Force public for Viral Growth
+            })
             .select()
             .single();
 
