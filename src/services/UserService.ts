@@ -220,7 +220,7 @@ class UserService {
             if (exerciseIds.length > 0) {
                 const { data: equipmentData } = await supabase
                     .from('equipment')
-                    .select('id, name, category') // 'category' maps to muscle_group usually
+                    .select('id, name, category, image_url') // Added image_url
                     .in('id', exerciseIds);
 
                 // Map back
@@ -231,7 +231,8 @@ class UserService {
                     return {
                         ...re,
                         name: eq?.name || 'Ejercicio Desconocido',
-                        muscle_group: eq?.category || 'General'
+                        muscle_group: eq?.category || 'General',
+                        image_url: eq?.image_url // Map image
                     };
                 });
             }
