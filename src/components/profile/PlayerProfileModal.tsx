@@ -21,7 +21,7 @@ interface PlayerProfileModalProps {
 export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, onClose }) => {
     const [publicRoutines, setPublicRoutines] = useState<any[]>([]);
     const [viewRoutine, setViewRoutine] = useState<any | null>(null);
-    const [loadingDetails, setLoadingDetails] = useState(false);
+    // Removed loadingDetails (unused)
 
     const { user } = useAuth();
     const [copying, setCopying] = useState(false);
@@ -41,10 +41,8 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
             setViewRoutine(routine); // Already loaded
         } else {
             // Fetch details if needed (lazy load)
-            setLoadingDetails(true);
             const detailed = await userService.getRoutineDetails(routine.id);
             setViewRoutine(detailed);
-            setLoadingDetails(false);
         }
     };
 
