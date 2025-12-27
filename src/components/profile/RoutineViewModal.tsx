@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Swords, Loader, Trophy } from 'lucide-react';
+import { X, Swords, Loader, Trophy, Check } from 'lucide-react';
 
 interface RoutineViewModalProps {
     routine: any;
@@ -38,48 +38,64 @@ export const RoutineViewModal: React.FC<RoutineViewModalProps> = ({ routine, onC
                 <div className="flex-1 overflow-y-auto p-4 bg-neutral-950/50">
                     <div className="grid grid-cols-3 gap-2">
                         {routine.exercises && routine.exercises.length > 0 ? (
-                            routine.exercises.map((ex: any, idx: number) => (
-                                <div key={idx} className="relative group h-full bg-neutral-900 border border-white/5 rounded-2xl overflow-hidden flex flex-col hover:border-white/20 transition-all">
-                                    {/* Selection Indicator (Static) */}
-                                    <div className="absolute top-2 left-2 z-20 flex gap-1 flex-row-reverse">
-                                        <div className="w-5 h-5 rounded-full flex items-center justify-center bg-white/10 text-transparent">
-                                            <div className="w-2.5 h-2.5 rounded-full bg-neutral-600"></div>
-                                        </div>
-                                    </div>
+                            routine.exercises.map((ex: any, idx: number) => {
+                                // Default stats if missing
+                                const activeMetrics = [
+                                    { label: 'PESO', icon: '⚖️' },
+                                    { label: 'REPS', icon: '🔄' }
+                                ];
 
-                                    <div className="flex flex-col h-full relative group aspect-[3/4] min-h-[110px] p-1.5 overflow-hidden bg-neutral-900 border border-white/5 rounded-lg">
-                                        {/* Icon - Centered */}
-                                        <div className="flex-1 flex items-center justify-center w-full z-10 pb-2 pt-2">
-                                            {ex.image_url ? (
-                                                <img src={ex.image_url} alt={ex.name} className="w-16 h-16 object-contain drop-shadow-md" />
-                                            ) : (
-                                                <span className="text-4xl leading-none drop-shadow-md filter brightness-110 grayscale-[0.2]">⚡</span>
-                                            )}
+                                return (
+                                    <div key={idx} className="relative group h-full bg-neutral-900 border border-white/5 rounded-2xl overflow-hidden flex flex-col hover:border-white/20 transition-all">
+
+                                        {/* Selection Indicator (Visual Only - Matches ArsenalCard) */}
+                                        <div className="absolute top-2 left-2 z-20 flex gap-1 flex-row-reverse">
+                                            <div className="w-5 h-5 rounded-full flex items-center justify-center bg-white/10 text-transparent">
+                                                <div className="w-2.5 h-2.5 rounded-full bg-neutral-600"></div>
+                                            </div>
                                         </div>
 
-                                        {/* Title */}
-                                        <div className="text-center w-full px-1.5 leading-none z-20 pb-1.5 min-h-0 flex-shrink-0">
-                                            <h4 className="text-[8px] font-black italic uppercase tracking-wider line-clamp-3 text-wrap leading-tight text-neutral-200 drop-shadow-sm">
-                                                {ex.name}
-                                            </h4>
-                                        </div>
+                                        <div className="flex flex-col h-full relative group aspect-[3/4] min-h-[130px] p-1.5 overflow-hidden bg-neutral-900 border border-white/5 rounded-lg">
 
-                                        {/* Footer / Stats */}
-                                        <div className="border-t border-white/5 w-full bg-black/40 backdrop-blur-sm mt-auto">
-                                            <div className="flex flex-wrap gap-1 justify-center w-full py-1">
-                                                <span className="text-[6px] font-bold px-1 py-0.5 rounded-[2px] flex items-center gap-0.5 leading-none text-neutral-400">
-                                                    <span>🔄</span>
-                                                    <span className="tracking-wide uppercase">REPS</span>
-                                                </span>
-                                                <span className="text-[6px] font-bold px-1 py-0.5 rounded-[2px] flex items-center gap-0.5 leading-none text-neutral-400">
-                                                    <span>⚖️</span>
-                                                    <span className="tracking-wide uppercase">PESO</span>
-                                                </span>
+                                            {/* Icon / Image - Centered */}
+                                            <div className="flex-1 flex items-center justify-center w-full z-10 pb-2 pt-2">
+                                                {ex.image_url ? (
+                                                    /* Image Handling */
+                                                    <img
+                                                        src={ex.image_url}
+                                                        alt={ex.name}
+                                                        className="w-16 h-16 object-contain drop-shadow-md filter brightness-110"
+                                                    />
+                                                ) : (
+                                                    /* Fallback Icon handling (emojis) */
+                                                    <span className="text-5xl leading-none drop-shadow-md filter brightness-110 grayscale-[0.2] select-none">
+                                                        ⚡
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {/* Title - Anchored Bottom */}
+                                            <div className="text-center w-full px-1.5 leading-none z-20 pb-1.5 min-h-0 flex-shrink-0">
+                                                <h4 className="text-[9px] font-black italic uppercase tracking-wider line-clamp-3 text-wrap leading-tight text-neutral-200 drop-shadow-sm">
+                                                    {ex.name}
+                                                </h4>
+                                            </div>
+
+                                            {/* Footer / Stats */}
+                                            <div className="border-t border-white/5 w-full bg-black/40 backdrop-blur-sm mt-auto">
+                                                <div className="flex flex-wrap gap-1 justify-center w-full py-1">
+                                                    {activeMetrics.map((m, i) => (
+                                                        <span key={i} className="text-[6px] font-bold px-1 py-0.5 rounded-[2px] flex items-center gap-0.5 leading-none text-neutral-400">
+                                                            <span>{m.icon}</span>
+                                                            <span className="tracking-wide uppercase">{m.label}</span>
+                                                        </span>
+                                                    ))}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))
+                                );
+                            })
                         ) : (
                             <div className="col-span-3 text-center py-12 text-neutral-500 italic flex flex-col items-center">
                                 <Swords className="mb-2 opacity-20" size={32} />
