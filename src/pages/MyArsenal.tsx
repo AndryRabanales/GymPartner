@@ -220,6 +220,28 @@ export const MyArsenal = () => {
                 const items = await equipmentService.getInventory(targetGymId);
                 setInventory(items);
             }
+
+            // NEW: Fetch Global Exercises to match cloned routine IDs
+            const { data: globalExs } = await supabase
+                .from('exercises')
+                .select('id, name, target_muscle, icon') // Ensure icon is fetched
+                .limit(200);
+
+            if (globalExs) {
+                // Store global exercises in a separate state or merge?
+                // Let's store them in a new state variable to merge cleanly
+                setGlobalInventory(globalExs.map((e: any) => ({
+                    id: e.id, // REAL UUID
+                    name: e.name,
+                    category: 'FREE_WEIGHT', // Default/Fallback
+                    quantity: 999,
+                    condition: 'GOOD',
+                    // Use fetched icon OR fallback to seed logic later if missing
+                    icon: e.icon,
+                    // Map muscle to category for filtering if needed?
+                    // For now, let's keep it simple.
+                })));
+            }
         } catch (error) {
             console.error(error);
         } finally {
@@ -444,10 +466,25 @@ export const MyArsenal = () => {
         return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
     };
 
-    // --- Merge Real Inventory with Seeds (Virtual Items) ---
-    const effectiveInventory = [...inventory];
+    const [globalInventory, setGlobalInventory] = useState<Equipment[]>([]);
+
+    // --- Merge Real Inventory with Global & Seeds ---
+    // 1. Custom Inventory (User's Items)
+    // 2. Global Inventory (System Items with Real IDs - needed for Cloned Routines)
+    // 3. Seeds (Virtual fallback for browsing)
+
+    // Start with Real + Global
+    const combinedReal = [...inventory, ...globalInventory];
+
+    // Remove duplicates (Global might overlap with Custom if name matches? No, treat distinct)
+    // But deduplicate by ID just in case
+    const uniqueCombined = Array.from(new Map(combinedReal.map(item => [item.id, item])).values());
+
+    const effectiveInventory = [...uniqueCombined];
+
+    // Merge Seeds (Virtual) only if not already present by NAME in the real/global list
     COMMON_EQUIPMENT_SEEDS.forEach(seed => {
-        if (!inventory.some(i => normalizeText(i.name) === normalizeText(seed.name))) {
+        if (!effectiveInventory.some(i => normalizeText(i.name) === normalizeText(seed.name))) {
             effectiveInventory.push({
                 ...seed,
                 id: `virtual-${seed.name}`,
