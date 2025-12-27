@@ -279,177 +279,168 @@ class WorkoutService {
 
     // Import (Clone) a Master Routine to a Gym
     async importRoutine(userId: string, sourceRoutineId: string, targetGymId: string) {
-        // 1. Fetch Source Details (using UserService to get Rich Data including Names from Snapshot)
-        // We assume userService is imported or available via 'this.userService'? 
-        // No, 'userService' is a separate export. We can import it or use a raw fetch improved here.
-        // Let's rely on a robust local implementation to avoid circular dependencies if possible.
-        // But since we need "Rich" data (names), and getRoutineDetails has logic for it, we should use it if we can.
-        // If we can't import userService here (circular), we replicate the logic: Fetch routine_exercises and rely on 'name' column.
+        // 1. USE RPC for Server-Side "Sudo" Cloning (Bypasses RLS to read private data)
+        console.log(`[Import] Calling RPC clone_full_routine for ${sourceRoutineId} -> ${targetGymId}`);
 
-        // Fetch source routine with exercises
-        const { data: source, error: sourceError } = await supabase
-            .from('routines')
-            .select(`
-                id,
-                name,
-                description,
-                is_public,
-                user_id,
-                gym_id,
-                created_at,
-                exercises:routine_exercises(
-                    id,
-                    exercise_id,
-                    name,
-                    order_index,
-                    track_weight,
-                    track_reps,
-                    track_time,
-                    track_pr,
-                    target_sets,
-                    target_reps_text,
-                    custom_metric
-                )
-            `)
-            .eq('id', sourceRoutineId)
-            .single();
-
-        if (sourceError || !source) return { error: sourceError || 'Source not found' };
-
-        const exercises = source.exercises || [];
-        const idMapping = new Map<string, string>(); // OldID -> NewID
-
-        // 2. Process Exercises: Clone Custom items if needed
-        for (const ex of exercises) {
-            // Priority: Name in Snapshot > Fetch from gym_equipment (if allowed) > Fallback
-            let exName = ex.name;
-            let exCategory = 'FREE_WEIGHT';
-            let exIcon: string | undefined = undefined; // Undefined icon falls back to default
-
-            // If snapshot name missing (Legacy data), try fetch
-            if (!exName) {
-                const { data: eqData } = await supabase.from('gym_equipment').select('name, category, icon, image_url').eq('id', ex.exercise_id).maybeSingle();
-                if (eqData) {
-                    exName = eqData.name;
-                    exCategory = eqData.category;
-                    exIcon = eqData.icon || (eqData as any).image_url;
-                } else {
-                    exName = 'Ejercicio Importado';
-                }
-            } else {
-                // We have name, but need category/icon for potentially creating a new item
-                // Try fetch to get metadata, if RLS fails, we fallback to defaults
-                const { data: eqData } = await supabase.from('gym_equipment').select('category, icon, image_url').eq('id', ex.exercise_id).maybeSingle();
-                if (eqData) {
-                    exCategory = eqData.category;
-                    exIcon = eqData.icon || (eqData as any).image_url;
-                }
-            }
-
-            // Normalization helper
-            const normalize = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-
-            // Check if exists in Target Gym
-            const { data: existingLocal } = await supabase
-                .from('gym_equipment')
-                .select('id')
-                .eq('gym_id', targetGymId)
-                .ilike('name', exName) // Case insensitive check
-                .maybeSingle();
-
-            if (existingLocal) {
-                idMapping.set(ex.exercise_id, existingLocal.id);
-            } else {
-                // CLONE IT (Create new User-Owned Item)
-                console.log(`[Import] Cloning exercise "${exName}" to gym ${targetGymId}`);
-
-                // If category is unknown, try to infer from name
-                if (exCategory === 'FREE_WEIGHT' || !exCategory) {
-                    const n = normalize(exName);
-                    if (n.includes('bicep') || n.includes('curl')) exCategory = 'ARMS';
-                    else if (n.includes('pecho') || n.includes('press')) exCategory = 'CHEST';
-                    else if (n.includes('espalda') || n.includes('remo')) exCategory = 'BACK';
-                    else if (n.includes('pierna') || n.includes('sentadilla') || n.includes('squat')) exCategory = 'LEGS';
-                }
-
-                const { data: newItem, error: createError } = await supabase
-                    .from('gym_equipment')
-                    .insert({
-                        gym_id: targetGymId,
-                        name: exName,
-                        category: exCategory,
-                        quantity: 1, // Default
-                        condition: 'GOOD',
-                        metrics: { weight: ex.track_weight, reps: ex.track_reps },
-                        icon: exIcon,
-                        verified_by: userId
-                    })
-                    .select('id')
-                    .single();
-
-                if (newItem && !createError) {
-                    idMapping.set(ex.exercise_id, newItem.id);
-                } else {
-                    console.error("[Import] Failed to clone item, keeping old ID:", exName);
-                    idMapping.set(ex.exercise_id, ex.exercise_id);
-                }
-            }
-        }
-
-        // 3. Create New Routine (Clone)
-        const { data: newRoutine, error: createError } = await supabase
-            .from('routines')
-            .insert({
-                user_id: userId,
-                gym_id: targetGymId, // Link to Gym
-                name: source.name, // Keep same name
-                created_at: new Date().toISOString()
-            })
-            .select()
-            .single();
-
-        if (createError) return { error: createError };
-
-        // 4. Link Exercises (Using Mapped IDs)
-        const newLinkData = exercises.map((ex: any) => {
-            const finalId = idMapping.get(ex.exercise_id) || ex.exercise_id;
-
-            // Persist Name in the link (Snapshot)
-            // If we cloned it, we have the name. If we mapped it, we rely on the linked item.
-            // But we ALWAYS want a snapshot just in case.
-            let snapshotName = ex.name;
-            if (!snapshotName) {
-                // Try to recover from mapped logic? Too complex. Use 'Ejercicio Importado' if missing.
-                snapshotName = 'Ejercicio Importado';
-            }
-
-            return {
-                routine_id: newRoutine.id,
-                exercise_id: finalId,
-                name: snapshotName,
-                order_index: ex.order_index,
-                track_weight: ex.track_weight,
-                track_reps: ex.track_reps,
-                track_time: ex.track_time,
-                track_pr: ex.track_pr || false,
-                target_sets: ex.target_sets,
-                target_reps_text: ex.target_reps_text
-            };
+        const { data, error } = await supabase.rpc('clone_full_routine', {
+            p_user_id: userId,
+            p_source_routine_id: sourceRoutineId,
+            p_target_gym_id: targetGymId
         });
 
-        const { error: linkError } = await supabase
-            .from('routine_exercises')
-            .insert(newLinkData);
+        if (error) {
+            console.error('RPC clone_full_routine failed:', error);
+            // Fallback? No, if RPC fails, we likely can't do better manually due to RLS.
+            return { error };
+        }
 
-        if (linkError) console.error("Error cloning exercises:", linkError);
+        // RPC returns { success: boolean, routine_id: uuid, error: string }
+        if (!data || data.success === false) {
+            const msg = data?.error || 'Unknown RPC error';
+            console.error('RPC Business Logic Error:', msg);
+            return { error: { message: msg } };
+        }
 
-        return { data: newRoutine };
+        // Return expected format { data: { id: ... } }
+        return { data: { id: data.routine_id } };
+    }
+
+    if(sourceError || !source) return { error: sourceError || 'Source not found' };
+
+const exercises = source.exercises || [];
+const idMapping = new Map<string, string>(); // OldID -> NewID
+
+// 2. Process Exercises: Clone Custom items if needed
+for (const ex of exercises) {
+    // Priority: Name in Snapshot > Fetch from gym_equipment (if allowed) > Fallback
+    let exName = ex.name;
+    let exCategory = 'FREE_WEIGHT';
+    let exIcon: string | undefined = undefined; // Undefined icon falls back to default
+
+    // If snapshot name missing (Legacy data), try fetch
+    if (!exName) {
+        const { data: eqData } = await supabase.from('gym_equipment').select('name, category, icon, image_url').eq('id', ex.exercise_id).maybeSingle();
+        if (eqData) {
+            exName = eqData.name;
+            exCategory = eqData.category;
+            exIcon = eqData.icon || (eqData as any).image_url;
+        } else {
+            exName = 'Ejercicio Importado';
+        }
+    } else {
+        // We have name, but need category/icon for potentially creating a new item
+        // Try fetch to get metadata, if RLS fails, we fallback to defaults
+        const { data: eqData } = await supabase.from('gym_equipment').select('category, icon, image_url').eq('id', ex.exercise_id).maybeSingle();
+        if (eqData) {
+            exCategory = eqData.category;
+            exIcon = eqData.icon || (eqData as any).image_url;
+        }
+    }
+
+    // Normalization helper
+    const normalize = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+
+    // Check if exists in Target Gym
+    const { data: existingLocal } = await supabase
+        .from('gym_equipment')
+        .select('id')
+        .eq('gym_id', targetGymId)
+        .ilike('name', exName) // Case insensitive check
+        .maybeSingle();
+
+    if (existingLocal) {
+        idMapping.set(ex.exercise_id, existingLocal.id);
+    } else {
+        // CLONE IT (Create new User-Owned Item)
+        console.log(`[Import] Cloning exercise "${exName}" to gym ${targetGymId}`);
+
+        // If category is unknown, try to infer from name
+        if (exCategory === 'FREE_WEIGHT' || !exCategory) {
+            const n = normalize(exName);
+            if (n.includes('bicep') || n.includes('curl')) exCategory = 'ARMS';
+            else if (n.includes('pecho') || n.includes('press')) exCategory = 'CHEST';
+            else if (n.includes('espalda') || n.includes('remo')) exCategory = 'BACK';
+            else if (n.includes('pierna') || n.includes('sentadilla') || n.includes('squat')) exCategory = 'LEGS';
+        }
+
+        const { data: newItem, error: createError } = await supabase
+            .from('gym_equipment')
+            .insert({
+                gym_id: targetGymId,
+                name: exName,
+                category: exCategory,
+                quantity: 1, // Default
+                condition: 'GOOD',
+                metrics: { weight: ex.track_weight, reps: ex.track_reps },
+                icon: exIcon,
+                verified_by: userId
+            })
+            .select('id')
+            .single();
+
+        if (newItem && !createError) {
+            idMapping.set(ex.exercise_id, newItem.id);
+        } else {
+            console.error("[Import] Failed to clone item, keeping old ID:", exName);
+            idMapping.set(ex.exercise_id, ex.exercise_id);
+        }
+    }
+}
+
+// 3. Create New Routine (Clone)
+const { data: newRoutine, error: createError } = await supabase
+    .from('routines')
+    .insert({
+        user_id: userId,
+        gym_id: targetGymId, // Link to Gym
+        name: source.name, // Keep same name
+        created_at: new Date().toISOString()
+    })
+    .select()
+    .single();
+
+if (createError) return { error: createError };
+
+// 4. Link Exercises (Using Mapped IDs)
+const newLinkData = exercises.map((ex: any) => {
+    const finalId = idMapping.get(ex.exercise_id) || ex.exercise_id;
+
+    // Persist Name in the link (Snapshot)
+    // If we cloned it, we have the name. If we mapped it, we rely on the linked item.
+    // But we ALWAYS want a snapshot just in case.
+    let snapshotName = ex.name;
+    if (!snapshotName) {
+        // Try to recover from mapped logic? Too complex. Use 'Ejercicio Importado' if missing.
+        snapshotName = 'Ejercicio Importado';
+    }
+
+    return {
+        routine_id: newRoutine.id,
+        exercise_id: finalId,
+        name: snapshotName,
+        order_index: ex.order_index,
+        track_weight: ex.track_weight,
+        track_reps: ex.track_reps,
+        track_time: ex.track_time,
+        track_pr: ex.track_pr || false,
+        target_sets: ex.target_sets,
+        target_reps_text: ex.target_reps_text
+    };
+});
+
+const { error: linkError } = await supabase
+    .from('routine_exercises')
+    .insert(newLinkData);
+
+if (linkError) console.error("Error cloning exercises:", linkError);
+
+return { data: newRoutine };
     }
 
     async deleteRoutine(routineId: string) {
-        const { error } = await supabase.from('routines').delete().eq('id', routineId);
-        return { error };
-    }
+    const { error } = await supabase.from('routines').delete().eq('id', routineId);
+    return { error };
+}
 
     // Interface for exercise update
     /* 
@@ -464,98 +455,98 @@ class WorkoutService {
 
     // Update existing Routine
     async updateRoutine(routineId: string, name: string, equipmentData: string[] | any[]) {
-        // 1. Update Name
-        const { error: updateError } = await supabase
-            .from('routines')
-            .update({ name })
-            .eq('id', routineId);
+    // 1. Update Name
+    const { error: updateError } = await supabase
+        .from('routines')
+        .update({ name })
+        .eq('id', routineId);
 
-        if (updateError) return { error: updateError };
+    if (updateError) return { error: updateError };
 
-        //  2. Clear old links (routine_exercises only, routine_items doesn't exist)
-        await supabase.from('routine_exercises').delete().eq('routine_id', routineId);
+    //  2. Clear old links (routine_exercises only, routine_items doesn't exist)
+    await supabase.from('routine_exercises').delete().eq('routine_id', routineId);
 
-        // 3. Link new
-        if (equipmentData.length > 0) {
-            // Check if payload is rich objects or legacy strings
-            if (typeof equipmentData[0] === 'string') {
-                // Legacy string mode
-                await this.linkEquipmentToRoutine(routineId, equipmentData as string[]); // Fallback to defaults
-            } else {
-                // Rich config mode
-                await this.linkRichExercisesToRoutine(routineId, equipmentData);
-            }
+    // 3. Link new
+    if (equipmentData.length > 0) {
+        // Check if payload is rich objects or legacy strings
+        if (typeof equipmentData[0] === 'string') {
+            // Legacy string mode
+            await this.linkEquipmentToRoutine(routineId, equipmentData as string[]); // Fallback to defaults
+        } else {
+            // Rich config mode
+            await this.linkRichExercisesToRoutine(routineId, equipmentData);
         }
-
-        return { success: true };
     }
+
+    return { success: true };
+}
 
     // NEW Helper for Rich Config
     private async linkRichExercisesToRoutine(routineId: string, exercises: any[]) {
-        console.log('[linkRichExercisesToRoutine] Saving rich config for', exercises.length, 'items');
+    console.log('[linkRichExercisesToRoutine] Saving rich config for', exercises.length, 'items');
 
-        const exerciseRows = exercises.map((ex, idx) => ({
-            routine_id: routineId,
-            exercise_id: ex.id, // Use ID from config
-            name: ex.name || 'Ejercicio Personalizado', // Snapshot Name!
-            order_index: idx,
-            track_weight: ex.track_weight !== undefined ? ex.track_weight : true,
-            track_reps: ex.track_reps !== undefined ? ex.track_reps : true,
-            track_time: ex.track_time || false,
-            track_pr: ex.track_pr || false,
-            // Add other fields when DB supports them fully
-            // target_sets: ex.target_sets,
-        }));
+    const exerciseRows = exercises.map((ex, idx) => ({
+        routine_id: routineId,
+        exercise_id: ex.id, // Use ID from config
+        name: ex.name || 'Ejercicio Personalizado', // Snapshot Name!
+        order_index: idx,
+        track_weight: ex.track_weight !== undefined ? ex.track_weight : true,
+        track_reps: ex.track_reps !== undefined ? ex.track_reps : true,
+        track_time: ex.track_time || false,
+        track_pr: ex.track_pr || false,
+        // Add other fields when DB supports them fully
+        // target_sets: ex.target_sets,
+    }));
 
-        const { error } = await supabase.from('routine_exercises').insert(exerciseRows);
-        if (error) console.error("Error saving rich exercises:", error);
-    }
+    const { error } = await supabase.from('routine_exercises').insert(exerciseRows);
+    if (error) console.error("Error saving rich exercises:", error);
+}
 
     // Helper to link equipment to routine
     private async linkEquipmentToRoutine(routineId: string, equipmentIds: string[]) {
-        if (equipmentIds.length === 0) return;
+    if (equipmentIds.length === 0) return;
 
-        console.log('[linkEquipmentToRoutine] Starting with IDs:', equipmentIds);
+    console.log('[linkEquipmentToRoutine] Starting with IDs:', equipmentIds);
 
-        // Build exercise rows - use the IDs directly as exercise_ids
-        // These IDs can be from gym_equipment OR from exercises table
-        const exerciseRows = equipmentIds.map((eqId, idx) => ({
-            routine_id: routineId,
-            exercise_id: eqId,
-            name: 'Ejercicio', // Fallback name for legacy calls
-            order_index: idx,
-            track_weight: true,
-            track_reps: true
-        }));
+    // Build exercise rows - use the IDs directly as exercise_ids
+    // These IDs can be from gym_equipment OR from exercises table
+    const exerciseRows = equipmentIds.map((eqId, idx) => ({
+        routine_id: routineId,
+        exercise_id: eqId,
+        name: 'Ejercicio', // Fallback name for legacy calls
+        order_index: idx,
+        track_weight: true,
+        track_reps: true
+    }));
 
-        const { data: insertedExercises, error: insertError } = await supabase
-            .from('routine_exercises')
-            .insert(exerciseRows)
-            .select();
+    const { data: insertedExercises, error: insertError } = await supabase
+        .from('routine_exercises')
+        .insert(exerciseRows)
+        .select();
 
-        if (insertError) {
-            console.error('[linkEquipmentToRoutine] ❌ Insert failed:', insertError);
-            console.error('[linkEquipmentToRoutine] IDs that failed:', equipmentIds);
+    if (insertError) {
+        console.error('[linkEquipmentToRoutine] ❌ Insert failed:', insertError);
+        console.error('[linkEquipmentToRoutine] IDs that failed:', equipmentIds);
 
-            // Log which table these IDs might belong to
-            const { data: inGymEquipment } = await supabase
-                .from('gym_equipment')
-                .select('id, name')
-                .in('id', equipmentIds);
+        // Log which table these IDs might belong to
+        const { data: inGymEquipment } = await supabase
+            .from('gym_equipment')
+            .select('id, name')
+            .in('id', equipmentIds);
 
-            const { data: inExercises } = await supabase
-                .from('exercises')
-                .select('id, name')
-                .in('id', equipmentIds);
+        const { data: inExercises } = await supabase
+            .from('exercises')
+            .select('id, name')
+            .in('id', equipmentIds);
 
-            console.log('[linkEquipmentToRoutine] Found in gym_equipment:', inGymEquipment?.length || 0, inGymEquipment);
-            console.log('[linkEquipmentToRoutine] Found in exercises:', inExercises?.length || 0, inExercises);
+        console.log('[linkEquipmentToRoutine] Found in gym_equipment:', inGymEquipment?.length || 0, inGymEquipment);
+        console.log('[linkEquipmentToRoutine] Found in exercises:', inExercises?.length || 0, inExercises);
 
-            return;
-        }
-
-        console.log('[linkEquipmentToRoutine] ✅ Successfully saved', insertedExercises?.length, 'exercises');
+        return;
     }
+
+    console.log('[linkEquipmentToRoutine] ✅ Successfully saved', insertedExercises?.length, 'exercises');
+}
 
 
 
