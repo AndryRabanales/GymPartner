@@ -164,10 +164,68 @@ export const AppLayout = () => {
                 <Outlet />
             </main>
 
-            {/* Simple Footer */}
-            <footer className="border-t border-neutral-800 py-8 bg-neutral-900 mt-auto">
-                <div className="max-w-7xl mx-auto px-4 text-center text-neutral-500 text-sm">
-                    <p>© 2024 GymIntelligence. Built for the dedicated.</p>
+            {/* Premium GymRat Footer */}
+            <footer className="border-t border-neutral-900 bg-neutral-950 pt-16 pb-8 mt-auto relative overflow-hidden">
+                {/* Background Grid Pattern */}
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none"></div>
+
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16 text-center md:text-left">
+
+                        {/* Column 1: Brand */}
+                        <div className="col-span-1 md:col-span-2 space-y-4">
+                            <div className="flex items-center justify-center md:justify-start gap-2">
+                                <div className="h-8 w-8 bg-yellow-500 rounded flex items-center justify-center font-black text-black text-xl italic">
+                                    GP
+                                </div>
+                                <span className="font-black text-2xl text-white italic tracking-tighter uppercase">GYMPARTNER</span>
+                            </div>
+                            <p className="text-neutral-500 text-sm font-medium leading-relaxed max-w-sm mx-auto md:mx-0">
+                                La plataforma de inteligencia táctica para atletas que rechazan la mediocridad.
+                                Domina tu territorio, rastrea tus métricas y asciende en el rango.
+                            </p>
+                            <div className="flex gap-4 justify-center md:justify-start pt-2">
+                                {/* Fake Socials */}
+                                <div className="w-10 h-10 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400 hover:text-yellow-500 hover:border-yellow-500/50 transition-all cursor-pointer">
+                                    <span className="font-bold text-xs">IG</span>
+                                </div>
+                                <div className="w-10 h-10 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400 hover:text-yellow-500 hover:border-yellow-500/50 transition-all cursor-pointer">
+                                    <span className="font-bold text-xs">TW</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Column 2: Protocolos */}
+                        <div className="space-y-4">
+                            <h4 className="text-white font-bold uppercase tracking-widest text-xs border-b border-yellow-500/20 pb-2 inline-block">Protocolos</h4>
+                            <ul className="space-y-2 text-sm text-neutral-500">
+                                <li><Link to="/map" className="hover:text-yellow-500 transition-colors">Mapa Táctico</Link></li>
+                                <li><Link to="/ranking" className="hover:text-yellow-500 transition-colors">Leaderboard Global</Link></li>
+                                <li><Link to="/arsenal" className="hover:text-yellow-500 transition-colors">Arsenal Personal</Link></li>
+                                <li><a href="#" className="hover:text-yellow-500 transition-colors">Reportar Bug</a></li>
+                            </ul>
+                        </div>
+
+                        {/* Column 3: Legal */}
+                        <div className="space-y-4">
+                            <h4 className="text-white font-bold uppercase tracking-widest text-xs border-b border-yellow-500/20 pb-2 inline-block">Inteligencia</h4>
+                            <ul className="space-y-2 text-sm text-neutral-500">
+                                <li><a href="#" className="hover:text-white transition-colors">Términos de Servicio</a></li>
+                                <li><a href="#" className="hover:text-white transition-colors">Privacidad</a></li>
+                                <li><a href="#" className="hover:text-white transition-colors">Manifiesto</a></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    {/* Bottom Bar */}
+                    <div className="border-t border-neutral-900 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+                        <p className="text-neutral-600 text-xs font-mono">
+                            SYSTEM STATUS: <span className="text-green-500">ONLINE</span>
+                        </p>
+                        <p className="text-neutral-600 text-xs font-mono uppercase tracking-widest">
+                            © 2024 GYMPARTNER OPS
+                        </p>
+                    </div>
                 </div>
             </footer>
         </div>
