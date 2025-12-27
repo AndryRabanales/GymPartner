@@ -65,6 +65,7 @@ export const RoutineBuilder = () => {
 
                 // Map to Builder Format
                 if (routine.exercises) {
+                    console.log("Found exercises to map:", routine.exercises);
                     const mappedExercises: RoutineExerciseConfig[] = routine.exercises.map((ex: any) => ({
                         exercise_id: ex.exercise_id,
                         name: ex.name, // The service already hydrated this name!
@@ -76,7 +77,10 @@ export const RoutineBuilder = () => {
                         target_reps_text: ex.target_reps_text || '10-12',
                         custom_metric: ex.custom_metric || ''
                     }));
+                    console.log("Mapped Exercises for State:", mappedExercises);
                     setSelectedExercises(mappedExercises);
+                } else {
+                    console.warn("Routine has no exercises array:", routine);
                 }
             }
         } catch (err) {
