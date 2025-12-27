@@ -211,16 +211,15 @@ class UserService {
             if (eError) throw eError;
 
             // 3. Manual Join to get Exercise Details (Names)
-            // We need to fetch from 'equipment' table where id matches.
-            // Note: In a robust app, this might also need to check 'exercises' table for custom ones.
+            // We need to fetch from 'gym_equipment' table where id matches.
             const exerciseIds = routeExs?.map(re => re.exercise_id) || [];
 
             let enrichedExercises = routeExs || [];
 
             if (exerciseIds.length > 0) {
                 const { data: equipmentData } = await supabase
-                    .from('equipment')
-                    .select('id, name, category, image_url') // Added image_url
+                    .from('gym_equipment') // <--- FIXED: Correct Table Name
+                    .select('id, name, category, image_url')
                     .in('id', exerciseIds);
 
                 // Map back
@@ -230,7 +229,8 @@ class UserService {
                     const eq = equipmentMap.get(re.exercise_id);
                     return {
                         ...re,
-                        name: eq?.name || 'Ejercicio Desconocido',
+                        // Priority: 1. Equipment Data, 2. Cached Name in Routine Table, 3. Fallback
+                        name: eq?.name || re.name || 'Ejercicio Desconocido',
                         muscle_group: eq?.category || 'General',
                         image_url: eq?.image_url // Map image
                     };
