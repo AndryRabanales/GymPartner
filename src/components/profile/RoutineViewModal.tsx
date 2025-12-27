@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, Swords, Loader, Trophy } from 'lucide-react';
+import { EQUIPMENT_CATEGORIES } from '../../services/GymEquipmentService';
 
 interface RoutineViewModalProps {
     routine: any;
@@ -69,7 +70,7 @@ export const RoutineViewModal: React.FC<RoutineViewModalProps> = ({ routine, onC
                                                 ) : (
                                                     /* Fallback Icon handling (emojis) */
                                                     <span className="text-5xl leading-none drop-shadow-md filter brightness-110 grayscale-[0.2] select-none">
-                                                        {ex.icon || '⚡'}
+                                                        {ex.icon || EQUIPMENT_CATEGORIES[ex.muscle_group as keyof typeof EQUIPMENT_CATEGORIES]?.icon || '⚡'}
                                                     </span>
                                                 )}
                                             </div>
