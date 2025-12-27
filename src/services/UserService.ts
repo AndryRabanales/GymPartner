@@ -201,8 +201,8 @@ class UserService {
 
             if (rError) throw rError;
 
-            // 2. Get Exercises
-            const { data: exercises, error: eError } = await supabase
+            // 2. Get Exercises (Link Table)
+            const { data: routeExs, error: eError } = await supabase
                 .from('routine_exercises')
                 .select('*')
                 .eq('routine_id', routineId)
@@ -210,11 +210,105 @@ class UserService {
 
             if (eError) throw eError;
 
-            return { ...routine, exercises: exercises || [] };
+            // 3. Manual Join to get Exercise Details (Names)
+            // We need to fetch from 'equipment' table where id matches.
+            // Note: In a robust app, this might also need to check 'exercises' table for custom ones.
+            const exerciseIds = routeExs?.map(re => re.exercise_id) || [];
+
+            let enrichedExercises = routeExs || [];
+
+            if (exerciseIds.length > 0) {
+                const { data: equipmentData } = await supabase
+                    .from('equipment')
+                    .select('id, name, category') // 'category' maps to muscle_group usually
+                    .in('id', exerciseIds);
+
+                // Map back
+                const equipmentMap = new Map(equipmentData?.map(e => [e.id, e]) || []);
+
+                enrichedExercises = routeExs!.map(re => {
+                    const eq = equipmentMap.get(re.exercise_id);
+                    return {
+                        ...re,
+                        name: eq?.name || 'Ejercicio Desconocido',
+                        muscle_group: eq?.category || 'General'
+                    };
+                });
+            }
+
+            return { ...routine, exercises: enrichedExercises };
 
         } catch (error) {
             console.error('Error fetching routine details:', error);
             return null;
+        }
+    }
+
+    // Copy a routine to the current user's library (Clash Royale feature)
+    async copyRoutine(sourceRoutineId: string, targetUserId: string): Promise<{ success: boolean; error?: string }> {
+        try {
+            // 1. Fetch Source
+            const source = await this.getRoutineDetails(sourceRoutineId);
+            if (!source) throw new Error('Routine not found');
+
+            // 2. Create New Routine
+            const { data: newRoutine, error: createError } = await supabase
+                .from('routines')
+                .insert({
+                    user_id: targetUserId,
+                    name: `Copia de ${source.name}`,
+                    public: false
+                })
+                .select()
+                .single();
+
+            if (createError) throw createError;
+
+            // 3. Copy Exercises
+            if (source.exercises && source.exercises.length > 0) {
+                const exercisesToInsert = source.exercises.map((ex: any) => ({
+                    routine_id: newRoutine.id,
+                    exercise_id: ex.exercise_id,
+                    order_index: ex.order_index,
+                    track_weight: ex.track_weight,
+                    track_reps: ex.track_reps,
+                    track_time: ex.track_time,
+                    track_pr: ex.track_pr,
+                    target_sets: ex.target_sets,
+                    target_reps_text: ex.target_reps_text,
+                    custom_metric: ex.custom_metric
+                }));
+
+                const { error: insertError } = await supabase
+                    .from('routine_exercises')
+                    .insert(exercisesToInsert);
+
+                if (insertError) throw insertError;
+            }
+
+            return { success: true };
+
+        } catch (error: any) {
+            console.error('Copy routine error:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    // Get all public routines for a user (Profile Inspector - All Decks)
+    async getUserPublicRoutines(userId: string): Promise<any[]> {
+        try {
+            const { data, error } = await supabase
+                .from('routines')
+                .select('*')
+                .eq('user_id', userId)
+                .eq('is_public', true)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            return data || [];
+        } catch (error) {
+            console.error('Error fetching user public routines:', error);
+            return [];
         }
     }
 

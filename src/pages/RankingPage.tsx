@@ -8,7 +8,7 @@ import { PublicTeaser } from '../components/common/PublicTeaser';
 import { PlayerProfileModal } from '../components/profile/PlayerProfileModal';
 
 interface RankedUser {
-    // id: string; // Removed for privacy
+    id: string;
     username: string;
     avatar_url: string;
     xp: number;
@@ -40,13 +40,14 @@ export const RankingPage = () => {
 
                 // 2. Prepare Real Users
                 const realUsers = (profiles || []).map((p: any) => ({
+                    id: p.id,
                     username: p.username || 'Usuario GymPartner',
                     avatar_url: p.avatar_url || `https://ui-avatars.com/api/?name=${p.username || 'User'}&background=random`,
                     xp: p.xp || 0,
                     gym_name: p.home_gym?.name || 'Nómada',
                     is_current_user: p.id === user.id,
                     banner_url: p.custom_settings?.banner_url,
-                    featured_routine_id: p.featured_routine_id, // Now it exists properly
+                    featured_routine_id: p.featured_routine_id,
                 }));
 
                 // 3. HYBRID STRATEGY: Fill gaps with Bots
@@ -56,14 +57,15 @@ export const RankingPage = () => {
                     // Static Call - Guaranteed to work if file exists
                     const bots = BotSeeder.generateMockProfiles(missing);
 
-                    const mappedBots = bots.map(b => ({
+                    const mappedBots = bots.map((b, idx) => ({
+                        id: `bot-${idx}`, // Mock ID
                         username: b.username,
                         avatar_url: b.avatar_url,
                         xp: b.xp,
                         gym_name: b.home_gym.name,
                         is_current_user: false,
                         banner_url: b.custom_settings.banner_url,
-                        featured_routine_id: null // Bots have no decks yet
+                        featured_routine_id: null
                     }));
 
                     allPlayers = [...allPlayers, ...mappedBots];

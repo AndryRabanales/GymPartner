@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { X, Trophy, Shield, MapPin, Loader, Swords, User } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import { userService } from '../../services/UserService';
 
 interface PlayerProfileModalProps {
     player: {
+        id: string;
         username: string;
         avatar_url: string;
         xp: number;
@@ -16,8 +18,8 @@ interface PlayerProfileModalProps {
 }
 
 export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, onClose }) => {
-    const [routine, setRoutine] = useState<any | null>(null);
-    const [loadingRoutine, setLoadingRoutine] = useState(false);
+    const { user } = useAuth();
+    const [copying, setCopying] = useState(false);
 
     useEffect(() => {
         const fetchRoutine = async () => {
@@ -30,6 +32,18 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
         };
         fetchRoutine();
     }, [player.featured_routine_id]);
+
+    const handleCopyRoutine = async () => {
+        if (!user || !routine) return;
+        setCopying(true);
+        const result = await userService.copyRoutine(routine.id, user.id);
+        if (result.success) {
+            alert("¡Estrategia robada con éxito! Ahora está en tu arsenal.");
+        } else {
+            alert("Error al copiar: " + result.error);
+        }
+        setCopying(false);
+    };
 
     return (
         <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
@@ -94,13 +108,17 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
                     {/* Featured Routine (Battle Deck) */}
                     <div className="bg-black/40 rounded-2xl p-4 border border-white/5">
                         <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-2">
-                            <h3 className="text-sm font-bold text-white uppercase flex items-center gap-2">
-                                <Swords size={16} className="text-gym-primary" />
-                                Rutina Destacada
-                            </h3>
-                            {routine && (
-                                <span className="text-[10px] text-neutral-500">{routine.name}</span>
-                            )}
+                            <div className="flex flex-col">
+                                <h3 className="text-sm font-bold text-white uppercase flex items-center gap-2">
+                                    <Swords size={16} className="text-gym-primary" />
+                                    {routine ? routine.name : 'Estrategia'}
+                                </h3>
+                                {(routine && routine.exercises) && (
+                                    <span className="text-[9px] text-neutral-500 font-bold tracking-wider">
+                                        COSTO ELIXIR: PROM. {routine.exercises.length * 20} min
+                                    </span>
+                                )}
+                            </div>
                         </div>
 
                         {loadingRoutine ? (
@@ -108,43 +126,57 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
                                 <Loader className="animate-spin text-gym-primary" />
                             </div>
                         ) : routine ? (
-                            <div className="grid grid-cols-4 gap-2">
-                                {routine.exercises && routine.exercises.length > 0 ? (
-                                    routine.exercises.slice(0, 8).map((ex: any, idx: number) => (
-                                        <div key={idx} className="aspect-[3/4] bg-neutral-800 rounded-lg border border-neutral-700 relative overflow-hidden group">
-                                            {/* Card Style */}
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent z-10" />
-                                            <div className="absolute bottom-1 left-1 right-1 z-20">
-                                                <p className="text-[8px] font-bold text-white text-center leading-tight truncate">{ex.name}</p>
+                            <>
+                                <div className="grid grid-cols-4 gap-2 mb-4">
+                                    {routine.exercises && routine.exercises.length > 0 ? (
+                                        routine.exercises.slice(0, 8).map((ex: any, idx: number) => (
+                                            <div key={idx} className="aspect-[3/4] bg-neutral-800 rounded-lg border border-neutral-700 relative overflow-hidden group hover:border-gym-primary hover:scale-105 transition-all shadow-lg">
+                                                {/* Card Style */}
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-neutral-800/50 z-10" />
+
+                                                {/* Card Content */}
+                                                <div className="absolute top-1 left-1 z-20">
+                                                    {/* Level Orb */}
+                                                    <div className="w-3 h-3 rounded-full bg-blue-500 border border-white/20 shadow-sm"></div>
+                                                </div>
+
+                                                <div className="absolute bottom-1 left-1 right-1 z-20 flex flex-col items-center">
+                                                    <p className="text-[7px] font-black text-white text-center leading-tight line-clamp-2 uppercase drop-shadow-md">{ex.name}</p>
+                                                    <span className="text-[6px] text-gym-primary font-bold mt-0.5">{ex.target_sets}x{ex.target_reps_text}</span>
+                                                </div>
+
+                                                {/* Fake Image Placeholder based on ID hash or random */}
+                                                <div className={`absolute inset-0 opacity-40 mix-blend-overlay ${idx % 2 === 0 ? 'bg-blue-600' : 'bg-red-600'}`} />
+
+                                                {/* Icon Center */}
+                                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 opacity-30">
+                                                    <User size={16} className="text-white" />
+                                                </div>
                                             </div>
-                                            {/* Top Icon */}
-                                            <div className="absolute top-1 right-1 z-20 opacity-50">
-                                                <User size={8} className="text-white" />
-                                            </div>
-                                            {/* Fake Image Placeholder based on ID hash or random */}
-                                            <div className={`absolute inset-0 opacity-30 ${idx % 2 === 0 ? 'bg-blue-500' : 'bg-red-500'}`} />
+                                        ))
+                                    ) : (
+                                        <div className="col-span-4 text-center py-4 text-xs text-neutral-600 italic">
+                                            Estrategia confidencial (Vacía)
                                         </div>
-                                    ))
-                                ) : (
-                                    <div className="col-span-4 text-center py-4 text-xs text-neutral-600 italic">
-                                        Estrategia confidencial (Vacía)
-                                    </div>
-                                )}
-                            </div>
+                                    )}
+                                </div>
+
+                                {/* ACTION BUTTON: COPY DECK */}
+                                <button
+                                    onClick={handleCopyRoutine}
+                                    disabled={copying}
+                                    className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-black uppercase text-xs py-3 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(234,179,8,0.3)] disabled:opacity-50"
+                                >
+                                    {copying ? <Loader size={14} className="animate-spin" /> : <Swords size={14} strokeWidth={2.5} />}
+                                    COPIAR ESTRATEGIA
+                                </button>
+                            </>
                         ) : (
                             <div className="text-center py-6">
                                 <div className="inline-block p-3 rounded-full bg-neutral-800 mb-2">
                                     <Shield size={24} className="text-neutral-600" />
                                 </div>
                                 <p className="text-xs text-neutral-500">Este agente no ha revelado su estrategia aún.</p>
-                            </div>
-                        )}
-
-                        {routine && (
-                            <div className="mt-3 pt-2 border-t border-white/5 text-center">
-                                <span className="text-[10px] text-gym-primary font-bold uppercase cursor-pointer hover:underline">
-                                    Ver Detalle Completo
-                                </span>
                             </div>
                         )}
                     </div>

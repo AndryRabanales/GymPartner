@@ -120,7 +120,8 @@ export const RoutineBuilder = () => {
         // 2. Add Exercises
         const exercisesToInsert = selectedExercises.map((ex, i) => ({
             routine_id: routine.id,
-            exercise_id: ex.exercise_id, // Note: In real DB this must be a UUID. Mocks might fail if not UUID.
+            exercise_id: ex.exercise_id,
+            name: ex.name, // FIXED: Added missing cached name
             order_index: i,
             track_weight: ex.track_weight,
             track_reps: ex.track_reps,
@@ -129,16 +130,13 @@ export const RoutineBuilder = () => {
             target_reps_text: ex.target_reps_text
         }));
 
-        // Filter out mocks if we are in real mode, or ensure DB handles it
-        // For this demo, let's assume we proceed.
-
         const { error: exError } = await supabase
             .from('routine_exercises')
             .insert(exercisesToInsert);
 
         if (exError) {
-            console.error(exError); // Mocks might fail UUID check
-            alert('Rutina guardada (con advertencias de formato).');
+            console.error(exError);
+            alert('Error al guardar ejercicios: ' + exError.message);
         } else {
             alert('¡Rutina de Guerra creada!');
         }
