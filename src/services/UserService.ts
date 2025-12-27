@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import type { GymPlace } from './MapsService';
+import { COMMON_EQUIPMENT_SEEDS } from './GymEquipmentService';
 
 export interface UserPrimaryGym {
     gym_id: string; // Internal UUID
@@ -241,13 +242,22 @@ class UserService {
 
                 enrichedExercises = routeExs!.map(re => {
                     const eq = equipmentMap.get(re.exercise_id);
+
+                    // Logic to recover Icon for Old Data (Hydration from Seeds)
+                    let finalIcon = eq?.icon;
+                    if (!finalIcon && (eq?.name || re.name)) {
+                        const targetName = eq?.name || re.name;
+                        const seed = COMMON_EQUIPMENT_SEEDS.find(s => s.name === targetName);
+                        if (seed) finalIcon = seed.icon;
+                    }
+
                     return {
                         ...re,
                         // Priority: 1. Equipment Data, 2. Cached Name in Routine Table, 3. Fallback
                         name: eq?.name || re.name || 'Ejercicio Desconocido',
                         muscle_group: eq?.category || 'General',
                         image_url: eq?.image_url, // Map image
-                        icon: eq?.icon // Map icon
+                        icon: finalIcon // Map icon (DB or Seed Hydrated)
                     };
                 });
             }
