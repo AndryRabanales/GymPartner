@@ -54,7 +54,7 @@ export const RoutineBuilder = () => {
         // In a real scenario we might ask "Which gym is this routine for?" or show ALL user's known equipment.
         // Let's rely on a simple fetchAll for now or mock the 'equipment' nature.
 
-        const { data } = await supabase.from('equipment').select('*').limit(20); // Looking for equipment, not exercises
+        const { data } = await supabase.from('gym_equipment').select('*').limit(20); // Looking for equipment, not exercises
 
         if (data && data.length > 0) {
             // Map equipment to catalog format
