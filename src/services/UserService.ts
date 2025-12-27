@@ -401,6 +401,23 @@ class UserService {
         }
     }
 
+    // Toggle Routine Visibility (Public/Private)
+    async updateRoutineVisibility(routineId: string, isPublic: boolean): Promise<{ success: boolean; error?: string }> {
+        try {
+            const { error } = await supabase
+                .from('routines')
+                .update({ is_public: isPublic })
+                .eq('id', routineId);
+
+            if (error) throw error;
+            console.log(`[UserService] Routine ${routineId} visibility updated to: ${isPublic}`);
+            return { success: true };
+        } catch (error: any) {
+            console.error('Error updating routine visibility:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
     // Set a gym as Home Base (Sede)
     async setHomeBase(userId: string, gymId: string): Promise<{ success: boolean; error?: string }> {
         try {
