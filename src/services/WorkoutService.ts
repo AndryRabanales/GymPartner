@@ -297,7 +297,19 @@ class WorkoutService {
                 user_id,
                 gym_id,
                 created_at,
-                exercises:routine_exercises(*)
+                exercises:routine_exercises(
+                    id,
+                    exercise_id,
+                    name,
+                    order_index,
+                    track_weight,
+                    track_reps,
+                    track_time,
+                    track_pr,
+                    target_sets,
+                    target_reps_text,
+                    custom_metric
+                )
             `)
             .eq('id', sourceRoutineId)
             .single();
