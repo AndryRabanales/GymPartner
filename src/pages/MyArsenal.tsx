@@ -705,17 +705,55 @@ export const MyArsenal = () => {
                 let finalId = id;
                 let finalName = '';
 
-                // Resolve Virtual IDs to Real Items
-                if (id.startsWith('virtual-')) {
+                // 1. Check if it's a GHOST item (Imported but not local)
+                // We find it in the current view (globalInventory includes ghosts now)
+                const ghostItem = globalInventory.find(i => i.id === id && i.gym_id === 'ghost');
+
+                if (ghostItem) {
+                    finalName = ghostItem.name;
+                    // We need to REALIFY this ghost:
+                    // Check if we already have a real item with this name in Personal Gym
+                    const personalGymId = await userService.ensurePersonalGym(user.id);
+
+                    // Try to find existing by Name in Personal Gym to avoid dupes
+                    let { data: existingReal } = await supabase
+                        .from('gym_equipment')
+                        .select('id, name')
+                        .eq('gym_id', personalGymId)
+                        .ilike('name', ghostItem.name) // Case insensitive match
+                        .maybeSingle();
+
+                    if (existingReal) {
+                        console.log(`[Ghost] Linking to existing local item: ${existingReal.name}`);
+                        finalId = existingReal.id;
+                    } else {
+                        console.log(`[Ghost] CLONING item to Personal Gym: ${ghostItem.name}`);
+                        // CLONE IT
+                        const newEq = await equipmentService.addEquipment({
+                            name: ghostItem.name,
+                            category: ghostItem.category,
+                            gym_id: personalGymId,
+                            quantity: 1,
+                            condition: 'GOOD',
+                            icon: ghostItem.icon
+                        }, user.id);
+                        if (newEq) {
+                            finalId = newEq.id;
+                        }
+                    }
+                }
+
+                // 2. Resolve Virtual IDs to Real Items (Seeds)
+                else if (id.startsWith('virtual-')) {
                     const seedName = id.replace('virtual-', '');
-                    finalName = seedName;
                     const seedData = COMMON_EQUIPMENT_SEEDS.find(s => s.name === seedName);
+                    finalName = seedName;
 
                     if (seedData) {
                         const targetGymId = await resolveTargetGymId();
 
                         if (targetGymId) {
-                            // Local Gym: Check if we have a match already (prevent duplicates)
+                            // Local Gym check
                             const existingLocal = inventory.find(i => normalizeText(i.name) === normalizeText(seedName));
                             if (existingLocal) {
                                 finalId = existingLocal.id;
@@ -728,7 +766,7 @@ export const MyArsenal = () => {
                                     gym_id: targetGymId,
                                     quantity: 1,
                                     condition: 'GOOD',
-                                    icon: (cleanSeed as any).icon // Persist icon
+                                    icon: (cleanSeed as any).icon
                                 }, user.id);
                                 if (newEq) finalId = newEq.id;
                             }
@@ -753,7 +791,7 @@ export const MyArsenal = () => {
                         }
                     }
                 } else {
-                    // It's a real ID or a Ghost ID
+                    // It's a real ID (Inventory or Global Real)
                     const existingItem = inventory.find(i => i.id === id) || globalInventory.find(i => i.id === id);
                     if (existingItem) {
                         finalName = existingItem.name;
