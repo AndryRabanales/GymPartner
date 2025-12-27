@@ -218,8 +218,8 @@ class UserService {
 
             if (exerciseIds.length > 0) {
                 const { data: equipmentData } = await supabase
-                    .from('gym_equipment') // <--- FIXED: Correct Table Name
-                    .select('id, name, category, image_url')
+                    .from('gym_equipment')
+                    .select('id, name, category, image_url, icon')
                     .in('id', exerciseIds);
 
                 // Map back
@@ -232,7 +232,8 @@ class UserService {
                         // Priority: 1. Equipment Data, 2. Cached Name in Routine Table, 3. Fallback
                         name: eq?.name || re.name || 'Ejercicio Desconocido',
                         muscle_group: eq?.category || 'General',
-                        image_url: eq?.image_url // Map image
+                        image_url: eq?.image_url, // Map image
+                        icon: eq?.icon // Map icon
                     };
                 });
             }

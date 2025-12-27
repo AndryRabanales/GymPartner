@@ -69,7 +69,7 @@ export const RoutineViewModal: React.FC<RoutineViewModalProps> = ({ routine, onC
                                                 ) : (
                                                     /* Fallback Icon handling (emojis) */
                                                     <span className="text-5xl leading-none drop-shadow-md filter brightness-110 grayscale-[0.2] select-none">
-                                                        ⚡
+                                                        {ex.icon || '⚡'}
                                                     </span>
                                                 )}
                                             </div>
