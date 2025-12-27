@@ -250,8 +250,15 @@ class UserService {
                         // Helper for normalization
                         const normalize = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 
-                        const seed = COMMON_EQUIPMENT_SEEDS.find(s => normalize(s.name) === normalize(targetName));
-                        if (seed) finalIcon = seed.icon;
+                        const normTarget = normalize(targetName);
+                        const seed = COMMON_EQUIPMENT_SEEDS.find(s => normalize(s.name) === normTarget);
+
+                        if (seed) {
+                            finalIcon = seed.icon;
+                            // console.log(`[Hydration] Recovered icon for "${targetName}": ${seed.icon}`);
+                        } else {
+                            console.warn(`[Hydration] Failed to find seed for "${targetName}" (Normalized: "${normTarget}")`);
+                        }
                     }
 
                     return {

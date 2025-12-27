@@ -1,6 +1,7 @@
 import React from 'react';
-import { X, Swords, Loader, Trophy } from 'lucide-react';
-import { EQUIPMENT_CATEGORIES } from '../../services/GymEquipmentService';
+import { X, Copy, Check, Swords, Loader, Trophy } from 'lucide-react';
+import { EQUIPMENT_CATEGORIES, COMMON_EQUIPMENT_SEEDS } from '../../services/GymEquipmentService';
+import { useAuth } from '../../context/AuthContext';
 
 interface RoutineViewModalProps {
     routine: any;
@@ -74,11 +75,17 @@ export const RoutineViewModal: React.FC<RoutineViewModalProps> = ({ routine, onC
                                                             // 1. Direct Icon (DB)
                                                             if (ex.icon) return ex.icon;
 
-                                                            // 2. Lookup by Key (Standard)
+                                                            // 2. Hydration by Seed Name (Fuzzy Match)
+                                                            const normalize = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+                                                            const normTarget = normalize(ex.name || '');
+                                                            const seed = COMMON_EQUIPMENT_SEEDS.find(s => normalize(s.name) === normTarget);
+                                                            if (seed?.icon) return seed.icon;
+
+                                                            // 3. Lookup by Key (Standard)
                                                             // @ts-ignore
                                                             if (EQUIPMENT_CATEGORIES[ex.muscle_group]?.icon) return EQUIPMENT_CATEGORIES[ex.muscle_group].icon;
 
-                                                            // 3. Lookup by Label (Spanish -> English Key match)
+                                                            // 4. Lookup by Label (Spanish -> English Key match)
                                                             const foundEntry = Object.values(EQUIPMENT_CATEGORIES).find((cat: any) =>
                                                                 cat.label?.toLowerCase() === ex.muscle_group?.toLowerCase()
                                                             );
