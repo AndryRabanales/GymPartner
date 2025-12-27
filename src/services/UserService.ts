@@ -193,19 +193,40 @@ class UserService {
     // Get full details of a specific routine (for Profile Inspector)
     async getRoutineDetails(routineId: string): Promise<any | null> {
         try {
-            // 1. Get Routine Metadata
+            // 1. Get Routine Metadata (Explicit Select)
             const { data: routine, error: rError } = await supabase
                 .from('routines')
-                .select('*')
+                .select(`
+                    id,
+                    user_id,
+                    name,
+                    description,
+                    is_public,
+                    created_at,
+                    gym_id
+                `)
                 .eq('id', routineId)
                 .single();
 
             if (rError) throw rError;
 
-            // 2. Get Exercises (Link Table)
+            // 2. Get Exercises (Link Table) (Explicit Select)
             const { data: routeExs, error: eError } = await supabase
                 .from('routine_exercises')
-                .select('*')
+                .select(`
+                    id,
+                    routine_id,
+                    exercise_id,
+                    name,
+                    order_index,
+                    track_weight,
+                    track_reps,
+                    track_time,
+                    track_pr,
+                    target_sets,
+                    target_reps_text,
+                    custom_metric
+                `)
                 .eq('routine_id', routineId)
                 .order('order_index', { ascending: true });
 
