@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Swords, Loader, Trophy, Check } from 'lucide-react';
+import { X, Swords, Loader, Trophy } from 'lucide-react';
 
 interface RoutineViewModalProps {
     routine: any;
