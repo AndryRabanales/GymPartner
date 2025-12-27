@@ -289,7 +289,16 @@ class WorkoutService {
         // Fetch source routine with exercises
         const { data: source, error: sourceError } = await supabase
             .from('routines')
-            .select(`*, exercises:routine_exercises(*)`) // We trust 'name' is in routine_exercises
+            .select(`
+                id,
+                name,
+                description,
+                is_public,
+                user_id,
+                gym_id,
+                created_at,
+                exercises:routine_exercises(*)
+            `)
             .eq('id', sourceRoutineId)
             .single();
 
