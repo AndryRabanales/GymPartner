@@ -270,12 +270,24 @@ export const MyArsenal = () => {
             }
         }
 
+        // Resolve Icon from Category (Standard or Custom)
+        let resolvedIcon = '⚡';
+        // @ts-ignore
+        if (EQUIPMENT_CATEGORIES[customCategory]) {
+            // @ts-ignore
+            resolvedIcon = EQUIPMENT_CATEGORIES[customCategory].icon;
+        } else {
+            const customCat = userSettings.categories.find(c => c.id === customCategory);
+            if (customCat) resolvedIcon = customCat.icon;
+        }
+
         const payload = {
             name: customName,
             category: customCategory,
             gym_id: finalGymId, // Now guaranteed to have an ID
             quantity: 1,
-            metrics: customMetrics
+            metrics: customMetrics,
+            icon: resolvedIcon // <--- SAVED TO DB
         };
         console.log('Attempting to create custom equipment:', payload);
 
