@@ -139,8 +139,8 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
                                         key={r.id}
                                         onClick={() => loadRoutineDetails(r.id)}
                                         className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${selectedRoutine?.id === r.id
-                                            ? 'bg-gym-primary text-black border-gym-primary shadow-[0_0_10px_rgba(234,179,8,0.3)]'
-                                            : 'bg-neutral-800 text-neutral-400 border-neutral-700 hover:border-neutral-500'
+                                                ? 'bg-gym-primary text-black border-gym-primary shadow-[0_0_10px_rgba(234,179,8,0.3)]'
+                                                : 'bg-neutral-800 text-neutral-400 border-neutral-700 hover:border-neutral-500'
                                             }`}
                                     >
                                         {r.name}
@@ -173,69 +173,52 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
                                 </div>
                             ) : selectedRoutine ? (
                                 <>
-                                    <div className="grid grid-cols-4 gap-2 mb-4">
+                                    <div className="grid grid-cols-3 gap-2 mb-4">
                                         {selectedRoutine.exercises && selectedRoutine.exercises.length > 0 ? (
-                                            selectedRoutine.exercises.map((ex: any, idx: number) => {
-                                                // Rarity Logic based on Muscle Group
-                                                let rarityColor = 'border-slate-400'; // Common
-                                                let bgGlow = 'from-slate-400/20';
-
-                                                const mg = (ex.muscle_group || '').toLowerCase();
-                                                if (mg.includes('chest') || mg.includes('pecho') || mg.includes('back') || mg.includes('espalda')) {
-                                                    rarityColor = 'border-purple-500'; // Epic
-                                                    bgGlow = 'from-purple-500/20';
-                                                } else if (mg.includes('leg') || mg.includes('pierna') || mg.includes('quad')) {
-                                                    rarityColor = 'border-orange-500'; // Rare
-                                                    bgGlow = 'from-orange-500/20';
-                                                } else if (mg.includes('shoulder') || mg.includes('hombro')) {
-                                                    rarityColor = 'border-pink-500'; // Legendary-ish
-                                                    bgGlow = 'from-pink-500/20';
-                                                }
-
-                                                // Elixir Cost (Sets)
-                                                const elixirCost = ex.target_sets || 3;
-
-                                                return (
-                                                    <div key={idx} className={`aspect-[3/4.2] bg-neutral-900 rounded-lg relative overflow-hidden group transition-all transform hover:scale-105 shadow-xl border-2 ${rarityColor}`}>
-
-                                                        {/* Card Image */}
-                                                        {ex.image_url ? (
-                                                            <img src={ex.image_url} alt={ex.name} className="absolute inset-0 w-full h-full object-cover" />
-                                                        ) : (
-                                                            <div className="absolute inset-0 bg-neutral-800 flex items-center justify-center">
-                                                                <Swords className="text-white/20" size={32} />
-                                                            </div>
-                                                        )}
-
-                                                        {/* Inner Shadow / Vignette */}
-                                                        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/90 pointer-events-none" />
-
-                                                        {/* Elixir Drop (Top Left) */}
-                                                        <div className="absolute -top-1 -left-1 w-6 h-7 bg-purple-600 rounded-br-lg border-r border-b border-black/50 flex items-center justify-center z-20 shadow-lg">
-                                                            <span className="text-white font-black text-xs drop-shadow-md font-mono">{elixirCost}</span>
+                                            selectedRoutine.exercises.map((ex: any, idx: number) => (
+                                                <div key={idx} className="relative group h-full bg-neutral-900 border border-white/5 rounded-2xl overflow-hidden flex flex-col hover:border-white/20 transition-all">
+                                                    {/* Selection Indicator (Fake/Static to match screenshot style) */}
+                                                    <div className="absolute top-2 left-2 z-20 flex gap-1 flex-row-reverse">
+                                                        <div className="w-5 h-5 rounded-full flex items-center justify-center bg-white/10 text-transparent">
+                                                            <div className="w-2.5 h-2.5 rounded-full bg-neutral-600"></div>
                                                         </div>
-
-                                                        {/* Level Badge (Bottom) */}
-                                                        <div className="absolute bottom-6 w-full flex justify-center z-20">
-                                                            <div className="bg-blue-600 border border-blue-400 px-1.5 py-0.5 rounded shadow-[0_2px_0_rgba(0,0,0,0.5)] transform -skew-x-6">
-                                                                <span className="text-[6px] text-white font-black tracking-wide uppercase">Nvl. {ex.target_reps_text || '9'}</span>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Name (Very Bottom) */}
-                                                        <div className="absolute bottom-1 w-full text-center px-0.5 z-20">
-                                                            <p className="text-[7px] font-black text-white uppercase leading-none drop-shadow-[0_1.2px_1.2px_rgba(0,0,0,1)] tracking-tight line-clamp-2">
-                                                                {ex.name}
-                                                            </p>
-                                                        </div>
-
-                                                        {/* Shine Effect (Rarity) */}
-                                                        <div className={`absolute inset-0 bg-gradient-to-t ${bgGlow} to-transparent opacity-30 pointer-events-none`} />
                                                     </div>
-                                                );
-                                            })
+
+                                                    <div className="flex flex-col h-full relative group aspect-[3/4] min-h-[110px] p-1.5 overflow-hidden bg-neutral-900 border border-white/5 rounded-lg">
+                                                        {/* Icon - Centered */}
+                                                        <div className="flex-1 flex items-center justify-center w-full z-10 pb-2 pt-2">
+                                                            {ex.image_url ? (
+                                                                <img src={ex.image_url} alt={ex.name} className="w-16 h-16 object-contain drop-shadow-md" />
+                                                            ) : (
+                                                                <span className="text-4xl leading-none drop-shadow-md filter brightness-110 grayscale-[0.2]">⚡</span>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Title */}
+                                                        <div className="text-center w-full px-1.5 leading-none z-20 pb-1.5 min-h-0 flex-shrink-0">
+                                                            <h4 className="text-[8px] font-black italic uppercase tracking-wider line-clamp-3 text-wrap leading-tight text-neutral-200 drop-shadow-sm">
+                                                                {ex.name}
+                                                            </h4>
+                                                        </div>
+
+                                                        {/* Footer / Stats */}
+                                                        <div className="border-t border-white/5 w-full bg-black/40 backdrop-blur-sm mt-auto">
+                                                            <div className="flex flex-wrap gap-1 justify-center w-full py-1">
+                                                                <span className="text-[6px] font-bold px-1 py-0.5 rounded-[2px] flex items-center gap-0.5 leading-none text-neutral-400">
+                                                                    <span>🔄</span>
+                                                                    <span className="tracking-wide uppercase">REPS</span>
+                                                                </span>
+                                                                <span className="text-[6px] font-bold px-1 py-0.5 rounded-[2px] flex items-center gap-0.5 leading-none text-neutral-400">
+                                                                    <span>⚖️</span>
+                                                                    <span className="tracking-wide uppercase">PESO</span>
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))
                                         ) : (
-                                            <div className="col-span-4 text-center py-4 text-xs text-neutral-600 italic">
+                                            <div className="col-span-3 text-center py-4 text-xs text-neutral-600 italic">
                                                 Estrategia vacía
                                             </div>
                                         )}
