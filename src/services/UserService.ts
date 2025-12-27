@@ -174,8 +174,23 @@ class UserService {
         }
         return data || [];
     }
+    // Get user's created routines
+    async getUserRoutines(userId: string): Promise<any[]> {
+        const { data, error } = await supabase
+            .from('routines')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('Error fetching routines:', error);
+            return [];
+        }
+        return data || [];
+    }
+
     // Update user profile
-    async updateProfile(userId: string, updates: { username?: string; avatar_url?: string; custom_settings?: any }): Promise<{ success: boolean; error?: string }> {
+    async updateProfile(userId: string, updates: { username?: string; avatar_url?: string; custom_settings?: any; featured_routine_id?: string | null }): Promise<{ success: boolean; error?: string }> {
         try {
             const { error } = await supabase
                 .from('profiles')

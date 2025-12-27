@@ -29,6 +29,7 @@ interface ProfileData {
         banner_url?: string;
     };
     referred_by?: string;
+    featured_routine_id?: string;
 }
 
 export const UserProfile = () => {
@@ -640,6 +641,7 @@ export const UserProfile = () => {
                     currentUsername={profile.username || user.user_metadata.full_name}
                     currentAvatarUrl={profile.avatar_url || user.user_metadata.avatar_url}
                     currentBannerUrl={profile.custom_settings?.banner_url}
+                    currentFeaturedRoutineId={profile.featured_routine_id}
                     onClose={() => setShowEditProfile(false)}
                     onUpdate={loadUserData}
                 />

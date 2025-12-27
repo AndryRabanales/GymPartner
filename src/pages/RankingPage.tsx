@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { BotSeeder } from '../services/BotSeeder';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Trophy, Shield, MapPin } from 'lucide-react';
+import { Trophy, Shield, MapPin, Swords } from 'lucide-react';
 import { PublicTeaser } from '../components/common/PublicTeaser';
 
 interface RankedUser {
@@ -15,6 +15,7 @@ interface RankedUser {
     gym_name?: string;
     is_current_user?: boolean;
     banner_url?: string;
+    featured_routine_id?: string | null;
 }
 
 export const RankingPage = () => {
@@ -29,7 +30,7 @@ export const RankingPage = () => {
                 // 1. Fetch ALL real profiles
                 const { data: profiles, error } = await supabase
                     .from('profiles')
-                    .select('id, username, avatar_url, xp, custom_settings, home_gym:gyms(name)')
+                    .select('id, username, avatar_url, xp, custom_settings, featured_routine_id, home_gym:gyms(name)')
                     .order('xp', { ascending: false })
                     .limit(50);
 
@@ -42,7 +43,8 @@ export const RankingPage = () => {
                     xp: p.xp || 0,
                     gym_name: p.home_gym?.name || 'Nómada',
                     is_current_user: p.id === user.id,
-                    banner_url: p.custom_settings?.banner_url
+                    banner_url: p.custom_settings?.banner_url,
+                    featured_routine_id: p.featured_routine_id // Map it
                 }));
 
                 // 3. HYBRID STRATEGY: Fill gaps with Bots
@@ -58,7 +60,8 @@ export const RankingPage = () => {
                         xp: b.xp,
                         gym_name: b.home_gym.name,
                         is_current_user: false,
-                        banner_url: b.custom_settings.banner_url
+                        banner_url: b.custom_settings.banner_url,
+                        featured_routine_id: null // Bots have no decks yet
                     }));
 
                     allPlayers = [...allPlayers, ...mappedBots];
@@ -190,9 +193,18 @@ export const RankingPage = () => {
 
                         {/* Info */}
                         <div className="flex-1 min-w-0 relative z-10">
-                            <h3 className={`font-black text-sm sm:text-base truncate ${player.is_current_user ? 'text-gym-primary' : 'text-white'}`}>
-                                {player.username}
-                            </h3>
+                            <div className="flex items-center gap-2">
+                                <h3 className={`font-black text-sm sm:text-base truncate ${player.is_current_user ? 'text-gym-primary' : 'text-white'}`}>
+                                    {player.username}
+                                </h3>
+                                {/* Battle Deck Icon */}
+                                {player.featured_routine_id && (
+                                    <div className="bg-users-500/10 border border-yellow-500/30 rounded px-1.5 py-0.5 flex items-center gap-1" title="Mazo de Batalla Activo">
+                                        <Swords size={10} className="text-yellow-500" />
+                                        <span className="text-[9px] font-bold text-yellow-500 tracking-wider hidden sm:block">DECK</span>
+                                    </div>
+                                )}
+                            </div>
                             <div className="flex items-center gap-1 text-xs text-neutral-400">
                                 <MapPin size={10} />
                                 <span className="truncate">{player.gym_name}</span>

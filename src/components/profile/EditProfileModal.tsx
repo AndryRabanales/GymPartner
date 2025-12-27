@@ -1,13 +1,15 @@
-import React, { useState, useRef } from 'react';
-import { X, Camera, Save, Loader } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { X, Camera, Save, Loader, Swords, Trophy } from 'lucide-react';
 import { userService } from '../../services/UserService';
 import type { User } from '@supabase/supabase-js';
+import { Link } from 'react-router-dom';
 
 interface EditProfileModalProps {
     user: User;
     currentUsername: string;
     currentAvatarUrl: string;
-    currentBannerUrl?: string; // New Prop
+    currentBannerUrl?: string;
+    currentFeaturedRoutineId?: string; // New Prop
     onClose: () => void;
     onUpdate: () => void;
 }
@@ -17,6 +19,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     currentUsername,
     currentAvatarUrl,
     currentBannerUrl,
+    currentFeaturedRoutineId,
     onClose,
     onUpdate
 }) => {
@@ -28,9 +31,22 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     const [bannerFile, setBannerFile] = useState<File | null>(null);
     const [bannerPreview, setBannerPreview] = useState(currentBannerUrl);
 
+    // Battle Deck State
+    const [routines, setRoutines] = useState<any[]>([]);
+    const [selectedRoutineId, setSelectedRoutineId] = useState<string | null>(currentFeaturedRoutineId || null);
+
     const [loading, setLoading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const bannerInputRef = useRef<HTMLInputElement>(null); // Ref for banner
+    const bannerInputRef = useRef<HTMLInputElement>(null);
+
+    // Fetch Routines on Mount
+    useEffect(() => {
+        const fetchRoutines = async () => {
+            const data = await userService.getUserRoutines(user.id);
+            setRoutines(data);
+        };
+        fetchRoutines();
+    }, [user.id]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -75,12 +91,13 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                 username: username,
                 avatar_url: newAvatarUrl,
                 custom_settings: {
-                    banner_url: newBannerUrl // Save banner in JSONB
-                }
+                    banner_url: newBannerUrl
+                },
+                featured_routine_id: selectedRoutineId // Save selected routine
             });
 
             if (updateResult.success) {
-                onUpdate(); // Reload parent data
+                onUpdate();
                 onClose();
             } else {
                 alert('Error al actualizar perfil: ' + updateResult.error);
@@ -183,6 +200,42 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                             className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white font-bold tracking-tight focus:outline-none focus:border-yellow-500/50 transition-colors placeholder:text-neutral-700"
                             placeholder="Tu nombre público..."
                         />
+                    </div>
+
+                    {/* BATTLE DECK SELECTOR */}
+                    <div className="space-y-2 pt-2 border-t border-white/5">
+                        <div className="flex items-center justify-between">
+                            <label className="text-xs font-bold text-yellow-500 uppercase tracking-widest ml-1 flex items-center gap-2">
+                                <Swords size={14} /> MAZO DE BATALLA (Rutina)
+                            </label>
+                            <Link to="/builder" onClick={onClose} className="text-[10px] font-bold text-neutral-500 hover:text-white uppercase flex items-center gap-1">
+                                <Trophy size={10} /> Crear Nueva
+                            </Link>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
+                            {routines.map(routine => (
+                                <button
+                                    key={routine.id}
+                                    onClick={() => setSelectedRoutineId(routine.id === selectedRoutineId ? null : routine.id)}
+                                    className={`w-full text-left p-3 rounded-lg border transition-all flex items-center justify-between group ${selectedRoutineId === routine.id
+                                            ? 'bg-yellow-500/10 border-yellow-500 text-white'
+                                            : 'bg-neutral-950 border-neutral-800 text-neutral-400 hover:border-neutral-600'
+                                        }`}
+                                >
+                                    <span className="font-bold text-sm truncate">{routine.name}</span>
+                                    {selectedRoutineId === routine.id && <div className="w-2 h-2 rounded-full bg-yellow-500"></div>}
+                                </button>
+                            ))}
+                            {routines.length === 0 && (
+                                <div className="text-center p-4 border border-dashed border-neutral-800 rounded-lg">
+                                    <p className="text-xs text-neutral-600">No tienes rutinas creadas.</p>
+                                </div>
+                            )}
+                        </div>
+                        <p className="text-[10px] text-neutral-500 leading-tight">
+                            Esta rutina aparecerá en tu perfil y ranking público como tu "Arma Principal".
+                        </p>
                     </div>
 
                     {/* Action Buttons */}
