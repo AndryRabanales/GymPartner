@@ -70,7 +70,22 @@ export const RoutineViewModal: React.FC<RoutineViewModalProps> = ({ routine, onC
                                                 ) : (
                                                     /* Fallback Icon handling (emojis) */
                                                     <span className="text-5xl leading-none drop-shadow-md filter brightness-110 grayscale-[0.2] select-none">
-                                                        {ex.icon || EQUIPMENT_CATEGORIES[ex.muscle_group as keyof typeof EQUIPMENT_CATEGORIES]?.icon || '⚡'}
+                                                        {(() => {
+                                                            // 1. Direct Icon (DB)
+                                                            if (ex.icon) return ex.icon;
+
+                                                            // 2. Lookup by Key (Standard)
+                                                            // @ts-ignore
+                                                            if (EQUIPMENT_CATEGORIES[ex.muscle_group]?.icon) return EQUIPMENT_CATEGORIES[ex.muscle_group].icon;
+
+                                                            // 3. Lookup by Label (Spanish -> English Key match)
+                                                            const foundEntry = Object.values(EQUIPMENT_CATEGORIES).find((cat: any) =>
+                                                                cat.label?.toLowerCase() === ex.muscle_group?.toLowerCase()
+                                                            );
+                                                            if (foundEntry) return (foundEntry as any).icon;
+
+                                                            return '⚡';
+                                                        })()}
                                                     </span>
                                                 )}
                                             </div>
