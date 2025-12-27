@@ -89,32 +89,54 @@ export const RoutineBuilder = () => {
     };
 
     const loadCatalog = async () => {
-        // Fetch Machines from the User's Gym (or Global if undefined)
-        // For now, let's fetch from the user's primary gym or just generic list
-        // Since we want "machines", we should look at 'equipment' table or 'gym_equipment'
+        try {
+            // 1. Fetch User's Custom Equipment
+            const { data: customData } = await supabase
+                .from('gym_equipment')
+                .select('*')
+                .limit(50);
 
-        // TODO: Get real gym ID. For now, mocking or getting first available.
-        // In a real scenario we might ask "Which gym is this routine for?" or show ALL user's known equipment.
-        // Let's rely on a simple fetchAll for now or mock the 'equipment' nature.
+            // 2. Fetch Global Seed Exercises
+            const { data: globalData } = await supabase
+                .from('exercises')
+                .select('id, name, target_muscle')
+                .limit(100);
 
-        const { data } = await supabase.from('gym_equipment').select('*').limit(20); // Looking for equipment, not exercises
+            let combinedCatalog: Exercise[] = [];
 
-        if (data && data.length > 0) {
-            // Map equipment to catalog format
-            setCatalog(data.map((item: any) => ({
-                id: item.id,
-                name: item.name,
-                muscle_group: item.category || 'General'
-            })));
-        } else {
-            // Fallback Mock (Machines Focus)
-            setCatalog([
-                { id: '1', name: 'Press Banca (Barra)', muscle_group: 'Pecho' },
-                { id: '2', name: 'Prensa 45°', muscle_group: 'Pierna' },
-                { id: '3', name: 'Jalón al Pecho', muscle_group: 'Espalda' },
-                { id: '4', name: 'Mancuernas (Libre)', muscle_group: 'General' },
-                { id: '5', name: 'Smith Machine', muscle_group: 'Pierna' },
-            ]);
+            // Map Custom
+            if (customData) {
+                combinedCatalog = [...combinedCatalog, ...customData.map((item: any) => ({
+                    id: item.id,
+                    name: item.name,
+                    muscle_group: item.category || 'General'
+                }))];
+            }
+
+            // Map Global
+            if (globalData) {
+                combinedCatalog = [...combinedCatalog, ...globalData.map((item: any) => ({
+                    id: item.id,
+                    name: item.name,
+                    muscle_group: item.target_muscle || 'General'
+                }))];
+            }
+
+            // If empty, fallback
+            if (combinedCatalog.length === 0) {
+                setCatalog([
+                    { id: '1', name: 'Press Banca (Barra)', muscle_group: 'Pecho' },
+                    { id: '2', name: 'Prensa 45°', muscle_group: 'Pierna' },
+                    { id: '3', name: 'Jalón al Pecho', muscle_group: 'Espalda' },
+                ]);
+            } else {
+                // Deduplicate by ID just in case
+                const uniqueCatalog = Array.from(new Map(combinedCatalog.map(item => [item.id, item])).values());
+                setCatalog(uniqueCatalog);
+            }
+
+        } catch (error) {
+            console.error("Error loading full catalog:", error);
         }
     };
 
