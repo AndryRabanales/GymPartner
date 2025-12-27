@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { equipmentService } from '../services/GymEquipmentService';
+import { userService } from '../services/UserService';
 import type { CustomSettings } from '../services/GymEquipmentService';
 import { ArrowLeft, Plus, Save, Trash2, Dumbbell, Clock, Hash, Trophy } from 'lucide-react';
 
@@ -34,16 +35,54 @@ export const RoutineBuilder = () => {
     const [catalog, setCatalog] = useState<Exercise[]>([]);
     const [userSettings, setUserSettings] = useState<CustomSettings>({ categories: [], metrics: [] });
 
+    const { id } = useParams<{ id: string }>(); // Get ID from URL
+
+    // ... logic ...
+
     useEffect(() => {
         const init = async () => {
             if (user) {
                 const settings = await equipmentService.getUserSettings(user.id);
                 setUserSettings(settings);
             }
-            loadCatalog();
+            await loadCatalog();
+
+            // NEW: Load existing routine if ID is present
+            if (id) {
+                await loadRoutineForEdit(id);
+            }
         };
         init();
-    }, [user]);
+    }, [user, id]);
+
+    const loadRoutineForEdit = async (routineId: string) => {
+        try {
+            // We use the same service as the Profile View, which already has the fallback logic!
+            const routine = await userService.getRoutineDetails(routineId);
+
+            if (routine) {
+                setName(routine.name);
+
+                // Map to Builder Format
+                if (routine.exercises) {
+                    const mappedExercises: RoutineExerciseConfig[] = routine.exercises.map((ex: any) => ({
+                        exercise_id: ex.exercise_id,
+                        name: ex.name, // The service already hydrated this name!
+                        track_weight: ex.track_weight,
+                        track_reps: ex.track_reps,
+                        track_time: ex.track_time,
+                        track_pr: ex.track_pr,
+                        target_sets: ex.target_sets || 4,
+                        target_reps_text: ex.target_reps_text || '10-12',
+                        custom_metric: ex.custom_metric || ''
+                    }));
+                    setSelectedExercises(mappedExercises);
+                }
+            }
+        } catch (err) {
+            console.error("Error loading routine for edit:", err);
+        }
+    };
 
     const loadCatalog = async () => {
         // Fetch Machines from the User's Gym (or Global if undefined)
