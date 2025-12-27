@@ -753,12 +753,26 @@ export const MyArsenal = () => {
         return true;
     });
 
+    const DEBUG_VERSION = "v2173-FIX-NAME-MATCH";
+
     if (loading) return <div className="h-screen flex items-center justify-center bg-black text-gym-primary"><Loader className="animate-spin" /></div>;
+
+    // DEBUG OVERLAY
+    const DebugOverlay = () => (
+        <div className="fixed bottom-4 right-4 z-[9999] bg-red-900/90 text-white p-2 text-[10px] font-mono border border-red-500 rounded shadow-xl pointer-events-none">
+            <div>VER: {DEBUG_VERSION}</div>
+            <div>Global Inv: {globalInventory.length}</div>
+            <div>User Inv: {inventory.length}</div>
+            <div>Selected: {selectedItems.size}</div>
+            <div>Effect. Inv: {effectiveInventory.length}</div>
+        </div>
+    );
 
     // RENDER ROUTINE LIST (Level 1)
     if (viewMode === 'ROUTINES') {
         return (
             <div className="min-h-screen bg-black text-white p-4 md:p-12 pb-24 font-sans selection:bg-gym-primary selection:text-black">
+                <DebugOverlay />
                 <div className="max-w-7xl mx-auto">
                     {/* Header - Compact */}
                     <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6 md:mb-12">
