@@ -428,14 +428,7 @@ const newLinkData = exercises.map((ex: any) => {
     };
 });
 
-const { error: linkError } = await supabase
-    .from('routine_exercises')
-    .insert(newLinkData);
 
-if (linkError) console.error("Error cloning exercises:", linkError);
-
-return { data: newRoutine };
-    }
 
     async deleteRoutine(routineId: string) {
     const { error } = await supabase.from('routines').delete().eq('id', routineId);
