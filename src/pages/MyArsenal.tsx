@@ -145,6 +145,7 @@ export const MyArsenal = () => {
     const [activeSection, setActiveSection] = useState<string | null>(null);
 
     const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+    const [routineConfigs, setRoutineConfigs] = useState<Map<string, any>>(new Map()); // Persistence State
     const [routineName, setRoutineName] = useState('');
     const [editingRoutineId, setEditingRoutineId] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
@@ -432,59 +433,99 @@ export const MyArsenal = () => {
         setEditingRoutineId(routine.id);
         setRoutineName(routine.name);
 
-        // Fetch Full details to get Names
+        // Fetch Full details to get Names and Configs
         try {
             const details = await userService.getRoutineDetails(routine.id);
             const exercises = details?.exercises || [];
 
             const resolvedIDs = new Set<string>();
-
-            // Match each exercise to our Inventory (Effective)
-            // We reconstruct effective inventory logic here briefly or just iterate standard lists
-            // Since we can't access 'effectiveInventory' easily due to scope/render timing,
-            // we iterate the sources:
+            const newConfigs = new Map<string, any>();
+            const ghostItems: Equipment[] = [];
 
             exercises.forEach((ex: any) => {
                 const normName = normalizeText(ex.name);
+                let finalId = ex.exercise_id; // Default to existing ID
+                let foundMatch = false;
 
-                // 1. Check Custom Inventory
-                const customMatch = inventory.find(i => normalizeText(i.name) === normName);
+                // 1. Check Custom Inventory (Real ID)
+                const customMatch = inventory.find(i => i.id === ex.exercise_id || normalizeText(i.name) === normName);
                 if (customMatch) {
-                    resolvedIDs.add(customMatch.id);
-                    return;
+                    finalId = customMatch.id;
+                    foundMatch = true;
                 }
 
-                // 2. Check Global Inventory (Real UUIDs)
-                const globalMatch = globalInventory.find(i => normalizeText(i.name) === normName);
-                if (globalMatch) {
-                    resolvedIDs.add(globalMatch.id);
-                    return;
-                }
-
-                // 3. Check Seeds (Virtual IDs)
-                const seedMatch = COMMON_EQUIPMENT_SEEDS.find(s => normalizeText(s.name) === normName);
-                if (seedMatch) {
-                    resolvedIDs.add(`virtual-${seedMatch.name}`);
-                    return;
-                }
-
-                // 4. Fallback: If we have the original ID and it's a UUID, maybe it matches directly?
-                // (Only if it was fetched in globalInventory/custom)
-                if (routine.equipment_ids && routine.equipment_ids.includes(ex.exercise_id)) {
-                    // Check if this ID exists in our known lists
-                    const existsReal = inventory.some(i => i.id === ex.exercise_id) || globalInventory.some(g => g.id === ex.exercise_id);
-                    if (existsReal) {
-                        resolvedIDs.add(ex.exercise_id);
+                // 2. Check Global Inventory (Real ID)
+                if (!foundMatch) {
+                    const globalMatch = globalInventory.find(i => i.id === ex.exercise_id || normalizeText(i.name) === normName);
+                    if (globalMatch) {
+                        finalId = globalMatch.id;
+                        foundMatch = true;
                     }
+                }
+
+                // 3. Check Seeds (Virtual ID)
+                if (!foundMatch) {
+                    const seedMatch = COMMON_EQUIPMENT_SEEDS.find(s => normalizeText(s.name) === normName);
+                    if (seedMatch) {
+                        finalId = `virtual-${seedMatch.name}`;
+                        foundMatch = true;
+                    }
+                }
+
+                // 4. Ghost Handling (Imported Item not found locally)
+                // If we still haven't found a match in our view, we must create a "Ghost" item
+                // so the user can see it selected.
+                if (!foundMatch) {
+                    console.log(`[Ghost] reviving item: ${ex.name} (${ex.exercise_id})`);
+                    // Create a temporary "Ghost" item for display
+                    const ghost: Equipment = {
+                        id: ex.exercise_id, // Keep original ID
+                        name: ex.name || 'Ejercicio Importado',
+                        category: ex.muscle_group || 'FREE_WEIGHT', // Fallback
+                        quantity: 1,
+                        condition: 'GOOD',
+                        gym_id: 'ghost',
+                        icon: ex.icon || '👻',
+                        metrics: {
+                            weight: ex.track_weight,
+                            reps: ex.track_reps,
+                            time: ex.track_time
+                        }
+                    };
+                    ghostItems.push(ghost);
+                    foundMatch = true;
+                }
+
+                if (foundMatch) {
+                    resolvedIDs.add(finalId);
+
+                    // Recover Config
+                    newConfigs.set(finalId, {
+                        track_weight: ex.track_weight,
+                        track_reps: ex.track_reps,
+                        track_time: ex.track_time,
+                        track_pr: ex.track_pr
+                    });
                 }
             });
 
-            console.log(`Resolved ${resolvedIDs.size} IDs from ${exercises.length} exercises via Name Matching`);
+            // Add Ghosts to View if needed
+            if (ghostItems.length > 0) {
+                setGlobalInventory(prev => {
+                    // Avoid dupes in globalInventory just in case
+                    const existingIds = new Set(prev.map(p => p.id));
+                    const uniqueGhosts = ghostItems.filter(g => !existingIds.has(g.id));
+                    return [...prev, ...uniqueGhosts];
+                });
+            }
+
+            console.log(`Resolved ${resolvedIDs.size} IDs from ${exercises.length} exercises via Match/Ghost logic`);
             setSelectedItems(resolvedIDs);
+            setRoutineConfigs(newConfigs);
 
         } catch (e) {
             console.error("Error resolving routine details for edit:", e);
-            // Fallback to raw IDs
+            // Fallback to raw IDs if fetch fails
             if (routine.equipment_ids) {
                 setSelectedItems(new Set(routine.equipment_ids));
             } else {
@@ -499,6 +540,7 @@ export const MyArsenal = () => {
         setEditingRoutineId(null);
         setRoutineName('');
         setSelectedItems(new Set());
+        setRoutineConfigs(new Map());
         setViewMode('MACHINES');
         setSearchTerm('');
     };
@@ -655,84 +697,106 @@ export const MyArsenal = () => {
         setIsSaving(true);
         try {
             const finalEquipmentIds: string[] = [];
+            const finalConfigPayload: any[] = [];
+
             const selectedArray = Array.from(selectedItems);
 
             for (const id of selectedArray) {
+                let finalId = id;
+                let finalName = '';
+
+                // Resolve Virtual IDs to Real Items
                 if (id.startsWith('virtual-')) {
                     const seedName = id.replace('virtual-', '');
+                    finalName = seedName;
                     const seedData = COMMON_EQUIPMENT_SEEDS.find(s => s.name === seedName);
 
                     if (seedData) {
                         const targetGymId = await resolveTargetGymId();
-                        // const gyms = await userService.getUserGyms(user.id);
-                        // const targetGymId = routeGymId || gyms[0]?.gym_id;
 
-                        // Scenario A: Local Routine With Gym -> Create Physical Item
                         if (targetGymId) {
-                            // Sanitize seed data to remove extra props like 'targetMuscle' that act as metadata
-                            const { targetMuscle, ...cleanSeed } = seedData as any;
-
-                            const newEq = await equipmentService.addEquipment({
-                                name: cleanSeed.name,
-                                category: cleanSeed.category,
-                                gym_id: targetGymId,
-                                quantity: 1,
-                                condition: 'GOOD'
-                            }, user.id);
-                            if (newEq) finalEquipmentIds.push(newEq.id);
-                        }
-                        // Scenario B: Global Routine or User-with-no-Gym -> Use Catalog ID
-                        // Scenario B: Global Routine or User-with-no-Gym -> Use "Global Equipment Instance"
-                        else {
-                            // Virtual Gym Strategy: Use "Personal Gym" ID instead of null
-                            // This ensures we satisfy the DB constraint even if users didn't run the SQL fix
+                            // Local Gym: Check if we have a match already (prevent duplicates)
+                            const existingLocal = inventory.find(i => normalizeText(i.name) === normalizeText(seedName));
+                            if (existingLocal) {
+                                finalId = existingLocal.id;
+                            } else {
+                                // Create new physical item
+                                const { targetMuscle, ...cleanSeed } = seedData as any;
+                                const newEq = await equipmentService.addEquipment({
+                                    name: cleanSeed.name,
+                                    category: cleanSeed.category,
+                                    gym_id: targetGymId,
+                                    quantity: 1,
+                                    condition: 'GOOD',
+                                    icon: (cleanSeed as any).icon // Persist icon
+                                }, user.id);
+                                if (newEq) finalId = newEq.id;
+                            }
+                        } else {
+                            // Personal/Global Fallback
                             const personalGymId = await userService.ensurePersonalGym(user.id);
-
-                            // 1. Try to find existing Personal Instance
-                            let { data: globalItem } = await supabase
-                                .from('gym_equipment')
-                                .select('id')
-                                .eq('gym_id', personalGymId) // Search in Personal Gym
-                                .eq('name', seedName)
-                                .maybeSingle();
+                            let { data: globalItem } = await supabase.from('gym_equipment').select('id').eq('gym_id', personalGymId).eq('name', seedName).maybeSingle();
 
                             if (!globalItem) {
-                                // 2. Create Instance in Personal Gym if missing
                                 const { targetMuscle, ...cleanSeed } = seedData as any;
                                 const newItem = await equipmentService.addEquipment({
                                     name: cleanSeed.name,
                                     category: cleanSeed.category,
-                                    gym_id: personalGymId, // Link to Personal Gym
+                                    gym_id: personalGymId,
                                     quantity: 1,
-                                    condition: 'GOOD'
+                                    condition: 'GOOD',
+                                    icon: (cleanSeed as any).icon
                                 }, user.id);
                                 globalItem = newItem;
                             }
-
-                            if (globalItem) {
-                                finalEquipmentIds.push(globalItem.id);
-                            } else {
-                                console.warn(`Could not create/find Global Item for ${seedName}`);
-                            }
+                            if (globalItem) finalId = globalItem.id;
                         }
                     }
                 } else {
-                    finalEquipmentIds.push(id);
+                    // It's a real ID or a Ghost ID
+                    const existingItem = inventory.find(i => i.id === id) || globalInventory.find(i => i.id === id);
+                    if (existingItem) {
+                        finalName = existingItem.name;
+                    }
                 }
+
+                finalEquipmentIds.push(finalId);
+
+                // Get Preserved Config
+                const config = routineConfigs.get(id) || {};
+                finalConfigPayload.push({
+                    id: finalId,
+                    name: finalName, // Send the Name!
+                    track_weight: config.track_weight !== undefined ? config.track_weight : true,
+                    track_reps: config.track_reps !== undefined ? config.track_reps : true,
+                    track_time: config.track_time || false,
+                    track_pr: config.track_pr || false
+                });
             }
 
             if (editingRoutineId) {
-                const result = await workoutService.updateRoutine(editingRoutineId, routineName, finalEquipmentIds);
+                // Now sends RICH Payload
+                const result = await workoutService.updateRoutine(editingRoutineId, routineName, finalConfigPayload);
                 if (result.error) throw result.error;
                 alert("¡Estrategia Actualizada!");
             } else {
                 const result = await workoutService.createRoutine(user.id, routineName, finalEquipmentIds, routeGymId);
+                // Note: createRoutine currently only takes IDs. 
+                // We should probably update it to take config too, but for now updateRoutine handles the rich payload.
+                // Or we can immediately call updateRoutine after create (hacky but works).
+
+                // Better: Check if createRoutine can take config or just do the 2-step
                 if (result.error) throw result.error;
+
+                // 2-Step for rich config on create:
+                await workoutService.updateRoutine(result.data.id, routineName, finalConfigPayload);
+
                 alert("¡Estrategia Guardada!");
             }
 
             setRoutineName('');
             setSelectedItems(new Set());
+            setRoutineConfigs(new Map());
             setEditingRoutineId(null);
             setViewMode('ROUTINES');
             initialize();
@@ -753,26 +817,12 @@ export const MyArsenal = () => {
         return true;
     });
 
-    const DEBUG_VERSION = "v2173-FIX-NAME-MATCH";
-
     if (loading) return <div className="h-screen flex items-center justify-center bg-black text-gym-primary"><Loader className="animate-spin" /></div>;
-
-    // DEBUG OVERLAY
-    const DebugOverlay = () => (
-        <div className="fixed bottom-4 right-4 z-[9999] bg-red-900/90 text-white p-2 text-[10px] font-mono border border-red-500 rounded shadow-xl pointer-events-none">
-            <div>VER: {DEBUG_VERSION}</div>
-            <div>Global Inv: {globalInventory.length}</div>
-            <div>User Inv: {inventory.length}</div>
-            <div>Selected: {selectedItems.size}</div>
-            <div>Effect. Inv: {effectiveInventory.length}</div>
-        </div>
-    );
 
     // RENDER ROUTINE LIST (Level 1)
     if (viewMode === 'ROUTINES') {
         return (
             <div className="min-h-screen bg-black text-white p-4 md:p-12 pb-24 font-sans selection:bg-gym-primary selection:text-black">
-                <DebugOverlay />
                 <div className="max-w-7xl mx-auto">
                     {/* Header - Compact */}
                     <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6 md:mb-12">

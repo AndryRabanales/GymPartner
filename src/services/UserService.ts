@@ -317,6 +317,7 @@ class UserService {
                 const exercisesToInsert = source.exercises.map((ex: any) => ({
                     routine_id: newRoutine.id,
                     exercise_id: ex.exercise_id,
+                    name: ex.name, // Copy the name snapshot!
                     order_index: ex.order_index,
                     track_weight: ex.track_weight,
                     track_reps: ex.track_reps,

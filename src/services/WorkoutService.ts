@@ -414,8 +414,19 @@ class WorkoutService {
         return { error };
     }
 
+    // Interface for exercise update
+    /* 
+    interface RoutineExerciseConfig {
+        id: string; // The equipment/exercise ID
+        track_weight?: boolean;
+        track_reps?: boolean;
+        target_sets?: number;
+        target_reps_text?: string;
+    } 
+    */
+
     // Update existing Routine
-    async updateRoutine(routineId: string, name: string, equipmentIds: string[]) {
+    async updateRoutine(routineId: string, name: string, equipmentData: string[] | any[]) {
         // 1. Update Name
         const { error: updateError } = await supabase
             .from('routines')
@@ -428,11 +439,39 @@ class WorkoutService {
         await supabase.from('routine_exercises').delete().eq('routine_id', routineId);
 
         // 3. Link new
-        if (equipmentIds.length > 0) {
-            await this.linkEquipmentToRoutine(routineId, equipmentIds);
+        if (equipmentData.length > 0) {
+            // Check if payload is rich objects or legacy strings
+            if (typeof equipmentData[0] === 'string') {
+                // Legacy string mode
+                await this.linkEquipmentToRoutine(routineId, equipmentData as string[]); // Fallback to defaults
+            } else {
+                // Rich config mode
+                await this.linkRichExercisesToRoutine(routineId, equipmentData);
+            }
         }
 
         return { success: true };
+    }
+
+    // NEW Helper for Rich Config
+    private async linkRichExercisesToRoutine(routineId: string, exercises: any[]) {
+        console.log('[linkRichExercisesToRoutine] Saving rich config for', exercises.length, 'items');
+
+        const exerciseRows = exercises.map((ex, idx) => ({
+            routine_id: routineId,
+            exercise_id: ex.id, // Use ID from config
+            name: ex.name || 'Ejercicio Personalizado', // Snapshot Name!
+            order_index: idx,
+            track_weight: ex.track_weight !== undefined ? ex.track_weight : true,
+            track_reps: ex.track_reps !== undefined ? ex.track_reps : true,
+            track_time: ex.track_time || false,
+            track_pr: ex.track_pr || false,
+            // Add other fields when DB supports them fully
+            // target_sets: ex.target_sets,
+        }));
+
+        const { error } = await supabase.from('routine_exercises').insert(exerciseRows);
+        if (error) console.error("Error saving rich exercises:", error);
     }
 
     // Helper to link equipment to routine
@@ -446,6 +485,7 @@ class WorkoutService {
         const exerciseRows = equipmentIds.map((eqId, idx) => ({
             routine_id: routineId,
             exercise_id: eqId,
+            name: 'Ejercicio', // Fallback name for legacy calls
             order_index: idx,
             track_weight: true,
             track_reps: true

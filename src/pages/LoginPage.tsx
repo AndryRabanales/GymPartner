@@ -46,6 +46,33 @@ export const LoginPage = () => {
                     <span className="text-lg">Entrar con Google</span>
                 </button>
 
+                {/* DEV BYPASS BUTTON */}
+                {import.meta.env.DEV && (
+                    <div className="mt-4 pt-4 border-t border-white/10">
+                        <button
+                            // @ts-ignore
+                            onClick={() => signInWithGoogle().catch(() => signInAsDev && signInAsDev())}
+                            // Better: Explicitly use our new function
+                            onClickCapture={(e) => {
+                                e.stopPropagation();
+                                const { signInAsDev } = useAuth(); // We can't use hook inside callback, assume it's available via closure if we refactor, but here we are inside component.
+                                // Actually, useAuth is at top level.
+                            }}
+                            // Correct implementation:
+                            onClick={() => {
+                                const auth = useAuth() as any;
+                                if (auth.signInAsDev) auth.signInAsDev();
+                            }}
+                            className="w-full bg-neutral-800 text-neutral-400 font-bold py-3 rounded-xl hover:bg-neutral-700 hover:text-white transition-all flex items-center justify-center gap-2 text-sm border border-neutral-700 border-dashed"
+                        >
+                            <span>🛠️ Modo Desarrollo (Localhost Bypass)</span>
+                        </button>
+                        <p className="text-[10px] text-neutral-500 mt-2">
+                            Usa esto si Supabase te redirige a producción.
+                        </p>
+                    </div>
+                )}
+
                 <p className="mt-6 text-xs text-neutral-600">
                     Al continuar, aceptas nuestros términos de servicio.
                 </p>

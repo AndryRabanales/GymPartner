@@ -8,6 +8,7 @@ interface AuthContextType {
     loading: boolean;
     signInWithGoogle: () => Promise<void>;
     signInWithEmail: (email: string) => Promise<void>;
+    signInAsDev: () => Promise<void>;
     signOut: () => Promise<void>;
 }
 
@@ -17,6 +18,7 @@ const AuthContext = createContext<AuthContextType>({
     loading: true,
     signInWithGoogle: async () => { },
     signInWithEmail: async () => { },
+    signInAsDev: async () => { },
     signOut: async () => { },
 });
 
@@ -60,15 +62,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (!isSupabaseConfigured() || !supabase) {
             throw new Error("Supabase no está configurado.");
         }
-        // Use window.location.origin but ensure it doesn't have trailing slash
-        const redirectUrl = window.location.origin; // e.g. https://gympartner...
 
-        await supabase.auth.signInWithOAuth({
+        // Force localhost in dev mode to ensure we request it explicitly
+        let redirectUrl = window.location.origin;
+        if (import.meta.env.DEV) {
+            redirectUrl = 'http://localhost:5173';
+        }
+
+        console.log("🔐 Initiating Google Auth with redirect:", redirectUrl);
+
+        const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: redirectUrl
+                redirectTo: redirectUrl,
+                skipBrowserRedirect: false // Ensure we redirect
             }
         });
+
+        if (error) console.error("Auth Error:", error);
     };
 
     const signInWithEmail = async (email: string) => {
@@ -86,14 +97,50 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
     };
 
+
+
+    const signInAsDev = async () => {
+        // MOCK USER for Localhost Testing (Bypass Supabase Redirect)
+        const mockUser: any = {
+            id: 'dev-user-local',
+            aud: 'authenticated',
+            role: 'authenticated',
+            email: 'dev@localhost.com',
+            email_confirmed_at: new Date().toISOString(),
+            phone: '',
+            user_metadata: {
+                full_name: 'Desarrollador (Local)',
+                avatar_url: 'https://cdn-icons-png.flaticon.com/512/2919/2919600.png', // Robot Icon
+            },
+            created_at: new Date().toISOString(),
+        };
+
+        const mockSession: any = {
+            access_token: 'mock-token',
+            token_type: 'bearer',
+            expires_in: 3600,
+            refresh_token: 'mock-refresh',
+            user: mockUser
+        };
+
+        setUser(mockUser);
+        setSession(mockSession);
+        console.log("🔓 Dev Access Granted: Logged in as 'dev-user-local'");
+    };
+
     const signOut = async () => {
+        if (session?.user?.id.startsWith('dev-')) {
+            setUser(null);
+            setSession(null);
+            return;
+        }
         if (supabase) {
             await supabase.auth.signOut();
         }
     };
 
     return (
-        <AuthContext.Provider value={{ user, session, loading, signInWithGoogle, signInWithEmail, signOut }}>
+        <AuthContext.Provider value={{ user, session, loading, signInWithGoogle, signInWithEmail, signInAsDev, signOut }}>
             {!loading && children}
         </AuthContext.Provider>
     );
