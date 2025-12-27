@@ -247,7 +247,10 @@ class UserService {
                     let finalIcon = eq?.icon;
                     if (!finalIcon && (eq?.name || re.name)) {
                         const targetName = eq?.name || re.name;
-                        const seed = COMMON_EQUIPMENT_SEEDS.find(s => s.name === targetName);
+                        // Helper for normalization
+                        const normalize = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+
+                        const seed = COMMON_EQUIPMENT_SEEDS.find(s => normalize(s.name) === normalize(targetName));
                         if (seed) finalIcon = seed.icon;
                     }
 
