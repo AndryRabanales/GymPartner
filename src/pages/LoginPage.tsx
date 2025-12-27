@@ -3,7 +3,7 @@ import { LogIn } from 'lucide-react';
 import { useState } from 'react';
 
 export const LoginPage = () => {
-    const { signInWithGoogle } = useAuth();
+    const { signInWithGoogle, signInAsDev } = useAuth();
     const [error, setError] = useState<string | null>(null);
 
     const handleGoogleLogin = async () => {
