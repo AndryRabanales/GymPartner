@@ -213,14 +213,28 @@ class UserService {
             // 3. Manual Join to get Exercise Details (Names)
             // We need to fetch from 'gym_equipment' table where id matches.
             const exerciseIds = routeExs?.map(re => re.exercise_id) || [];
-
             let enrichedExercises = routeExs || [];
 
             if (exerciseIds.length > 0) {
-                const { data: equipmentData } = await supabase
+                let equipmentData: any[] | null = null;
+
+                // Try fetching with icon (Schema V2)
+                const { data: dataV2, error: errorV2 } = await supabase
                     .from('gym_equipment')
                     .select('id, name, category, image_url, icon')
                     .in('id', exerciseIds);
+
+                if (!errorV2 && dataV2) {
+                    equipmentData = dataV2;
+                } else {
+                    console.warn('Failed to fetch icons (Schema V2), falling back to legacy schema:', errorV2?.message);
+                    // Fallback: Fetch without icon (Schema V1)
+                    const { data: dataV1 } = await supabase
+                        .from('gym_equipment')
+                        .select('id, name, category, image_url')
+                        .in('id', exerciseIds);
+                    equipmentData = dataV1;
+                }
 
                 // Map back
                 const equipmentMap = new Map(equipmentData?.map(e => [e.id, e]) || []);
