@@ -87,6 +87,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
             }
 
             // 3. Update Profile Data
+            console.log("Saving Profile with Routine ID:", selectedRoutineId); // DEBUG
             const updateResult = await userService.updateProfile(user.id, {
                 username: username,
                 avatar_url: newAvatarUrl,
@@ -97,9 +98,11 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
             });
 
             if (updateResult.success) {
+                console.log("Profile Update Success!");
                 onUpdate();
                 onClose();
             } else {
+                console.error("Profile Update Failed:", updateResult.error);
                 alert('Error al actualizar perfil: ' + updateResult.error);
             }
 

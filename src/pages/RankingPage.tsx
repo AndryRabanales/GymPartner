@@ -50,6 +50,11 @@ export const RankingPage = () => {
                     featured_routine_id: p.featured_routine_id,
                 }));
 
+                console.log("Ranking Real Users Mapped:", realUsers.map((u: any) => ({
+                    user: u.username,
+                    fid: u.featured_routine_id
+                }))); // DEBUG
+
                 // 3. HYBRID STRATEGY: Fill gaps with Bots
                 let allPlayers = [...realUsers];
                 if (allPlayers.length < 50) {

@@ -27,8 +27,12 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
     // Initial Load: Public Routines & Featured Logic
     useEffect(() => {
         const init = async () => {
+            console.log("PlayerProfileModal INIT for:", player.username, "ID:", player.id); // DEBUG
+            console.log("Featured Routine ID from Props:", player.featured_routine_id); // DEBUG
+
             // 1. Get List of Public Routines
             const decks = await userService.getUserPublicRoutines(player.id || '');
+            console.log("Public Decks Found:", decks); // DEBUG
             setPublicRoutines(decks);
 
             // 2. Decide which one to show first
@@ -135,8 +139,8 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
                                         key={r.id}
                                         onClick={() => loadRoutineDetails(r.id)}
                                         className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${selectedRoutine?.id === r.id
-                                                ? 'bg-gym-primary text-black border-gym-primary shadow-[0_0_10px_rgba(234,179,8,0.3)]'
-                                                : 'bg-neutral-800 text-neutral-400 border-neutral-700 hover:border-neutral-500'
+                                            ? 'bg-gym-primary text-black border-gym-primary shadow-[0_0_10px_rgba(234,179,8,0.3)]'
+                                            : 'bg-neutral-800 text-neutral-400 border-neutral-700 hover:border-neutral-500'
                                             }`}
                                     >
                                         {r.name}
