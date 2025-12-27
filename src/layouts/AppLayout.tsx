@@ -181,8 +181,8 @@ export const AppLayout = () => {
                                 <span className="font-black text-2xl text-white italic tracking-tighter uppercase">GYMPARTNER</span>
                             </div>
                             <p className="text-neutral-500 text-sm font-medium leading-relaxed max-w-sm mx-auto md:mx-0">
-                                La plataforma de inteligencia táctica para atletas que rechazan la mediocridad.
-                                Domina tu territorio, rastrea tus métricas y asciende en el rango.
+                                La plataforma de alto rendimiento para atletas comprometidos con su progreso.
+                                Gestiona tu entrenamiento, analiza tus métricas y alcanza tu máximo potencial.
                             </p>
                             <div className="flex gap-4 justify-center md:justify-start pt-2">
                                 {/* Fake Socials */}

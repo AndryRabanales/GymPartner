@@ -206,7 +206,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                     <div className="space-y-2 pt-2 border-t border-white/5">
                         <div className="flex items-center justify-between">
                             <label className="text-xs font-bold text-yellow-500 uppercase tracking-widest ml-1 flex items-center gap-2">
-                                <Swords size={14} /> MAZO DE BATALLA (Rutina)
+                                <Swords size={14} /> RUTINA DESTACADA (Signature Routine)
                             </label>
                             <Link to="/builder" onClick={onClose} className="text-[10px] font-bold text-neutral-500 hover:text-white uppercase flex items-center gap-1">
                                 <Trophy size={10} /> Crear Nueva
@@ -219,8 +219,8 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                                     key={routine.id}
                                     onClick={() => setSelectedRoutineId(routine.id === selectedRoutineId ? null : routine.id)}
                                     className={`w-full text-left p-3 rounded-lg border transition-all flex items-center justify-between group ${selectedRoutineId === routine.id
-                                            ? 'bg-yellow-500/10 border-yellow-500 text-white'
-                                            : 'bg-neutral-950 border-neutral-800 text-neutral-400 hover:border-neutral-600'
+                                        ? 'bg-yellow-500/10 border-yellow-500 text-white'
+                                        : 'bg-neutral-950 border-neutral-800 text-neutral-400 hover:border-neutral-600'
                                         }`}
                                 >
                                     <span className="font-bold text-sm truncate">{routine.name}</span>

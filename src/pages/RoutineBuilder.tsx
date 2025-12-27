@@ -169,7 +169,7 @@ export const RoutineBuilder = () => {
 
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                        <label className="text-neutral-500 text-sm font-bold uppercase tracking-wider">Secuencia de Batalla</label>
+                        <label className="text-neutral-500 text-sm font-bold uppercase tracking-wider">Secuencia de Ejercicios</label>
                         <button
                             onClick={() => setShowSelector(true)}
                             className="text-gym-primary text-sm font-bold hover:underline flex items-center gap-1"
@@ -280,7 +280,7 @@ export const RoutineBuilder = () => {
                     className="w-full max-w-2xl mx-auto bg-gym-primary text-black font-black italic text-lg py-4 rounded-xl shadow-lg hover:brightness-110 transition-all flex items-center justify-center gap-2"
                 >
                     <Save size={20} />
-                    GUARDAR RUTINA DE GUERRA
+                    GUARDAR RUTINA MAESTRA
                 </button>
             </div>
 
@@ -288,7 +288,7 @@ export const RoutineBuilder = () => {
             {showSelector && (
                 <div className="fixed inset-0 bg-black/90 z-50 p-6 flex flex-col">
                     <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-xl font-bold text-white">Catálogo de Armas</h2>
+                        <h2 className="text-xl font-bold text-white">Catálogo de Ejercicios</h2>
                         <button onClick={() => setShowSelector(false)} className="text-neutral-500">Cerrar</button>
                     </div>
                     <div className="grid grid-cols-1 gap-3 overflow-y-auto">

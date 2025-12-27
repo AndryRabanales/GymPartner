@@ -199,9 +199,9 @@ export const RankingPage = () => {
                                 </h3>
                                 {/* Battle Deck Icon */}
                                 {player.featured_routine_id && (
-                                    <div className="bg-users-500/10 border border-yellow-500/30 rounded px-1.5 py-0.5 flex items-center gap-1" title="Mazo de Batalla Activo">
+                                    <div className="bg-users-500/10 border border-yellow-500/30 rounded px-1.5 py-0.5 flex items-center gap-1" title="Rutina Destacada Activa">
                                         <Swords size={10} className="text-yellow-500" />
-                                        <span className="text-[9px] font-bold text-yellow-500 tracking-wider hidden sm:block">DECK</span>
+                                        <span className="text-[9px] font-bold text-yellow-500 tracking-wider hidden sm:block">RUTINA</span>
                                     </div>
                                 )}
                             </div>

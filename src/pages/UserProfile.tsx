@@ -264,7 +264,7 @@ export const UserProfile = () => {
                             <MapPin size={32} className="text-blue-500 hidden md:block" />
                         </div>
                         <h3 className="text-sm md:text-xl font-bold text-white mb-2 uppercase italic tracking-tighter">La Sede</h3>
-                        <p className="text-[10px] md:text-sm text-neutral-500 leading-tight">Localiza tu gimnasio en el mapa y reclama tu territorio base.</p>
+                        <p className="text-[10px] md:text-sm text-neutral-500 leading-tight">Localiza tu gimnasio en el mapa y establece tu base de entrenamiento.</p>
                     </div>
                     <div className="bg-neutral-950 p-4 md:p-10 text-center hover:bg-neutral-900 transition-colors group cursor-default">
                         <div className="bg-purple-500/10 w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl flex items-center justify-center mx-auto mb-4 md:mb-6 group-hover:bg-purple-500/20 transition-colors">
@@ -279,7 +279,7 @@ export const UserProfile = () => {
                             <Swords size={24} className="text-green-500 md:hidden" />
                             <Swords size={32} className="text-green-500 hidden md:block" />
                         </div>
-                        <h3 className="text-sm md:text-xl font-bold text-white mb-2 uppercase italic tracking-tighter">Batalla</h3>
+                        <h3 className="text-sm md:text-xl font-bold text-white mb-2 uppercase italic tracking-tighter">Entrenamiento</h3>
                         <p className="text-[10px] md:text-sm text-neutral-500 leading-tight">Tracker de entrenamiento de guerra. Series, reps y progreso real.</p>
                     </div>
                 </div>
@@ -683,7 +683,7 @@ export const UserProfile = () => {
                 >
                     <UserPlus size={28} className="group-hover:rotate-12 transition-transform duration-300" strokeWidth={2.5} />
                     <div className="flex flex-col items-start leading-none">
-                        <span className="text-sm md:text-base uppercase tracking-wider font-black">RECLUTAR</span>
+                        <span className="text-sm md:text-base uppercase tracking-wider font-black">INVITAR AMIGOS</span>
                         <span className="text-[10px] md:text-xs font-bold text-black/70 uppercase tracking-tight">Gana +250 XP</span>
                     </div>
                 </button>
