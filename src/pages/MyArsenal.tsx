@@ -427,15 +427,71 @@ export const MyArsenal = () => {
         });
     };
 
-    const handleEditRoutine = (routine: any) => {
+    const handleEditRoutine = async (routine: any) => {
         console.log('Editing Routine:', routine.name, 'IDs:', routine.equipment_ids);
         setEditingRoutineId(routine.id);
         setRoutineName(routine.name);
-        if (routine.equipment_ids) {
-            setSelectedItems(new Set(routine.equipment_ids));
-        } else {
-            setSelectedItems(new Set());
+
+        // Fetch Full details to get Names
+        try {
+            const details = await userService.getRoutineDetails(routine.id);
+            const exercises = details?.exercises || [];
+
+            const resolvedIDs = new Set<string>();
+
+            // Match each exercise to our Inventory (Effective)
+            // We reconstruct effective inventory logic here briefly or just iterate standard lists
+            // Since we can't access 'effectiveInventory' easily due to scope/render timing,
+            // we iterate the sources:
+
+            exercises.forEach((ex: any) => {
+                const normName = normalizeText(ex.name);
+
+                // 1. Check Custom Inventory
+                const customMatch = inventory.find(i => normalizeText(i.name) === normName);
+                if (customMatch) {
+                    resolvedIDs.add(customMatch.id);
+                    return;
+                }
+
+                // 2. Check Global Inventory (Real UUIDs)
+                const globalMatch = globalInventory.find(i => normalizeText(i.name) === normName);
+                if (globalMatch) {
+                    resolvedIDs.add(globalMatch.id);
+                    return;
+                }
+
+                // 3. Check Seeds (Virtual IDs)
+                const seedMatch = COMMON_EQUIPMENT_SEEDS.find(s => normalizeText(s.name) === normName);
+                if (seedMatch) {
+                    resolvedIDs.add(`virtual-${seedMatch.name}`);
+                    return;
+                }
+
+                // 4. Fallback: If we have the original ID and it's a UUID, maybe it matches directly?
+                // (Only if it was fetched in globalInventory/custom)
+                if (routine.equipment_ids && routine.equipment_ids.includes(ex.exercise_id)) {
+                    // Check if this ID exists in our known lists
+                    const existsReal = inventory.some(i => i.id === ex.exercise_id) || globalInventory.some(g => g.id === ex.exercise_id);
+                    if (existsReal) {
+                        resolvedIDs.add(ex.exercise_id);
+                    }
+                }
+            });
+
+            console.log(`Resolved ${resolvedIDs.size} IDs from ${exercises.length} exercises via Name Matching`);
+            setSelectedItems(resolvedIDs);
+
+        } catch (e) {
+            console.error("Error resolving routine details for edit:", e);
+            // Fallback to raw IDs
+            if (routine.equipment_ids) {
+                setSelectedItems(new Set(routine.equipment_ids));
+            } else {
+                setSelectedItems(new Set());
+            }
         }
+
         setViewMode('MACHINES');
     };
 
