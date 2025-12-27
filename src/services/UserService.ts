@@ -229,12 +229,24 @@ class UserService {
                     equipmentData = dataV2;
                 } else {
                     console.warn('Failed to fetch icons (Schema V2), falling back to legacy schema:', errorV2?.message);
-                    // Fallback: Fetch without icon (Schema V1)
-                    const { data: dataV1 } = await supabase
+
+                    // Fallback Level 1: Fetch without icon (Schema V1 - with image_url)
+                    const { data: dataV1, error: errorV1 } = await supabase
                         .from('gym_equipment')
                         .select('id, name, category, image_url')
                         .in('id', exerciseIds);
-                    equipmentData = dataV1;
+
+                    if (!errorV1 && dataV1) {
+                        equipmentData = dataV1;
+                    } else {
+                        console.warn('Failed to fetch images (Schema V1), falling back to primitive schema:', errorV1?.message);
+                        // Fallback Level 2 (Doomsday): Fetch only base fields (Schema V0)
+                        const { data: dataV0 } = await supabase
+                            .from('gym_equipment')
+                            .select('id, name, category')
+                            .in('id', exerciseIds);
+                        equipmentData = dataV0;
+                    }
                 }
 
                 // Map back
