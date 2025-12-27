@@ -1,7 +1,6 @@
 import React from 'react';
-import { X, Copy, Check, Swords, Loader, Trophy } from 'lucide-react';
+import { X, Swords, Loader, Trophy } from 'lucide-react';
 import { EQUIPMENT_CATEGORIES, COMMON_EQUIPMENT_SEEDS } from '../../services/GymEquipmentService';
-import { useAuth } from '../../context/AuthContext';
 
 interface RoutineViewModalProps {
     routine: any;
