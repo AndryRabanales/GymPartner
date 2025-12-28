@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { X, Upload, Image as ImageIcon, Film, Check } from 'lucide-react';
 import { socialService } from '../../services/SocialService';
 import { useAuth } from '../../context/AuthContext';
+import { compressVideoToSize, needsCompression } from '../../utils/videoCompression';
 
 interface UploadModalProps {
     onClose: () => void;
@@ -16,6 +17,8 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
     const [caption, setCaption] = useState('');
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
     const [uploadProgress, setUploadProgress] = useState(0);
+    const [compressionProgress, setCompressionProgress] = useState(0);
+    const [isCompressing, setIsCompressing] = useState(false);
     const [loadProgress, setLoadProgress] = useState(0);
     const [videoMetadata, setVideoMetadata] = useState<{
         size: string;
@@ -231,11 +234,34 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
         setUploadProgress(0);
 
         try {
-            // Check if any video is too large and warn user
-            const largeVideos = files.filter(f => f.type.startsWith('video') && f.size > REELS_SPECS.MAX_FILE_SIZE);
-            if (largeVideos.length > 0) {
-                const sizeMB = (largeVideos[0].size / (1024 * 1024)).toFixed(2);
-                console.warn(`⚠️ Large video detected: ${sizeMB}MB - uploading as-is`);
+            // Compress large videos before uploading
+            const processedFiles: File[] = [];
+
+            for (const file of files) {
+                if (file.type.startsWith('video') && needsCompression(file, 50)) {
+                    const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                    console.log(`🗜️ Compressing large video: ${sizeMB}MB`);
+
+                    setIsCompressing(true);
+                    setCompressionProgress(0);
+
+                    try {
+                        const compressed = await compressVideoToSize(file, 45, (progress) => {
+                            setCompressionProgress(progress);
+                        });
+                        processedFiles.push(compressed);
+                    } catch (error) {
+                        console.error('Compression failed:', error);
+                        alert('Error al comprimir el video. Intenta con un archivo más pequeño.');
+                        setStep('preview');
+                        setIsCompressing(false);
+                        return;
+                    }
+
+                    setIsCompressing(false);
+                } else {
+                    processedFiles.push(file);
+                }
             }
 
             // Simulate progress (since Supabase doesn't provide real progress)
@@ -246,10 +272,10 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
                 });
             }, 300);
 
-            // Upload files directly without compression
-            const result = files.length > 1
-                ? await socialService.createPostWithMultipleMedia(user.id, files, caption)
-                : await socialService.createPost(user.id, files[0], files[0].type.startsWith('video') ? 'video' : 'image', caption);
+            // Upload files
+            const result = processedFiles.length > 1
+                ? await socialService.createPostWithMultipleMedia(user.id, processedFiles, caption)
+                : await socialService.createPost(user.id, processedFiles[0], processedFiles[0].type.startsWith('video') ? 'video' : 'image', caption);
 
             clearInterval(progressInterval);
             setUploadProgress(100);
@@ -271,6 +297,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
             console.error('Upload error:', error);
             setStep('preview');
             setUploadProgress(0);
+            setIsCompressing(false);
         }
     };
 
@@ -465,22 +492,45 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
 
                     {step === 'uploading' && (
                         <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
-                            <div className="w-20 h-20 rounded-full bg-blue-500/20 flex items-center justify-center mb-6 relative">
-                                <div className="absolute inset-0 rounded-full border-4 border-blue-500/30"></div>
-                                <div
-                                    className="absolute inset-0 rounded-full border-4 border-blue-500 border-t-transparent animate-spin"
-                                    style={{ borderTopColor: 'transparent' }}
-                                ></div>
-                                <span className="text-blue-500 font-black text-lg z-10">{uploadProgress}%</span>
-                            </div>
-                            <h3 className="text-white font-bold text-lg mb-2">Subiendo...</h3>
-                            <p className="text-neutral-400 text-sm mb-4">Compartiendo tu contenido</p>
-                            <div className="w-full max-w-xs bg-neutral-800 rounded-full h-2 overflow-hidden">
-                                <div
-                                    className="h-full bg-gradient-to-r from-blue-500 to-blue-400 transition-all duration-300"
-                                    style={{ width: `${uploadProgress}% ` }}
-                                ></div>
-                            </div>
+                            {isCompressing ? (
+                                <>
+                                    <div className="w-20 h-20 rounded-full bg-yellow-500/20 flex items-center justify-center mb-6 relative">
+                                        <div className="absolute inset-0 rounded-full border-4 border-yellow-500/30"></div>
+                                        <div
+                                            className="absolute inset-0 rounded-full border-4 border-yellow-500 border-t-transparent animate-spin"
+                                            style={{ borderTopColor: 'transparent' }}
+                                        ></div>
+                                        <span className="text-yellow-500 font-black text-lg z-10">{compressionProgress}%</span>
+                                    </div>
+                                    <h3 className="text-white font-bold text-lg mb-2">Comprimiendo video...</h3>
+                                    <p className="text-neutral-400 text-sm mb-4">Optimizando calidad para 50MB</p>
+                                    <div className="w-full max-w-xs bg-neutral-800 rounded-full h-2 overflow-hidden">
+                                        <div
+                                            className="h-full bg-gradient-to-r from-yellow-500 to-yellow-400 transition-all duration-300"
+                                            style={{ width: `${compressionProgress}%` }}
+                                        ></div>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="w-20 h-20 rounded-full bg-blue-500/20 flex items-center justify-center mb-6 relative">
+                                        <div className="absolute inset-0 rounded-full border-4 border-blue-500/30"></div>
+                                        <div
+                                            className="absolute inset-0 rounded-full border-4 border-blue-500 border-t-transparent animate-spin"
+                                            style={{ borderTopColor: 'transparent' }}
+                                        ></div>
+                                        <span className="text-blue-500 font-black text-lg z-10">{uploadProgress}%</span>
+                                    </div>
+                                    <h3 className="text-white font-bold text-lg mb-2">Subiendo...</h3>
+                                    <p className="text-neutral-400 text-sm mb-4">Compartiendo tu contenido</p>
+                                    <div className="w-full max-w-xs bg-neutral-800 rounded-full h-2 overflow-hidden">
+                                        <div
+                                            className="h-full bg-gradient-to-r from-blue-500 to-blue-400 transition-all duration-300"
+                                            style={{ width: `${uploadProgress}% ` }}
+                                        ></div>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     )}
 
