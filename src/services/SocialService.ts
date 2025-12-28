@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { userService } from './UserService';
 
 // Types representing the DB Schema
 export interface MediaItem {
@@ -85,6 +86,9 @@ class SocialService {
 
             if (dbError) throw dbError;
 
+            // 🎉 Award XP for social engagement
+            await userService.addXP(userId, 10);
+
             return { success: true };
         } catch (error: any) {
             console.error('Error creating post:', error);
@@ -164,6 +168,9 @@ class SocialService {
 
             if (mediaError) throw mediaError;
 
+            // 🎉 Award XP for social engagement
+            await userService.addXP(userId, 10);
+
             return { success: true };
         } catch (error: any) {
             console.error('Error creating multi-media post:', error);
@@ -194,6 +201,9 @@ class SocialService {
                 });
 
             if (dbError) throw dbError;
+
+            // 🎉 Award XP for social engagement
+            await userService.addXP(userId, 10);
 
             return { success: true };
         } catch (error: any) {

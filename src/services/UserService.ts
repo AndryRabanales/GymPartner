@@ -163,6 +163,53 @@ class UserService {
             return { success: false, error: error.message };
         }
     }
+
+    /**
+     * Add XP to a user
+     * @param userId The user ID to add XP to
+     * @param amount The amount of XP to add
+     */
+    async addXP(userId: string, amount: number): Promise<{ success: boolean; new_xp?: number; error?: string }> {
+        try {
+            // 1. Try connecting via RPC (Atomic)
+            const { error: rpcError } = await supabase.rpc('increment_xp', {
+                u_id: userId,
+                amount: amount
+            });
+
+            if (!rpcError) {
+                return { success: true };
+            }
+
+            console.warn('[UserService] RPC increment_xp failed, using manual update:', rpcError.message);
+
+            // 2. Fallback: Manual Read-Modify-Write
+            const { data: profile, error: fetchError } = await supabase
+                .from('profiles')
+                .select('xp')
+                .eq('id', userId)
+                .single();
+
+            if (fetchError) throw fetchError;
+
+            const currentXp = profile?.xp || 0;
+            const newXp = currentXp + amount;
+
+            const { error: updateError } = await supabase
+                .from('profiles')
+                .update({ xp: newXp })
+                .eq('id', userId);
+
+            if (updateError) throw updateError;
+
+            return { success: true, new_xp: newXp };
+
+        } catch (error: any) {
+            console.error('Error adding XP:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
     // Get all gyms in the system (for the global map)
     async getAllGyms(): Promise<any[]> {
         const { data, error } = await supabase
