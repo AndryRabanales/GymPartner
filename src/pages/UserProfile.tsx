@@ -496,20 +496,21 @@ export const UserProfile = () => {
                             </div>
 
                             {/* SOCIAL STATS ROW (Unified Design) */}
-                            <div className="flex items-center justify-center sm:justify-start gap-6 sm:gap-8 border-t border-white/5 pt-3 mt-1 w-full sm:w-auto">
-                                <div className="flex flex-col items-center sm:items-start group cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setShowSocialProfile(true)}>
-                                    <span className="font-black text-xl text-white leading-none mb-0.5">{socialStats.followersCount}</span>
-                                    <span className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Seguidores</span>
+                            {/* SOCIAL STATS ROW (Glassmorphic) */}
+                            <div className="flex items-center justify-center gap-8 bg-black/60 backdrop-blur-md rounded-2xl py-3 px-6 border border-white/10 shadow-xl mt-4 w-full sm:w-fit mx-auto sm:mx-0">
+                                <div className="flex flex-col items-center group cursor-pointer hover:scale-110 transition-transform" onClick={() => setShowSocialProfile(true)}>
+                                    <span className="font-black text-xl text-white leading-none mb-1 drop-shadow-md">{socialStats.followersCount}</span>
+                                    <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest text-shadow-sm">Seguidores</span>
                                 </div>
-                                <div className="w-px h-6 bg-white/10"></div>
-                                <div className="flex flex-col items-center sm:items-start group cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setShowSocialProfile(true)}>
-                                    <span className="font-black text-xl text-white leading-none mb-0.5">{socialStats.followingCount}</span>
-                                    <span className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Siguiendo</span>
+                                <div className="w-px h-8 bg-white/20"></div>
+                                <div className="flex flex-col items-center group cursor-pointer hover:scale-110 transition-transform" onClick={() => setShowSocialProfile(true)}>
+                                    <span className="font-black text-xl text-white leading-none mb-1 drop-shadow-md">{socialStats.followingCount}</span>
+                                    <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest text-shadow-sm">Siguiendo</span>
                                 </div>
-                                <div className="w-px h-6 bg-white/10"></div>
-                                <div className="flex flex-col items-center sm:items-start group cursor-pointer hover:opacity-80 transition-opacity">
-                                    <span className="font-black text-xl text-white leading-none mb-0.5 text-red-500">{socialStats.totalLikes}</span>
-                                    <span className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Likes</span>
+                                <div className="w-px h-8 bg-white/20"></div>
+                                <div className="flex flex-col items-center group cursor-pointer hover:scale-110 transition-transform">
+                                    <span className="font-black text-xl text-white leading-none mb-1 text-red-500 drop-shadow-md">{socialStats.totalLikes}</span>
+                                    <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest text-shadow-sm">Likes</span>
                                 </div>
                             </div>
                         </div>
