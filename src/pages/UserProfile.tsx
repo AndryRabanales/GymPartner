@@ -461,7 +461,7 @@ export const UserProfile = () => {
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div className="space-y-0 text-center sm:text-left">
                             {/* Name: Golden Shock (High Visibility & Energy) */}
-                            <h1 className="text-xl sm:text-4xl font-black text-yellow-400 tracking-tighter uppercase italic drop-shadow-[0_0_20px_rgba(255,255,255,0.4)] animate-pulse leading-none mb-1">
+                            <h1 className="text-3xl sm:text-4xl font-black text-yellow-400 tracking-tighter uppercase italic drop-shadow-[0_0_20px_rgba(255,255,255,0.4)] animate-pulse leading-none mb-1">
                                 {profile?.username || user.user_metadata.full_name}
                             </h1>
 
@@ -521,7 +521,7 @@ export const UserProfile = () => {
             </div>
 
             {/* Quick Actions / Passport Grid */}
-            <div className="grid grid-cols-4 gap-2 md:gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-4">
                 <button
                     onClick={() => setShowSocialProfile(true)}
                     className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-yellow-500/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md cursor-pointer"
