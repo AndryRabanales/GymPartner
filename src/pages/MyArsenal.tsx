@@ -224,8 +224,8 @@ export const MyArsenal = () => {
 
             // NEW: Fetch Global Exercises to match cloned routine IDs
             const { data: globalExs } = await supabase
-                .from('exercises')
-                .select('id, name, target_muscle, icon') // Ensure icon is fetched
+                .from('gym_equipment')
+                .select('id, name, category, icon, image_url')
                 .limit(200);
 
             if (globalExs) {
