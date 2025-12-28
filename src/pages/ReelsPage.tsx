@@ -175,7 +175,7 @@ export const ReelsPage = () => {
                 avatar_url: profile.avatar_url,
                 xp: profile.xp || 0,
                 rank: rank,
-                gym_name: profile.home_gym?.name,
+                gym_name: Array.isArray(profile.home_gym) ? profile.home_gym[0]?.name : (profile.home_gym as any)?.name,
                 banner_url: profile.custom_settings?.banner_url,
                 featured_routine_id: profile.featured_routine_id
             };
@@ -208,13 +208,13 @@ export const ReelsPage = () => {
 
                     {/* VIDEO CONTAINER */}
                     <div
-                        className="relative w-[96%] h-[94%] md:w-full md:h-full md:max-h-[85vh] rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10"
+                        className="relative w-[92%] h-[90%] md:w-full md:h-full md:max-h-[85vh] rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10 bg-black"
                         onDoubleClick={(e) => handleDoubleTap(post, e)}
                     >
                         <video
                             ref={el => { if (el) videoRefs.current[post.id] = el }}
                             src={post.media_url}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-contain"
                             playsInline
                             loop
                             muted={muted}
