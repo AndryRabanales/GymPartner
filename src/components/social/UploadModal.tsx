@@ -14,11 +14,82 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
     const [files, setFiles] = useState<File[]>([]);
     const [previewUrls, setPreviewUrls] = useState<string[]>([]);
     const [caption, setCaption] = useState('');
+    const [validationErrors, setValidationErrors] = useState<string[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Official Reels Specifications
+    const REELS_SPECS = {
+        ASPECT_RATIO: 9 / 16,
+        MIN_RESOLUTION: { width: 720, height: 1280 },
+        RECOMMENDED_RESOLUTION: { width: 1080, height: 1920 },
+        MIN_DURATION: 3, // seconds
+        MAX_DURATION: 90, // seconds
+        MAX_FILE_SIZE: 500 * 1024 * 1024, // 500MB
+        ALLOWED_FORMATS: ['video/mp4', 'video/quicktime'], // MP4 and MOV
+        MAX_CAPTION_LENGTH: 2200
+    };
+
+    const validateVideoFile = async (file: File): Promise<{ valid: boolean; errors: string[] }> => {
+        const errors: string[] = [];
+
+        // Format validation
+        if (!REELS_SPECS.ALLOWED_FORMATS.includes(file.type)) {
+            errors.push(`Formato no válido. Solo se aceptan MP4 y MOV.`);
+            return { valid: false, errors };
+        }
+
+        // Size validation
+        if (file.size > REELS_SPECS.MAX_FILE_SIZE) {
+            const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+            errors.push(`Archivo muy pesado (${sizeMB}MB). Máximo: 500MB.`);
+        }
+
+        // Video metadata validation
+        return new Promise((resolve) => {
+            const video = document.createElement('video');
+            video.preload = 'metadata';
+
+            video.onloadedmetadata = () => {
+                window.URL.revokeObjectURL(video.src);
+
+                // Duration validation
+                if (video.duration < REELS_SPECS.MIN_DURATION) {
+                    errors.push(`Video muy corto (${video.duration.toFixed(1)}s). Mínimo: 3 segundos.`);
+                }
+                if (video.duration > REELS_SPECS.MAX_DURATION) {
+                    errors.push(`Video muy largo (${Math.floor(video.duration)}s). Máximo: 90 segundos.`);
+                }
+
+                // Resolution validation
+                if (video.videoWidth < REELS_SPECS.MIN_RESOLUTION.width ||
+                    video.videoHeight < REELS_SPECS.MIN_RESOLUTION.height) {
+                    errors.push(`Resolución muy baja (${video.videoWidth}x${video.videoHeight}). Mínimo: 720x1280.`);
+                }
+
+                // Aspect ratio validation (9:16 with 5% tolerance)
+                const aspectRatio = video.videoWidth / video.videoHeight;
+                const targetRatio = REELS_SPECS.ASPECT_RATIO;
+                const tolerance = 0.05;
+                if (Math.abs(aspectRatio - targetRatio) > tolerance) {
+                    errors.push(`Aspecto incorrecto (${aspectRatio.toFixed(2)}). Requerido: 9:16 (vertical).`);
+                }
+
+                resolve({ valid: errors.length === 0, errors });
+            };
+
+            video.onerror = () => {
+                errors.push('Error al leer el video. Intenta con otro archivo.');
+                resolve({ valid: false, errors });
+            };
+
+            video.src = URL.createObjectURL(file);
+        });
+    };
+
+    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
             const selectedFiles = Array.from(e.target.files);
+            setValidationErrors([]);
 
             // Validate max 10 files
             if (selectedFiles.length > 10) {
@@ -26,19 +97,39 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
                 return;
             }
 
-            // Validate all files are images or videos
-            const validFiles = selectedFiles.filter(f => {
-                const isValid = f.type.startsWith('video/') || f.type.startsWith('image/');
-                if (!isValid) {
-                    alert(`${f.name} no es una imagen o video válido.`);
-                }
-                return isValid;
-            });
+            // Separate images and videos
+            const images = selectedFiles.filter(f => f.type.startsWith('image/'));
+            const videos = selectedFiles.filter(f => f.type.startsWith('video/'));
+            const invalid = selectedFiles.filter(f => !f.type.startsWith('image/') && !f.type.startsWith('video/'));
 
-            // Size Validation (500MB each)
-            const oversized = validFiles.filter(f => f.size > 500 * 1024 * 1024);
-            if (oversized.length > 0) {
-                alert(`Archivos demasiado grandes: ${oversized.map(f => f.name).join(', ')}. Máximo 500MB cada uno.`);
+            if (invalid.length > 0) {
+                alert(`Archivos no válidos: ${invalid.map(f => f.name).join(', ')}`);
+                return;
+            }
+
+            // Validate videos against Reels specs
+            const allErrors: string[] = [];
+            const validatedVideos: File[] = [];
+
+            for (const video of videos) {
+                const { valid, errors } = await validateVideoFile(video);
+                if (valid) {
+                    validatedVideos.push(video);
+                } else {
+                    allErrors.push(`${video.name}: ${errors.join(', ')}`);
+                }
+            }
+
+            // Show validation errors if any
+            if (allErrors.length > 0) {
+                setValidationErrors(allErrors);
+                // Still allow proceeding with valid files
+            }
+
+            const validFiles = [...images, ...validatedVideos];
+
+            if (validFiles.length === 0) {
+                alert('No hay archivos válidos para subir.');
                 return;
             }
 
@@ -108,6 +199,9 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
                                 <Upload size={40} className="text-white relative z-10" />
                             </div>
                             <h3 className="text-xl font-bold text-white mb-2">Arrastra fotos o videos aquí</h3>
+                            <p className="text-neutral-500 text-xs mb-4 text-center max-w-sm">
+                                Videos: 9:16 (vertical), 1080x1920px, 3-90s, MP4/MOV, máx 500MB
+                            </p>
                             <button
                                 onClick={() => fileInputRef.current?.click()}
                                 className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg text-sm transition-colors"
@@ -118,10 +212,22 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
                                 type="file"
                                 ref={fileInputRef}
                                 className="hidden"
-                                accept="image/*,video/*"
+                                accept="image/*,video/mp4,video/quicktime"
                                 multiple
                                 onChange={handleFileSelect}
                             />
+
+                            {/* Validation Errors */}
+                            {validationErrors.length > 0 && (
+                                <div className="mt-6 bg-red-500/10 border border-red-500/30 rounded-lg p-4 max-w-md">
+                                    <p className="text-red-400 font-bold text-sm mb-2">⚠️ Errores de validación:</p>
+                                    <ul className="text-red-300 text-xs space-y-1">
+                                        {validationErrors.map((error, i) => (
+                                            <li key={i}>• {error}</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -169,12 +275,29 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
                                         <span className="text-white font-bold text-sm truncate">{user?.user_metadata?.full_name || 'Usuario'}</span>
                                     </div>
 
-                                    <textarea
-                                        value={caption}
-                                        onChange={(e) => setCaption(e.target.value)}
-                                        placeholder="Escribe un pie de foto..."
-                                        className="w-full bg-transparent text-white text-base md:text-sm resize-none focus:outline-none placeholder:text-neutral-500 min-h-[100px] mb-4 flex-1 md:flex-none"
-                                    />
+                                    <div className="flex-1 md:flex-none">
+                                        <textarea
+                                            value={caption}
+                                            onChange={(e) => {
+                                                const newValue = e.target.value;
+                                                if (newValue.length <= REELS_SPECS.MAX_CAPTION_LENGTH) {
+                                                    setCaption(newValue);
+                                                }
+                                            }}
+                                            placeholder="Escribe un pie de foto..."
+                                            className="w-full bg-transparent text-white text-base md:text-sm resize-none focus:outline-none placeholder:text-neutral-500 min-h-[100px] mb-2"
+                                            maxLength={REELS_SPECS.MAX_CAPTION_LENGTH}
+                                        />
+                                        <div className="flex justify-between items-center mb-4">
+                                            <span className="text-xs text-neutral-500">Máx. {REELS_SPECS.MAX_CAPTION_LENGTH} caracteres</span>
+                                            <span className={`text-xs font-mono ${caption.length > REELS_SPECS.MAX_CAPTION_LENGTH * 0.9
+                                                    ? 'text-yellow-500'
+                                                    : 'text-neutral-500'
+                                                }`}>
+                                                {caption.length}/{REELS_SPECS.MAX_CAPTION_LENGTH}
+                                            </span>
+                                        </div>
+                                    </div>
 
                                     <div>
                                         <button
