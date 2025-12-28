@@ -171,6 +171,37 @@ class SocialService {
         }
     }
 
+    /**
+     * Creates a post with an external URL (e.g., from Cloudinary)
+     * Used when video is uploaded to external service
+     */
+    async createPostWithExternalUrl(
+        userId: string,
+        mediaUrl: string,
+        type: 'image' | 'video',
+        caption?: string,
+        linkedRoutineId?: string
+    ): Promise<{ success: boolean; error?: string }> {
+        try {
+            const { error: dbError } = await supabase
+                .from('posts')
+                .insert({
+                    user_id: userId,
+                    type: type,
+                    media_url: mediaUrl,
+                    caption: caption,
+                    linked_routine_id: linkedRoutineId
+                });
+
+            if (dbError) throw dbError;
+
+            return { success: true };
+        } catch (error: any) {
+            console.error('Error creating post with external URL:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
     // ============================================================================
     // 📺 READ FEEDS (Profile & Main)
     // ============================================================================

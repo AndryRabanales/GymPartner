@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { X, Upload, Image as ImageIcon, Film, Check } from 'lucide-react';
 import { socialService } from '../../services/SocialService';
 import { useAuth } from '../../context/AuthContext';
+import { cloudinaryService } from '../../services/CloudinaryService';
 
 interface UploadModalProps {
     onClose: () => void;
@@ -227,49 +228,84 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
     const handleUpload = async () => {
         if (!user || files.length === 0) return;
 
-        // Check for videos over 50MB and reject them
-        const oversizedVideos = files.filter(f => f.type.startsWith('video') && f.size > REELS_SPECS.MAX_FILE_SIZE);
-        if (oversizedVideos.length > 0) {
-            const sizeMB = (oversizedVideos[0].size / (1024 * 1024)).toFixed(2);
-            alert(`❌ Video muy grande (${sizeMB}MB)\n\n` +
-                `El límite es 50MB.\n\n` +
-                `Sugerencias:\n` +
-                `• Recorta el video a menos de 90 segundos\n` +
-                `• Reduce la calidad en tu editor de video\n` +
-                `• Usa una app de compresión antes de subir`);
-            return;
-        }
-
         setStep('uploading');
         setUploadProgress(0);
 
         try {
-            // Simulate progress (since Supabase doesn't provide real progress)
-            const progressInterval = setInterval(() => {
-                setUploadProgress(prev => {
-                    if (prev >= 90) return prev; // Stop at 90% until actual upload completes
-                    return prev + 10;
+            // Check if Cloudinary is configured
+            const useCloudinary = cloudinaryService.isConfigured();
+
+            if (!useCloudinary) {
+                // Fallback: Check for videos over 50MB if not using Cloudinary
+                const oversizedVideos = files.filter(f => f.type.startsWith('video') && f.size > REELS_SPECS.MAX_FILE_SIZE);
+                if (oversizedVideos.length > 0) {
+                    const sizeMB = (oversizedVideos[0].size / (1024 * 1024)).toFixed(2);
+                    alert(`❌ Video muy grande (${sizeMB}MB)\n\n` +
+                        `El límite es 50MB.\n\n` +
+                        `Cloudinary no está configurado. Agrega VITE_CLOUDINARY_CLOUD_NAME al archivo .env para subir videos grandes.`);
+                    setStep('preview');
+                    return;
+                }
+            }
+
+            // Upload to Cloudinary if configured and file is video
+            if (useCloudinary && files.length === 1 && files[0].type.startsWith('video')) {
+                console.log('📤 Uploading video to Cloudinary...');
+
+                const cloudinaryResponse = await cloudinaryService.uploadVideo(files[0], (progress) => {
+                    setUploadProgress(progress.percentage);
                 });
-            }, 300);
 
-            // Upload files directly without compression
-            const result = files.length > 1
-                ? await socialService.createPostWithMultipleMedia(user.id, files, caption)
-                : await socialService.createPost(user.id, files[0], files[0].type.startsWith('video') ? 'video' : 'image', caption);
+                console.log('✅ Cloudinary upload complete:', cloudinaryResponse.secure_url);
 
-            clearInterval(progressInterval);
-            setUploadProgress(100);
+                // Create post with Cloudinary URL
+                const result = await socialService.createPostWithExternalUrl(
+                    user.id,
+                    cloudinaryResponse.secure_url,
+                    'video',
+                    caption
+                );
 
-            if (result.success) {
-                setStep('success');
-                setTimeout(() => {
-                    onSuccess();
-                    onClose();
-                }, 2000);
+                setUploadProgress(100);
+
+                if (result.success) {
+                    setStep('success');
+                    setTimeout(() => {
+                        onSuccess();
+                        onClose();
+                    }, 2000);
+                } else {
+                    alert('Error al guardar: ' + result.error);
+                    setStep('preview');
+                    setUploadProgress(0);
+                }
             } else {
-                alert('Error al subir: ' + result.error);
-                setStep('preview');
-                setUploadProgress(0);
+                // Use Supabase for images or if Cloudinary not configured
+                const progressInterval = setInterval(() => {
+                    setUploadProgress(prev => {
+                        if (prev >= 90) return prev;
+                        return prev + 10;
+                    });
+                }, 300);
+
+                const result = files.length > 1
+                    ? await socialService.createPostWithMultipleMedia(user.id, files, caption)
+                    : await socialService.createPost(user.id, files[0], files[0].type.startsWith('video') ? 'video' : 'image', caption);
+
+                clearInterval(progressInterval);
+                setUploadProgress(100);
+
+                if (result.success) {
+                    setStep('success');
+                    setTimeout(() => {
+                        onSuccess();
+                        onClose();
+                    }, 2000);
+                } else {
+                    alert('Error al subir: ' + result.error);
+                    setStep('preview');
+                    setUploadProgress(0);
+                }
             }
         } catch (error: any) {
             alert('Error al subir: ' + error.message);
