@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { X, MapPin, Swords, Shield, ChevronRight, Grid, Film, UserPlus, UserCheck, Heart } from 'lucide-react';
+import { X, MapPin, Grid, Film, UserPlus, UserCheck, Heart } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { userService } from '../../services/UserService';
+// userService removed
 import { socialService, type Post } from '../../services/SocialService'; // Import Social Service
-import { RoutineViewModal } from './RoutineViewModal';
+// RoutineViewModal import removed
 
 interface PlayerProfileModalProps {
     player: {
@@ -25,28 +25,19 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
     // Social State
     const [stats, setStats] = useState({ followersCount: 0, followingCount: 0, totalLikes: 0 });
     const [isFollowing, setIsFollowing] = useState(false);
-    const [activeTab, setActiveTab] = useState<'routines' | 'grid' | 'reels'>('routines');
+    const [activeTab, setActiveTab] = useState<'grid' | 'reels'>('grid');
 
     // Content State
-    const [publicRoutines, setPublicRoutines] = useState<any[]>([]);
     const [posts, setPosts] = useState<Post[]>([]);
-
-    // View States
-    const [viewRoutine, setViewRoutine] = useState<any | null>(null);
-    const [copying, setCopying] = useState(false);
 
     // Initial Load
     useEffect(() => {
         const init = async () => {
-            // 1. Fetch Routines (Existing)
-            const decks = await userService.getUserPublicRoutines(player.id || '');
-            setPublicRoutines(decks);
-
-            // 2. Fetch Social Stats
+            // 1. Fetch Social Stats
             const s = await socialService.getProfileStats(player.id);
             setStats(s);
 
-            // 3. Check Follow Status
+            // 2. Check Follow Status
             if (user && user.id !== player.id) {
                 const following = await socialService.getFollowStatus(user.id, player.id);
                 setIsFollowing(following);
@@ -81,27 +72,7 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
         }
     };
 
-    const handleOpenRoutine = async (routine: any) => {
-        if (routine.exercises) {
-            setViewRoutine(routine); // Already loaded
-        } else {
-            // Fetch details if needed (lazy load)
-            const detailed = await userService.getRoutineDetails(routine.id);
-            setViewRoutine(detailed);
-        }
-    };
-
-    const handleCopyRoutine = async () => {
-        if (!user || !viewRoutine) return;
-        setCopying(true);
-        const result = await userService.copyRoutine(viewRoutine.id, user.id);
-        if (result.success) {
-            alert("¡Estrategia robada con éxito! Ahora está en tu arsenal.");
-        } else {
-            alert("Error al copiar: " + result.error);
-        }
-        setCopying(false);
-    };
+    // Routine handlers removed
 
     return (
         <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-end md:justify-center p-0 md:p-4 backdrop-blur-sm animate-in fade-in duration-200">
@@ -192,14 +163,6 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
                         {/* TABS SWITCHER */}
                         <div className="flex border-b border-neutral-800 mb-4">
                             <button
-                                onClick={() => setActiveTab('routines')}
-                                className={`flex-1 pb-3 text-xs font-bold uppercase tracking-widest transition-colors relative ${activeTab === 'routines' ? 'text-white' : 'text-neutral-500'}`}
-                            >
-                                <Swords size={18} className="mx-auto mb-1" />
-                                Mazos
-                                {activeTab === 'routines' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-yellow-500" />}
-                            </button>
-                            <button
                                 onClick={() => setActiveTab('grid')}
                                 className={`flex-1 pb-3 text-xs font-bold uppercase tracking-widest transition-colors relative ${activeTab === 'grid' ? 'text-white' : 'text-neutral-500'}`}
                             >
@@ -219,38 +182,7 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
 
                         {/* TAB CONTENT */}
 
-                        {/* 1. ROUTINES TAB */}
-                        {activeTab === 'routines' && (
-                            <div className="flex flex-col gap-2 animate-in slide-in-from-bottom-2 fade-in duration-300">
-                                {publicRoutines.length > 0 ? (
-                                    publicRoutines.map(r => (
-                                        <button
-                                            key={r.id}
-                                            onClick={() => handleOpenRoutine(r)}
-                                            className="group relative overflow-hidden bg-neutral-900 border border-neutral-800 hover:border-yellow-500 rounded-xl p-3 transition-all hover:bg-neutral-800 text-left flex items-center justify-between"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-12 h-12 rounded-lg bg-neutral-800 flex items-center justify-center text-neutral-500 group-hover:text-yellow-500 group-hover:bg-yellow-500/10 transition-colors border border-white/5">
-                                                    <Swords size={20} />
-                                                </div>
-                                                <div>
-                                                    <h4 className="font-bold text-white text-sm uppercase italic group-hover:text-yellow-500 transition-colors">{r.name}</h4>
-                                                    <span className="text-[10px] text-neutral-500 font-bold tracking-wider block mt-0.5">
-                                                        {(r.routine_exercises?.length || r.exercises?.length || 0)} CARTAS
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <ChevronRight size={16} className="text-neutral-600 group-hover:text-yellow-500" />
-                                        </button>
-                                    ))
-                                ) : (
-                                    <div className="text-center py-8 border-2 border-dashed border-neutral-800 rounded-xl">
-                                        <Shield size={24} className="mx-auto text-neutral-700 mb-2" />
-                                        <p className="text-xs text-neutral-500 font-medium">Sin estrategias registradas</p>
-                                    </div>
-                                )}
-                            </div>
-                        )}
+                        {/* 1. GRID TAB (Images) */}
 
                         {/* 2. GRID TAB (Images) */}
                         {activeTab === 'grid' && (
@@ -307,15 +239,7 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
 
             </div>
 
-            {/* ROUTINE DETAIL MODAL (Nested) */}
-            {viewRoutine && (
-                <RoutineViewModal
-                    routine={viewRoutine}
-                    onClose={() => setViewRoutine(null)}
-                    onCopy={handleCopyRoutine}
-                    isCopying={copying}
-                />
-            )}
+// Routine Modal helper removed
         </div>
     );
 };
