@@ -16,8 +16,6 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
     const [caption, setCaption] = useState('');
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
     const [uploadProgress, setUploadProgress] = useState(0);
-    const [compressionProgress, setCompressionProgress] = useState(0);
-    const [isCompressing, setIsCompressing] = useState(false);
     const [loadProgress, setLoadProgress] = useState(0);
     const [videoMetadata, setVideoMetadata] = useState<{
         size: string;
@@ -37,7 +35,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
         RECOMMENDED_RESOLUTION: { width: 1080, height: 1920 },
         MIN_DURATION: 3, // seconds
         MAX_DURATION: 90, // seconds (Instagram/TikTok standard)
-        MAX_FILE_SIZE: 50 * 1024 * 1024, // 50MB (for compression trigger)
+        MAX_FILE_SIZE: 100 * 1024 * 1024, // 100MB (Supabase limit)
         ALLOWED_FORMATS: ['video/mp4', 'video/quicktime'], // MP4 and MOV
         MAX_CAPTION_LENGTH: 2200
     };
@@ -100,149 +98,6 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
         });
     };
 
-    /**
-     * Compress video if it exceeds 50MB
-     * Uses MediaRecorder API to re-encode at lower bitrate while maintaining quality
-     */
-    const compressVideo = async (file: File): Promise<File> => {
-        return new Promise((resolve, reject) => {
-            setIsCompressing(true);
-            setCompressionProgress(0);
-
-            const video = document.createElement('video');
-            video.preload = 'metadata';
-
-            video.onloadedmetadata = async () => {
-                try {
-                    // Detect original frame rate (default to 30 if not detectable)
-                    const originalFPS = 30; // Most phones record at 30fps
-
-                    // Create canvas for video processing
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d')!;
-
-                    // Maintain aspect ratio, max 1080p
-                    const maxWidth = 1080;
-                    const maxHeight = 1920;
-                    let width = video.videoWidth;
-                    let height = video.videoHeight;
-
-                    if (width > maxWidth) {
-                        height = (height * maxWidth) / width;
-                        width = maxWidth;
-                    }
-                    if (height > maxHeight) {
-                        width = (width * maxHeight) / height;
-                        height = maxHeight;
-                    }
-
-                    canvas.width = width;
-                    canvas.height = height;
-
-                    // Calculate target bitrate to fit in ~45MB (leaving margin)
-                    const duration = video.duration;
-                    const targetSizeMB = 45;
-                    const targetBitrate = (targetSizeMB * 8 * 1024 * 1024) / duration; // bits per second
-
-                    // Use higher quality bitrate (min 1.5 Mbps for smooth playback)
-                    const finalBitrate = Math.max(Math.min(targetBitrate, 4000000), 1500000); // Between 1.5-4 Mbps
-
-                    // Try to use H.264 codec first (better compatibility), fallback to VP9
-                    let mimeType = 'video/webm;codecs=h264';
-                    if (!MediaRecorder.isTypeSupported(mimeType)) {
-                        mimeType = 'video/webm;codecs=vp8'; // VP8 is more compatible than VP9
-                        if (!MediaRecorder.isTypeSupported(mimeType)) {
-                            mimeType = 'video/webm'; // Ultimate fallback
-                        }
-                    }
-
-                    console.log(`🎬 Compressing with: ${mimeType}, ${finalBitrate} bps, ${originalFPS} fps`);
-
-                    const stream = canvas.captureStream(originalFPS); // Use detected FPS
-                    const mediaRecorder = new MediaRecorder(stream, {
-                        mimeType: mimeType,
-                        videoBitsPerSecond: finalBitrate
-                    });
-
-                    const chunks: Blob[] = [];
-                    mediaRecorder.ondataavailable = (e) => {
-                        if (e.data.size > 0) {
-                            chunks.push(e.data);
-                        }
-                    };
-
-                    mediaRecorder.onstop = () => {
-                        const compressedBlob = new Blob(chunks, { type: mimeType.split(';')[0] });
-                        const compressedFile = new File(
-                            [compressedBlob],
-                            file.name.replace(/\.[^/.]+$/, '.webm'),
-                            { type: mimeType.split(';')[0] }
-                        );
-
-                        console.log(`✅ Compressed: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(compressedFile.size / 1024 / 1024).toFixed(2)}MB`);
-
-                        setIsCompressing(false);
-                        setCompressionProgress(100);
-                        resolve(compressedFile);
-                    };
-
-                    mediaRecorder.onerror = (error) => {
-                        console.error('MediaRecorder error:', error);
-                        setIsCompressing(false);
-                        reject(error);
-                    };
-
-                    // Start recording
-                    mediaRecorder.start(100); // Collect data every 100ms
-
-                    // Set playback rate to normal (important!)
-                    video.playbackRate = 1.0;
-                    video.currentTime = 0;
-
-                    await video.play();
-
-                    // Draw frames to canvas at consistent rate
-                    let lastFrameTime = 0;
-                    const frameInterval = 1000 / originalFPS; // ms per frame
-
-                    const drawFrame = (currentTime: number) => {
-                        if (!video.paused && !video.ended) {
-                            // Only draw if enough time has passed (maintain frame rate)
-                            if (currentTime - lastFrameTime >= frameInterval) {
-                                ctx.drawImage(video, 0, 0, width, height);
-                                lastFrameTime = currentTime;
-                            }
-
-                            const progress = (video.currentTime / video.duration) * 100;
-                            setCompressionProgress(Math.round(progress));
-                            requestAnimationFrame(drawFrame);
-                        }
-                    };
-
-                    video.onplay = () => {
-                        requestAnimationFrame(drawFrame);
-                    };
-
-                    video.onended = () => {
-                        setTimeout(() => {
-                            mediaRecorder.stop();
-                        }, 100); // Small delay to ensure last frames are captured
-                    };
-                } catch (error) {
-                    console.error('Compression setup error:', error);
-                    setIsCompressing(false);
-                    reject(error);
-                }
-            };
-
-            video.onerror = () => {
-                setIsCompressing(false);
-                reject(new Error('Error loading video for compression'));
-            };
-
-            video.src = URL.createObjectURL(file);
-        });
-    };
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
@@ -376,17 +231,11 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
         setUploadProgress(0);
 
         try {
-            // Compress large videos before uploading
-            const processedFiles: File[] = [];
-
-            for (const file of files) {
-                if (file.type.startsWith('video') && file.size > REELS_SPECS.MAX_FILE_SIZE) {
-                    console.log(`🗜️ Compressing large video: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
-                    const compressed = await compressVideo(file);
-                    processedFiles.push(compressed);
-                } else {
-                    processedFiles.push(file);
-                }
+            // Check if any video is too large and warn user
+            const largeVideos = files.filter(f => f.type.startsWith('video') && f.size > REELS_SPECS.MAX_FILE_SIZE);
+            if (largeVideos.length > 0) {
+                const sizeMB = (largeVideos[0].size / (1024 * 1024)).toFixed(2);
+                console.warn(`⚠️ Large video detected: ${sizeMB}MB - uploading as-is`);
             }
 
             // Simulate progress (since Supabase doesn't provide real progress)
@@ -397,10 +246,10 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
                 });
             }, 300);
 
-            // Use multi-media upload if more than 1 file
-            const result = processedFiles.length > 1
-                ? await socialService.createPostWithMultipleMedia(user.id, processedFiles, caption)
-                : await socialService.createPost(user.id, processedFiles[0], processedFiles[0].type.startsWith('video') ? 'video' : 'image', caption);
+            // Upload files directly without compression
+            const result = files.length > 1
+                ? await socialService.createPostWithMultipleMedia(user.id, files, caption)
+                : await socialService.createPost(user.id, files[0], files[0].type.startsWith('video') ? 'video' : 'image', caption);
 
             clearInterval(progressInterval);
             setUploadProgress(100);
@@ -616,45 +465,22 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
 
                     {step === 'uploading' && (
                         <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
-                            {isCompressing ? (
-                                <>
-                                    <div className="w-20 h-20 rounded-full bg-yellow-500/20 flex items-center justify-center mb-6 relative">
-                                        <div className="absolute inset-0 rounded-full border-4 border-yellow-500/30"></div>
-                                        <div
-                                            className="absolute inset-0 rounded-full border-4 border-yellow-500 border-t-transparent animate-spin"
-                                            style={{ borderTopColor: 'transparent' }}
-                                        ></div>
-                                        <span className="text-yellow-500 font-black text-lg z-10">{compressionProgress}%</span>
-                                    </div>
-                                    <h3 className="text-white font-bold text-lg mb-2">Comprimiendo video...</h3>
-                                    <p className="text-neutral-400 text-sm mb-4">Reduciendo tamaño para cumplir con el límite</p>
-                                    <div className="w-full max-w-xs bg-neutral-800 rounded-full h-2 overflow-hidden">
-                                        <div
-                                            className="h-full bg-gradient-to-r from-yellow-500 to-yellow-400 transition-all duration-300"
-                                            style={{ width: `${compressionProgress}% ` }}
-                                        ></div>
-                                    </div>
-                                </>
-                            ) : (
-                                <>
-                                    <div className="w-20 h-20 rounded-full bg-blue-500/20 flex items-center justify-center mb-6 relative">
-                                        <div className="absolute inset-0 rounded-full border-4 border-blue-500/30"></div>
-                                        <div
-                                            className="absolute inset-0 rounded-full border-4 border-blue-500 border-t-transparent animate-spin"
-                                            style={{ borderTopColor: 'transparent' }}
-                                        ></div>
-                                        <span className="text-blue-500 font-black text-lg z-10">{uploadProgress}%</span>
-                                    </div>
-                                    <h3 className="text-white font-bold text-lg mb-2">Subiendo...</h3>
-                                    <p className="text-neutral-400 text-sm mb-4">Compartiendo tu contenido</p>
-                                    <div className="w-full max-w-xs bg-neutral-800 rounded-full h-2 overflow-hidden">
-                                        <div
-                                            className="h-full bg-gradient-to-r from-blue-500 to-blue-400 transition-all duration-300"
-                                            style={{ width: `${uploadProgress}% ` }}
-                                        ></div>
-                                    </div>
-                                </>
-                            )}
+                            <div className="w-20 h-20 rounded-full bg-blue-500/20 flex items-center justify-center mb-6 relative">
+                                <div className="absolute inset-0 rounded-full border-4 border-blue-500/30"></div>
+                                <div
+                                    className="absolute inset-0 rounded-full border-4 border-blue-500 border-t-transparent animate-spin"
+                                    style={{ borderTopColor: 'transparent' }}
+                                ></div>
+                                <span className="text-blue-500 font-black text-lg z-10">{uploadProgress}%</span>
+                            </div>
+                            <h3 className="text-white font-bold text-lg mb-2">Subiendo...</h3>
+                            <p className="text-neutral-400 text-sm mb-4">Compartiendo tu contenido</p>
+                            <div className="w-full max-w-xs bg-neutral-800 rounded-full h-2 overflow-hidden">
+                                <div
+                                    className="h-full bg-gradient-to-r from-blue-500 to-blue-400 transition-all duration-300"
+                                    style={{ width: `${uploadProgress}% ` }}
+                                ></div>
+                            </div>
                         </div>
                     )}
 
