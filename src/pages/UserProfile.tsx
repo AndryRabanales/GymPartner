@@ -15,6 +15,7 @@ import { PlayerProfileModal } from '../components/profile/PlayerProfileModal';
 
 import { userService } from '../services/UserService';
 import type { UserPrimaryGym } from '../services/UserService';
+import { socialService } from '../services/SocialService';
 // seedExercisesCatalog removed
 
 
@@ -58,9 +59,15 @@ export const UserProfile = () => {
         errorType: 'DISTANCE' | 'NO_COORDS' | 'GPS_ERROR';
     }>({ isOpen: false, gymName: '', distanceMeters: null, errorType: 'GPS_ERROR' });
 
+    // Social Stats State
+    const [socialStats, setSocialStats] = useState({ followersCount: 0, followingCount: 0, totalLikes: 0 });
+
     useEffect(() => {
         if (user) {
             loadUserData();
+            // Fetch Social Stats
+            socialService.getProfileStats(user.id).then(setSocialStats);
+
             // Check for tutorial
             const hasSeen = localStorage.getItem('hasSeenTutorial');
             if (!hasSeen) {
@@ -466,14 +473,13 @@ export const UserProfile = () => {
                             </h1>
 
                             {/* Rank: Dark Glass Pill */}
-                            <div className="flex items-center justify-center sm:justify-start gap-3">
+                            <div className="flex flex-col sm:flex-row items-center sm:items-center gap-3 mb-4">
                                 <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-black/40 border border-yellow-500/30 rounded-full backdrop-blur-md shadow-lg group hover:border-yellow-500/60 transition-colors">
                                     <Trophy size={14} className="text-yellow-500" />
                                     <span className="text-yellow-500 font-bold text-xs tracking-widest uppercase">
                                         {realRank}
                                     </span>
                                 </div>
-                                <div className="hidden sm:block h-px w-8 bg-neutral-800"></div>
                                 <span className="text-neutral-500 text-xs font-bold tracking-[0.2em] uppercase hidden sm:block">
                                     {userGyms.find(g => g.is_home_base) ? (
                                         <div className="flex items-center gap-2 text-yellow-500 animate-pulse">
@@ -487,6 +493,24 @@ export const UserProfile = () => {
                                         </div>
                                     )}
                                 </span>
+                            </div>
+
+                            {/* SOCIAL STATS ROW (Unified Design) */}
+                            <div className="flex items-center justify-center sm:justify-start gap-6 sm:gap-8 border-t border-white/5 pt-3 mt-1 w-full sm:w-auto">
+                                <div className="flex flex-col items-center sm:items-start group cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setShowSocialProfile(true)}>
+                                    <span className="font-black text-xl text-white leading-none mb-0.5">{socialStats.followersCount}</span>
+                                    <span className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Seguidores</span>
+                                </div>
+                                <div className="w-px h-6 bg-white/10"></div>
+                                <div className="flex flex-col items-center sm:items-start group cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setShowSocialProfile(true)}>
+                                    <span className="font-black text-xl text-white leading-none mb-0.5">{socialStats.followingCount}</span>
+                                    <span className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Siguiendo</span>
+                                </div>
+                                <div className="w-px h-6 bg-white/10"></div>
+                                <div className="flex flex-col items-center sm:items-start group cursor-pointer hover:opacity-80 transition-opacity">
+                                    <span className="font-black text-xl text-white leading-none mb-0.5 text-red-500">{socialStats.totalLikes}</span>
+                                    <span className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Likes</span>
+                                </div>
                             </div>
                         </div>
 
