@@ -104,8 +104,8 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
     };
 
     return (
-        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-neutral-900 border border-neutral-800 w-full max-w-sm rounded-3xl overflow-hidden relative shadow-2xl animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-end md:justify-center p-0 md:p-4 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-neutral-900 border-l md:border border-neutral-800 w-full md:max-w-sm h-full md:h-auto md:rounded-3xl overflow-hidden relative shadow-2xl animate-in slide-in-from-right duration-300 flex flex-col md:max-h-[90vh]">
 
                 {/* Header / Banner */}
                 <div className="h-32 bg-neutral-800 relative shrink-0">
