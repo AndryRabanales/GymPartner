@@ -136,13 +136,14 @@ export const CommunityPage = () => {
                             {post.media && post.media.length > 0 ? (
                                 <MediaCarousel media={post.media} />
                             ) : (
-                                <div className="bg-black w-full relative">
+                                <div className="bg-black w-full relative" style={{ maxHeight: '600px' }}>
                                     {post.type === 'video' ? (
-                                        <div className="aspect-square relative max-h-[280px]">
+                                        <div className="flex items-center justify-center" style={{ maxHeight: '600px' }}>
                                             <video
                                                 ref={el => { if (el) videoRefs.current[post.id] = el }}
                                                 src={post.media_url}
-                                                className="w-full h-full object-cover"
+                                                className="w-full h-auto max-h-[600px] object-contain"
+                                                style={{ maxWidth: '100%' }}
                                                 playsInline
                                                 loop
                                                 muted
@@ -156,8 +157,8 @@ export const CommunityPage = () => {
                                             </div>
                                         </div>
                                     ) : (
-                                        <div className="aspect-square max-h-[280px]">
-                                            <img src={post.media_url} alt="Post" className="w-full h-full object-cover" />
+                                        <div className="flex items-center justify-center" style={{ maxHeight: '600px' }}>
+                                            <img src={post.media_url} alt="Post" className="w-full h-auto max-h-[600px] object-contain" style={{ maxWidth: '100%' }} />
                                         </div>
                                     )}
                                 </div>

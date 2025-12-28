@@ -58,23 +58,25 @@ export const MediaCarousel: React.FC<MediaCarouselProps> = ({ media }) => {
 
     return (
         <div
-            className="relative w-full aspect-square max-h-[280px] bg-black overflow-hidden"
+            className="relative w-full bg-black overflow-hidden"
+            style={{ maxHeight: '600px' }}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
         >
             {/* Media Container */}
             <div
-                className="flex transition-transform duration-300 ease-out h-full"
+                className="flex transition-transform duration-300 ease-out"
                 style={{ transform: `translateX(-${currentIndex * 100}%)` }}
             >
                 {media.map((item, index) => (
-                    <div key={index} className="min-w-full h-full flex items-center justify-center">
+                    <div key={index} className="min-w-full flex items-center justify-center" style={{ maxHeight: '600px' }}>
                         {item.type === 'video' ? (
                             <video
                                 ref={el => { if (el) videoRefs.current[index] = el }}
                                 src={item.url}
-                                className="w-full h-full object-cover"
+                                className="w-full h-auto max-h-[600px] object-contain"
+                                style={{ maxWidth: '100%' }}
                                 playsInline
                                 loop
                                 muted={index !== currentIndex}
@@ -88,7 +90,8 @@ export const MediaCarousel: React.FC<MediaCarouselProps> = ({ media }) => {
                             <img
                                 src={item.url}
                                 alt={`Media ${index + 1}`}
-                                className="w-full h-full object-cover"
+                                className="w-full h-auto max-h-[600px] object-contain"
+                                style={{ maxWidth: '100%' }}
                             />
                         )}
                     </div>
