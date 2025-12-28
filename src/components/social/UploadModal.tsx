@@ -1,4 +1,3 @@
-```
 import React, { useState, useRef } from 'react';
 import { X, Upload, Image as ImageIcon, Film, Check } from 'lucide-react';
 import { socialService } from '../../services/SocialService';
@@ -47,7 +46,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
         // Size validation
         if (file.size > REELS_SPECS.MAX_FILE_SIZE) {
             const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
-            errors.push(`Archivo muy pesado(${ sizeMB }MB).Máximo: 50MB.`);
+            errors.push(`Archivo muy pesado(${sizeMB}MB).Máximo: 50MB.`);
         }
 
         // Video metadata validation
@@ -60,16 +59,16 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
 
                 // Duration validation
                 if (video.duration < REELS_SPECS.MIN_DURATION) {
-                    errors.push(`Video muy corto(${ video.duration.toFixed(1) }s).Mínimo: 3 segundos.`);
+                    errors.push(`Video muy corto(${video.duration.toFixed(1)}s).Mínimo: 3 segundos.`);
                 }
                 if (video.duration > REELS_SPECS.MAX_DURATION) {
-                    errors.push(`Video muy largo(${ Math.floor(video.duration) }s).Máximo: 90 segundos.`);
+                    errors.push(`Video muy largo(${Math.floor(video.duration)}s).Máximo: 90 segundos.`);
                 }
 
                 // Resolution validation
                 if (video.videoWidth < REELS_SPECS.MIN_RESOLUTION.width ||
                     video.videoHeight < REELS_SPECS.MIN_RESOLUTION.height) {
-                    errors.push(`Resolución muy baja(${ video.videoWidth }x${ video.videoHeight }).Mínimo: 720x1280.`);
+                    errors.push(`Resolución muy baja(${video.videoWidth}x${video.videoHeight}).Mínimo: 720x1280.`);
                 }
 
                 // Aspect ratio validation (9:16 with 5% tolerance)
@@ -77,7 +76,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
                 const targetRatio = REELS_SPECS.ASPECT_RATIO;
                 const tolerance = 0.05;
                 if (Math.abs(aspectRatio - targetRatio) > tolerance) {
-                    errors.push(`Aspecto incorrecto(${ aspectRatio.toFixed(2) }).Requerido: 9: 16(vertical).`);
+                    errors.push(`Aspecto incorrecto(${aspectRatio.toFixed(2)}).Requerido: 9: 16(vertical).`);
                 }
 
                 resolve({ valid: errors.length === 0, errors });
@@ -213,7 +212,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
             const invalid = selectedFiles.filter(f => !f.type.startsWith('image/') && !f.type.startsWith('video/'));
 
             if (invalid.length > 0) {
-                alert(`Archivos no válidos: ${ invalid.map(f => f.name).join(', ') } `);
+                alert(`Archivos no válidos: ${invalid.map(f => f.name).join(', ')} `);
                 return;
             }
 
@@ -230,13 +229,13 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
                             const compressed = await compressVideo(video);
                             validatedVideos.push(compressed);
                         } catch (error) {
-                            allErrors.push(`${ video.name }: Error al comprimir.Intenta con un video más corto.`);
+                            allErrors.push(`${video.name}: Error al comprimir.Intenta con un video más corto.`);
                         }
                     } else {
                         validatedVideos.push(video);
                     }
                 } else {
-                    allErrors.push(`${ video.name }: ${ errors.join(', ') } `);
+                    allErrors.push(`${video.name}: ${errors.join(', ')} `);
                 }
             }
 
@@ -374,7 +373,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
                                             {file.type.startsWith('video') ? (
                                                 <video src={previewUrls[index]} className="w-full h-full object-cover" />
                                             ) : (
-                                                <img src={previewUrls[index]} alt={`Preview ${ index + 1 } `} className="w-full h-full object-cover" />
+                                                <img src={previewUrls[index]} alt={`Preview ${index + 1} `} className="w-full h-full object-cover" />
                                             )}
                                             {/* Remove Button */}
                                             <button
@@ -423,11 +422,10 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
                                         />
                                         <div className="flex justify-between items-center mb-4">
                                             <span className="text-xs text-neutral-500">Máx. {REELS_SPECS.MAX_CAPTION_LENGTH} caracteres</span>
-                                            <span className={`text - xs font - mono ${
-    caption.length > REELS_SPECS.MAX_CAPTION_LENGTH * 0.9
-    ? 'text-yellow-500'
-    : 'text-neutral-500'
-} `}>
+                                            <span className={`text - xs font - mono ${caption.length > REELS_SPECS.MAX_CAPTION_LENGTH * 0.9
+                                                    ? 'text-yellow-500'
+                                                    : 'text-neutral-500'
+                                                } `}>
                                                 {caption.length}/{REELS_SPECS.MAX_CAPTION_LENGTH}
                                             </span>
                                         </div>
@@ -464,7 +462,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
                                     <div className="w-full max-w-xs bg-neutral-800 rounded-full h-2 overflow-hidden">
                                         <div
                                             className="h-full bg-gradient-to-r from-yellow-500 to-yellow-400 transition-all duration-300"
-                                            style={{ width: `${ compressionProgress }% ` }}
+                                            style={{ width: `${compressionProgress}% ` }}
                                         ></div>
                                     </div>
                                 </>
@@ -483,7 +481,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
                                     <div className="w-full max-w-xs bg-neutral-800 rounded-full h-2 overflow-hidden">
                                         <div
                                             className="h-full bg-gradient-to-r from-blue-500 to-blue-400 transition-all duration-300"
-                                            style={{ width: `${ uploadProgress }% ` }}
+                                            style={{ width: `${uploadProgress}% ` }}
                                         ></div>
                                     </div>
                                 </>
