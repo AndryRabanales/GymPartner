@@ -5,12 +5,14 @@ import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { CommentsSheet } from '../components/social/CommentsSheet';
 import { MediaCarousel } from '../components/social/MediaCarousel';
+import { PlayerProfileModal } from '../components/profile/PlayerProfileModal';
 
 export const CommunityPage = () => {
     const { user } = useAuth();
     const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(null);
+    const [selectedPlayer, setSelectedPlayer] = useState<any | null>(null);
 
     // Auto-play videos intersection observer
     const videoRefs = useRef<{ [key: string]: HTMLVideoElement }>({});
@@ -107,16 +109,36 @@ export const CommunityPage = () => {
                             {/* Post Header */}
                             <div className="flex items-center justify-between px-3 py-1">
                                 <div className="flex items-center gap-2">
-                                    <div className="w-7 h-7 rounded-full bg-neutral-800 overflow-hidden border border-white/10">
+                                    <button
+                                        onClick={() => setSelectedPlayer({
+                                            id: post.user_id,
+                                            username: post.profiles?.username || 'Usuario',
+                                            avatar_url: post.profiles?.avatar_url,
+                                            xp: 0,
+                                            rank: 0
+                                        })}
+                                        className="w-7 h-7 rounded-full bg-neutral-800 overflow-hidden border border-white/10 hover:ring-2 hover:ring-yellow-500/50 transition-all cursor-pointer"
+                                    >
                                         <img
                                             src={post.profiles?.avatar_url || 'https://i.pravatar.cc/150'}
                                             alt={post.profiles?.username}
                                             className="w-full h-full object-cover"
                                         />
-                                    </div>
+                                    </button>
                                     <div>
                                         <div className="flex items-center gap-1">
-                                            <span className="font-bold text-xs text-white">{post.profiles?.username || 'Usuario'}</span>
+                                            <button
+                                                onClick={() => setSelectedPlayer({
+                                                    id: post.user_id,
+                                                    username: post.profiles?.username || 'Usuario',
+                                                    avatar_url: post.profiles?.avatar_url,
+                                                    xp: 0,
+                                                    rank: 0
+                                                })}
+                                                className="font-bold text-xs text-white hover:text-yellow-500 transition-colors cursor-pointer"
+                                            >
+                                                {post.profiles?.username || 'Usuario'}
+                                            </button>
                                             <span className="text-[9px] text-neutral-500">• 2h</span>
                                         </div>
                                         {post.linked_routine_id && post.routines && (
@@ -198,7 +220,18 @@ export const CommunityPage = () => {
                                 {/* Caption */}
                                 <div className="space-y-0.5">
                                     <p className="text-xs text-white line-clamp-2">
-                                        <span className="font-bold mr-1.5">{post.profiles?.username}</span>
+                                        <button
+                                            onClick={() => setSelectedPlayer({
+                                                id: post.user_id,
+                                                username: post.profiles?.username || 'Usuario',
+                                                avatar_url: post.profiles?.avatar_url,
+                                                xp: 0,
+                                                rank: 0
+                                            })}
+                                            className="font-bold mr-1.5 hover:text-yellow-500 transition-colors cursor-pointer"
+                                        >
+                                            {post.profiles?.username}
+                                        </button>
                                         {post.caption}
                                     </p>
                                 </div>
@@ -207,6 +240,7 @@ export const CommunityPage = () => {
                     ))
                 )}
             </div>
+
             {/* COMMENTS SHEET OVERLAY */}
             {activeCommentPostId && (
                 <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm" onClick={() => setActiveCommentPostId(null)}>
@@ -217,6 +251,14 @@ export const CommunityPage = () => {
                         />
                     </div>
                 </div>
+            )}
+
+            {/* PLAYER PROFILE MODAL */}
+            {selectedPlayer && (
+                <PlayerProfileModal
+                    player={selectedPlayer}
+                    onClose={() => setSelectedPlayer(null)}
+                />
             )}
         </div>
     );
