@@ -3,14 +3,31 @@ import { Heart, MessageCircle, Share2, MoreHorizontal, Music2, Swords } from 'lu
 import { socialService, type Post } from '../services/SocialService';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
+import { CommentsSheet } from '../components/social/CommentsSheet';
 
 export const CommunityPage = () => {
     const { user } = useAuth();
     const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
+    const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(null);
 
     // Auto-play videos intersection observer
     const videoRefs = useRef<{ [key: string]: HTMLVideoElement }>({});
+
+    const handleShare = async (post: Post) => {
+        try {
+            if (navigator.share) {
+                await navigator.share({
+                    title: `GymPartner: ${post.profiles?.username}`,
+                    text: post.caption || 'Entrenamiento en GymPartner',
+                    url: window.location.href
+                });
+            } else {
+                await navigator.clipboard.writeText(window.location.href);
+                alert('Link copiado 📋');
+            }
+        } catch (error) { console.log(error); }
+    };
 
     useEffect(() => {
         loadFeed();
@@ -153,10 +170,16 @@ export const CommunityPage = () => {
                                             className={post.user_has_liked ? "text-red-500 fill-red-500" : "text-white"}
                                         />
                                     </button>
-                                    <button className="text-white hover:text-neutral-300">
+                                    <button
+                                        onClick={() => setActiveCommentPostId(post.id)}
+                                        className="text-white hover:text-neutral-300 transition-transform active:scale-95"
+                                    >
                                         <MessageCircle size={26} />
                                     </button>
-                                    <button className="text-white hover:text-neutral-300 ml-auto">
+                                    <button
+                                        onClick={() => handleShare(post)}
+                                        className="text-white hover:text-neutral-300 ml-auto transition-transform active:scale-95"
+                                    >
                                         <Share2 size={24} />
                                     </button>
                                 </div>
@@ -178,6 +201,17 @@ export const CommunityPage = () => {
                     ))
                 )}
             </div>
+            {/* COMMENTS SHEET OVERLAY */}
+            {activeCommentPostId && (
+                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm" onClick={() => setActiveCommentPostId(null)}>
+                    <div onClick={e => e.stopPropagation()} className="w-full max-w-md">
+                        <CommentsSheet
+                            postId={activeCommentPostId}
+                            onClose={() => setActiveCommentPostId(null)}
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

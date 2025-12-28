@@ -1,14 +1,16 @@
 import { useEffect, useState, useRef } from 'react';
-import { Heart, MessageCircle, Share2, Music2, Swords, UserPlus, Volume2, VolumeX } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Music2, Swords, Volume2, VolumeX } from 'lucide-react';
 import { socialService, type Post } from '../services/SocialService';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
+import { CommentsSheet } from '../components/social/CommentsSheet';
 
 export const ReelsPage = () => {
     const { user } = useAuth();
     const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
     const [muted, setMuted] = useState(true);
+    const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(null);
 
     const videoRefs = useRef<{ [key: string]: HTMLVideoElement }>({});
 
@@ -93,8 +95,53 @@ export const ReelsPage = () => {
         }
     };
 
+    const handleShare = async (post: Post) => {
+        try {
+            if (navigator.share) {
+                await navigator.share({
+                    title: `GymPartner: ${post.profiles?.username}`,
+                    text: post.caption || 'Mira este entrenamiento épico en GymPartner 💪',
+                    url: window.location.href // Ideally, deep link to specific post
+                });
+            } else {
+                await navigator.clipboard.writeText(window.location.href);
+                alert('Enlace copiado al portapapeles 📋');
+            }
+        } catch (error) {
+            console.log('Error sharing:', error);
+        }
+    };
+
+    const handleDoubleTap = (post: Post, e: React.MouseEvent) => {
+        e.stopPropagation();
+
+        // Show Heart Animation logic would go here (requires new state tracking coordinates)
+        // For MVP Speed: trigger like immediately and maybe a visual feedback container
+        handleLike(post, e);
+
+        // Visual Feedback (Temporary)
+        const heart = document.createElement('div');
+        heart.innerHTML = '❤️';
+        heart.style.position = 'absolute';
+        heart.style.left = `${e.clientX}px`;
+        heart.style.top = `${e.clientY}px`;
+        heart.style.fontSize = '100px';
+        heart.style.transform = 'translate(-50%, -50%) scale(0)';
+        heart.style.transition = 'all 0.5s ease-out';
+        heart.style.pointerEvents = 'none';
+        heart.style.zIndex = '100';
+        document.body.appendChild(heart);
+
+        requestAnimationFrame(() => {
+            heart.style.transform = 'translate(-50%, -50%) scale(1.5) rotate(-15deg)';
+            heart.style.opacity = '0';
+        });
+
+        setTimeout(() => heart.remove(), 1000);
+    };
+
     return (
-        <div className="h-[calc(100vh-theme(spacing.16))] md:h-[calc(100vh-theme(spacing.20))] bg-black overflow-y-scroll snap-y snap-mandatory custom-scrollbar">
+        <div className="h-[calc(100vh-theme(spacing.16))] md:h-[calc(100vh-theme(spacing.20))] bg-black overflow-y-scroll snap-y snap-mandatory custom-scrollbar relative">
 
             {loading && (
                 <div className="h-full w-full flex items-center justify-center snap-center">
@@ -113,7 +160,10 @@ export const ReelsPage = () => {
                 <div key={post.id} className="h-full w-full max-w-md mx-auto relative snap-center flex items-center justify-center bg-neutral-900 border-b border-neutral-800 md:border-none">
 
                     {/* VIDEO CONTAINER */}
-                    <div className="relative w-full h-full md:max-h-[85vh] md:rounded-2xl overflow-hidden shadow-2xl">
+                    <div
+                        className="relative w-full h-full md:max-h-[85vh] md:rounded-2xl overflow-hidden shadow-2xl"
+                        onDoubleClick={(e) => handleDoubleTap(post, e)}
+                    >
                         <video
                             ref={el => { if (el) videoRefs.current[post.id] = el }}
                             src={post.media_url}
@@ -136,10 +186,8 @@ export const ReelsPage = () => {
                         <div className="absolute bottom-6 right-2 flex flex-col items-center gap-6 z-20">
                             <div className="flex flex-col items-center gap-1">
                                 <div className="w-10 h-10 rounded-full bg-neutral-800 border-2 border-white overflow-hidden mb-2 relative">
-                                    <img src={post.profiles?.avatar_url} alt="User" className="w-full h-full object-cover" />
-                                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-red-500 rounded-full p-0.5">
-                                        <UserPlus size={10} className="text-white" />
-                                    </div>
+                                    <img src={post.profiles?.avatar_url || 'https://i.pravatar.cc/150'} alt="User" className="w-full h-full object-cover" />
+                                    {/* Link to profile pending... */}
                                 </div>
                             </div>
 
@@ -150,12 +198,12 @@ export const ReelsPage = () => {
                                 <span className="text-white text-xs font-bold drop-shadow-md">{post.likes_count}</span>
                             </div>
 
-                            <button className="flex flex-col items-center gap-1">
+                            <button onClick={() => setActiveCommentPostId(post.id)} className="flex flex-col items-center gap-1 p-2 transition-transform active:scale-75">
                                 <MessageCircle size={30} className="text-white drop-shadow-lg" strokeWidth={1.5} />
-                                <span className="text-white text-xs font-bold drop-shadow-md">0</span>
+                                <span className="text-white text-xs font-bold drop-shadow-md">Chat</span>
                             </button>
 
-                            <button className="flex flex-col items-center gap-1">
+                            <button onClick={() => handleShare(post)} className="flex flex-col items-center gap-1 p-2 transition-transform active:scale-75">
                                 <Share2 size={28} className="text-white drop-shadow-lg" strokeWidth={1.5} />
                                 <span className="text-white text-xs font-bold drop-shadow-md">Share</span>
                             </button>
@@ -201,6 +249,18 @@ export const ReelsPage = () => {
                     </div>
                 </div>
             ))}
+
+            {/* COMMENTS SHEET OVERLAY */}
+            {activeCommentPostId && (
+                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm" onClick={() => setActiveCommentPostId(null)}>
+                    <div onClick={e => e.stopPropagation()} className="w-full max-w-md">
+                        <CommentsSheet
+                            postId={activeCommentPostId}
+                            onClose={() => setActiveCommentPostId(null)}
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

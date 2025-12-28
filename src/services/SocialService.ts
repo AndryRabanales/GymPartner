@@ -90,16 +90,21 @@ class SocialService {
     /**
      * Fetches posts for a specific user's profile (Grid or Reels tab).
      */
-    async getUserPosts(userId: string, type: 'image' | 'video'): Promise<Post[]> {
-        const { data, error } = await supabase
+    async getUserPosts(userId: string, type?: 'image' | 'video'): Promise<Post[]> {
+        let query = supabase
             .from('posts')
             .select(`
                 *,
                 post_likes (count)
             `)
             .eq('user_id', userId)
-            .eq('type', type)
             .order('created_at', { ascending: false });
+
+        if (type) {
+            query = query.eq('type', type);
+        }
+
+        const { data, error } = await query;
 
         if (error) {
             console.error(`Error fetching user ${type} posts:`, error);
@@ -236,6 +241,39 @@ class SocialService {
             console.error(e);
             return { followersCount: 0, followingCount: 0, totalLikes: 0 };
         }
+    }
+
+    // ============================================================================
+    // 💬 COMMENTS
+    // ============================================================================
+
+    async getComments(postId: string): Promise<any[]> {
+        const { data, error } = await supabase
+            .from('comments')
+            .select(`
+                *,
+                profiles (username, avatar_url)
+            `)
+            .eq('post_id', postId)
+            .order('created_at', { ascending: true });
+
+        if (error) {
+            console.error("Error fetching comments:", error);
+            return [];
+        }
+        return data;
+    }
+
+    async addComment(userId: string, postId: string, content: string) {
+        return await supabase
+            .from('comments')
+            .insert({
+                user_id: userId,
+                post_id: postId,
+                content: content
+            })
+            .select('*, profiles(username, avatar_url)')
+            .single();
     }
 }
 
