@@ -1,71 +1,182 @@
-import { Users, MapPin, Lock } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { Heart, MessageCircle, Share2, MoreHorizontal, Music2, Swords } from 'lucide-react';
+import { socialService, type Post } from '../services/SocialService';
+import { useAuth } from '../context/AuthContext';
+import { Link } from 'react-router-dom';
 
 export const CommunityPage = () => {
+    const { user } = useAuth();
+    const [posts, setPosts] = useState<Post[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    // Auto-play videos intersection observer
+    const videoRefs = useRef<{ [key: string]: HTMLVideoElement }>({});
+
+    useEffect(() => {
+        loadFeed();
+    }, []);
+
+    const loadFeed = async () => {
+        setLoading(true);
+        // Using getGlobalFeed for discovery
+        const feed = await socialService.getGlobalFeed(user?.id);
+        setPosts(feed);
+        setLoading(false);
+    };
+
+    // Intersection Observer for Auto-Play
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    const video = entry.target as HTMLVideoElement;
+                    if (entry.isIntersecting) {
+                        video.play().catch(() => { }); // catch abort errors
+                    } else {
+                        video.pause();
+                    }
+                });
+            },
+            { threshold: 0.6 } // Play when 60% visible
+        );
+
+        Object.values(videoRefs.current).forEach((video) => {
+            if (video) observer.observe(video);
+        });
+
+        return () => observer.disconnect();
+    }, [posts]);
+
+    const handleLike = async (post: Post) => {
+        if (!user) return alert("Inicia sesión para dar like ❤️");
+
+        // Optimistic Update
+        const isLiked = post.user_has_liked;
+        const newCount = (post.likes_count || 0) + (isLiked ? -1 : 1);
+
+        setPosts(prev => prev.map(p => p.id === post.id ? {
+            ...p,
+            user_has_liked: !isLiked,
+            likes_count: newCount
+        } : p));
+
+        await socialService.toggleLike(user.id, post.id);
+    };
+
     return (
-        <div className="min-h-screen bg-neutral-950 flex flex-col items-center justify-center p-6 text-center relative overflow-hidden">
-            {/* Background Effects */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gym-primary/10 rounded-full blur-[100px] pointer-events-none" />
+        <div className="min-h-screen bg-black pb-20">
+            {/* Header (Mobile style) */}
+            <div className="sticky top-0 z-30 bg-black/80 backdrop-blur-md border-b border-white/10 px-4 h-14 flex items-center justify-center">
+                <span className="font-black italic text-white tracking-tighter text-lg">GYM<span className="text-yellow-500">TOK</span></span>
+            </div>
 
-            <div className="relative z-10 max-w-md w-full space-y-8">
-                {/* Icon Cluster */}
-                <div className="relative mx-auto w-24 h-24 mb-8">
-                    <div className="absolute inset-0 bg-neutral-900 rounded-3xl rotate-6 border border-white/5" />
-                    <div className="absolute inset-0 bg-neutral-900 rounded-3xl -rotate-6 border border-white/5" />
-                    <div className="absolute inset-0 bg-neutral-900 rounded-3xl flex items-center justify-center border border-white/10 shadow-2xl">
-                        <Users size={40} className="text-gym-primary" />
+            <div className="max-w-md mx-auto">
+                {loading ? (
+                    <div className="flex flex-col items-center justify-center py-20">
+                        <div className="w-8 h-8 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                        <p className="text-neutral-500 text-xs font-bold uppercase">Cargando Feed...</p>
                     </div>
-                    <div className="absolute -bottom-2 -right-2 bg-neutral-950 p-2 rounded-xl border border-white/10 shadow-lg">
-                        <Lock size={16} className="text-neutral-400" />
+                ) : posts.length === 0 ? (
+                    <div className="text-center py-20 px-6">
+                        <p className="text-white font-bold text-lg mb-2">Está muy tranquilo por aquí... 🦗</p>
+                        <p className="text-neutral-500 text-sm mb-6">Sé el primero en subir un post.</p>
+                        <p className="text-xs text-neutral-600">Haz click en el botón (+) arriba.</p>
                     </div>
-                </div>
+                ) : (
+                    posts.map((post) => (
+                        <div key={post.id} className="border-b border-white/10 pb-6 mb-6">
 
-                {/* Text Content */}
-                <div className="space-y-4">
-                    <h1 className="text-3xl font-black text-white italic uppercase tracking-tighter">
-                        Comunidad <span className="text-gym-primary">Local</span>
-                    </h1>
-                    <p className="text-neutral-400 text-lg leading-relaxed font-medium">
-                        Estamos construyendo un espacio exclusivo para ti y los miembros de tu gimnasio.
-                    </p>
-                </div>
+                            {/* Post Header */}
+                            <div className="flex items-center justify-between px-4 py-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-neutral-800 overflow-hidden border border-white/10">
+                                        <img
+                                            src={post.profiles?.avatar_url || 'https://i.pravatar.cc/150'}
+                                            alt={post.profiles?.username}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center gap-1">
+                                            <span className="font-bold text-sm text-white">{post.profiles?.username || 'Usuario'}</span>
+                                            <span className="text-[10px] text-neutral-500">• 2h</span>
+                                        </div>
+                                        {post.linked_routine_id && post.routines && (
+                                            <Link to="/arsenal" className="flex items-center gap-1 text-[10px] text-yellow-500 hover:underline">
+                                                <Swords size={10} />
+                                                <span>{post.routines.name}</span>
+                                            </Link>
+                                        )}
+                                    </div>
+                                </div>
+                                <button className="text-neutral-400">
+                                    <MoreHorizontal size={20} />
+                                </button>
+                            </div>
 
-                {/* Feature Card Preview */}
-                <div className="bg-neutral-900/50 backdrop-blur-sm border border-white/5 rounded-2xl p-6 text-left space-y-4 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 px-3 py-1 bg-yellow-500/10 border-b border-l border-yellow-500/20 rounded-bl-xl text-[10px] font-bold text-yellow-500 uppercase">
-                        Próximamente
-                    </div>
+                            {/* Media */}
+                            <div className="bg-neutral-900 w-full relative">
+                                {post.type === 'video' ? (
+                                    <div className="aspect-[9/16] relative">
+                                        <video
+                                            ref={el => { if (el) videoRefs.current[post.id] = el }}
+                                            src={post.media_url}
+                                            className="w-full h-full object-cover"
+                                            playsInline
+                                            loop
+                                            muted
+                                            onClick={(e) => {
+                                                const v = e.target as HTMLVideoElement;
+                                                v.muted = !v.muted; // Toggle mute on click
+                                            }}
+                                        />
+                                        <div className="absolute bottom-4 right-4 bg-black/50 p-2 rounded-full backdrop-blur-sm">
+                                            <Music2 size={16} className="text-white animate-pulse" />
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="aspect-square">
+                                        <img src={post.media_url} alt="Post" className="w-full h-full object-cover" />
+                                    </div>
+                                )}
+                            </div>
 
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-neutral-800 flex items-center justify-center">
-                            <MapPin size={20} className="text-white" />
-                        </div>
-                        <div>
-                            <div className="h-3 w-24 bg-neutral-800 rounded mb-1.5" />
-                            <div className="h-2 w-16 bg-neutral-800/50 rounded" />
-                        </div>
-                    </div>
+                            {/* Actions */}
+                            <div className="px-4 py-3">
+                                <div className="flex items-center gap-4 mb-3">
+                                    <button
+                                        onClick={() => handleLike(post)}
+                                        className="transition-transform active:scale-95"
+                                    >
+                                        <Heart
+                                            size={26}
+                                            className={post.user_has_liked ? "text-red-500 fill-red-500" : "text-white"}
+                                        />
+                                    </button>
+                                    <button className="text-white hover:text-neutral-300">
+                                        <MessageCircle size={26} />
+                                    </button>
+                                    <button className="text-white hover:text-neutral-300 ml-auto">
+                                        <Share2 size={24} />
+                                    </button>
+                                </div>
 
-                    <div className="space-y-2 pt-2">
-                        <div className="flex gap-2">
-                            <div className="w-8 h-8 rounded-full bg-neutral-800 shrink-0" />
-                            <div className="flex-1 bg-neutral-800/50 rounded-r-xl rounded-bl-xl p-3 text-xs text-neutral-500">
-                                ¿Alguien para entrenar pierna hoy a las 6?
+                                {/* Likes Count */}
+                                <div className="mb-2">
+                                    <span className="font-bold text-sm text-white">{post.likes_count} Me gusta</span>
+                                </div>
+
+                                {/* Caption */}
+                                <div className="space-y-1">
+                                    <p className="text-sm text-white">
+                                        <span className="font-bold mr-2">{post.profiles?.username}</span>
+                                        {post.caption}
+                                    </p>
+                                </div>
                             </div>
                         </div>
-                        <div className="flex gap-2 flex-row-reverse">
-                            <div className="w-8 h-8 rounded-full bg-neutral-800 shrink-0" />
-                            <div className="flex-1 bg-gym-primary/10 rounded-l-xl rounded-br-xl p-3 text-xs text-gym-primary/70">
-                                ¡Yo me apunto! Nos vemos en la zona de peso libre.
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="pt-8">
-                    <p className="text-xs text-neutral-600 uppercase tracking-widest font-bold">
-                        GymPartner Community
-                    </p>
-                </div>
+                    ))
+                )}
             </div>
         </div>
     );

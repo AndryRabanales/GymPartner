@@ -1,11 +1,13 @@
-import { Dumbbell, MapPin, Menu, LogIn, Trophy, Users, LogOut } from 'lucide-react';
+import { Dumbbell, MapPin, Menu, LogIn, Trophy, Users, LogOut, PlusSquare } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link, Outlet } from 'react-router-dom';
+import { UploadModal } from '../components/social/UploadModal';
 
 export const AppLayout = () => {
     const { user, signOut } = useAuth();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
     return (
         <div className="min-h-screen bg-neutral-950 text-white flex flex-col">
@@ -61,6 +63,17 @@ export const AppLayout = () => {
                             <Link to="/map" className="hidden sm:flex w-10 h-10 rounded-full bg-neutral-900 border border-neutral-800 items-center justify-center text-neutral-400 hover:text-gym-primary hover:border-gym-primary/50 transition-all hover:shadow-[0_0_15px_rgba(234,179,8,0.15)] group">
                                 <MapPin size={18} className="group-hover:scale-110 transition-transform" />
                             </Link>
+
+                            {/* Create Post Action (Logged In) */}
+                            {user && (
+                                <button
+                                    onClick={() => setIsUploadModalOpen(true)}
+                                    className="w-10 h-10 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400 hover:text-yellow-500 hover:border-yellow-500/50 transition-all hover:shadow-[0_0_15px_rgba(234,179,8,0.15)] group active:scale-95"
+                                    title="Nuevo Post"
+                                >
+                                    <PlusSquare size={20} className="group-hover:scale-110 transition-transform" />
+                                </button>
+                            )}
 
                             {user ? (
                                 <div className="relative group z-50">
@@ -145,6 +158,13 @@ export const AppLayout = () => {
                             {user && (
                                 <>
                                     <div className="h-px bg-white/5 my-2"></div>
+                                    <button
+                                        onClick={() => { setIsMobileMenuOpen(false); setIsUploadModalOpen(true); }}
+                                        className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl bg-neutral-900/50 border border-white/5 hover:bg-white/10 text-neutral-300 hover:text-white font-bold text-sm transition-all"
+                                    >
+                                        <PlusSquare size={18} className="text-yellow-500" />
+                                        <span>CREAR POST</span>
+                                    </button>
                                     <div className="h-px bg-white/5 my-2"></div>
                                     <button
                                         onClick={() => { signOut(); setIsMobileMenuOpen(false); }}
@@ -163,6 +183,9 @@ export const AppLayout = () => {
             <main className="flex-1 flex flex-col">
                 <Outlet />
             </main>
+
+            {/* Global Modals */}
+            {isUploadModalOpen && <UploadModal onClose={() => setIsUploadModalOpen(false)} onSuccess={() => setIsUploadModalOpen(false)} />}
 
             {/* Premium GymRat Footer */}
             <footer className="border-t border-neutral-900 bg-neutral-950 pt-16 pb-8 mt-auto relative overflow-hidden">
