@@ -22,31 +22,32 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
 
     // Official Reels Specifications
     // NOTE: Supabase Storage free tier has 50MB limit per file
-    // Instagram/TikTok allow up to 500MB, but we're limited by our backend
+    // We compress videos automatically if they exceed this limit
     const REELS_SPECS = {
         ASPECT_RATIO: 9 / 16,
-        MIN_RESOLUTION: { width: 720, height: 1280 },
+        MIN_RESOLUTION: { width: 540, height: 960 }, // More lenient (was 720x1280)
         RECOMMENDED_RESOLUTION: { width: 1080, height: 1920 },
         MIN_DURATION: 3, // seconds
-        MAX_DURATION: 90, // seconds
-        MAX_FILE_SIZE: 50 * 1024 * 1024, // 50MB (Supabase Storage limit)
+        MAX_DURATION: 90, // seconds (Instagram/TikTok standard)
+        MAX_FILE_SIZE: 50 * 1024 * 1024, // 50MB (for compression trigger)
         ALLOWED_FORMATS: ['video/mp4', 'video/quicktime'], // MP4 and MOV
         MAX_CAPTION_LENGTH: 2200
     };
 
-    const validateVideoFile = async (file: File): Promise<{ valid: boolean; errors: string[] }> => {
+    const validateVideoFile = async (file: File): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> => {
         const errors: string[] = [];
+        const warnings: string[] = [];
 
-        // Format validation
+        // Format validation (STRICT)
         if (!REELS_SPECS.ALLOWED_FORMATS.includes(file.type)) {
-            errors.push(`Formato no válido.Solo se aceptan MP4 y MOV.`);
-            return { valid: false, errors };
+            errors.push(`Formato no válido. Solo se aceptan MP4 y MOV.`);
+            return { valid: false, errors, warnings };
         }
 
-        // Size validation
+        // Size warning (NOT blocking, will compress automatically)
         if (file.size > REELS_SPECS.MAX_FILE_SIZE) {
             const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
-            errors.push(`Archivo muy pesado(${sizeMB}MB).Máximo: 50MB.`);
+            warnings.push(`Video grande (${sizeMB}MB). Se comprimirá automáticamente.`);
         }
 
         // Video metadata validation
@@ -57,34 +58,34 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
             video.onloadedmetadata = () => {
                 window.URL.revokeObjectURL(video.src);
 
-                // Duration validation
+                // Duration validation (STRICT - Instagram/TikTok requirement)
                 if (video.duration < REELS_SPECS.MIN_DURATION) {
-                    errors.push(`Video muy corto(${video.duration.toFixed(1)}s).Mínimo: 3 segundos.`);
+                    errors.push(`Video muy corto (${video.duration.toFixed(1)}s). Mínimo: 3 segundos.`);
                 }
                 if (video.duration > REELS_SPECS.MAX_DURATION) {
-                    errors.push(`Video muy largo(${Math.floor(video.duration)}s).Máximo: 90 segundos.`);
+                    errors.push(`Video muy largo (${Math.floor(video.duration)}s). Máximo: 90 segundos.`);
                 }
 
-                // Resolution validation
+                // Resolution validation (LENIENT - just a warning)
                 if (video.videoWidth < REELS_SPECS.MIN_RESOLUTION.width ||
                     video.videoHeight < REELS_SPECS.MIN_RESOLUTION.height) {
-                    errors.push(`Resolución muy baja(${video.videoWidth}x${video.videoHeight}).Mínimo: 720x1280.`);
+                    warnings.push(`Resolución baja (${video.videoWidth}x${video.videoHeight}). Recomendado: 1080x1920.`);
                 }
 
-                // Aspect ratio validation (9:16 with 5% tolerance)
+                // Aspect ratio validation (FLEXIBLE - 15% tolerance)
                 const aspectRatio = video.videoWidth / video.videoHeight;
                 const targetRatio = REELS_SPECS.ASPECT_RATIO;
-                const tolerance = 0.05;
+                const tolerance = 0.15; // Increased from 5% to 15%
                 if (Math.abs(aspectRatio - targetRatio) > tolerance) {
-                    errors.push(`Aspecto incorrecto(${aspectRatio.toFixed(2)}).Requerido: 9: 16(vertical).`);
+                    warnings.push(`Aspecto no ideal (${aspectRatio.toFixed(2)}). Recomendado: 9:16 (vertical).`);
                 }
 
-                resolve({ valid: errors.length === 0, errors });
+                resolve({ valid: errors.length === 0, errors, warnings });
             };
 
             video.onerror = () => {
                 errors.push('Error al leer el video. Intenta con otro archivo.');
-                resolve({ valid: false, errors });
+                resolve({ valid: false, errors, warnings });
             };
 
             video.src = URL.createObjectURL(file);
@@ -218,31 +219,43 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
 
             // Validate videos against Reels specs
             const allErrors: string[] = [];
+            const allWarnings: string[] = [];
             const validatedVideos: File[] = [];
 
             for (const video of videos) {
-                const { valid, errors } = await validateVideoFile(video);
+                const { valid, errors, warnings } = await validateVideoFile(video);
+
+                // Collect warnings
+                if (warnings.length > 0) {
+                    allWarnings.push(...warnings);
+                }
+
                 if (valid) {
-                    // Check if needs compression
+                    // Check if needs compression (don't block, just compress)
                     if (video.size > REELS_SPECS.MAX_FILE_SIZE) {
                         try {
                             const compressed = await compressVideo(video);
                             validatedVideos.push(compressed);
                         } catch (error) {
-                            allErrors.push(`${video.name}: Error al comprimir.Intenta con un video más corto.`);
+                            allErrors.push(`${video.name}: Error al comprimir. Intenta con un video más corto.`);
                         }
                     } else {
                         validatedVideos.push(video);
                     }
                 } else {
-                    allErrors.push(`${video.name}: ${errors.join(', ')} `);
+                    // Only add to errors if validation failed (duration/format issues)
+                    allErrors.push(`${video.name}: ${errors.join(', ')}`);
                 }
             }
 
             // Show validation errors if any
             if (allErrors.length > 0) {
                 setValidationErrors(allErrors);
-                // Still allow proceeding with valid files
+            }
+
+            // Show warnings as info (not blocking)
+            if (allWarnings.length > 0 && allErrors.length === 0) {
+                setValidationErrors(allWarnings.map(w => `ℹ️ ${w}`));
             }
 
             const validFiles = [...images, ...validatedVideos];
@@ -332,7 +345,8 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
                             </div>
                             <h3 className="text-xl font-bold text-white mb-2">Arrastra fotos o videos aquí</h3>
                             <p className="text-neutral-500 text-xs mb-4 text-center max-w-sm">
-                                Videos: 9:16 (vertical), 1080x1920px, 3-90s, MP4/MOV, máx 50MB
+                                Videos: 9:16 (vertical), 1080x1920px, 3-90s, MP4/MOV<br />
+                                <span className="text-yellow-500">Videos grandes se comprimen automáticamente</span>
                             </p>
                             <button
                                 onClick={() => fileInputRef.current?.click()}
@@ -423,8 +437,8 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
                                         <div className="flex justify-between items-center mb-4">
                                             <span className="text-xs text-neutral-500">Máx. {REELS_SPECS.MAX_CAPTION_LENGTH} caracteres</span>
                                             <span className={`text - xs font - mono ${caption.length > REELS_SPECS.MAX_CAPTION_LENGTH * 0.9
-                                                    ? 'text-yellow-500'
-                                                    : 'text-neutral-500'
+                                                ? 'text-yellow-500'
+                                                : 'text-neutral-500'
                                                 } `}>
                                                 {caption.length}/{REELS_SPECS.MAX_CAPTION_LENGTH}
                                             </span>
