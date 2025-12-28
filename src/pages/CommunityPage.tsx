@@ -132,7 +132,7 @@ export const CommunityPage = () => {
                             </div>
 
                             {/* Media */}
-                            <div className="bg-neutral-900 w-full relative">
+                            <div className="bg-black w-full relative">
                                 {post.type === 'video' ? (
                                     <div className="aspect-square relative max-h-[280px]">
                                         <video
