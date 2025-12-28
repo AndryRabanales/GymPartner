@@ -7,6 +7,13 @@ import { CommentsSheet } from '../components/social/CommentsSheet';
 import { PlayerProfileModal } from '../components/profile/PlayerProfileModal';
 import { supabase } from '../lib/supabase';
 
+const getRoutineName = (routines: any) => {
+    if (Array.isArray(routines)) {
+        return routines[0]?.name;
+    }
+    return routines?.name;
+};
+
 export const ReelsPage = () => {
     const { user } = useAuth();
     const [posts, setPosts] = useState<Post[]>([]);
@@ -282,7 +289,7 @@ export const ReelsPage = () => {
                                 <Link to="/arsenal" className="inline-flex items-center gap-2 bg-neutral-800/60 backdrop-blur-md px-3 py-1.5 rounded-lg border-l-2 border-yellow-500">
                                     <Swords size={12} className="text-yellow-500" />
                                     <span className="text-xs font-bold">
-                                        {(Array.isArray(post.routines) ? post.routines[0]?.name : (post.routines as any).name) || 'Rutina'}
+                                        {getRoutineName(post.routines) || 'Rutina'}
                                     </span>
                                 </Link>
                             )}
