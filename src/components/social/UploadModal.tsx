@@ -38,7 +38,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
         RECOMMENDED_RESOLUTION: { width: 1080, height: 1920 },
         MIN_DURATION: 3, // seconds
         MAX_DURATION: 90, // seconds (Instagram/TikTok standard)
-        MAX_FILE_SIZE: 100 * 1024 * 1024, // 100MB (Supabase limit)
+        MAX_FILE_SIZE: 50 * 1024 * 1024, // 50MB (Supabase free tier limit)
         ALLOWED_FORMATS: ['video/mp4', 'video/quicktime'], // MP4 and MOV
         MAX_CAPTION_LENGTH: 2200
     };
