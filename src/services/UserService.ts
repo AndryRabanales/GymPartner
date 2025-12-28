@@ -370,15 +370,24 @@ class UserService {
         if (!userId || userId.startsWith('bot-')) return [];
 
         try {
-            const { data, error } = await supabase
+            // 1. Get routine IDs
+            const { data: routines, error } = await supabase
                 .from('routines')
-                .select('*, routine_exercises(id)')
+                .select('id')
                 .eq('user_id', userId)
                 .eq('is_public', true)
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
-            return data || [];
+            if (!routines || routines.length === 0) return [];
+
+            // 2. Fetch full details for each routine (includes exercises with icons/images)
+            const detailedRoutines = await Promise.all(
+                routines.map(r => this.getRoutineDetails(r.id))
+            );
+
+            // Filter out any null results
+            return detailedRoutines.filter(r => r !== null);
         } catch (error) {
             console.error('Error fetching user public routines:', error);
             return [];
