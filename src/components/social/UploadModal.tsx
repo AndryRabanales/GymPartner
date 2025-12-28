@@ -74,7 +74,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
                 </div>
 
                 {/* Content */}
-                <div className="flex flex-col h-[500px]">
+                <div className="flex-1 overflow-hidden relative flex flex-col">
                     {step === 'select' && (
                         <div className="flex-1 flex flex-col items-center justify-center p-6 animate-in slide-in-from-bottom-5">
                             <div className="w-24 h-24 bg-neutral-800 rounded-full flex items-center justify-center mb-6 relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
@@ -99,13 +99,13 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
                     )}
 
                     {step === 'preview' && previewUrl && (
-                        <div className="flex-1 flex flex-col md:flex-row bg-neutral-900 animate-in fade-in">
-                            {/* Media Preview (Left/Top) */}
-                            <div className="flex-1 bg-black flex items-center justify-center relative border-b md:border-b-0 md:border-r border-neutral-800 overflow-hidden">
+                        <div className="flex flex-col md:flex-row h-full animate-in fade-in overflow-hidden">
+                            {/* Media Preview (Top on Mobile, Left on Desktop) */}
+                            <div className="bg-black flex items-center justify-center relative border-b md:border-b-0 md:border-r border-neutral-800 overflow-hidden shrink-0 h-[40vh] md:h-auto md:flex-1">
                                 {mediaType === 'video' ? (
-                                    <video src={previewUrl} controls className="max-w-full max-h-full object-contain" />
+                                    <video src={previewUrl} controls className="w-full h-full object-contain" />
                                 ) : (
-                                    <img src={previewUrl} alt="Preview" className="max-w-full max-h-full object-contain" />
+                                    <img src={previewUrl} alt="Preview" className="w-full h-full object-contain" />
                                 )}
                                 <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full text-[10px] font-black text-white uppercase flex items-center gap-1.5 border border-white/10 z-10">
                                     {mediaType === 'video' ? <Film size={12} /> : <ImageIcon size={12} />}
@@ -113,29 +113,32 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
                                 </div>
                             </div>
 
-                            {/* Details (Right/Bottom) */}
-                            <div className="w-full md:w-[350px] p-6 flex flex-col bg-neutral-900">
-                                <div className="flex items-center gap-3 mb-6">
-                                    <div className="w-8 h-8 rounded-full bg-neutral-800 overflow-hidden border border-white/10">
-                                        <img src={user?.user_metadata?.avatar_url || 'https://i.pravatar.cc/150'} className="w-full h-full object-cover" />
+                            {/* Details (Bottom on Mobile, Right on Desktop) */}
+                            <div className="w-full md:w-[350px] flex flex-col bg-neutral-900 shrink-0 md:h-full overflow-y-auto">
+                                <div className="p-4 sm:p-6 flex flex-col h-full">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="w-8 h-8 rounded-full bg-neutral-800 overflow-hidden border border-white/10 shrink-0">
+                                            <img src={user?.user_metadata?.avatar_url || 'https://i.pravatar.cc/150'} className="w-full h-full object-cover" />
+                                        </div>
+                                        <span className="text-white font-bold text-sm truncate">{user?.user_metadata?.full_name || 'Usuario'}</span>
                                     </div>
-                                    <span className="text-white font-bold text-sm">{user?.user_metadata?.full_name || 'Usuario'}</span>
-                                </div>
 
-                                <textarea
-                                    value={caption}
-                                    onChange={(e) => setCaption(e.target.value)}
-                                    placeholder="Escribe un pie de foto..."
-                                    className="w-full bg-transparent text-white text-sm resize-none focus:outline-none placeholder:text-neutral-500 min-h-[100px] mb-4"
-                                />
+                                    <textarea
+                                        value={caption}
+                                        onChange={(e) => setCaption(e.target.value)}
+                                        placeholder="Escribe un pie de foto..."
+                                        className="w-full bg-transparent text-white text-sm resize-none focus:outline-none placeholder:text-neutral-500 min-h-[100px] mb-4 flex-1 md:flex-none"
+                                    />
 
-                                <div className="mt-auto">
-                                    <button
-                                        onClick={handleUpload}
-                                        className="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-lg transition-all text-sm shadow-lg shadow-blue-500/20 active:scale-95"
-                                    >
-                                        Compartir
-                                    </button>
+                                    <div>
+                                        <button
+                                            onClick={handleUpload}
+                                            className="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-lg transition-all text-sm shadow-lg shadow-blue-500/20 active:scale-95 flex items-center justify-center gap-2"
+                                        >
+                                            <Upload size={18} />
+                                            Compartir Post
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>

@@ -496,19 +496,17 @@ export const UserProfile = () => {
                             </div>
 
                             {/* SOCIAL STATS ROW (Unified Design) */}
-                            {/* SOCIAL STATS ROW (Glassmorphic) */}
-                            <div className="flex items-center justify-center gap-8 bg-black/60 backdrop-blur-md rounded-2xl py-3 px-6 border border-white/10 shadow-xl mt-4 w-full sm:w-fit mx-auto sm:mx-0">
-                                <div className="flex flex-col items-center group cursor-pointer hover:scale-110 transition-transform" onClick={() => setShowSocialProfile(true)}>
+                            {/* SOCIAL STATS ROW (Grid for Perfect Symmetry) */}
+                            <div className="grid grid-cols-3 divide-x divide-white/10 bg-black/60 backdrop-blur-md rounded-2xl py-3 border border-white/10 shadow-xl mt-4 w-full max-w-xs mx-auto">
+                                <div className="flex flex-col items-center justify-center group cursor-pointer hover:bg-white/5 transition-colors py-1" onClick={() => setShowSocialProfile(true)}>
                                     <span className="font-black text-xl text-white leading-none mb-1 drop-shadow-md">{socialStats.followersCount}</span>
                                     <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest text-shadow-sm">Seguidores</span>
                                 </div>
-                                <div className="w-px h-8 bg-white/20"></div>
-                                <div className="flex flex-col items-center group cursor-pointer hover:scale-110 transition-transform" onClick={() => setShowSocialProfile(true)}>
+                                <div className="flex flex-col items-center justify-center group cursor-pointer hover:bg-white/5 transition-colors py-1" onClick={() => setShowSocialProfile(true)}>
                                     <span className="font-black text-xl text-white leading-none mb-1 drop-shadow-md">{socialStats.followingCount}</span>
-                                    <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest text-shadow-sm">Siguiendo</span>
+                                    <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest text-shadow-sm">Seguidos</span>
                                 </div>
-                                <div className="w-px h-8 bg-white/20"></div>
-                                <div className="flex flex-col items-center group cursor-pointer hover:scale-110 transition-transform">
+                                <div className="flex flex-col items-center justify-center group cursor-pointer hover:bg-white/5 transition-colors py-1">
                                     <span className="font-black text-xl text-white leading-none mb-1 text-red-500 drop-shadow-md">{socialStats.totalLikes}</span>
                                     <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest text-shadow-sm">Likes</span>
                                 </div>
