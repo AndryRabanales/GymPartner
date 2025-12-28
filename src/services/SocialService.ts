@@ -128,7 +128,7 @@ class SocialService {
             .from('posts')
             .select(`
                 *,
-                profiles (username, avatar_url),
+                profiles!fk_posts_profiles (username, avatar_url),
                 routines (name),
                 post_likes (user_id)
             `)
@@ -142,7 +142,7 @@ class SocialService {
         const { data, error } = await query;
 
         if (error) {
-            console.error('Error fetching global feed:', error);
+            console.error('Error fetching global feed:', JSON.stringify(error, null, 2));
 
             // Helpful check for the developer/user
             if (error.code === '42P01') {
@@ -252,7 +252,7 @@ class SocialService {
             .from('comments')
             .select(`
                 *,
-                profiles (username, avatar_url)
+                profiles!fk_comments_profiles (username, avatar_url)
             `)
             .eq('post_id', postId)
             .order('created_at', { ascending: true });
@@ -272,7 +272,7 @@ class SocialService {
                 post_id: postId,
                 content: content
             })
-            .select('*, profiles(username, avatar_url)')
+            .select('*, profiles!fk_comments_profiles(username, avatar_url)')
             .single();
     }
 }
