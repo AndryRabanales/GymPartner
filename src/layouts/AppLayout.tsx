@@ -1,4 +1,4 @@
-import { Dumbbell, MapPin, Menu, LogIn, Trophy, Users, LogOut, PlusSquare } from 'lucide-react';
+import { Dumbbell, MapPin, Menu, LogIn, Trophy, Users, LogOut, PlusSquare, Film } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link, Outlet } from 'react-router-dom';
@@ -43,6 +43,7 @@ export const AppLayout = () => {
                         <nav className="hidden md:flex items-center bg-white/5 rounded-full p-1 border border-white/5 backdrop-blur-md">
                             {[
                                 { to: "/", label: "Inicio" },
+                                { to: "/reels", label: "Reels" },
                                 { to: "/map", label: "Mapa" },
                                 { to: "/ranking", label: "Rankings" },
                                 { to: "/community", label: "Comunidad" }
@@ -139,6 +140,7 @@ export const AppLayout = () => {
                         <div className="flex flex-col p-4 space-y-2">
                             {[
                                 { to: "/", label: "INICIO", icon: <Dumbbell size={18} className="text-gym-primary" /> },
+                                { to: "/reels", label: "REELS", icon: <Film size={18} className="text-pink-500" /> },
                                 { to: "/map", label: "MAPA", icon: <MapPin size={18} className="text-blue-400" /> },
                                 { to: "/ranking", label: "RANKINGS", icon: <Trophy size={18} className="text-yellow-400" /> },
                                 { to: "/community", label: "COMUNIDAD", icon: <Users size={18} className="text-green-400" /> }

@@ -13,6 +13,7 @@ import { HistoryPage } from './pages/HistoryPage';
 import WorkoutDetailPage from './pages/WorkoutDetailPage';
 import { RankingPage } from './pages/RankingPage';
 import { CommunityPage } from './pages/CommunityPage';
+import { ReelsPage } from './pages/ReelsPage';
 
 
 
@@ -23,6 +24,7 @@ function App() {
         <Routes>
           <Route path="/" element={<AppLayout />}>
             <Route index element={<UserProfile />} />
+            <Route path="reels" element={<ReelsPage />} />
             <Route path="login" element={<LoginPage />} />
             <Route path="map" element={<MapPage />} />
             <Route path="arsenal" element={<MyArsenal />} />

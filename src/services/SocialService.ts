@@ -117,7 +117,7 @@ class SocialService {
      * Fetches the main feed (Global or Following). 
      * Currently implements Global Feed (Discovery).
      */
-    async getGlobalFeed(currentUserId?: string): Promise<Post[]> {
+    async getGlobalFeed(currentUserId?: string, type?: 'image' | 'video'): Promise<Post[]> {
         // Fetch posts + Creator info + Routine info (if linked)
         let query = supabase
             .from('posts')
@@ -129,6 +129,10 @@ class SocialService {
             `)
             .order('created_at', { ascending: false })
             .limit(20);
+
+        if (type) {
+            query = query.eq('type', type);
+        }
 
         const { data, error } = await query;
 
