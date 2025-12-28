@@ -1,5 +1,6 @@
+```
 import React, { useState, useRef } from 'react';
-import { X, Upload, Image as ImageIcon, Film, Loader, Check } from 'lucide-react';
+import { X, Upload, Image as ImageIcon, Film, Check } from 'lucide-react';
 import { socialService } from '../../services/SocialService';
 import { useAuth } from '../../context/AuthContext';
 
@@ -15,6 +16,9 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
     const [previewUrls, setPreviewUrls] = useState<string[]>([]);
     const [caption, setCaption] = useState('');
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [compressionProgress, setCompressionProgress] = useState(0);
+    const [isCompressing, setIsCompressing] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Official Reels Specifications
@@ -36,14 +40,14 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
 
         // Format validation
         if (!REELS_SPECS.ALLOWED_FORMATS.includes(file.type)) {
-            errors.push(`Formato no válido. Solo se aceptan MP4 y MOV.`);
+            errors.push(`Formato no válido.Solo se aceptan MP4 y MOV.`);
             return { valid: false, errors };
         }
 
         // Size validation
         if (file.size > REELS_SPECS.MAX_FILE_SIZE) {
             const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
-            errors.push(`Archivo muy pesado (${sizeMB}MB). Máximo: 50MB.`);
+            errors.push(`Archivo muy pesado(${ sizeMB }MB).Máximo: 50MB.`);
         }
 
         // Video metadata validation
@@ -56,16 +60,16 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
 
                 // Duration validation
                 if (video.duration < REELS_SPECS.MIN_DURATION) {
-                    errors.push(`Video muy corto (${video.duration.toFixed(1)}s). Mínimo: 3 segundos.`);
+                    errors.push(`Video muy corto(${ video.duration.toFixed(1) }s).Mínimo: 3 segundos.`);
                 }
                 if (video.duration > REELS_SPECS.MAX_DURATION) {
-                    errors.push(`Video muy largo (${Math.floor(video.duration)}s). Máximo: 90 segundos.`);
+                    errors.push(`Video muy largo(${ Math.floor(video.duration) }s).Máximo: 90 segundos.`);
                 }
 
                 // Resolution validation
                 if (video.videoWidth < REELS_SPECS.MIN_RESOLUTION.width ||
                     video.videoHeight < REELS_SPECS.MIN_RESOLUTION.height) {
-                    errors.push(`Resolución muy baja (${video.videoWidth}x${video.videoHeight}). Mínimo: 720x1280.`);
+                    errors.push(`Resolución muy baja(${ video.videoWidth }x${ video.videoHeight }).Mínimo: 720x1280.`);
                 }
 
                 // Aspect ratio validation (9:16 with 5% tolerance)
@@ -73,7 +77,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
                 const targetRatio = REELS_SPECS.ASPECT_RATIO;
                 const tolerance = 0.05;
                 if (Math.abs(aspectRatio - targetRatio) > tolerance) {
-                    errors.push(`Aspecto incorrecto (${aspectRatio.toFixed(2)}). Requerido: 9:16 (vertical).`);
+                    errors.push(`Aspecto incorrecto(${ aspectRatio.toFixed(2) }).Requerido: 9: 16(vertical).`);
                 }
 
                 resolve({ valid: errors.length === 0, errors });
@@ -82,6 +86,110 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
             video.onerror = () => {
                 errors.push('Error al leer el video. Intenta con otro archivo.');
                 resolve({ valid: false, errors });
+            };
+
+            video.src = URL.createObjectURL(file);
+        });
+    };
+
+    /**
+     * Compress video if it exceeds 50MB
+     * Uses MediaRecorder API to re-encode at lower bitrate
+     */
+    const compressVideo = async (file: File): Promise<File> => {
+        return new Promise((resolve, reject) => {
+            setIsCompressing(true);
+            setCompressionProgress(0);
+
+            const video = document.createElement('video');
+            video.preload = 'metadata';
+
+            video.onloadedmetadata = async () => {
+                video.currentTime = 0;
+
+                // Create canvas for video processing
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d')!;
+
+                // Maintain aspect ratio, max 1080p
+                const maxWidth = 1080;
+                const maxHeight = 1920;
+                let width = video.videoWidth;
+                let height = video.videoHeight;
+
+                if (width > maxWidth) {
+                    height = (height * maxWidth) / width;
+                    width = maxWidth;
+                }
+                if (height > maxHeight) {
+                    width = (width * maxHeight) / height;
+                    height = maxHeight;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+
+                // Calculate target bitrate to fit in ~45MB (leaving margin)
+                const duration = video.duration;
+                const targetSizeMB = 45;
+                const targetBitrate = (targetSizeMB * 8 * 1024 * 1024) / duration; // bits per second
+
+                const stream = canvas.captureStream(30); // 30 FPS
+                const mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: 'video/webm;codecs=vp9',
+                    videoBitsPerSecond: Math.min(targetBitrate, 2500000) // Max 2.5 Mbps
+                });
+
+                const chunks: Blob[] = [];
+                mediaRecorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) {
+                        chunks.push(e.data);
+                    }
+                };
+
+                mediaRecorder.onstop = () => {
+                    const compressedBlob = new Blob(chunks, { type: 'video/webm' });
+                    const compressedFile = new File(
+                        [compressedBlob],
+                        file.name.replace(/\.[^/.]+$/, '.webm'),
+                        { type: 'video/webm' }
+                    );
+                    setIsCompressing(false);
+                    setCompressionProgress(100);
+                    resolve(compressedFile);
+                };
+
+                mediaRecorder.onerror = (error) => {
+                    setIsCompressing(false);
+                    reject(error);
+                };
+
+                // Start recording
+                mediaRecorder.start(100); // Collect data every 100ms
+                video.play();
+
+                // Draw frames to canvas
+                const drawFrame = () => {
+                    if (!video.paused && !video.ended) {
+                        ctx.drawImage(video, 0, 0, width, height);
+                        const progress = (video.currentTime / video.duration) * 100;
+                        setCompressionProgress(Math.round(progress));
+                        requestAnimationFrame(drawFrame);
+                    }
+                };
+
+                video.onplay = () => {
+                    drawFrame();
+                };
+
+                video.onended = () => {
+                    mediaRecorder.stop();
+                };
+            };
+
+            video.onerror = () => {
+                setIsCompressing(false);
+                reject(new Error('Error loading video for compression'));
             };
 
             video.src = URL.createObjectURL(file);
@@ -105,7 +213,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
             const invalid = selectedFiles.filter(f => !f.type.startsWith('image/') && !f.type.startsWith('video/'));
 
             if (invalid.length > 0) {
-                alert(`Archivos no válidos: ${invalid.map(f => f.name).join(', ')}`);
+                alert(`Archivos no válidos: ${ invalid.map(f => f.name).join(', ') } `);
                 return;
             }
 
@@ -116,9 +224,19 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
             for (const video of videos) {
                 const { valid, errors } = await validateVideoFile(video);
                 if (valid) {
-                    validatedVideos.push(video);
+                    // Check if needs compression
+                    if (video.size > REELS_SPECS.MAX_FILE_SIZE) {
+                        try {
+                            const compressed = await compressVideo(video);
+                            validatedVideos.push(compressed);
+                        } catch (error) {
+                            allErrors.push(`${ video.name }: Error al comprimir.Intenta con un video más corto.`);
+                        }
+                    } else {
+                        validatedVideos.push(video);
+                    }
                 } else {
-                    allErrors.push(`${video.name}: ${errors.join(', ')}`);
+                    allErrors.push(`${ video.name }: ${ errors.join(', ') } `);
                 }
             }
 
@@ -160,11 +278,23 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
         if (!user || files.length === 0) return;
 
         setStep('uploading');
+        setUploadProgress(0);
+
+        // Simulate progress (since Supabase doesn't provide real progress)
+        const progressInterval = setInterval(() => {
+            setUploadProgress(prev => {
+                if (prev >= 90) return prev; // Stop at 90% until actual upload completes
+                return prev + 10;
+            });
+        }, 300);
 
         // Use multi-media upload if more than 1 file
         const result = files.length > 1
             ? await socialService.createPostWithMultipleMedia(user.id, files, caption)
             : await socialService.createPost(user.id, files[0], files[0].type.startsWith('video') ? 'video' : 'image', caption);
+
+        clearInterval(progressInterval);
+        setUploadProgress(100);
 
         if (result.success) {
             setStep('success');
@@ -175,6 +305,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
         } else {
             alert('Error al subir: ' + result.error);
             setStep('preview');
+            setUploadProgress(0);
         }
     };
 
@@ -243,7 +374,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
                                             {file.type.startsWith('video') ? (
                                                 <video src={previewUrls[index]} className="w-full h-full object-cover" />
                                             ) : (
-                                                <img src={previewUrls[index]} alt={`Preview ${index + 1}`} className="w-full h-full object-cover" />
+                                                <img src={previewUrls[index]} alt={`Preview ${ index + 1 } `} className="w-full h-full object-cover" />
                                             )}
                                             {/* Remove Button */}
                                             <button
@@ -292,10 +423,11 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
                                         />
                                         <div className="flex justify-between items-center mb-4">
                                             <span className="text-xs text-neutral-500">Máx. {REELS_SPECS.MAX_CAPTION_LENGTH} caracteres</span>
-                                            <span className={`text-xs font-mono ${caption.length > REELS_SPECS.MAX_CAPTION_LENGTH * 0.9
-                                                ? 'text-yellow-500'
-                                                : 'text-neutral-500'
-                                                }`}>
+                                            <span className={`text - xs font - mono ${
+    caption.length > REELS_SPECS.MAX_CAPTION_LENGTH * 0.9
+    ? 'text-yellow-500'
+    : 'text-neutral-500'
+} `}>
                                                 {caption.length}/{REELS_SPECS.MAX_CAPTION_LENGTH}
                                             </span>
                                         </div>
@@ -317,8 +449,45 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
 
                     {step === 'uploading' && (
                         <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
-                            <Loader size={48} className="text-blue-500 animate-spin mb-6" />
-                            <h3 className="text-white font-bold text-lg mb-2">Compartiendo...</h3>
+                            {isCompressing ? (
+                                <>
+                                    <div className="w-20 h-20 rounded-full bg-yellow-500/20 flex items-center justify-center mb-6 relative">
+                                        <div className="absolute inset-0 rounded-full border-4 border-yellow-500/30"></div>
+                                        <div
+                                            className="absolute inset-0 rounded-full border-4 border-yellow-500 border-t-transparent animate-spin"
+                                            style={{ borderTopColor: 'transparent' }}
+                                        ></div>
+                                        <span className="text-yellow-500 font-black text-lg z-10">{compressionProgress}%</span>
+                                    </div>
+                                    <h3 className="text-white font-bold text-lg mb-2">Comprimiendo video...</h3>
+                                    <p className="text-neutral-400 text-sm mb-4">Reduciendo tamaño para cumplir con el límite</p>
+                                    <div className="w-full max-w-xs bg-neutral-800 rounded-full h-2 overflow-hidden">
+                                        <div
+                                            className="h-full bg-gradient-to-r from-yellow-500 to-yellow-400 transition-all duration-300"
+                                            style={{ width: `${ compressionProgress }% ` }}
+                                        ></div>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="w-20 h-20 rounded-full bg-blue-500/20 flex items-center justify-center mb-6 relative">
+                                        <div className="absolute inset-0 rounded-full border-4 border-blue-500/30"></div>
+                                        <div
+                                            className="absolute inset-0 rounded-full border-4 border-blue-500 border-t-transparent animate-spin"
+                                            style={{ borderTopColor: 'transparent' }}
+                                        ></div>
+                                        <span className="text-blue-500 font-black text-lg z-10">{uploadProgress}%</span>
+                                    </div>
+                                    <h3 className="text-white font-bold text-lg mb-2">Subiendo...</h3>
+                                    <p className="text-neutral-400 text-sm mb-4">Compartiendo tu contenido</p>
+                                    <div className="w-full max-w-xs bg-neutral-800 rounded-full h-2 overflow-hidden">
+                                        <div
+                                            className="h-full bg-gradient-to-r from-blue-500 to-blue-400 transition-all duration-300"
+                                            style={{ width: `${ uploadProgress }% ` }}
+                                        ></div>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     )}
 
