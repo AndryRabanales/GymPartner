@@ -10,6 +10,7 @@ import { WorkoutHeatmap } from '../components/stats/WorkoutHeatmap';
 import { StatsAnalyzer } from '../utils/StatsAnalyzer';
 import { ShareOverlay } from '../components/stats/ShareOverlay';
 import { PublicTeaser } from '../components/common/PublicTeaser';
+import { socialService } from '../services/SocialService';
 
 interface Stats {
     totalWorkouts: number;
@@ -19,6 +20,11 @@ interface Stats {
     oneRepMaxes: any[];
     volumeTrendData: any[]; // New field
     consistencyData: any[]; // New field
+    social: {             // New field
+        followers: number;
+        following: number;
+        likes: number;
+    };
 }
 
 export const StatsPage = () => {
@@ -79,10 +85,13 @@ export const StatsPage = () => {
                 if (error) throw error;
 
                 if (!sessions || sessions.length === 0) {
-                    setStats({ totalWorkouts: 0, totalVolume: 0, totalTimeMinutes: 0, muscleBalanceData: [], oneRepMaxes: [], volumeTrendData: [], consistencyData: [] });
+                    setStats({ totalWorkouts: 0, totalVolume: 0, totalTimeMinutes: 0, muscleBalanceData: [], oneRepMaxes: [], volumeTrendData: [], consistencyData: [], social: { followers: 0, following: 0, likes: 0 } });
                     setLoading(false);
                     return;
                 }
+
+                // Fetch Social Stats
+                const socialStats = await socialService.getProfileStats(user.id);
 
                 // Calculate stats
                 let totalVolume = 0;
@@ -158,7 +167,12 @@ export const StatsPage = () => {
                     muscleBalanceData,
                     oneRepMaxes: topLifts,
                     volumeTrendData,
-                    consistencyData
+                    consistencyData,
+                    social: {
+                        followers: socialStats.followersCount,
+                        following: socialStats.followingCount,
+                        likes: socialStats.totalLikes
+                    }
                 });
                 setLoading(false);
             } catch (error) {
@@ -170,7 +184,8 @@ export const StatsPage = () => {
                     muscleBalanceData: [],
                     oneRepMaxes: [],
                     volumeTrendData: [],
-                    consistencyData: []
+                    consistencyData: [],
+                    social: { followers: 0, following: 0, likes: 0 }
                 });
                 setLoading(false);
             }
@@ -281,6 +296,32 @@ export const StatsPage = () => {
 
             {/* MAIN ANALYTICS GRID */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                {/* SOCIAL INTELLIGENCE CARD (New) */}
+                <div className="lg:col-span-3 bg-gradient-to-r from-neutral-900 via-neutral-900 to-yellow-900/10 border border-neutral-800 rounded-3xl p-6 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-6 opacity-10">
+                        <Share2 size={100} className="text-yellow-500" />
+                    </div>
+                    <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2 relative z-10">
+                        <Share2 size={18} className="text-yellow-500" />
+                        Influencia Social
+                    </h3>
+
+                    <div className="grid grid-cols-3 gap-4 relative z-10">
+                        <div className="bg-black/30 p-4 rounded-2xl border border-white/5 text-center">
+                            <p className="text-xs text-neutral-500 font-bold uppercase tracking-wider mb-1">Seguidores</p>
+                            <span className="text-3xl font-black text-white">{stats.social.followers}</span>
+                        </div>
+                        <div className="bg-black/30 p-4 rounded-2xl border border-white/5 text-center">
+                            <p className="text-xs text-neutral-500 font-bold uppercase tracking-wider mb-1">Likes</p>
+                            <span className="text-3xl font-black text-white">{stats.social.likes}</span>
+                        </div>
+                        <div className="bg-black/30 p-4 rounded-2xl border border-white/5 text-center">
+                            <p className="text-xs text-neutral-500 font-bold uppercase tracking-wider mb-1">Siguiendo</p>
+                            <span className="text-3xl font-black text-neutral-400">{stats.social.following}</span>
+                        </div>
+                    </div>
+                </div>
 
                 {/* 1. Radar Chart */}
                 <div className="lg:col-span-2 bg-neutral-900 border border-neutral-800 rounded-3xl p-6 relative overflow-hidden">

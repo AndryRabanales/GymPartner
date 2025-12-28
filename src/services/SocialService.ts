@@ -216,23 +216,24 @@ class SocialService {
     async getProfileStats(userId: string): Promise<SocialProfileStats> {
         try {
             // Parallel fetch for perf
-            const [followers, following] = await Promise.all([
+            const [followers, following, postsWithLikes] = await Promise.all([
                 supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', userId),
                 supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', userId),
-                // supabase.from('post_likes').select('user_id', { count: 'exact', head: true }).eq('user_id', userId) // WAIT: This counts likes GIVEN, not RECEIVED. 
+                supabase.from('posts').select('id, post_likes(count)', { count: 'exact' }).eq('user_id', userId)
             ]);
 
-            // Correction: Total Likes RECEIVED on user's posts
-            // This is harder in Supabase without a view or RPC. 
-            // For MVP, we might display "Likes Actions" or just skip 'Total Likes Received' unless we make a DB function.
-            // Let's stick to Followers/Following for now to be safe and fast.
+            // Calculate Total Likes Received
+            const totalLikesReceived = postsWithLikes.data?.reduce((acc: number, post: any) => {
+                return acc + (post.post_likes?.[0]?.count || 0);
+            }, 0) || 0;
 
             return {
                 followersCount: followers.count || 0,
                 followingCount: following.count || 0,
-                totalLikes: 0 // Placeholder
+                totalLikes: totalLikesReceived
             };
         } catch (e) {
+            console.error(e);
             return { followersCount: 0, followingCount: 0, totalLikes: 0 };
         }
     }

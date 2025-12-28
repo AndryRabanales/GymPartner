@@ -20,7 +20,18 @@ export const ReelsPage = () => {
         setLoading(true);
         // Fetch ONLY videos
         const feed = await socialService.getGlobalFeed(user?.id, 'video');
-        setPosts(feed);
+
+        // Check follow status for each creator in the feed
+        if (user) {
+            const feedWithFollow = await Promise.all(feed.map(async (post) => {
+                const isFollowing = await socialService.getFollowStatus(user.id, post.user_id);
+                return { ...post, is_following: isFollowing };
+            }));
+            setPosts(feedWithFollow as any);
+        } else {
+            setPosts(feed);
+        }
+
         setLoading(false);
     };
 
@@ -63,6 +74,23 @@ export const ReelsPage = () => {
         } : p));
 
         await socialService.toggleLike(user.id, post.id);
+    };
+
+    const handleFollow = async (post: any, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!user) return alert("Inicia sesión para seguir a este atleta.");
+        if (post.user_id === user.id) return; // Can't follow self
+
+        const isFollowing = post.is_following;
+
+        // Optimistic Update
+        setPosts(prev => prev.map(p => p.user_id === post.user_id ? { ...p, is_following: !isFollowing } : p));
+
+        if (isFollowing) {
+            await socialService.unfollowUser(user.id, post.user_id);
+        } else {
+            await socialService.followUser(user.id, post.user_id);
+        }
     };
 
     return (
@@ -141,7 +169,17 @@ export const ReelsPage = () => {
                         <div className="absolute bottom-6 left-4 right-16 z-20 text-white text-left">
                             <h3 className="font-bold text-shadow-sm mb-2 flex items-center gap-2">
                                 @{post.profiles?.username}
-                                <span className="text-[10px] bg-white/20 px-1.5 rounded font-medium">Seguir</span>
+                                {user?.id !== post.user_id && (
+                                    <button
+                                        onClick={(e) => handleFollow(post, e)}
+                                        className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider transition-colors ${(post as any).is_following
+                                                ? 'bg-neutral-800 text-neutral-400 border border-neutral-600'
+                                                : 'bg-white/20 hover:bg-yellow-500 hover:text-black text-white'
+                                            }`}
+                                    >
+                                        {(post as any).is_following ? 'Siguiendo' : 'Seguir'}
+                                    </button>
+                                )}
                             </h3>
 
                             <p className="text-sm opacity-90 mb-3 line-clamp-2 leading-snug">
