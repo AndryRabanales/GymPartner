@@ -333,7 +333,6 @@ export const MyArsenal = () => {
             }
 
             // Success
-            // await initialize();  <-- Removed to avoid race condition overriding our optimistic update
             setAddingMode(false);
             setCustomMode(false);
             setCustomName('');
@@ -341,6 +340,11 @@ export const MyArsenal = () => {
 
             // Force scroll to item or section?
             alert(`¡Ejercicio "${newItem.name}" creado y añadido a tu arsenal!`); // Feedback
+
+            // Delayed re-fetch to sync with other devices (after optimistic update settles)
+            setTimeout(() => {
+                initialize();
+            }, 500);
 
         } catch (error: any) {
             console.error('Detailed Error saving custom equipment:', error);

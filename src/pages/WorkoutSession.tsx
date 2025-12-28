@@ -181,21 +181,42 @@ export const WorkoutSession = () => {
 
         // Map Routine IDs to Actual Inventory Items
         const exercisesToAdd: WorkoutExercise[] = [];
+        const missingExercises: string[] = [];
 
         const details = routine.routine_exercises || [];
 
         // Helper to get default metrics
         const defaultMetrics = { weight: true, reps: true, time: false, distance: false, rpe: false };
 
+        // Helper to normalize names for better matching
+        const normalizeName = (name: string) => {
+            return name
+                .toLowerCase()
+                .trim()
+                .normalize('NFD') // Decompose accented characters
+                .replace(/[\u0300-\u036f]/g, '') // Remove accents
+                .replace(/[^a-z0-9\s]/g, '') // Remove special characters
+                .replace(/\s+/g, ' '); // Normalize spaces
+        };
+
         if (details.length > 0) {
             details.sort((a: any, b: any) => (a.order_index || 0) - (b.order_index || 0)).forEach((detail: any) => {
                 // 1. Try Strict ID Match
                 let item = arsenal.find(i => i.id === detail.exercise_id);
 
-                // 2. Fallback: Name Match
+                // 2. Fallback: Normalized Name Match
                 if (!item && detail.equipment?.name) {
-                    const targetName = detail.equipment.name.toLowerCase().trim();
-                    item = arsenal.find(i => i.name.toLowerCase().trim() === targetName);
+                    const targetName = normalizeName(detail.equipment.name);
+                    item = arsenal.find(i => normalizeName(i.name) === targetName);
+                }
+
+                // 3. Fallback: Partial Name Match (fuzzy)
+                if (!item && detail.equipment?.name) {
+                    const targetName = normalizeName(detail.equipment.name);
+                    item = arsenal.find(i => {
+                        const itemName = normalizeName(i.name);
+                        return itemName.includes(targetName) || targetName.includes(itemName);
+                    });
                 }
 
                 if (item) {
@@ -227,6 +248,10 @@ export const WorkoutSession = () => {
                         }],
                         category: item.target_muscle_group || item.category || 'Custom'
                     });
+                } else {
+                    // Track missing exercise
+                    const exerciseName = detail.equipment?.name || detail.name || 'Ejercicio desconocido';
+                    missingExercises.push(exerciseName);
                 }
             });
         } else {
@@ -242,20 +267,28 @@ export const WorkoutSession = () => {
                         sets: [{ id: Math.random().toString(), weight: 0, reps: 0, completed: false }],
                         category: item.target_muscle_group || item.category || 'Custom'
                     });
+                } else {
+                    missingExercises.push(`Ejercicio ID: ${eqId}`);
                 }
             });
         }
 
         if (exercisesToAdd.length > 0) {
             setActiveExercises(exercisesToAdd);
+
+            // Show warning if some exercises are missing, but allow continuing
+            if (missingExercises.length > 0) {
+                const missingList = missingExercises.join(', ');
+                alert(`⚠️ Algunos ejercicios no están en este gimnasio:\n\n${missingList}\n\nPuedes continuar con los ${exercisesToAdd.length} ejercicios disponibles o agregar los faltantes a tu Arsenal.`);
+            }
         } else {
             console.warn("No matching exercises found in this gym's arsenal.");
-            alert("⚠️ No se encontraron las máquinas de esta rutina en este gimnasio. Asegúrate de registrar máquinas con el mismo nombre en tu Arsenal Local.");
+            const missingList = missingExercises.length > 0 ? `\n\nEjercicios faltantes:\n${missingExercises.join('\n')}` : '';
+            alert(`⚠️ No se encontraron ejercicios de esta rutina en este gimnasio.${missingList}\n\nAgrega estos ejercicios a tu Arsenal Local para poder usar esta rutina.`);
         }
 
         setLoading(false);
     };
-
     const addExercise = (equipment: Equipment) => {
         const defaultMetrics = { weight: true, reps: true, time: false, distance: false, rpe: false };
         const newExercise: WorkoutExercise = {
