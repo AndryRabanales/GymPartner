@@ -1,6 +1,12 @@
 import { supabase } from '../lib/supabase';
 
 // Types representing the DB Schema
+export interface MediaItem {
+    url: string;
+    type: 'image' | 'video';
+    order_index: number;
+}
+
 export interface Post {
     id: string;
     user_id: string;
@@ -10,6 +16,9 @@ export interface Post {
     caption?: string;
     linked_routine_id?: string;
     created_at: string;
+
+    // Multi-media support
+    media?: MediaItem[]; // Array of media items for carousel posts
 
     // Aggregated/Joined data
     likes_count?: number;
@@ -83,6 +92,85 @@ class SocialService {
         }
     }
 
+    /**
+     * Creates a post with multiple media files (carousel)
+     */
+    async createPostWithMultipleMedia(
+        userId: string,
+        files: File[],
+        caption?: string,
+        linkedRoutineId?: string
+    ): Promise<{ success: boolean; error?: string }> {
+        try {
+            if (files.length === 0) {
+                throw new Error('No files provided');
+            }
+
+            // 1. Create the post record first
+            const { data: post, error: postError } = await supabase
+                .from('posts')
+                .insert({
+                    user_id: userId,
+                    type: files[0].type.startsWith('video') ? 'video' : 'image', // Primary type
+                    media_url: '', // Will be updated with first media URL
+                    caption: caption,
+                    linked_routine_id: linkedRoutineId
+                })
+                .select()
+                .single();
+
+            if (postError) throw postError;
+
+            // 2. Upload all files and create post_media records
+            const mediaRecords = [];
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${userId}/${Date.now()}_${i}.${fileExt}`;
+                const mediaType = file.type.startsWith('video') ? 'video' : 'image';
+
+                // Upload to storage
+                const { error: uploadError } = await supabase.storage
+                    .from('gym-social-media')
+                    .upload(fileName, file);
+
+                if (uploadError) throw uploadError;
+
+                // Get public URL
+                const { data: { publicUrl } } = supabase.storage
+                    .from('gym-social-media')
+                    .getPublicUrl(fileName);
+
+                mediaRecords.push({
+                    post_id: post.id,
+                    media_url: publicUrl,
+                    media_type: mediaType,
+                    order_index: i
+                });
+
+                // Update main post with first media URL for backward compatibility
+                if (i === 0) {
+                    await supabase
+                        .from('posts')
+                        .update({ media_url: publicUrl })
+                        .eq('id', post.id);
+                }
+            }
+
+            // 3. Insert all media records
+            const { error: mediaError } = await supabase
+                .from('post_media')
+                .insert(mediaRecords);
+
+            if (mediaError) throw mediaError;
+
+            return { success: true };
+        } catch (error: any) {
+            console.error('Error creating multi-media post:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
     // ============================================================================
     // 📺 READ FEEDS (Profile & Main)
     // ============================================================================
@@ -111,10 +199,48 @@ class SocialService {
             return [];
         }
 
+        // Fetch media for all posts
+        const postsWithMedia = await this.attachMediaToPosts(data);
+
         // Transform to include simple counts
-        return data.map((post: any) => ({
+        return postsWithMedia.map((post: any) => ({
             ...post,
             likes_count: post.post_likes?.[0]?.count || 0
+        }));
+    }
+
+    /**
+     * Helper: Attach media array from post_media table to posts
+     */
+    private async attachMediaToPosts(posts: any[]): Promise<any[]> {
+        if (!posts || posts.length === 0) return [];
+
+        const postIds = posts.map(p => p.id);
+
+        // Fetch all media for these posts
+        const { data: mediaData } = await supabase
+            .from('post_media')
+            .select('*')
+            .in('post_id', postIds)
+            .order('order_index', { ascending: true });
+
+        // Group media by post_id
+        const mediaByPost = new Map<string, MediaItem[]>();
+        mediaData?.forEach((m: any) => {
+            if (!mediaByPost.has(m.post_id)) {
+                mediaByPost.set(m.post_id, []);
+            }
+            mediaByPost.get(m.post_id)!.push({
+                url: m.media_url,
+                type: m.media_type,
+                order_index: m.order_index
+            });
+        });
+
+        // Attach media to posts
+        return posts.map(post => ({
+            ...post,
+            media: mediaByPost.get(post.id) || []
         }));
     }
 
@@ -151,7 +277,10 @@ class SocialService {
             return [];
         }
 
-        return data.map((post: any) => ({
+        // Fetch media for all posts
+        const postsWithMedia = await this.attachMediaToPosts(data);
+
+        return postsWithMedia.map((post: any) => ({
             ...post,
             // Check if current user liked it (if logged in)
             user_has_liked: currentUserId

@@ -11,41 +11,67 @@ interface UploadModalProps {
 export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) => {
     const { user } = useAuth();
     const [step, setStep] = useState<'select' | 'preview' | 'uploading' | 'success'>('select');
-    const [file, setFile] = useState<File | null>(null);
-    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-    const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
+    const [files, setFiles] = useState<File[]>([]);
+    const [previewUrls, setPreviewUrls] = useState<string[]>([]);
     const [caption, setCaption] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            const selectedFile = e.target.files[0];
-            const isVideo = selectedFile.type.startsWith('video/');
-            const isImage = selectedFile.type.startsWith('image/');
+        if (e.target.files && e.target.files.length > 0) {
+            const selectedFiles = Array.from(e.target.files);
 
-            if (!isVideo && !isImage) {
-                alert('Solo se permiten imágenes o videos.');
+            // Validate max 10 files
+            if (selectedFiles.length > 10) {
+                alert('Máximo 10 archivos por post.');
                 return;
             }
 
-            // Size Validation (500MB for High Quality)
-            if (selectedFile.size > 500 * 1024 * 1024) {
-                alert('¡El archivo es demasiado grande! Máximo 500MB.');
+            // Validate all files are images or videos
+            const validFiles = selectedFiles.filter(f => {
+                const isValid = f.type.startsWith('video/') || f.type.startsWith('image/');
+                if (!isValid) {
+                    alert(`${f.name} no es una imagen o video válido.`);
+                }
+                return isValid;
+            });
+
+            // Size Validation (500MB each)
+            const oversized = validFiles.filter(f => f.size > 500 * 1024 * 1024);
+            if (oversized.length > 0) {
+                alert(`Archivos demasiado grandes: ${oversized.map(f => f.name).join(', ')}. Máximo 500MB cada uno.`);
                 return;
             }
 
-            setFile(selectedFile);
-            setMediaType(isVideo ? 'video' : 'image');
-            setPreviewUrl(URL.createObjectURL(selectedFile));
+            setFiles(validFiles);
+            setPreviewUrls(validFiles.map(f => URL.createObjectURL(f)));
             setStep('preview');
         }
     };
 
+    const removeFile = (index: number) => {
+        const newFiles = files.filter((_, i) => i !== index);
+        const newPreviews = previewUrls.filter((_, i) => i !== index);
+
+        // Revoke old URL to prevent memory leak
+        URL.revokeObjectURL(previewUrls[index]);
+
+        setFiles(newFiles);
+        setPreviewUrls(newPreviews);
+
+        if (newFiles.length === 0) {
+            setStep('select');
+        }
+    };
+
     const handleUpload = async () => {
-        if (!user || !file) return;
+        if (!user || files.length === 0) return;
 
         setStep('uploading');
-        const result = await socialService.createPost(user.id, file, mediaType, caption);
+
+        // Use multi-media upload if more than 1 file
+        const result = files.length > 1
+            ? await socialService.createPostWithMultipleMedia(user.id, files, caption)
+            : await socialService.createPost(user.id, files[0], files[0].type.startsWith('video') ? 'video' : 'image', caption);
 
         if (result.success) {
             setStep('success');
@@ -93,24 +119,44 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
                                 ref={fileInputRef}
                                 className="hidden"
                                 accept="image/*,video/*"
+                                multiple
                                 onChange={handleFileSelect}
                             />
                         </div>
                     )}
 
-                    {step === 'preview' && previewUrl && (
+                    {step === 'preview' && previewUrls.length > 0 && (
                         <div className="flex flex-col md:flex-row h-full animate-in fade-in overflow-hidden">
-                            {/* Media Preview (Top on Mobile, Left on Desktop) */}
-                            <div className="bg-black flex items-center justify-center relative border-b md:border-b-0 md:border-r border-neutral-800 overflow-hidden shrink-0 h-[40vh] md:h-auto md:flex-1">
-                                {mediaType === 'video' ? (
-                                    <video src={previewUrl} controls className="w-full h-full object-contain" />
-                                ) : (
-                                    <img src={previewUrl} alt="Preview" className="w-full h-full object-contain" />
-                                )}
-                                <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full text-[10px] font-black text-white uppercase flex items-center gap-1.5 border border-white/10 z-10">
-                                    {mediaType === 'video' ? <Film size={12} /> : <ImageIcon size={12} />}
-                                    {mediaType === 'video' ? 'REEL' : 'POST'}
+                            {/* Media Preview Grid (Top on Mobile, Left on Desktop) */}
+                            <div className="bg-black flex items-center justify-center relative border-b md:border-b-0 md:border-r border-neutral-800 overflow-auto shrink-0 h-[40vh] md:h-auto md:flex-1 p-4">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 w-full max-w-2xl">
+                                    {files.map((file, index) => (
+                                        <div key={index} className="relative aspect-square bg-neutral-900 rounded-lg overflow-hidden group">
+                                            {file.type.startsWith('video') ? (
+                                                <video src={previewUrls[index]} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <img src={previewUrls[index]} alt={`Preview ${index + 1}`} className="w-full h-full object-cover" />
+                                            )}
+                                            {/* Remove Button */}
+                                            <button
+                                                onClick={() => removeFile(index)}
+                                                className="absolute top-1 right-1 bg-black/70 hover:bg-red-500 text-white p-1 rounded-full transition-colors opacity-0 group-hover:opacity-100"
+                                            >
+                                                <X size={16} />
+                                            </button>
+                                            {/* Type Badge */}
+                                            <div className="absolute bottom-1 left-1 bg-black/60 backdrop-blur-sm px-1.5 py-0.5 rounded text-[8px] font-bold text-white uppercase">
+                                                {file.type.startsWith('video') ? <Film size={10} /> : <ImageIcon size={10} />}
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
+                                {/* File Count Badge */}
+                                {files.length > 1 && (
+                                    <div className="absolute top-4 right-4 bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-bold text-white border border-white/10">
+                                        {files.length} archivos
+                                    </div>
+                                )}
                             </div>
 
                             {/* Details (Bottom on Mobile, Right on Desktop) */}

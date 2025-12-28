@@ -4,6 +4,7 @@ import { socialService, type Post } from '../services/SocialService';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { CommentsSheet } from '../components/social/CommentsSheet';
+import { MediaCarousel } from '../components/social/MediaCarousel';
 
 export const CommunityPage = () => {
     const { user } = useAuth();
@@ -132,31 +133,35 @@ export const CommunityPage = () => {
                             </div>
 
                             {/* Media */}
-                            <div className="bg-black w-full relative">
-                                {post.type === 'video' ? (
-                                    <div className="aspect-square relative max-h-[280px]">
-                                        <video
-                                            ref={el => { if (el) videoRefs.current[post.id] = el }}
-                                            src={post.media_url}
-                                            className="w-full h-full object-cover"
-                                            playsInline
-                                            loop
-                                            muted
-                                            onClick={(e) => {
-                                                const v = e.target as HTMLVideoElement;
-                                                v.muted = !v.muted; // Toggle mute on click
-                                            }}
-                                        />
-                                        <div className="absolute bottom-4 right-4 bg-black/50 p-2 rounded-full backdrop-blur-sm">
-                                            <Music2 size={16} className="text-white animate-pulse" />
+                            {post.media && post.media.length > 0 ? (
+                                <MediaCarousel media={post.media} postId={post.id} />
+                            ) : (
+                                <div className="bg-black w-full relative">
+                                    {post.type === 'video' ? (
+                                        <div className="aspect-square relative max-h-[280px]">
+                                            <video
+                                                ref={el => { if (el) videoRefs.current[post.id] = el }}
+                                                src={post.media_url}
+                                                className="w-full h-full object-cover"
+                                                playsInline
+                                                loop
+                                                muted
+                                                onClick={(e) => {
+                                                    const v = e.target as HTMLVideoElement;
+                                                    v.muted = !v.muted;
+                                                }}
+                                            />
+                                            <div className="absolute bottom-4 right-4 bg-black/50 p-2 rounded-full backdrop-blur-sm">
+                                                <Music2 size={16} className="text-white animate-pulse" />
+                                            </div>
                                         </div>
-                                    </div>
-                                ) : (
-                                    <div className="aspect-square max-h-[280px]">
-                                        <img src={post.media_url} alt="Post" className="w-full h-full object-cover" />
-                                    </div>
-                                )}
-                            </div>
+                                    ) : (
+                                        <div className="aspect-square max-h-[280px]">
+                                            <img src={post.media_url} alt="Post" className="w-full h-full object-cover" />
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             {/* Actions */}
                             <div className="px-3 py-1">
