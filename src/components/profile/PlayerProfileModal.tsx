@@ -78,41 +78,41 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
         <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-end md:justify-center p-0 md:p-4 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="bg-neutral-900 border-l md:border border-neutral-800 w-full md:max-w-sm h-full md:h-auto md:rounded-3xl overflow-hidden relative shadow-2xl animate-in slide-in-from-right duration-300 flex flex-col md:max-h-[90vh]">
 
-                {/* Header / Banner */}
-                <div className="h-32 bg-neutral-800 relative shrink-0">
-                    {player.banner_url ? (
-                        <img src={player.banner_url} alt="Banner" className="w-full h-full object-cover opacity-60" />
-                    ) : (
-                        <div className="absolute inset-0 bg-gradient-to-b from-neutral-800 to-neutral-900" />
-                    )}
+                {/* Close Button (Fixed) */}
+                <button
+                    onClick={onClose}
+                    className="absolute top-4 right-4 bg-black/50 text-white p-1 rounded-full hover:bg-black/80 transition-colors z-50"
+                >
+                    <X size={20} />
+                </button>
 
-                    {/* Close Button */}
-                    <button
-                        onClick={onClose}
-                        className="absolute top-4 right-4 bg-black/50 text-white p-1 rounded-full hover:bg-black/80 transition-colors z-20"
-                    >
-                        <X size={20} />
-                    </button>
+                {/* Scrollable Content (Banner matches scroll) */}
+                <div className="overflow-y-auto flex-1 custom-scrollbar w-full">
 
-                    {/* Rank Badge */}
-                    <div className="absolute top-4 left-4 z-20">
-                        {player.rank <= 3 ? (
-                            <div className={`w-10 h-10 flex items-center justify-center font-black rounded-lg shadow-lg skew-x-[-10deg] border border-white/20 ${player.rank === 1 ? 'bg-yellow-500 text-black' :
-                                player.rank === 2 ? 'bg-slate-300 text-black' :
-                                    'bg-orange-600 text-white'
-                                }`}>
-                                {player.rank}
-                            </div>
+                    {/* Header / Banner */}
+                    <div className="h-32 bg-neutral-800 relative">
+                        {player.banner_url ? (
+                            <img src={player.banner_url} alt="Banner" className="w-full h-full object-cover opacity-60" />
                         ) : (
-                            <div className="bg-black/60 backdrop-blur px-3 py-1 rounded-lg border border-white/10 text-xs font-bold text-white">
-                                #{player.rank}
-                            </div>
+                            <div className="absolute inset-0 bg-gradient-to-b from-neutral-800 to-neutral-900" />
                         )}
-                    </div>
-                </div>
 
-                {/* Scrollable Content */}
-                <div className="overflow-y-auto flex-1 custom-scrollbar">
+                        {/* Rank Badge */}
+                        <div className="absolute top-4 left-4 z-20">
+                            {player.rank <= 3 ? (
+                                <div className={`w-10 h-10 flex items-center justify-center font-black rounded-lg shadow-lg skew-x-[-10deg] border border-white/20 ${player.rank === 1 ? 'bg-yellow-500 text-black' :
+                                    player.rank === 2 ? 'bg-slate-300 text-black' :
+                                        'bg-orange-600 text-white'
+                                    }`}>
+                                    {player.rank}
+                                </div>
+                            ) : (
+                                <div className="bg-black/60 backdrop-blur px-3 py-1 rounded-lg border border-white/10 text-xs font-bold text-white">
+                                    #{player.rank}
+                                </div>
+                            )}
+                        </div>
+                    </div>
                     <div className="relative px-6 pb-6 flex flex-col items-center text-center">
 
                         {/* Avatar (Centered & Overlapping Banner) */}
