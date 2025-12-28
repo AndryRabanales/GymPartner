@@ -18,6 +18,14 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
     const [uploadProgress, setUploadProgress] = useState(0);
     const [compressionProgress, setCompressionProgress] = useState(0);
     const [isCompressing, setIsCompressing] = useState(false);
+    const [loadProgress, setLoadProgress] = useState(0);
+    const [videoMetadata, setVideoMetadata] = useState<{
+        size: string;
+        resolution: string;
+        duration: string;
+        format: string;
+        needsCompression: boolean;
+    } | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Official Reels Specifications
@@ -200,6 +208,8 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
         if (e.target.files && e.target.files.length > 0) {
             const selectedFiles = Array.from(e.target.files);
             setValidationErrors([]);
+            setLoadProgress(0);
+            setVideoMetadata(null);
 
             // Validate max 10 files
             if (selectedFiles.length > 10) {
@@ -213,8 +223,46 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
             const invalid = selectedFiles.filter(f => !f.type.startsWith('image/') && !f.type.startsWith('video/'));
 
             if (invalid.length > 0) {
-                alert(`Archivos no válidos: ${invalid.map(f => f.name).join(', ')} `);
+                alert(`Archivos no válidos: ${invalid.map(f => f.name).join(', ')}`);
                 return;
+            }
+
+            // Simulate file load progress
+            const loadInterval = setInterval(() => {
+                setLoadProgress(prev => {
+                    if (prev >= 100) {
+                        clearInterval(loadInterval);
+                        return 100;
+                    }
+                    return prev + 20;
+                });
+            }, 100);
+
+            // Extract metadata for first video (if any)
+            if (videos.length > 0) {
+                const video = videos[0];
+                const videoElement = document.createElement('video');
+                videoElement.preload = 'metadata';
+
+                videoElement.onloadedmetadata = () => {
+                    const sizeMB = (video.size / (1024 * 1024)).toFixed(2);
+                    const resolution = `${videoElement.videoWidth}x${videoElement.videoHeight}`;
+                    const duration = `${Math.floor(videoElement.duration)}s`;
+                    const format = video.type.split('/')[1].toUpperCase();
+                    const needsCompression = video.size > REELS_SPECS.MAX_FILE_SIZE;
+
+                    setVideoMetadata({
+                        size: `${sizeMB} MB`,
+                        resolution,
+                        duration,
+                        format,
+                        needsCompression
+                    });
+
+                    URL.revokeObjectURL(videoElement.src);
+                };
+
+                videoElement.src = URL.createObjectURL(video);
             }
 
             // Validate videos against Reels specs
