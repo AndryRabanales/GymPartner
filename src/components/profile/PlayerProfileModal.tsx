@@ -113,133 +113,150 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
 
                 {/* Scrollable Content */}
                 <div className="overflow-y-auto flex-1 custom-scrollbar">
-                    <div className="relative px-6 pb-6 -mt-12">
-                        {/* Avatar & Stats */}
-                        <div className="flex justify-between items-end mb-4">
-                            <div className="w-24 h-24 rounded-2xl border-4 border-neutral-900 bg-neutral-800 overflow-hidden shadow-lg relative z-10">
+                    <div className="relative px-6 pb-6 flex flex-col items-center text-center">
+
+                        {/* Avatar (Centered & Overlapping Banner) */}
+                        <div className="-mt-16 mb-4 relative z-10 group">
+                            <div className="absolute inset-0 bg-yellow-500/20 rounded-full blur-xl animate-pulse group-hover:bg-yellow-500/40 transition-all"></div>
+                            <div className="w-32 h-32 rounded-full border-4 border-neutral-900 bg-neutral-800 overflow-hidden shadow-2xl relative">
                                 <img src={player.avatar_url} alt={player.username} className="w-full h-full object-cover" />
                             </div>
-
-                            {/* Social Stats */}
-                            <div className="flex-1 flex justify-end gap-4 mb-2">
-                                <div className="text-center">
-                                    <span className="block font-black text-white text-lg leading-none">{stats.followersCount}</span>
-                                    <span className="text-[10px] text-neutral-500 font-bold uppercase">Seguidores</span>
-                                </div>
-                                <div className="text-center">
-                                    <span className="block font-black text-white text-lg leading-none">{stats.followingCount}</span>
-                                    <span className="text-[10px] text-neutral-500 font-bold uppercase">Siguiendo</span>
-                                </div>
+                            {/* Rank Badge Integration (Optional small badge) */}
+                            <div className="absolute bottom-0 right-0 bg-black/80 backdrop-blur border border-yellow-500/50 text-yellow-500 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest shadow-lg">
+                                Lvl {Math.floor(player.xp / 1000) + 1}
                             </div>
                         </div>
 
-                        {/* Name & Follow Button */}
-                        <div className="flex justify-between items-start mb-6">
-                            <div>
-                                <h2 className="text-2xl font-black text-white italic uppercase tracking-tighter mb-1 leading-none">{player.username}</h2>
-                                <p className="text-xs text-neutral-500 font-medium uppercase tracking-wider mb-1">Agente de Alto Rendimiento</p>
-                                {player.gym_name && (
-                                    <div className="flex items-center gap-1 text-xs text-neutral-400">
-                                        <MapPin size={10} />
-                                        <span className="truncate max-w-[150px]">{player.gym_name}</span>
-                                    </div>
-                                )}
-                            </div>
-
-                            {user && user.id !== player.id && (
-                                <button
-                                    onClick={handleFollowToggle}
-                                    className={`px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wide transition-all flex items-center gap-2 ${isFollowing
-                                        ? 'bg-neutral-800 text-white border border-neutral-700'
-                                        : 'bg-yellow-500 text-black shadow-lg shadow-yellow-500/20'
-                                        }`}
-                                >
-                                    {isFollowing ? <UserCheck size={16} /> : <UserPlus size={16} />}
-                                    {isFollowing ? 'Siguiendo' : 'Seguir'}
-                                </button>
+                        {/* Name & Title */}
+                        <div className="mb-6 space-y-1">
+                            <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter leading-none drop-shadow-lg">
+                                {player.username}
+                            </h2>
+                            <p className="text-xs text-neutral-400 font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-2">
+                                <span className="w-1 h-1 rounded-full bg-yellow-500"></span>
+                                Agente de Alto Rendimiento
+                                <span className="w-1 h-1 rounded-full bg-yellow-500"></span>
+                            </p>
+                            {player.gym_name && (
+                                <div className="flex items-center justify-center gap-1.5 text-xs text-neutral-500 mt-2 bg-neutral-800/50 py-1 px-3 rounded-full mx-auto w-fit border border-white/5">
+                                    <MapPin size={10} />
+                                    <span>{player.gym_name}</span>
+                                </div>
                             )}
                         </div>
 
+                        {/* Social Stats Row */}
+                        <div className="flex items-center justify-center gap-8 mb-8 w-full border-y border-white/5 py-4 bg-white/[0.02]">
+                            <div className="flex flex-col items-center group cursor-pointer hover:scale-105 transition-transform">
+                                <span className="font-black text-2xl text-white leading-none mb-1 group-hover:text-yellow-500 transition-colors">{stats.followersCount}</span>
+                                <span className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Seguidores</span>
+                            </div>
+                            <div className="w-px h-8 bg-white/10"></div>
+                            <div className="flex flex-col items-center group cursor-pointer hover:scale-105 transition-transform">
+                                <span className="font-black text-2xl text-white leading-none mb-1 group-hover:text-yellow-500 transition-colors">{stats.followingCount}</span>
+                                <span className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Siguiendo</span>
+                            </div>
+                            <div className="w-px h-8 bg-white/10"></div>
+                            <div className="flex flex-col items-center group cursor-pointer hover:scale-105 transition-transform">
+                                <span className="font-black text-2xl text-white leading-none mb-1 group-hover:text-red-500 transition-colors">{stats.totalLikes}</span>
+                                <span className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Likes</span>
+                            </div>
+                        </div>
+
+                        {/* Follow Button */}
+                        {user && user.id !== player.id && (
+                            <button
+                                onClick={handleFollowToggle}
+                                className={`w-full py-3 rounded-xl font-black text-sm uppercase tracking-widest transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 mb-8 shadow-lg ${isFollowing
+                                    ? 'bg-neutral-800 text-neutral-400 border border-neutral-700 hover:text-white hover:border-neutral-500'
+                                    : 'bg-yellow-500 text-black hover:bg-yellow-400 shadow-yellow-500/20'
+                                    }`}
+                            >
+                                {isFollowing ? <UserCheck size={18} /> : <UserPlus size={18} />}
+                                {isFollowing ? 'Siguiendo' : 'Seguir Agente'}
+                            </button>
+                        )}
+
                         {/* TABS SWITCHER */}
-                        <div className="flex border-b border-neutral-800 mb-4">
+                        <div className="flex w-full border-b border-neutral-800 mb-4 sticky top-0 bg-neutral-900/95 backdrop-blur z-20 pt-2">
                             <button
                                 onClick={() => setActiveTab('grid')}
-                                className={`flex-1 pb-3 text-xs font-bold uppercase tracking-widest transition-colors relative ${activeTab === 'grid' ? 'text-white' : 'text-neutral-500'}`}
+                                className={`flex-1 pb-3 text-xs font-bold uppercase tracking-widest transition-colors relative ${activeTab === 'grid' ? 'text-white' : 'text-neutral-500 hover:text-neutral-300'}`}
                             >
                                 <Grid size={18} className="mx-auto mb-1" />
                                 Posts
-                                {activeTab === 'grid' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-yellow-500" />}
+                                {activeTab === 'grid' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-yellow-500 shadow-[0_0_10px_#eab308]" />}
                             </button>
                             <button
                                 onClick={() => setActiveTab('reels')}
-                                className={`flex-1 pb-3 text-xs font-bold uppercase tracking-widest transition-colors relative ${activeTab === 'reels' ? 'text-white' : 'text-neutral-500'}`}
+                                className={`flex-1 pb-3 text-xs font-bold uppercase tracking-widest transition-colors relative ${activeTab === 'reels' ? 'text-white' : 'text-neutral-500 hover:text-neutral-300'}`}
                             >
                                 <Film size={18} className="mx-auto mb-1" />
                                 Reels
-                                {activeTab === 'reels' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-yellow-500" />}
+                                {activeTab === 'reels' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-yellow-500 shadow-[0_0_10px_#eab308]" />}
                             </button>
                         </div>
 
-                        {/* TAB CONTENT */}
+                        {/* TAB CONTENT (Full Width) */}
+                        <div className="w-full">
+                            {/* 1. GRID TAB (Images) */}
+                            {activeTab === 'grid' && (
+                                <div className="grid grid-cols-3 gap-1 animate-in slide-in-from-bottom-2 fade-in duration-300">
+                                    {posts.map(post => (
+                                        <div key={post.id} className="aspect-square bg-neutral-800 relative group overflow-hidden cursor-pointer" onClick={() => alert('Ver Post ' + post.id)}>
+                                            {post.type === 'video' ? (
+                                                <video src={post.media_url} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <img src={post.media_url} alt="Post" className="w-full h-full object-cover" />
+                                            )}
 
-                        {/* 1. GRID TAB (Images) */}
+                                            {/* Type Indicator */}
+                                            {post.type === 'video' && (
+                                                <div className="absolute top-2 right-2">
+                                                    <Film size={16} className="text-white drop-shadow-md" />
+                                                </div>
+                                            )}
 
-                        {/* 2. GRID TAB (Images) */}
-                        {activeTab === 'grid' && (
-                            <div className="grid grid-cols-3 gap-1 animate-in slide-in-from-bottom-2 fade-in duration-300">
-                                {posts.map(post => (
-                                    <div key={post.id} className="aspect-square bg-neutral-800 relative group overflow-hidden cursor-pointer" onClick={() => alert('Ver Post ' + post.id)}>
-                                        {post.type === 'video' ? (
-                                            <video src={post.media_url} className="w-full h-full object-cover" />
-                                        ) : (
-                                            <img src={post.media_url} alt="Post" className="w-full h-full object-cover" />
-                                        )}
-
-                                        {/* Type Indicator */}
-                                        {post.type === 'video' && (
-                                            <div className="absolute top-2 right-2">
-                                                <Film size={16} className="text-white drop-shadow-md" />
+                                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 text-white text-xs font-bold">
+                                                <Heart size={12} fill="white" /> {post.likes_count}
                                             </div>
-                                        )}
-
-                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 text-white text-xs font-bold">
-                                            <Heart size={12} fill="white" /> {post.likes_count}
                                         </div>
-                                    </div>
-                                ))}
-                                {posts.length === 0 && (
-                                    <div className="col-span-3 text-center py-8 text-neutral-600 text-xs">
-                                        Sin fotos aún.
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {/* 3. REELS TAB (Videos) */}
-                        {activeTab === 'reels' && (
-                            <div className="grid grid-cols-2 gap-2 animate-in slide-in-from-bottom-2 fade-in duration-300">
-                                {posts.map(post => (
-                                    <div key={post.id} className="aspect-[9/16] bg-neutral-800 rounded-lg relative overflow-hidden cursor-pointer">
-                                        <video src={post.media_url} className="w-full h-full object-cover" />
-                                        <div className="absolute bottom-2 left-2 flex items-center gap-1 text-white text-xs font-bold dropshadow-md">
-                                            <Film size={12} /> {post.likes_count}
+                                    ))}
+                                    {posts.length === 0 && (
+                                        <div className="col-span-3 py-12 flex flex-col items-center justify-center text-neutral-600 space-y-3 opacity-60">
+                                            <div className="w-16 h-16 rounded-full bg-neutral-800 flex items-center justify-center">
+                                                <Grid size={24} />
+                                            </div>
+                                            <p className="text-sm font-bold uppercase tracking-wider">Sin fotos aún</p>
                                         </div>
-                                    </div>
-                                ))}
-                                {posts.length === 0 && (
-                                    <div className="col-span-2 text-center py-8 text-neutral-600 text-xs">
-                                        Sin reels aún.
-                                    </div>
-                                )}
-                            </div>
-                        )}
+                                    )}
+                                </div>
+                            )}
 
+                            {/* 2. REELS TAB (Videos) */}
+                            {activeTab === 'reels' && (
+                                <div className="grid grid-cols-2 gap-2 animate-in slide-in-from-bottom-2 fade-in duration-300">
+                                    {posts.map(post => (
+                                        <div key={post.id} className="aspect-[9/16] bg-neutral-800 rounded-lg relative overflow-hidden cursor-pointer group">
+                                            <video src={post.media_url} className="w-full h-full object-cover" />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity"></div>
+                                            <div className="absolute bottom-3 left-3 flex items-center gap-1.5 text-white text-sm font-bold drop-shadow-md">
+                                                <Heart size={14} fill="white" /> {post.likes_count}
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {posts.length === 0 && (
+                                        <div className="col-span-2 py-12 flex flex-col items-center justify-center text-neutral-600 space-y-3 opacity-60">
+                                            <div className="w-16 h-16 rounded-full bg-neutral-800 flex items-center justify-center">
+                                                <Film size={24} />
+                                            </div>
+                                            <p className="text-sm font-bold uppercase tracking-wider">Sin reels aún</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 
             </div>
-
-// Routine Modal helper removed
-        </div>
-    );
-};
