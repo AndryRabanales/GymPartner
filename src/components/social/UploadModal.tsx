@@ -456,6 +456,57 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
                                     <div className="absolute top-4 right-4 bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-bold text-white border border-white/10">
                                         {files.length} archivos
                                     </div>
+                                {/* Video Metadata Card */}
+                                {videoMetadata && (
+                                    <div className="absolute bottom-4 left-4 right-4 bg-neutral-900/95 backdrop-blur-md border border-neutral-700 rounded-lg p-3 shadow-2xl">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <Film size={16} className="text-yellow-500" />
+                                            <h4 className="text-white font-bold text-xs">Info del Video</h4>
+                                        </div>
+                                        
+                                        {/* Load Progress */}
+                                        {loadProgress < 100 && (
+                                            <div className="mb-2">
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <span className="text-[10px] text-neutral-400">Cargando...</span>
+                                                    <span className="text-[10px] text-yellow-500 font-mono">{loadProgress}%</span>
+                                                </div>
+                                                <div className="w-full bg-neutral-700 rounded-full h-1 overflow-hidden">
+                                                    <div 
+                                                        className="h-full bg-gradient-to-r from-yellow-500 to-yellow-400 transition-all duration-300"
+                                                        style={{ width: `${loadProgress}%` }}
+                                                    ></div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div className="grid grid-cols-4 gap-2">
+                                            <div className="bg-neutral-800/50 rounded p-1.5">
+                                                <p className="text-[9px] text-neutral-500 mb-0.5">Tamaño</p>
+                                                <p className="text-[11px] text-white font-mono font-bold">{videoMetadata.size}</p>
+                                            </div>
+                                            <div className="bg-neutral-800/50 rounded p-1.5">
+                                                <p className="text-[9px] text-neutral-500 mb-0.5">Resolución</p>
+                                                <p className="text-[11px] text-white font-mono font-bold">{videoMetadata.resolution}</p>
+                                            </div>
+                                            <div className="bg-neutral-800/50 rounded p-1.5">
+                                                <p className="text-[9px] text-neutral-500 mb-0.5">Duración</p>
+                                                <p className="text-[11px] text-white font-mono font-bold">{videoMetadata.duration}</p>
+                                            </div>
+                                            <div className="bg-neutral-800/50 rounded p-1.5">
+                                                <p className="text-[9px] text-neutral-500 mb-0.5">Formato</p>
+                                                <p className="text-[11px] text-white font-mono font-bold">{videoMetadata.format}</p>
+                                            </div>
+                                        </div>
+
+                                        {videoMetadata.needsCompression && (
+                                            <div className="mt-2 flex items-center gap-1.5 bg-yellow-500/10 border border-yellow-500/30 rounded p-1.5">
+                                                <span className="text-yellow-500 text-sm">⚠️</span>
+                                                <p className="text-[10px] text-yellow-500 font-bold">Se comprimirá automáticamente a ~45MB</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                                 )}
                             </div>
 
