@@ -101,10 +101,10 @@ export const CommunityPage = () => {
                     </div>
                 ) : (
                     posts.map((post) => (
-                        <div key={post.id} className="border-b border-white/10 pb-6 mb-6">
+                        <div key={post.id} className="border-b border-white/10 pb-3 mb-3">
 
                             {/* Post Header */}
-                            <div className="flex items-center justify-between px-4 py-3">
+                            <div className="flex items-center justify-between px-4 py-2">
                                 <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 rounded-full bg-neutral-800 overflow-hidden border border-white/10">
                                         <img
@@ -134,7 +134,7 @@ export const CommunityPage = () => {
                             {/* Media */}
                             <div className="bg-neutral-900 w-full relative">
                                 {post.type === 'video' ? (
-                                    <div className="aspect-[9/16] relative">
+                                    <div className="aspect-[4/5] relative">
                                         <video
                                             ref={el => { if (el) videoRefs.current[post.id] = el }}
                                             src={post.media_url}
@@ -152,7 +152,7 @@ export const CommunityPage = () => {
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="aspect-square">
+                                    <div className="aspect-[4/5]">
                                         <img src={post.media_url} alt="Post" className="w-full h-full object-cover" />
                                     </div>
                                 )}
