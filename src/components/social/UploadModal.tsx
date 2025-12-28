@@ -127,7 +127,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
                                         value={caption}
                                         onChange={(e) => setCaption(e.target.value)}
                                         placeholder="Escribe un pie de foto..."
-                                        className="w-full bg-transparent text-white text-sm resize-none focus:outline-none placeholder:text-neutral-500 min-h-[100px] mb-4 flex-1 md:flex-none"
+                                        className="w-full bg-transparent text-white text-base md:text-sm resize-none focus:outline-none placeholder:text-neutral-500 min-h-[100px] mb-4 flex-1 md:flex-none"
                                     />
 
                                     <div>

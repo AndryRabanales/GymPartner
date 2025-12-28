@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { X, MapPin, Grid, Film, UserPlus, UserCheck, Heart } from 'lucide-react';
+import { X, MapPin, Grid, Film, UserPlus, UserCheck, Heart, Swords } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-// userService removed
-import { socialService, type Post } from '../../services/SocialService'; // Import Social Service
-// RoutineViewModal import removed
+import { userService } from '../../services/UserService';
+import { socialService, type Post } from '../../services/SocialService';
+import { RoutineViewModal } from './RoutineViewModal';
 
 interface PlayerProfileModalProps {
     player: {
@@ -25,10 +25,13 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
     // Social State
     const [stats, setStats] = useState({ followersCount: 0, followingCount: 0, totalLikes: 0 });
     const [isFollowing, setIsFollowing] = useState(false);
-    const [activeTab, setActiveTab] = useState<'grid' | 'reels'>('grid');
+    const [activeTab, setActiveTab] = useState<'grid' | 'reels' | 'routines'>('grid');
 
     // Content State
     const [posts, setPosts] = useState<Post[]>([]);
+    const [publicRoutines, setPublicRoutines] = useState<any[]>([]);
+    const [viewRoutine, setViewRoutine] = useState<any | null>(null);
+    const [copying, setCopying] = useState(false);
 
     // Initial Load
     useEffect(() => {
@@ -46,14 +49,14 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
         init();
     }, [player, user]);
 
-    // Fetch Posts when tab changes
+    // Fetch Posts/Routines when tab changes
     useEffect(() => {
         if (activeTab === 'grid') {
-            // Fetch ALL posts (Images + Videos) for the main grid
             socialService.getUserPosts(player.id).then(setPosts);
         } else if (activeTab === 'reels') {
-            // Fetch ONLY videos for Reels tab
             socialService.getUserPosts(player.id, 'video').then(setPosts);
+        } else if (activeTab === 'routines') {
+            userService.getUserPublicRoutines(player.id).then(setPublicRoutines);
         }
     }, [activeTab, player.id]);
 
@@ -69,6 +72,21 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
             await socialService.followUser(user.id, player.id);
         } else {
             await socialService.unfollowUser(user.id, player.id);
+        }
+    };
+
+    const handleCopyRoutine = async () => {
+        if (!user || !viewRoutine) return;
+        setCopying(true);
+        try {
+            await userService.copyRoutine(viewRoutine.id, user.id);
+            alert('¡Estrategia robada con éxito! Ahora está en tu arsenal.');
+            setViewRoutine(null);
+        } catch (error) {
+            console.error('Error copying routine:', error);
+            alert('Error al copiar la rutina.');
+        } finally {
+            setCopying(false);
         }
     };
 
@@ -195,6 +213,14 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
                                 Reels
                                 {activeTab === 'reels' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-yellow-500 shadow-[0_0_10px_#eab308]" />}
                             </button>
+                            <button
+                                onClick={() => setActiveTab('routines')}
+                                className={`flex-1 pb-3 text-xs font-bold uppercase tracking-widest transition-colors relative ${activeTab === 'routines' ? 'text-white' : 'text-neutral-500 hover:text-neutral-300'}`}
+                            >
+                                <Swords size={18} className="mx-auto mb-1" />
+                                Mazos
+                                {activeTab === 'routines' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-yellow-500 shadow-[0_0_10px_#eab308]" />}
+                            </button>
                         </div>
 
                         {/* TAB CONTENT (Full Width) */}
@@ -255,7 +281,46 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
                                     )}
                                 </div>
                             )}
+
+                            {/* 3. ROUTINES TAB (Mazos) */}
+                            {activeTab === 'routines' && (
+                                <div className="grid grid-cols-1 gap-2 animate-in slide-in-from-bottom-2 fade-in duration-300">
+                                    {publicRoutines.map(routine => (
+                                        <div
+                                            key={routine.id}
+                                            onClick={() => setViewRoutine(routine)}
+                                            className="bg-neutral-800 p-4 rounded-xl border border-white/5 flex items-center gap-4 cursor-pointer hover:bg-neutral-700 transition-colors"
+                                        >
+                                            <div className="w-12 h-12 bg-neutral-900 rounded-lg flex items-center justify-center text-2xl border border-white/5">
+                                                <Swords size={20} className="text-gym-primary" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <h3 className="font-bold text-white uppercase italic tracking-wider truncate">{routine.name}</h3>
+                                                <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest">{routine.exercises?.length || 0} Cartas</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {publicRoutines.length === 0 && (
+                                        <div className="py-12 flex flex-col items-center justify-center text-neutral-600 space-y-3 opacity-60">
+                                            <div className="w-16 h-16 rounded-full bg-neutral-800 flex items-center justify-center">
+                                                <Swords size={24} />
+                                            </div>
+                                            <p className="text-sm font-bold uppercase tracking-wider">Sin mazos públicos</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
+
+                        {/* Routine Inspector */}
+                        {viewRoutine && (
+                            <RoutineViewModal
+                                routine={viewRoutine}
+                                onClose={() => setViewRoutine(null)}
+                                onCopy={handleCopyRoutine}
+                                isCopying={copying}
+                            />
+                        )}
                     </div>
                 </div>
 
