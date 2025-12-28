@@ -260,3 +260,6 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
                 </div>
 
             </div>
+        </div>
+    );
+};
