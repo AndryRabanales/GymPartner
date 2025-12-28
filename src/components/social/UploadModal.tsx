@@ -456,6 +456,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
                                     <div className="absolute top-4 right-4 bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-bold text-white border border-white/10">
                                         {files.length} archivos
                                     </div>
+                                )}
                                 {/* Video Metadata Card */}
                                 {videoMetadata && (
                                     <div className="absolute bottom-4 left-4 right-4 bg-neutral-900/95 backdrop-blur-md border border-neutral-700 rounded-lg p-3 shadow-2xl">
@@ -463,7 +464,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
                                             <Film size={16} className="text-yellow-500" />
                                             <h4 className="text-white font-bold text-xs">Info del Video</h4>
                                         </div>
-                                        
+
                                         {/* Load Progress */}
                                         {loadProgress < 100 && (
                                             <div className="mb-2">
@@ -472,7 +473,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
                                                     <span className="text-[10px] text-yellow-500 font-mono">{loadProgress}%</span>
                                                 </div>
                                                 <div className="w-full bg-neutral-700 rounded-full h-1 overflow-hidden">
-                                                    <div 
+                                                    <div
                                                         className="h-full bg-gradient-to-r from-yellow-500 to-yellow-400 transition-all duration-300"
                                                         style={{ width: `${loadProgress}%` }}
                                                     ></div>
@@ -506,7 +507,6 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
                                             </div>
                                         )}
                                     </div>
-                                )}
                                 )}
                             </div>
 
