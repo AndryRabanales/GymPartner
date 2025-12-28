@@ -8,10 +8,9 @@ interface MediaItem {
 
 interface MediaCarouselProps {
     media: MediaItem[];
-    postId: string;
 }
 
-export const MediaCarousel: React.FC<MediaCarouselProps> = ({ media, postId }) => {
+export const MediaCarousel: React.FC<MediaCarouselProps> = ({ media }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [touchStart, setTouchStart] = useState(0);
     const [touchEnd, setTouchEnd] = useState(0);
@@ -135,8 +134,8 @@ export const MediaCarousel: React.FC<MediaCarouselProps> = ({ media, postId }) =
                             key={index}
                             onClick={() => setCurrentIndex(index)}
                             className={`w-1.5 h-1.5 rounded-full transition-all ${index === currentIndex
-                                    ? 'bg-white w-4'
-                                    : 'bg-white/50'
+                                ? 'bg-white w-4'
+                                : 'bg-white/50'
                                 }`}
                         />
                     ))}

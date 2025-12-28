@@ -134,7 +134,7 @@ export const CommunityPage = () => {
 
                             {/* Media */}
                             {post.media && post.media.length > 0 ? (
-                                <MediaCarousel media={post.media} postId={post.id} />
+                                <MediaCarousel media={post.media} />
                             ) : (
                                 <div className="bg-black w-full relative">
                                     {post.type === 'video' ? (
