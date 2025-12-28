@@ -207,6 +207,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
             const selectedFiles = Array.from(e.target.files);
+            console.log("📁 Files selected:", selectedFiles.length);
             setValidationErrors([]);
             setLoadProgress(0);
             setVideoMetadata(null);
@@ -307,6 +308,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
             }
 
             const validFiles = [...images, ...validatedVideos];
+            console.log("✅ Valid files:", validFiles.length, "Images:", images.length, "Videos:", validatedVideos.length);
 
             if (validFiles.length === 0) {
                 alert('No hay archivos válidos para subir.');
@@ -315,6 +317,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
 
             setFiles(validFiles);
             setPreviewUrls(validFiles.map(f => URL.createObjectURL(f)));
+            console.log("🎬 Advancing to preview step");
             setStep('preview');
         }
     };
@@ -364,6 +367,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
             }, 2000);
         } else {
             alert('Error al subir: ' + result.error);
+            console.log("🎬 Advancing to preview step");
             setStep('preview');
             setUploadProgress(0);
         }
