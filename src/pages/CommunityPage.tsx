@@ -101,12 +101,12 @@ export const CommunityPage = () => {
                     </div>
                 ) : (
                     posts.map((post) => (
-                        <div key={post.id} className="border-b border-white/10 pb-2 mb-2">
+                        <div key={post.id} className="border-b border-white/5 pb-1 mb-1">
 
                             {/* Post Header */}
-                            <div className="flex items-center justify-between px-4 py-1.5">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-full bg-neutral-800 overflow-hidden border border-white/10">
+                            <div className="flex items-center justify-between px-3 py-1">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-7 h-7 rounded-full bg-neutral-800 overflow-hidden border border-white/10">
                                         <img
                                             src={post.profiles?.avatar_url || 'https://i.pravatar.cc/150'}
                                             alt={post.profiles?.username}
@@ -115,8 +115,8 @@ export const CommunityPage = () => {
                                     </div>
                                     <div>
                                         <div className="flex items-center gap-1">
-                                            <span className="font-bold text-sm text-white">{post.profiles?.username || 'Usuario'}</span>
-                                            <span className="text-[10px] text-neutral-500">• 2h</span>
+                                            <span className="font-bold text-xs text-white">{post.profiles?.username || 'Usuario'}</span>
+                                            <span className="text-[9px] text-neutral-500">• 2h</span>
                                         </div>
                                         {post.linked_routine_id && post.routines && (
                                             <Link to="/arsenal" className="flex items-center gap-1 text-[10px] text-yellow-500 hover:underline">
@@ -127,14 +127,14 @@ export const CommunityPage = () => {
                                     </div>
                                 </div>
                                 <button className="text-neutral-400">
-                                    <MoreHorizontal size={20} />
+                                    <MoreHorizontal size={16} />
                                 </button>
                             </div>
 
                             {/* Media */}
                             <div className="bg-neutral-900 w-full relative">
                                 {post.type === 'video' ? (
-                                    <div className="aspect-[3/4] relative">
+                                    <div className="aspect-square relative max-h-[280px]">
                                         <video
                                             ref={el => { if (el) videoRefs.current[post.id] = el }}
                                             src={post.media_url}
@@ -152,21 +152,21 @@ export const CommunityPage = () => {
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="aspect-[3/4]">
+                                    <div className="aspect-square max-h-[280px]">
                                         <img src={post.media_url} alt="Post" className="w-full h-full object-cover" />
                                     </div>
                                 )}
                             </div>
 
                             {/* Actions */}
-                            <div className="px-4 py-2">
-                                <div className="flex items-center gap-3 mb-2">
+                            <div className="px-3 py-1">
+                                <div className="flex items-center gap-2.5 mb-1.5">
                                     <button
                                         onClick={() => handleLike(post)}
                                         className="transition-transform active:scale-95"
                                     >
                                         <Heart
-                                            size={22}
+                                            size={20}
                                             className={post.user_has_liked ? "text-red-500 fill-red-500" : "text-white"}
                                         />
                                     </button>
@@ -174,25 +174,25 @@ export const CommunityPage = () => {
                                         onClick={() => setActiveCommentPostId(post.id)}
                                         className="text-white hover:text-neutral-300 transition-transform active:scale-95"
                                     >
-                                        <MessageCircle size={22} />
+                                        <MessageCircle size={20} />
                                     </button>
                                     <button
                                         onClick={() => handleShare(post)}
                                         className="text-white hover:text-neutral-300 ml-auto transition-transform active:scale-95"
                                     >
-                                        <Share2 size={20} />
+                                        <Share2 size={18} />
                                     </button>
                                 </div>
 
                                 {/* Likes Count */}
-                                <div className="mb-2">
-                                    <span className="font-bold text-sm text-white">{post.likes_count} Me gusta</span>
+                                <div className="mb-1">
+                                    <span className="font-bold text-xs text-white">{post.likes_count} Me gusta</span>
                                 </div>
 
                                 {/* Caption */}
-                                <div className="space-y-1">
-                                    <p className="text-sm text-white">
-                                        <span className="font-bold mr-2">{post.profiles?.username}</span>
+                                <div className="space-y-0.5">
+                                    <p className="text-xs text-white line-clamp-2">
+                                        <span className="font-bold mr-1.5">{post.profiles?.username}</span>
                                         {post.caption}
                                     </p>
                                 </div>
