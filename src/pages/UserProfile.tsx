@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Trophy, MapPin, Edit2, LogIn, Loader, Swords, Dumbbell, Plus, LineChart, History, Star, Search, ArrowLeft, UserPlus } from 'lucide-react';
+import { Trophy, MapPin, Edit2, LogIn, Loader, Swords, Dumbbell, Plus, LineChart, History, Star, Search, ArrowLeft, UserPlus, Grid } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getXPProgress, getRankFromXP } from '../types/user';
 import type { UserRank } from '../types/user';
@@ -10,6 +10,7 @@ import { EditProfileModal } from '../components/profile/EditProfileModal';
 import { TacticalTutorialModal } from '../components/onboarding/TacticalTutorialModal';
 import { LocationAccessModal } from '../components/common/LocationAccessModal';
 import { ReferralModal } from '../components/common/ReferralModal';
+import { PlayerProfileModal } from '../components/profile/PlayerProfileModal';
 
 
 import { userService } from '../services/UserService';
@@ -40,6 +41,7 @@ export const UserProfile = () => {
     const [forceMission, setForceMission] = useState(false);
 
     const [showEditProfile, setShowEditProfile] = useState(false);
+    const [showSocialProfile, setShowSocialProfile] = useState(false);
     const [showTutorial, setShowTutorial] = useState(false);
     const [skipOnboarding, setSkipOnboarding] = useState(true); // Default to TRUE: Profile is the main page
     const hasSeededRef = useRef(false); // Track if we've run the seeder
@@ -519,7 +521,16 @@ export const UserProfile = () => {
             </div>
 
             {/* Quick Actions / Passport Grid */}
-            <div className="grid grid-cols-3 gap-2 md:gap-4">
+            <div className="grid grid-cols-4 gap-2 md:gap-4">
+                <button
+                    onClick={() => setShowSocialProfile(true)}
+                    className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-yellow-500/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md cursor-pointer"
+                >
+                    <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-yellow-500/5 flex items-center justify-center group-hover:scale-110 transition-transform border border-yellow-500/10">
+                        <Grid className="text-yellow-500 w-4 h-4 md:w-6 md:h-6" />
+                    </div>
+                    <span className="font-bold text-neutral-200 group-hover:text-white text-xs md:text-base">Mis Posts</span>
+                </button>
                 <Link to="/arsenal" className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-blue-500/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md">
                     <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-blue-500/5 flex items-center justify-center group-hover:scale-110 transition-transform border border-blue-500/10">
                         <Dumbbell className="text-blue-500 w-4 h-4 md:w-6 md:h-6" />
@@ -644,6 +655,21 @@ export const UserProfile = () => {
                     currentFeaturedRoutineId={profile.featured_routine_id}
                     onClose={() => setShowEditProfile(false)}
                     onUpdate={loadUserData}
+                />
+            )}
+
+            {/* SOCIAL PROFILE MODAL */}
+            {showSocialProfile && user && (
+                <PlayerProfileModal
+                    player={{
+                        id: user.id,
+                        username: profile?.username || user.user_metadata.full_name,
+                        avatar_url: profile?.avatar_url || user.user_metadata.avatar_url,
+                        xp: profile?.xp || 0,
+                        rank: (profile?.rank || 0) as number, // Cast if enum mismatch
+                        banner_url: profile?.custom_settings?.banner_url
+                    }}
+                    onClose={() => setShowSocialProfile(false)}
                 />
             )}
 
