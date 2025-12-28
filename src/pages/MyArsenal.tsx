@@ -324,27 +324,40 @@ export const MyArsenal = () => {
                 });
                 newItem = { ...editingItem, name: customName, category: customCategory, metrics: customMetrics };
 
-                // Optimistic Update for Edit
+                // Optimistic Update for Edit - Update in both inventories
                 setInventory(prev => prev.map(i => i.id === newItem.id ? newItem : i));
+                setGlobalInventory(prev => prev.map(i => i.id === newItem.id ? newItem : i));
             } else {
                 newItem = await equipmentService.addEquipment(payload, user.id);
-                // Optimistic Update for Create
+                console.log('✅ Exercise created successfully:', newItem);
+
+                // Add to BOTH inventory states so it appears immediately
+                // This ensures it shows up in the merged effectiveInventory
                 setInventory(prev => [...prev, newItem]);
+                setGlobalInventory(prev => {
+                    // Avoid duplicates
+                    if (prev.some(item => item.id === newItem.id)) return prev;
+                    return [...prev, newItem];
+                });
             }
 
-            // Success
+            // Success - Close modal and reset form
             setAddingMode(false);
             setCustomMode(false);
             setCustomName('');
             setEditingItem(null);
+            setCustomMetrics({
+                weight: true,
+                reps: true,
+                time: false,
+                distance: false,
+                rpe: false
+            });
 
-            // Force scroll to item or section?
-            alert(`¡Ejercicio "${newItem.name}" creado y añadido a tu arsenal!`); // Feedback
+            alert(`¡Ejercicio "${newItem.name}" creado y añadido a tu arsenal!`);
 
-            // Delayed re-fetch to sync with other devices (after optimistic update settles)
-            setTimeout(() => {
-                initialize();
-            }, 500);
+            // NO LONGER NEEDED: Removed delayed initialize() that was overwriting optimistic updates
+            // The item is already in the state and will appear immediately
 
         } catch (error: any) {
             console.error('Detailed Error saving custom equipment:', error);
@@ -354,13 +367,21 @@ export const MyArsenal = () => {
                 try {
                     console.log('Falling back to STRENGTH_MACHINE due to Enum error...');
                     const fallbackPayload = { ...payload, category: 'STRENGTH_MACHINE' };
+                    let fallbackItem: Equipment;
+
                     if (editingItem) {
                         await equipmentService.updateEquipment(editingItem.id, { ...fallbackPayload, id: undefined } as any);
+                        fallbackItem = { ...editingItem, ...fallbackPayload };
                     } else {
-                        await equipmentService.addEquipment(fallbackPayload, user.id);
+                        fallbackItem = await equipmentService.addEquipment(fallbackPayload, user.id);
+                        // Add to both inventories
+                        setInventory(prev => [...prev, fallbackItem]);
+                        setGlobalInventory(prev => {
+                            if (prev.some(item => item.id === fallbackItem.id)) return prev;
+                            return [...prev, fallbackItem];
+                        });
                     }
 
-                    await initialize();
                     setAddingMode(false);
                     setCustomMode(false);
                     setCustomName('');
