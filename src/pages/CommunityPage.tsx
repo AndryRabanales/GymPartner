@@ -101,10 +101,10 @@ export const CommunityPage = () => {
                     </div>
                 ) : (
                     posts.map((post) => (
-                        <div key={post.id} className="border-b border-white/10 pb-3 mb-3">
+                        <div key={post.id} className="border-b border-white/10 pb-2 mb-2">
 
                             {/* Post Header */}
-                            <div className="flex items-center justify-between px-4 py-2">
+                            <div className="flex items-center justify-between px-4 py-1.5">
                                 <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 rounded-full bg-neutral-800 overflow-hidden border border-white/10">
                                         <img
@@ -134,7 +134,7 @@ export const CommunityPage = () => {
                             {/* Media */}
                             <div className="bg-neutral-900 w-full relative">
                                 {post.type === 'video' ? (
-                                    <div className="aspect-[4/5] relative">
+                                    <div className="aspect-[3/4] relative">
                                         <video
                                             ref={el => { if (el) videoRefs.current[post.id] = el }}
                                             src={post.media_url}
@@ -152,21 +152,21 @@ export const CommunityPage = () => {
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="aspect-[4/5]">
+                                    <div className="aspect-[3/4]">
                                         <img src={post.media_url} alt="Post" className="w-full h-full object-cover" />
                                     </div>
                                 )}
                             </div>
 
                             {/* Actions */}
-                            <div className="px-4 py-3">
-                                <div className="flex items-center gap-4 mb-3">
+                            <div className="px-4 py-2">
+                                <div className="flex items-center gap-3 mb-2">
                                     <button
                                         onClick={() => handleLike(post)}
                                         className="transition-transform active:scale-95"
                                     >
                                         <Heart
-                                            size={26}
+                                            size={22}
                                             className={post.user_has_liked ? "text-red-500 fill-red-500" : "text-white"}
                                         />
                                     </button>
@@ -174,13 +174,13 @@ export const CommunityPage = () => {
                                         onClick={() => setActiveCommentPostId(post.id)}
                                         className="text-white hover:text-neutral-300 transition-transform active:scale-95"
                                     >
-                                        <MessageCircle size={26} />
+                                        <MessageCircle size={22} />
                                     </button>
                                     <button
                                         onClick={() => handleShare(post)}
                                         className="text-white hover:text-neutral-300 ml-auto transition-transform active:scale-95"
                                     >
-                                        <Share2 size={24} />
+                                        <Share2 size={20} />
                                     </button>
                                 </div>
 
