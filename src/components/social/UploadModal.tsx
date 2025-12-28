@@ -102,7 +102,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
 
     /**
      * Compress video if it exceeds 50MB
-     * Uses MediaRecorder API to re-encode at lower bitrate
+     * Uses MediaRecorder API to re-encode at lower bitrate while maintaining quality
      */
     const compressVideo = async (file: File): Promise<File> => {
         return new Promise((resolve, reject) => {
@@ -113,86 +113,126 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
             video.preload = 'metadata';
 
             video.onloadedmetadata = async () => {
-                video.currentTime = 0;
+                try {
+                    // Detect original frame rate (default to 30 if not detectable)
+                    const originalFPS = 30; // Most phones record at 30fps
 
-                // Create canvas for video processing
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d')!;
+                    // Create canvas for video processing
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d')!;
 
-                // Maintain aspect ratio, max 1080p
-                const maxWidth = 1080;
-                const maxHeight = 1920;
-                let width = video.videoWidth;
-                let height = video.videoHeight;
+                    // Maintain aspect ratio, max 1080p
+                    const maxWidth = 1080;
+                    const maxHeight = 1920;
+                    let width = video.videoWidth;
+                    let height = video.videoHeight;
 
-                if (width > maxWidth) {
-                    height = (height * maxWidth) / width;
-                    width = maxWidth;
-                }
-                if (height > maxHeight) {
-                    width = (width * maxHeight) / height;
-                    height = maxHeight;
-                }
-
-                canvas.width = width;
-                canvas.height = height;
-
-                // Calculate target bitrate to fit in ~45MB (leaving margin)
-                const duration = video.duration;
-                const targetSizeMB = 45;
-                const targetBitrate = (targetSizeMB * 8 * 1024 * 1024) / duration; // bits per second
-
-                const stream = canvas.captureStream(30); // 30 FPS
-                const mediaRecorder = new MediaRecorder(stream, {
-                    mimeType: 'video/webm;codecs=vp9',
-                    videoBitsPerSecond: Math.min(targetBitrate, 2500000) // Max 2.5 Mbps
-                });
-
-                const chunks: Blob[] = [];
-                mediaRecorder.ondataavailable = (e) => {
-                    if (e.data.size > 0) {
-                        chunks.push(e.data);
+                    if (width > maxWidth) {
+                        height = (height * maxWidth) / width;
+                        width = maxWidth;
                     }
-                };
+                    if (height > maxHeight) {
+                        width = (width * maxHeight) / height;
+                        height = maxHeight;
+                    }
 
-                mediaRecorder.onstop = () => {
-                    const compressedBlob = new Blob(chunks, { type: 'video/webm' });
-                    const compressedFile = new File(
-                        [compressedBlob],
-                        file.name.replace(/\.[^/.]+$/, '.webm'),
-                        { type: 'video/webm' }
-                    );
-                    setIsCompressing(false);
-                    setCompressionProgress(100);
-                    resolve(compressedFile);
-                };
+                    canvas.width = width;
+                    canvas.height = height;
 
-                mediaRecorder.onerror = (error) => {
+                    // Calculate target bitrate to fit in ~45MB (leaving margin)
+                    const duration = video.duration;
+                    const targetSizeMB = 45;
+                    const targetBitrate = (targetSizeMB * 8 * 1024 * 1024) / duration; // bits per second
+
+                    // Use higher quality bitrate (min 1.5 Mbps for smooth playback)
+                    const finalBitrate = Math.max(Math.min(targetBitrate, 4000000), 1500000); // Between 1.5-4 Mbps
+
+                    // Try to use H.264 codec first (better compatibility), fallback to VP9
+                    let mimeType = 'video/webm;codecs=h264';
+                    if (!MediaRecorder.isTypeSupported(mimeType)) {
+                        mimeType = 'video/webm;codecs=vp8'; // VP8 is more compatible than VP9
+                        if (!MediaRecorder.isTypeSupported(mimeType)) {
+                            mimeType = 'video/webm'; // Ultimate fallback
+                        }
+                    }
+
+                    console.log(`🎬 Compressing with: ${mimeType}, ${finalBitrate} bps, ${originalFPS} fps`);
+
+                    const stream = canvas.captureStream(originalFPS); // Use detected FPS
+                    const mediaRecorder = new MediaRecorder(stream, {
+                        mimeType: mimeType,
+                        videoBitsPerSecond: finalBitrate
+                    });
+
+                    const chunks: Blob[] = [];
+                    mediaRecorder.ondataavailable = (e) => {
+                        if (e.data.size > 0) {
+                            chunks.push(e.data);
+                        }
+                    };
+
+                    mediaRecorder.onstop = () => {
+                        const compressedBlob = new Blob(chunks, { type: mimeType.split(';')[0] });
+                        const compressedFile = new File(
+                            [compressedBlob],
+                            file.name.replace(/\.[^/.]+$/, '.webm'),
+                            { type: mimeType.split(';')[0] }
+                        );
+
+                        console.log(`✅ Compressed: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(compressedFile.size / 1024 / 1024).toFixed(2)}MB`);
+
+                        setIsCompressing(false);
+                        setCompressionProgress(100);
+                        resolve(compressedFile);
+                    };
+
+                    mediaRecorder.onerror = (error) => {
+                        console.error('MediaRecorder error:', error);
+                        setIsCompressing(false);
+                        reject(error);
+                    };
+
+                    // Start recording
+                    mediaRecorder.start(100); // Collect data every 100ms
+
+                    // Set playback rate to normal (important!)
+                    video.playbackRate = 1.0;
+                    video.currentTime = 0;
+
+                    await video.play();
+
+                    // Draw frames to canvas at consistent rate
+                    let lastFrameTime = 0;
+                    const frameInterval = 1000 / originalFPS; // ms per frame
+
+                    const drawFrame = (currentTime: number) => {
+                        if (!video.paused && !video.ended) {
+                            // Only draw if enough time has passed (maintain frame rate)
+                            if (currentTime - lastFrameTime >= frameInterval) {
+                                ctx.drawImage(video, 0, 0, width, height);
+                                lastFrameTime = currentTime;
+                            }
+
+                            const progress = (video.currentTime / video.duration) * 100;
+                            setCompressionProgress(Math.round(progress));
+                            requestAnimationFrame(drawFrame);
+                        }
+                    };
+
+                    video.onplay = () => {
+                        requestAnimationFrame(drawFrame);
+                    };
+
+                    video.onended = () => {
+                        setTimeout(() => {
+                            mediaRecorder.stop();
+                        }, 100); // Small delay to ensure last frames are captured
+                    };
+                } catch (error) {
+                    console.error('Compression setup error:', error);
                     setIsCompressing(false);
                     reject(error);
-                };
-
-                // Start recording
-                mediaRecorder.start(100); // Collect data every 100ms
-                video.play();
-
-                // Draw frames to canvas
-                const drawFrame = () => {
-                    if (!video.paused && !video.ended) {
-                        ctx.drawImage(video, 0, 0, width, height);
-                        const progress = (video.currentTime / video.duration) * 100;
-                        setCompressionProgress(Math.round(progress));
-                        requestAnimationFrame(drawFrame);
-                    }
-                };
-
-                video.onplay = () => {
-                    drawFrame();
-                };
-
-                video.onended = () => {
-                    mediaRecorder.stop();
-                };
+                }
             };
 
             video.onerror = () => {
@@ -280,17 +320,9 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
                 }
 
                 if (valid) {
-                    // Check if needs compression (don't block, just compress)
-                    if (video.size > REELS_SPECS.MAX_FILE_SIZE) {
-                        try {
-                            const compressed = await compressVideo(video);
-                            validatedVideos.push(compressed);
-                        } catch (error) {
-                            allErrors.push(`${video.name}: Error al comprimir. Intenta con un video más corto.`);
-                        }
-                    } else {
-                        validatedVideos.push(video);
-                    }
+                    // Don't compress here - just add to validated list
+                    // Compression will happen during upload if needed
+                    validatedVideos.push(video);
                 } else {
                     // Only add to errors if validation failed (duration/format issues)
                     allErrors.push(`${video.name}: ${errors.join(', ')}`);
@@ -343,31 +375,51 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
         setStep('uploading');
         setUploadProgress(0);
 
-        // Simulate progress (since Supabase doesn't provide real progress)
-        const progressInterval = setInterval(() => {
-            setUploadProgress(prev => {
-                if (prev >= 90) return prev; // Stop at 90% until actual upload completes
-                return prev + 10;
-            });
-        }, 300);
+        try {
+            // Compress large videos before uploading
+            const processedFiles: File[] = [];
 
-        // Use multi-media upload if more than 1 file
-        const result = files.length > 1
-            ? await socialService.createPostWithMultipleMedia(user.id, files, caption)
-            : await socialService.createPost(user.id, files[0], files[0].type.startsWith('video') ? 'video' : 'image', caption);
+            for (const file of files) {
+                if (file.type.startsWith('video') && file.size > REELS_SPECS.MAX_FILE_SIZE) {
+                    console.log(`🗜️ Compressing large video: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+                    const compressed = await compressVideo(file);
+                    processedFiles.push(compressed);
+                } else {
+                    processedFiles.push(file);
+                }
+            }
 
-        clearInterval(progressInterval);
-        setUploadProgress(100);
+            // Simulate progress (since Supabase doesn't provide real progress)
+            const progressInterval = setInterval(() => {
+                setUploadProgress(prev => {
+                    if (prev >= 90) return prev; // Stop at 90% until actual upload completes
+                    return prev + 10;
+                });
+            }, 300);
 
-        if (result.success) {
-            setStep('success');
-            setTimeout(() => {
-                onSuccess();
-                onClose();
-            }, 2000);
-        } else {
-            alert('Error al subir: ' + result.error);
-            console.log("🎬 Advancing to preview step");
+            // Use multi-media upload if more than 1 file
+            const result = processedFiles.length > 1
+                ? await socialService.createPostWithMultipleMedia(user.id, processedFiles, caption)
+                : await socialService.createPost(user.id, processedFiles[0], processedFiles[0].type.startsWith('video') ? 'video' : 'image', caption);
+
+            clearInterval(progressInterval);
+            setUploadProgress(100);
+
+            if (result.success) {
+                setStep('success');
+                setTimeout(() => {
+                    onSuccess();
+                    onClose();
+                }, 2000);
+            } else {
+                alert('Error al subir: ' + result.error);
+                console.log("🎬 Advancing to preview step");
+                setStep('preview');
+                setUploadProgress(0);
+            }
+        } catch (error: any) {
+            alert('Error al procesar el video: ' + error.message);
+            console.error('Upload error:', error);
             setStep('preview');
             setUploadProgress(0);
         }
