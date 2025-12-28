@@ -157,11 +157,11 @@ export const ReelsPage = () => {
             )}
 
             {posts.map((post) => (
-                <div key={post.id} className="h-full w-full max-w-md mx-auto relative snap-center flex items-center justify-center bg-neutral-900 border-b border-neutral-800 md:border-none">
+                <div key={post.id} className="h-full w-full max-w-md mx-auto relative snap-center flex items-center justify-center bg-black border-b border-neutral-800 md:border-none">
 
                     {/* VIDEO CONTAINER */}
                     <div
-                        className="relative w-full h-full md:max-h-[85vh] md:rounded-2xl overflow-hidden shadow-2xl"
+                        className="relative w-[96%] h-[94%] md:w-full md:h-full md:max-h-[85vh] rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10"
                         onDoubleClick={(e) => handleDoubleTap(post, e)}
                     >
                         <video
@@ -221,8 +221,8 @@ export const ReelsPage = () => {
                                     <button
                                         onClick={(e) => handleFollow(post, e)}
                                         className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider transition-colors ${(post as any).is_following
-                                                ? 'bg-neutral-800 text-neutral-400 border border-neutral-600'
-                                                : 'bg-white/20 hover:bg-yellow-500 hover:text-black text-white'
+                                            ? 'bg-neutral-800 text-neutral-400 border border-neutral-600'
+                                            : 'bg-white/20 hover:bg-yellow-500 hover:text-black text-white'
                                             }`}
                                     >
                                         {(post as any).is_following ? 'Siguiendo' : 'Seguir'}
