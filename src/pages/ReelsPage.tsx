@@ -4,6 +4,8 @@ import { socialService, type Post } from '../services/SocialService';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { CommentsSheet } from '../components/social/CommentsSheet';
+import { PlayerProfileModal } from '../components/profile/PlayerProfileModal';
+import { supabase } from '../lib/supabase';
 
 export const ReelsPage = () => {
     const { user } = useAuth();
@@ -11,6 +13,7 @@ export const ReelsPage = () => {
     const [loading, setLoading] = useState(true);
     const [muted, setMuted] = useState(true);
     const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(null);
+    const [selectedPlayer, setSelectedPlayer] = useState<any | null>(null);
 
     const videoRefs = useRef<{ [key: string]: HTMLVideoElement }>({});
 
@@ -140,6 +143,43 @@ export const ReelsPage = () => {
         setTimeout(() => heart.remove(), 1000);
     };
 
+    const handleOpenProfile = async (userId: string) => {
+        try {
+            // 1. Fetch exact profile details
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('id, username, avatar_url, xp, custom_settings, featured_routine_id, home_gym:gyms(name)')
+                .eq('id', userId)
+                .single();
+
+            if (!profile) return;
+
+            // 2. Calculate Rank (Heavy-ish but necessary for consistent UI)
+            const { count } = await supabase
+                .from('profiles')
+                .select('id', { count: 'exact', head: true })
+                .gt('xp', profile.xp || 0);
+
+            const rank = (count || 0) + 1;
+
+            const player = {
+                id: profile.id,
+                username: profile.username || 'Usuario',
+                avatar_url: profile.avatar_url,
+                xp: profile.xp || 0,
+                rank: rank,
+                gym_name: profile.home_gym?.name,
+                banner_url: profile.custom_settings?.banner_url,
+                featured_routine_id: profile.featured_routine_id
+            };
+
+            setSelectedPlayer(player);
+
+        } catch (error) {
+            console.error('Error fetching profile:', error);
+        }
+    };
+
     return (
         <div className="h-[calc(100vh-theme(spacing.16))] md:h-[calc(100vh-theme(spacing.20))] bg-black overflow-y-scroll snap-y snap-mandatory custom-scrollbar relative">
 
@@ -185,10 +225,12 @@ export const ReelsPage = () => {
                         {/* RIGHT ACTIONS BAR */}
                         <div className="absolute bottom-6 right-2 flex flex-col items-center gap-6 z-20">
                             <div className="flex flex-col items-center gap-1">
-                                <div className="w-10 h-10 rounded-full bg-neutral-800 border-2 border-white overflow-hidden mb-2 relative">
+                                <button
+                                    onClick={() => handleOpenProfile(post.user_id)}
+                                    className="w-10 h-10 rounded-full bg-neutral-800 border-2 border-white overflow-hidden mb-2 relative transition-transform active:scale-95"
+                                >
                                     <img src={post.profiles?.avatar_url || 'https://i.pravatar.cc/150'} alt="User" className="w-full h-full object-cover" />
-                                    {/* Link to profile pending... */}
-                                </div>
+                                </button>
                             </div>
 
                             <div className="flex flex-col items-center gap-1">
@@ -216,7 +258,9 @@ export const ReelsPage = () => {
                         {/* BOTTOM INFO */}
                         <div className="absolute bottom-6 left-4 right-16 z-20 text-white text-left">
                             <h3 className="font-bold text-shadow-sm mb-2 flex items-center gap-2">
-                                @{post.profiles?.username}
+                                <button onClick={() => handleOpenProfile(post.user_id)} className="hover:underline">
+                                    @{post.profiles?.username}
+                                </button>
                                 {user?.id !== post.user_id && (
                                     <button
                                         onClick={(e) => handleFollow(post, e)}
@@ -237,7 +281,9 @@ export const ReelsPage = () => {
                             {post.linked_routine_id && post.routines && (
                                 <Link to="/arsenal" className="inline-flex items-center gap-2 bg-neutral-800/60 backdrop-blur-md px-3 py-1.5 rounded-lg border-l-2 border-yellow-500">
                                     <Swords size={12} className="text-yellow-500" />
-                                    <span className="text-xs font-bold">{post.routines.name}</span>
+                                    <span className="text-xs font-bold">
+                                        {(Array.isArray(post.routines) ? post.routines[0]?.name : (post.routines as any).name) || 'Rutina'}
+                                    </span>
                                 </Link>
                             )}
 
@@ -250,17 +296,20 @@ export const ReelsPage = () => {
                 </div>
             ))}
 
-            {/* COMMENTS SHEET OVERLAY */}
             {activeCommentPostId && (
-                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm" onClick={() => setActiveCommentPostId(null)}>
-                    <div onClick={e => e.stopPropagation()} className="w-full max-w-md">
-                        <CommentsSheet
-                            postId={activeCommentPostId}
-                            onClose={() => setActiveCommentPostId(null)}
-                        />
-                    </div>
-                </div>
+                <CommentsSheet
+                    postId={activeCommentPostId}
+                    onClose={() => setActiveCommentPostId(null)}
+                />
             )}
+
+            {selectedPlayer && (
+                <PlayerProfileModal
+                    player={selectedPlayer}
+                    onClose={() => setSelectedPlayer(null)}
+                />
+            )}
+
         </div>
     );
 };
