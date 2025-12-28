@@ -119,7 +119,7 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ postId, onClose })
                         value={newComment}
                         onChange={(e) => setNewComment(e.target.value)}
                         placeholder="Escribe un comentario..."
-                        className="w-full bg-black/40 border border-white/10 rounded-full py-3 pl-4 pr-12 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:border-yellow-500 transition-colors"
+                        className="w-full bg-black/40 border border-white/10 rounded-full py-3 pl-4 pr-12 text-base text-white placeholder:text-neutral-500 focus:outline-none focus:border-yellow-500 transition-colors"
                     />
                     <button
                         type="submit"
