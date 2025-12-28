@@ -18,13 +18,15 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Official Reels Specifications
+    // NOTE: Supabase Storage free tier has 50MB limit per file
+    // Instagram/TikTok allow up to 500MB, but we're limited by our backend
     const REELS_SPECS = {
         ASPECT_RATIO: 9 / 16,
         MIN_RESOLUTION: { width: 720, height: 1280 },
         RECOMMENDED_RESOLUTION: { width: 1080, height: 1920 },
         MIN_DURATION: 3, // seconds
         MAX_DURATION: 90, // seconds
-        MAX_FILE_SIZE: 500 * 1024 * 1024, // 500MB
+        MAX_FILE_SIZE: 50 * 1024 * 1024, // 50MB (Supabase Storage limit)
         ALLOWED_FORMATS: ['video/mp4', 'video/quicktime'], // MP4 and MOV
         MAX_CAPTION_LENGTH: 2200
     };
@@ -41,7 +43,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
         // Size validation
         if (file.size > REELS_SPECS.MAX_FILE_SIZE) {
             const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
-            errors.push(`Archivo muy pesado (${sizeMB}MB). Máximo: 500MB.`);
+            errors.push(`Archivo muy pesado (${sizeMB}MB). Máximo: 50MB.`);
         }
 
         // Video metadata validation
@@ -200,7 +202,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
                             </div>
                             <h3 className="text-xl font-bold text-white mb-2">Arrastra fotos o videos aquí</h3>
                             <p className="text-neutral-500 text-xs mb-4 text-center max-w-sm">
-                                Videos: 9:16 (vertical), 1080x1920px, 3-90s, MP4/MOV, máx 500MB
+                                Videos: 9:16 (vertical), 1080x1920px, 3-90s, MP4/MOV, máx 50MB
                             </p>
                             <button
                                 onClick={() => fileInputRef.current?.click()}
@@ -291,8 +293,8 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
                                         <div className="flex justify-between items-center mb-4">
                                             <span className="text-xs text-neutral-500">Máx. {REELS_SPECS.MAX_CAPTION_LENGTH} caracteres</span>
                                             <span className={`text-xs font-mono ${caption.length > REELS_SPECS.MAX_CAPTION_LENGTH * 0.9
-                                                    ? 'text-yellow-500'
-                                                    : 'text-neutral-500'
+                                                ? 'text-yellow-500'
+                                                : 'text-neutral-500'
                                                 }`}>
                                                 {caption.length}/{REELS_SPECS.MAX_CAPTION_LENGTH}
                                             </span>
