@@ -188,7 +188,7 @@ export const ReelsPage = () => {
     };
 
     return (
-        <div className="h-[calc(100vh-theme(spacing.16))] md:h-[calc(100vh-theme(spacing.20))] bg-black overflow-y-scroll snap-y snap-mandatory custom-scrollbar relative">
+        <div className="h-[calc(100vh-theme(spacing.12))] md:h-[calc(100vh-theme(spacing.14))] bg-black overflow-y-scroll snap-y snap-mandatory custom-scrollbar relative">
 
             {loading && (
                 <div className="h-full w-full flex items-center justify-center snap-center">
@@ -208,7 +208,7 @@ export const ReelsPage = () => {
 
                     {/* VIDEO CONTAINER */}
                     <div
-                        className="relative w-[98%] h-[88%] mb-20 md:w-full md:h-full md:max-h-[85vh] md:mb-0 rounded-xl overflow-hidden shadow-2xl ring-1 ring-white/10 bg-black"
+                        className="relative w-[98%] h-[92%] mb-14 md:w-full md:h-full md:max-h-[85vh] md:mb-0 rounded-xl overflow-hidden shadow-2xl ring-1 ring-white/10 bg-black"
                         onDoubleClick={(e) => handleDoubleTap(post, e)}
                     >
                         <video
@@ -231,7 +231,7 @@ export const ReelsPage = () => {
                         <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
 
                         {/* RIGHT ACTIONS BAR */}
-                        <div className="absolute bottom-12 right-1.5 flex flex-col items-center gap-4 z-20">
+                        <div className="absolute bottom-4 right-1.5 flex flex-col items-center gap-4 z-20">
 
                             <div className="flex flex-col items-center gap-px">
                                 <button onClick={(e) => { e.stopPropagation(); handleLike(post, e); }} className="p-1.5 transition-transform active:scale-75">
@@ -256,7 +256,7 @@ export const ReelsPage = () => {
                         </div>
 
                         {/* BOTTOM INFO (Instagram Style) */}
-                        <div className="absolute bottom-8 left-2 right-14 z-20 text-white text-left pb-1">
+                        <div className="absolute bottom-2 left-2 right-14 z-20 text-white text-left pb-1">
 
                             {/* User Row */}
                             <div className="flex items-center gap-2 mb-2">
