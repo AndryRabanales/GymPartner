@@ -208,13 +208,13 @@ export const ReelsPage = () => {
 
                     {/* VIDEO CONTAINER */}
                     <div
-                        className="relative w-[92%] h-[90%] md:w-full md:h-full md:max-h-[85vh] rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10 bg-black"
+                        className="relative w-[96%] h-[82%] mb-12 md:w-full md:h-full md:max-h-[85vh] md:mb-0 rounded-xl overflow-hidden shadow-2xl ring-1 ring-white/10 bg-black"
                         onDoubleClick={(e) => handleDoubleTap(post, e)}
                     >
                         <video
                             ref={el => { if (el) (videoRefs.current as any)[(post as any).virtual_id || post.id] = el }}
                             src={post.media_url}
-                            className="w-full h-full object-contain"
+                            className="w-full h-full object-cover"
                             playsInline
                             loop
                             muted={muted}
@@ -223,56 +223,56 @@ export const ReelsPage = () => {
                         />
 
                         {/* MUTE INDICATOR */}
-                        <div className="absolute top-4 right-4 bg-black/50 p-2 rounded-full backdrop-blur-sm pointer-events-none">
-                            {muted ? <VolumeX size={20} className="text-white" /> : <Volume2 size={20} className="text-white" />}
+                        <div className="absolute top-3 right-3 bg-black/50 p-1.5 rounded-full backdrop-blur-sm pointer-events-none">
+                            {muted ? <VolumeX size={16} className="text-white" /> : <Volume2 size={16} className="text-white" />}
                         </div>
 
                         {/* OVERLAY CONTENT (Gradient) */}
-                        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none" />
+                        <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/90 via-black/30 to-transparent pointer-events-none" />
 
                         {/* RIGHT ACTIONS BAR */}
-                        <div className="absolute bottom-28 right-2 flex flex-col items-center gap-6 z-20">
-                            <div className="flex flex-col items-center gap-1">
+                        <div className="absolute bottom-10 right-1.5 flex flex-col items-center gap-3 z-20">
+                            <div className="flex flex-col items-center gap-0.5">
                                 <button
                                     onClick={() => handleOpenProfile(post.user_id)}
-                                    className="w-10 h-10 rounded-full bg-neutral-800 border-2 border-white overflow-hidden mb-2 relative transition-transform active:scale-95"
+                                    className="w-9 h-9 rounded-full bg-neutral-800 border-[1.5px] border-white overflow-hidden mb-1 relative transition-transform active:scale-95"
                                 >
                                     <img src={post.profiles?.avatar_url || 'https://i.pravatar.cc/150'} alt="User" className="w-full h-full object-cover" />
                                 </button>
                             </div>
 
-                            <div className="flex flex-col items-center gap-1">
-                                <button onClick={(e) => handleLike(post, e)} className="p-2 transition-transform active:scale-75">
-                                    <Heart size={32} className={post.user_has_liked ? "text-red-500 fill-red-500" : "text-white drop-shadow-lg"} strokeWidth={1.5} />
+                            <div className="flex flex-col items-center gap-px">
+                                <button onClick={(e) => handleLike(post, e)} className="p-1.5 transition-transform active:scale-75">
+                                    <Heart size={26} className={post.user_has_liked ? "text-red-500 fill-red-500" : "text-white drop-shadow-lg"} strokeWidth={1.5} />
                                 </button>
-                                <span className="text-white text-xs font-bold drop-shadow-md">{post.likes_count}</span>
+                                <span className="text-white text-[10px] font-bold drop-shadow-md">{post.likes_count}</span>
                             </div>
 
-                            <button onClick={() => setActiveCommentPostId(post.id)} className="flex flex-col items-center gap-1 p-2 transition-transform active:scale-75">
-                                <MessageCircle size={30} className="text-white drop-shadow-lg" strokeWidth={1.5} />
-                                <span className="text-white text-xs font-bold drop-shadow-md">Chat</span>
+                            <button onClick={() => setActiveCommentPostId(post.id)} className="flex flex-col items-center gap-px p-1.5 transition-transform active:scale-75">
+                                <MessageCircle size={24} className="text-white drop-shadow-lg" strokeWidth={1.5} />
+                                <span className="text-white text-[10px] font-bold drop-shadow-md">Chat</span>
                             </button>
 
-                            <button onClick={() => handleShare(post)} className="flex flex-col items-center gap-1 p-2 transition-transform active:scale-75">
-                                <Share2 size={28} className="text-white drop-shadow-lg" strokeWidth={1.5} />
-                                <span className="text-white text-xs font-bold drop-shadow-md">Share</span>
+                            <button onClick={() => handleShare(post)} className="flex flex-col items-center gap-px p-1.5 transition-transform active:scale-75">
+                                <Share2 size={22} className="text-white drop-shadow-lg" strokeWidth={1.5} />
+                                <span className="text-white text-[10px] font-bold drop-shadow-md">Share</span>
                             </button>
 
-                            <div className="w-8 h-8 rounded-full bg-neutral-800 border border-white/20 flex items-center justify-center animate-spin-slow mt-4">
-                                <Music2 size={14} className="text-white" />
+                            <div className="w-7 h-7 rounded-full bg-neutral-800 border border-white/20 flex items-center justify-center animate-spin-slow mt-2">
+                                <Music2 size={12} className="text-white" />
                             </div>
                         </div>
 
                         {/* BOTTOM INFO */}
-                        <div className="absolute bottom-20 left-4 right-16 z-20 text-white text-left pb-4">
-                            <h3 className="font-bold text-shadow-sm mb-2 flex items-center gap-2">
-                                <button onClick={() => handleOpenProfile(post.user_id)} className="hover:underline">
+                        <div className="absolute bottom-4 left-3 right-12 z-20 text-white text-left pb-1">
+                            <h3 className="font-bold text-shadow-sm mb-1 flex items-center gap-1.5">
+                                <button onClick={() => handleOpenProfile(post.user_id)} className="hover:underline text-sm shadow-black drop-shadow-md">
                                     @{post.profiles?.username}
                                 </button>
                                 {user?.id !== post.user_id && (
                                     <button
                                         onClick={(e) => handleFollow(post, e)}
-                                        className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider transition-colors ${(post as any).is_following
+                                        className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider transition-colors ${(post as any).is_following
                                             ? 'bg-neutral-800 text-neutral-400 border border-neutral-600'
                                             : 'bg-white/20 hover:bg-yellow-500 hover:text-black text-white'
                                             }`}
@@ -282,22 +282,22 @@ export const ReelsPage = () => {
                                 )}
                             </h3>
 
-                            <p className="text-sm opacity-90 mb-3 line-clamp-2 leading-snug">
+                            <p className="text-xs opacity-90 mb-2 line-clamp-2 leading-tight pr-4 drop-shadow-md">
                                 {post.caption}
                             </p>
 
                             {post.linked_routine_id && post.routines && (
-                                <Link to="/arsenal" className="inline-flex items-center gap-2 bg-neutral-800/60 backdrop-blur-md px-3 py-1.5 rounded-lg border-l-2 border-yellow-500">
-                                    <Swords size={12} className="text-yellow-500" />
-                                    <span className="text-xs font-bold">
+                                <Link to="/arsenal" className="inline-flex items-center gap-1.5 bg-neutral-800/60 backdrop-blur-md px-2 py-1 rounded-md border-l-2 border-yellow-500 mb-2">
+                                    <Swords size={10} className="text-yellow-500" />
+                                    <span className="text-[10px] font-bold">
                                         {getRoutineName(post.routines) || 'Rutina'}
                                     </span>
                                 </Link>
                             )}
 
-                            <div className="flex items-center gap-2 mt-3 opacity-70">
-                                <Music2 size={12} />
-                                <span className="text-xs marquee">Sonido Original - {post.profiles?.username}</span>
+                            <div className="flex items-center gap-1.5 opacity-80">
+                                <Music2 size={10} />
+                                <span className="text-[10px] marquee">Sonido Original - {post.profiles?.username}</span>
                             </div>
                         </div>
                     </div>
