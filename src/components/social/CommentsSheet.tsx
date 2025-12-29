@@ -64,7 +64,7 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ postId, onClose })
     };
 
     return (
-        <div className="absolute inset-x-0 bottom-0 h-[75vh] bg-neutral-900 rounded-t-3xl z-50 flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.8)] animate-in slide-in-from-bottom border-t border-white/10">
+        <div className="fixed inset-x-0 bottom-0 h-[75vh] bg-neutral-900 rounded-t-3xl z-50 flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.8)] animate-in slide-in-from-bottom border-t border-white/10">
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-white/5">
                 <div className="flex items-center gap-2">

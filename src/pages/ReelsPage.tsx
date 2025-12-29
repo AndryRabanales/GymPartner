@@ -234,18 +234,18 @@ export const ReelsPage = () => {
                         <div className="absolute bottom-12 right-1.5 flex flex-col items-center gap-4 z-20">
 
                             <div className="flex flex-col items-center gap-px">
-                                <button onClick={(e) => handleLike(post, e)} className="p-1.5 transition-transform active:scale-75">
+                                <button onClick={(e) => { e.stopPropagation(); handleLike(post, e); }} className="p-1.5 transition-transform active:scale-75">
                                     <Heart size={28} className={post.user_has_liked ? "text-red-500 fill-red-500" : "text-white drop-shadow-lg"} strokeWidth={1.5} />
                                 </button>
                                 <span className="text-white text-[10px] font-bold drop-shadow-md">{post.likes_count}</span>
                             </div>
 
-                            <button onClick={() => setActiveCommentPostId(post.id)} className="flex flex-col items-center gap-px p-1.5 transition-transform active:scale-75">
+                            <button onClick={(e) => { e.stopPropagation(); setActiveCommentPostId(post.id); }} className="flex flex-col items-center gap-px p-1.5 transition-transform active:scale-75">
                                 <MessageCircle size={26} className="text-white drop-shadow-lg" strokeWidth={1.5} />
                                 <span className="text-white text-[10px] font-bold drop-shadow-md">Chat</span>
                             </button>
 
-                            <button onClick={() => handleShare(post)} className="flex flex-col items-center gap-px p-1.5 transition-transform active:scale-75">
+                            <button onClick={(e) => { e.stopPropagation(); handleShare(post); }} className="flex flex-col items-center gap-px p-1.5 transition-transform active:scale-75">
                                 <Share2 size={24} className="text-white drop-shadow-lg" strokeWidth={1.5} />
                                 <span className="text-white text-[10px] font-bold drop-shadow-md">Share</span>
                             </button>
