@@ -212,12 +212,13 @@ export const ReelsPage = () => {
                         onDoubleClick={(e) => handleDoubleTap(post, e)}
                     >
                         <video
-                            ref={el => { if (el) videoRefs.current[post.id] = el }}
+                            ref={el => { if (el) (videoRefs.current as any)[(post as any).virtual_id || post.id] = el }}
                             src={post.media_url}
                             className="w-full h-full object-contain"
                             playsInline
                             loop
                             muted={muted}
+                            poster={post.media_url.includes('cloudinary') ? post.media_url.replace(/\.(mp4|mov|webm)$/i, '.jpg') : undefined}
                             onClick={() => setMuted(!muted)}
                         />
 
