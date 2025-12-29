@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface MediaItem {
@@ -8,13 +8,28 @@ interface MediaItem {
 
 interface MediaCarouselProps {
     media: MediaItem[];
+    isPlaying?: boolean;
 }
 
-export const MediaCarousel: React.FC<MediaCarouselProps> = ({ media }) => {
+export const MediaCarousel: React.FC<MediaCarouselProps> = ({ media, isPlaying = false }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [touchStart, setTouchStart] = useState(0);
     const [touchEnd, setTouchEnd] = useState(0);
     const videoRefs = useRef<{ [key: number]: HTMLVideoElement }>({});
+
+    // Handle Playback Control via Prop
+    useEffect(() => {
+
+        Object.values(videoRefs.current).forEach((video, index) => {
+            if (video) {
+                if (index === currentIndex && isPlaying) {
+                    video.play().catch(() => { });
+                } else {
+                    video.pause();
+                }
+            }
+        });
+    }, [currentIndex, isPlaying]);
 
     const handleTouchStart = (e: React.TouchEvent) => {
         setTouchStart(e.targetTouches[0].clientX);
@@ -58,29 +73,27 @@ export const MediaCarousel: React.FC<MediaCarouselProps> = ({ media }) => {
 
     return (
         <div
-            className="relative w-full bg-black overflow-hidden"
-            style={{ maxHeight: '600px' }}
+            className="relative w-full bg-black overflow-hidden aspect-[4/5] max-h-[500px] rounded-sm"
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
         >
             {/* Media Container */}
             <div
-                className="flex transition-transform duration-300 ease-out"
+                className="flex h-full transition-transform duration-300 ease-out"
                 style={{ transform: `translateX(-${currentIndex * 100}%)` }}
             >
                 {media.map((item, index) => (
-                    <div key={index} className="min-w-full flex items-center justify-center" style={{ maxHeight: '600px' }}>
+                    <div key={index} className="min-w-full h-full flex items-center justify-center bg-black">
                         {item.type === 'video' ? (
                             <video
                                 ref={el => { if (el) videoRefs.current[index] = el }}
                                 src={item.url}
-                                className="w-full h-auto max-h-[600px] object-contain"
-                                style={{ maxWidth: '100%' }}
+                                className="w-full h-full object-contain"
                                 playsInline
                                 loop
                                 muted={index !== currentIndex}
-                                autoPlay={index === currentIndex}
+                                poster={item.url.includes('cloudinary') ? item.url.replace(/\.(mp4|mov|webm)$/i, '.jpg') : undefined}
                                 onClick={(e) => {
                                     const v = e.target as HTMLVideoElement;
                                     v.muted = !v.muted;
@@ -90,8 +103,7 @@ export const MediaCarousel: React.FC<MediaCarouselProps> = ({ media }) => {
                             <img
                                 src={item.url}
                                 alt={`Media ${index + 1}`}
-                                className="w-full h-auto max-h-[600px] object-contain"
-                                style={{ maxWidth: '100%' }}
+                                className="w-full h-full object-contain"
                             />
                         )}
                     </div>
@@ -104,7 +116,7 @@ export const MediaCarousel: React.FC<MediaCarouselProps> = ({ media }) => {
                     {currentIndex > 0 && (
                         <button
                             onClick={goToPrevious}
-                            className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 backdrop-blur-sm text-white p-1.5 rounded-full hover:bg-black/70 transition-colors hidden sm:block"
+                            className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 backdrop-blur-sm text-white p-1.5 rounded-full hover:bg-black/70 transition-colors hidden sm:block z-10"
                         >
                             <ChevronLeft size={20} />
                         </button>
@@ -112,7 +124,7 @@ export const MediaCarousel: React.FC<MediaCarouselProps> = ({ media }) => {
                     {currentIndex < media.length - 1 && (
                         <button
                             onClick={goToNext}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 backdrop-blur-sm text-white p-1.5 rounded-full hover:bg-black/70 transition-colors hidden sm:block"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 backdrop-blur-sm text-white p-1.5 rounded-full hover:bg-black/70 transition-colors hidden sm:block z-10"
                         >
                             <ChevronRight size={20} />
                         </button>
@@ -122,7 +134,7 @@ export const MediaCarousel: React.FC<MediaCarouselProps> = ({ media }) => {
 
             {/* Media Counter */}
             {media.length > 1 && (
-                <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm px-2 py-1 rounded-full">
+                <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm px-2 py-1 rounded-full z-10">
                     <span className="text-white text-xs font-bold">
                         {currentIndex + 1}/{media.length}
                     </span>
@@ -131,7 +143,7 @@ export const MediaCarousel: React.FC<MediaCarouselProps> = ({ media }) => {
 
             {/* Dot Indicators */}
             {media.length > 1 && (
-                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
                     {media.map((_, index) => (
                         <button
                             key={index}

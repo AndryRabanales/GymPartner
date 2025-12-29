@@ -14,8 +14,38 @@ export const CommunityPage = () => {
     const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(null);
     const [selectedPlayer, setSelectedPlayer] = useState<any | null>(null);
 
-    // Auto-play videos intersection observer
-    const videoRefs = useRef<{ [key: string]: HTMLVideoElement }>({});
+    const [playingPostId, setPlayingPostId] = useState<string | null>(null);
+    const observerRefs = useRef<{ [key: string]: HTMLDivElement }>({});
+
+    // Smart Auto-Play Observer
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                let maxRatio = 0;
+                let maxId = null;
+
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
+                        if (entry.intersectionRatio > maxRatio) {
+                            maxRatio = entry.intersectionRatio;
+                            maxId = entry.target.getAttribute('data-post-id');
+                        }
+                    }
+                });
+
+                if (maxId) {
+                    setPlayingPostId(maxId);
+                }
+            },
+            { threshold: [0.6, 0.8] }
+        );
+
+        Object.values(observerRefs.current).forEach((el) => {
+            if (el) observer.observe(el);
+        });
+
+        return () => observer.disconnect();
+    }, [posts]);
 
     const handleShare = async (post: Post) => {
         try {
@@ -44,29 +74,6 @@ export const CommunityPage = () => {
         setLoading(false);
     };
 
-    // Intersection Observer for Auto-Play
-    useEffect(() => {
-        const observer = new IntersectionObserver(
-            (entries) => {
-                entries.forEach((entry) => {
-                    const video = entry.target as HTMLVideoElement;
-                    if (entry.isIntersecting) {
-                        video.play().catch(() => { }); // catch abort errors
-                    } else {
-                        video.pause();
-                    }
-                });
-            },
-            { threshold: 0.6 } // Play when 60% visible
-        );
-
-        Object.values(videoRefs.current).forEach((video) => {
-            if (video) observer.observe(video);
-        });
-
-        return () => observer.disconnect();
-    }, [posts]);
-
     const handleLike = async (post: Post) => {
         if (!user) return alert("Inicia sesión para dar like ❤️");
 
@@ -86,7 +93,7 @@ export const CommunityPage = () => {
     return (
         <div className="min-h-screen bg-black pb-20">
             {/* Header (Mobile style) */}
-            <div className="sticky top-0 z-30 bg-black/80 backdrop-blur-md border-b border-white/10 px-4 h-14 flex items-center justify-center">
+            <div className="sticky top-0 z-30 bg-black/90 backdrop-blur-md border-b border-white/5 px-4 h-14 flex items-center justify-center">
                 <span className="font-black italic text-white tracking-tighter text-lg">GYM<span className="text-yellow-500">TOK</span></span>
             </div>
 
@@ -100,14 +107,18 @@ export const CommunityPage = () => {
                     <div className="text-center py-20 px-6">
                         <p className="text-white font-bold text-lg mb-2">Está muy tranquilo por aquí... 🦗</p>
                         <p className="text-neutral-500 text-sm mb-6">Sé el primero en subir un post.</p>
-                        <p className="text-xs text-neutral-600">Haz click en el botón (+) arriba.</p>
                     </div>
                 ) : (
                     posts.map((post) => (
-                        <div key={post.id} className="border-b border-white/5 pb-1 mb-1">
+                        <div
+                            key={post.id}
+                            ref={el => { if (el) observerRefs.current[post.id] = el }}
+                            data-post-id={post.id}
+                            className="border-b border-white/5 pb-4 mb-4"
+                        >
 
                             {/* Post Header */}
-                            <div className="flex items-center justify-between px-3 py-1">
+                            <div className="flex items-center justify-between px-3 py-2">
                                 <div className="flex items-center gap-2">
                                     <button
                                         onClick={() => setSelectedPlayer({
@@ -117,7 +128,7 @@ export const CommunityPage = () => {
                                             xp: 0,
                                             rank: 0
                                         })}
-                                        className="w-7 h-7 rounded-full bg-neutral-800 overflow-hidden border border-white/10 hover:ring-2 hover:ring-yellow-500/50 transition-all cursor-pointer"
+                                        className="w-8 h-8 rounded-full bg-neutral-800 overflow-hidden border border-white/10"
                                     >
                                         <img
                                             src={post.profiles?.avatar_url || 'https://i.pravatar.cc/150'}
@@ -128,18 +139,11 @@ export const CommunityPage = () => {
                                     <div>
                                         <div className="flex items-center gap-1">
                                             <button
-                                                onClick={() => setSelectedPlayer({
-                                                    id: post.user_id,
-                                                    username: post.profiles?.username || 'Usuario',
-                                                    avatar_url: post.profiles?.avatar_url,
-                                                    xp: 0,
-                                                    rank: 0
-                                                })}
-                                                className="font-bold text-xs text-white hover:text-yellow-500 transition-colors cursor-pointer"
+                                                className="font-bold text-sm text-white hover:text-yellow-500 transition-colors"
                                             >
                                                 {post.profiles?.username || 'Usuario'}
                                             </button>
-                                            <span className="text-[9px] text-neutral-500">• 2h</span>
+                                            <span className="text-[10px] text-neutral-500">• 2h</span>
                                         </div>
                                         {post.linked_routine_id && post.routines && (
                                             <Link to="/arsenal" className="flex items-center gap-1 text-[10px] text-yellow-500 hover:underline">
@@ -156,16 +160,20 @@ export const CommunityPage = () => {
 
                             {/* Media */}
                             {post.media && post.media.length > 0 ? (
-                                <MediaCarousel media={post.media} />
+                                <MediaCarousel media={post.media} isPlaying={playingPostId === post.id} />
                             ) : (
-                                <div className="bg-black w-full relative" style={{ maxHeight: '600px' }}>
+                                <div className="bg-neutral-900 w-full relative aspect-[4/5] max-h-[500px] overflow-hidden rounded-sm">
                                     {post.type === 'video' ? (
-                                        <div className="flex items-center justify-center" style={{ maxHeight: '600px' }}>
+                                        <div className="w-full h-full flex items-center justify-center bg-black">
                                             <video
-                                                ref={el => { if (el) videoRefs.current[post.id] = el }}
+                                                ref={el => {
+                                                    if (el) {
+                                                        if (playingPostId === post.id) el.play().catch(() => { });
+                                                        else el.pause();
+                                                    }
+                                                }}
                                                 src={post.media_url}
-                                                className="w-full h-auto max-h-[600px] object-contain"
-                                                style={{ maxWidth: '100%' }}
+                                                className="w-full h-full object-contain"
                                                 playsInline
                                                 loop
                                                 muted
@@ -174,13 +182,13 @@ export const CommunityPage = () => {
                                                     v.muted = !v.muted;
                                                 }}
                                             />
-                                            <div className="absolute bottom-4 right-4 bg-black/50 p-2 rounded-full backdrop-blur-sm">
-                                                <Music2 size={16} className="text-white animate-pulse" />
+                                            <div className="absolute bottom-3 right-3 bg-black/50 p-1.5 rounded-full backdrop-blur-sm pointer-events-none">
+                                                <Music2 size={12} className="text-white animate-pulse" />
                                             </div>
                                         </div>
                                     ) : (
-                                        <div className="flex items-center justify-center" style={{ maxHeight: '600px' }}>
-                                            <img src={post.media_url} alt="Post" className="w-full h-auto max-h-[600px] object-contain" style={{ maxWidth: '100%' }} />
+                                        <div className="w-full h-full flex items-center justify-center bg-black">
+                                            <img src={post.media_url} alt="Post" className="w-full h-full object-contain" />
                                         </div>
                                     )}
                                 </div>
