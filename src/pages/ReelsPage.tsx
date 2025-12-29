@@ -228,10 +228,10 @@ export const ReelsPage = () => {
                         </div>
 
                         {/* OVERLAY CONTENT (Gradient) */}
-                        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/80 pointer-events-none" />
+                        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none" />
 
                         {/* RIGHT ACTIONS BAR */}
-                        <div className="absolute bottom-6 right-2 flex flex-col items-center gap-6 z-20">
+                        <div className="absolute bottom-28 right-2 flex flex-col items-center gap-6 z-20">
                             <div className="flex flex-col items-center gap-1">
                                 <button
                                     onClick={() => handleOpenProfile(post.user_id)}
@@ -264,7 +264,7 @@ export const ReelsPage = () => {
                         </div>
 
                         {/* BOTTOM INFO */}
-                        <div className="absolute bottom-6 left-4 right-16 z-20 text-white text-left">
+                        <div className="absolute bottom-20 left-4 right-16 z-20 text-white text-left pb-4">
                             <h3 className="font-bold text-shadow-sm mb-2 flex items-center gap-2">
                                 <button onClick={() => handleOpenProfile(post.user_id)} className="hover:underline">
                                     @{post.profiles?.username}
