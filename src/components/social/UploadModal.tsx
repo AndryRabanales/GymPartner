@@ -108,9 +108,9 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
             setLoadProgress(0);
             setVideoMetadata(null);
 
-            // Validate max 10 files
-            if (selectedFiles.length > 10) {
-                alert('Máximo 10 archivos por post.');
+            // Validate max 20 files
+            if (selectedFiles.length > 20) {
+                alert('Máximo 20 archivos por post.');
                 return;
             }
 
@@ -232,11 +232,13 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
         setUploadProgress(0);
 
         try {
-            // Check if Cloudinary is configured
             const useCloudinary = cloudinaryService.isConfigured();
+            const uploadedMedia: { url: string; type: 'video' | 'image' }[] = [];
+            let totalProgress = 0;
+            const progressPerFile = 100 / files.length;
 
+            // Check for large videos only if Cloudinary is MISSING
             if (!useCloudinary) {
-                // Fallback: Check for videos over 50MB if not using Cloudinary
                 const oversizedVideos = files.filter(f => f.type.startsWith('video') && f.size > REELS_SPECS.MAX_FILE_SIZE);
                 if (oversizedVideos.length > 0) {
                     const sizeMB = (oversizedVideos[0].size / (1024 * 1024)).toFixed(2);
@@ -248,65 +250,58 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
                 }
             }
 
-            // Upload to Cloudinary if configured and file is video
-            if (useCloudinary && files.length === 1 && files[0].type.startsWith('video')) {
-                console.log('📤 Uploading video to Cloudinary...');
+            // Iterate and Upload ALL files
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const isVideo = file.type.startsWith('video');
+                let publicUrl = '';
 
-                const cloudinaryResponse = await cloudinaryService.uploadVideo(files[0], (progress) => {
-                    setUploadProgress(progress.percentage);
-                });
-
-                console.log('✅ Cloudinary upload complete:', cloudinaryResponse.secure_url);
-
-                // Create post with Cloudinary URL
-                const result = await socialService.createPostWithExternalUrl(
-                    user.id,
-                    cloudinaryResponse.secure_url,
-                    'video',
-                    caption
-                );
-
-                setUploadProgress(100);
-
-                if (result.success) {
-                    setStep('success');
-                    setTimeout(() => {
-                        onSuccess();
-                        onClose();
-                    }, 2000);
-                } else {
-                    alert('Error al guardar: ' + result.error);
-                    setStep('preview');
-                    setUploadProgress(0);
-                }
-            } else {
-                // Use Supabase for images or if Cloudinary not configured
-                const progressInterval = setInterval(() => {
-                    setUploadProgress(prev => {
-                        if (prev >= 90) return prev;
-                        return prev + 10;
+                // Upload Strategy
+                if (isVideo && useCloudinary) {
+                    // Upload to Cloudinary
+                    console.log(`📤 Uploading video ${i + 1}/${files.length} to Cloudinary...`);
+                    const response = await cloudinaryService.uploadVideo(file, (p) => {
+                        // Calculate partial progress for current file inside the big loop
+                        const currentFileProgress = p.percentage * (progressPerFile / 100);
+                        setUploadProgress(Math.min(99, totalProgress + currentFileProgress));
                     });
-                }, 300);
-
-                const result = files.length > 1
-                    ? await socialService.createPostWithMultipleMedia(user.id, files, caption)
-                    : await socialService.createPost(user.id, files[0], files[0].type.startsWith('video') ? 'video' : 'image', caption);
-
-                clearInterval(progressInterval);
-                setUploadProgress(100);
-
-                if (result.success) {
-                    setStep('success');
-                    setTimeout(() => {
-                        onSuccess();
-                        onClose();
-                    }, 2000);
+                    publicUrl = response.secure_url;
                 } else {
-                    alert('Error al subir: ' + result.error);
-                    setStep('preview');
-                    setUploadProgress(0);
+                    // Upload to Supabase (Images OR Videos if Cloudinary disabled)
+                    console.log(`📤 Uploading file ${i + 1}/${files.length} to Supabase...`);
+                    publicUrl = await socialService.uploadFile(user.id, file);
                 }
+
+                if (publicUrl) {
+                    uploadedMedia.push({
+                        url: publicUrl,
+                        type: isVideo ? 'video' : 'image'
+                    });
+                }
+
+                totalProgress += progressPerFile;
+                setUploadProgress(Math.min(99, totalProgress));
             }
+
+            // Create Post with all URLs (XP logic is handled inside this service method)
+            const result = await socialService.createPostWithMixedMedia(
+                user.id,
+                uploadedMedia,
+                caption
+            );
+
+            setUploadProgress(100);
+
+            if (result.success) {
+                setStep('success');
+                setTimeout(() => {
+                    onSuccess();
+                    onClose();
+                }, 2000);
+            } else {
+                throw new Error(result.error);
+            }
+
         } catch (error: any) {
             alert('Error al subir: ' + error.message);
             console.error('Upload error:', error);

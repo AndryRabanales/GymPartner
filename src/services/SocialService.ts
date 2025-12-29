@@ -46,6 +46,79 @@ class SocialService {
     // ============================================================================
 
     /**
+     * Helper: Upload a single file to Supabase Storage and return public URL.
+     */
+    async uploadFile(userId: string, file: File): Promise<string> {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${userId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('gym-social-media')
+            .upload(fileName, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+            .from('gym-social-media')
+            .getPublicUrl(fileName);
+
+        return publicUrl;
+    }
+
+    /**
+     * Creates a post with multiple pre-uploaded media items (URLs).
+     * This unifies Cloudinary (videos) and Supabase (images) workflows.
+     */
+    async createPostWithMixedMedia(
+        userId: string,
+        mediaItems: { url: string; type: 'video' | 'image' }[],
+        caption?: string,
+        linkedRoutineId?: string
+    ): Promise<{ success: boolean; error?: string }> {
+        try {
+            if (mediaItems.length === 0) throw new Error('No media items provided');
+
+            // 1. Create Post
+            const { data: post, error: postError } = await supabase
+                .from('posts')
+                .insert({
+                    user_id: userId,
+                    type: mediaItems[0].type, // Primary type from first item
+                    media_url: mediaItems[0].url, // Backward compatibility
+                    caption: caption,
+                    linked_routine_id: linkedRoutineId
+                })
+                .select()
+                .single();
+
+            if (postError) throw postError;
+
+            // 2. Insert Media Records
+            const mediaRecords = mediaItems.map((item, index) => ({
+                post_id: post.id,
+                media_url: item.url,
+                media_type: item.type,
+                order_index: index
+            }));
+
+            const { error: mediaError } = await supabase
+                .from('post_media')
+                .insert(mediaRecords);
+
+            if (mediaError) throw mediaError;
+
+            // 🎉 Award XP: 10 XP per media item (Video/Photo)
+            const totalXP = mediaItems.length * 10;
+            await userService.addXP(userId, totalXP);
+
+            return { success: true };
+        } catch (error: any) {
+            console.error('Error creating mixed-media post:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
      * Uploads a file to Supabase Storage and creates a Post record.
      */
     async createPost(
