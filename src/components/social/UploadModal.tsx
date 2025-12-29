@@ -374,7 +374,13 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
                                     {files.map((file, index) => (
                                         <div key={index} className="relative aspect-square bg-neutral-900 rounded-lg overflow-hidden group">
                                             {file.type.startsWith('video') ? (
-                                                <video src={previewUrls[index]} className="w-full h-full object-cover" />
+                                                <video
+                                                    src={previewUrls[index]}
+                                                    className="w-full h-full object-cover"
+                                                    muted
+                                                    playsInline
+                                                    onLoadedMetadata={(e) => { e.currentTarget.currentTime = 0.1; }}
+                                                />
                                             ) : (
                                                 <img src={previewUrls[index]} alt={`Preview ${index + 1} `} className="w-full h-full object-cover" />
                                             )}
