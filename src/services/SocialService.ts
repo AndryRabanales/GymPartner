@@ -362,7 +362,7 @@ class SocialService {
      * Fetches the main feed (Global or Following). 
      * Currently implements Global Feed (Discovery).
      */
-    async getGlobalFeed(currentUserId?: string, type?: 'image' | 'video'): Promise<Post[]> {
+    async getGlobalFeed(currentUserId?: string, type?: 'image' | 'video', flatten: boolean = false): Promise<Post[]> {
         // Fetch posts + Creator info + Routine info (if linked)
         let query = supabase
             .from('posts')
@@ -394,7 +394,38 @@ class SocialService {
         // Fetch media for all posts
         const postsWithMedia = await this.attachMediaToPosts(data);
 
-        return postsWithMedia.map((post: any) => ({
+        // Flatten logic: Convert multi-media posts into individual feed items
+        let finalFeed = postsWithMedia;
+
+        if (flatten) {
+            const flattenedFeed: any[] = [];
+
+            postsWithMedia.forEach((post: any) => {
+                const mediaItems = post.media || [];
+
+                if (mediaItems.length > 0) {
+                    // Create a feed item for EACH media file
+                    mediaItems.forEach((media: any, index: number) => {
+                        flattenedFeed.push({
+                            ...post,
+                            virtual_id: `${post.id}_${media.order_index}_${index}`,
+                            media_url: media.url,
+                            media_type: media.type,
+                            media: [] // Clear media array to prevent recursive/carousel rendering in UI
+                        });
+                    });
+                } else {
+                    // Fallback for legacy posts
+                    flattenedFeed.push({
+                        ...post,
+                        virtual_id: post.id
+                    });
+                }
+            });
+            finalFeed = flattenedFeed;
+        }
+
+        return finalFeed.map((post: any) => ({
             ...post,
             // Check if current user liked it (if logged in)
             user_has_liked: currentUserId

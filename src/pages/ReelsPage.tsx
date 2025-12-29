@@ -30,8 +30,8 @@ export const ReelsPage = () => {
 
     const loadReels = async () => {
         setLoading(true);
-        // Fetch ONLY videos
-        const feed = await socialService.getGlobalFeed(user?.id, 'video');
+        // Fetch ONLY videos. Enable 'flatten' to show multi-video posts as separate Items.
+        const feed = await socialService.getGlobalFeed(user?.id, 'video', true);
 
         // Check follow status for each creator in the feed
         if (user) {
@@ -204,7 +204,7 @@ export const ReelsPage = () => {
             )}
 
             {posts.map((post) => (
-                <div key={post.id} className="h-full w-full max-w-md mx-auto relative snap-center flex items-center justify-center bg-black border-b border-neutral-800 md:border-none">
+                <div key={(post as any).virtual_id || post.id} className="h-full w-full max-w-md mx-auto relative snap-center flex items-center justify-center bg-black border-b border-neutral-800 md:border-none">
 
                     {/* VIDEO CONTAINER */}
                     <div

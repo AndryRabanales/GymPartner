@@ -38,8 +38,8 @@ export const CommunityPage = () => {
 
     const loadFeed = async () => {
         setLoading(true);
-        // Using getGlobalFeed for discovery
-        const feed = await socialService.getGlobalFeed(user?.id);
+        // Using getGlobalFeed for discovery (default behavior: grouped posts, perfect for Community feed)
+        const feed = await socialService.getGlobalFeed(user?.id, undefined, false);
         setPosts(feed);
         setLoading(false);
     };
