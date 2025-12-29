@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Music2 } from 'lucide-react';
 
 interface MediaItem {
     url: string;
@@ -84,21 +84,34 @@ export const MediaCarousel: React.FC<MediaCarouselProps> = ({ media, isPlaying =
                 style={{ transform: `translateX(-${currentIndex * 100}%)` }}
             >
                 {media.map((item, index) => (
-                    <div key={index} className="min-w-full h-full flex items-center justify-center bg-black">
+                    <div key={index} className="min-w-full h-full flex items-center justify-center bg-black relative group">
                         {item.type === 'video' ? (
-                            <video
-                                ref={el => { if (el) videoRefs.current[index] = el }}
-                                src={item.url}
-                                className="w-full h-full object-contain"
-                                playsInline
-                                loop
-                                muted={index !== currentIndex}
-                                poster={item.url.includes('cloudinary') ? item.url.replace(/\.(mp4|mov|webm)$/i, '.jpg') : undefined}
-                                onClick={(e) => {
-                                    const v = e.target as HTMLVideoElement;
-                                    v.muted = !v.muted;
-                                }}
-                            />
+                            <>
+                                <video
+                                    ref={el => { if (el) videoRefs.current[index] = el }}
+                                    src={item.url}
+                                    className="w-full h-full object-contain cursor-pointer"
+                                    playsInline
+                                    loop
+                                    muted={index !== currentIndex}
+                                    poster={item.url.includes('cloudinary') ? item.url.replace(/\.(mp4|mov|webm)$/i, '.jpg') : undefined}
+                                    onClick={(e) => {
+                                        const v = e.currentTarget;
+                                        if (v.paused) v.play().catch(() => { });
+                                        else v.pause();
+                                    }}
+                                />
+                                <button
+                                    className="absolute bottom-3 right-3 bg-black/50 p-1.5 rounded-full backdrop-blur-sm text-white hover:bg-black/70 transition-colors active:scale-95 z-10"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        const v = e.currentTarget.parentElement?.querySelector('video');
+                                        if (v) v.muted = !v.muted;
+                                    }}
+                                >
+                                    <Music2 size={12} />
+                                </button>
+                            </>
                         ) : (
                             <img
                                 src={item.url}

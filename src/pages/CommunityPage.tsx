@@ -37,7 +37,7 @@ export const CommunityPage = () => {
                     setPlayingPostId(maxId);
                 }
             },
-            { threshold: [0.6, 0.8] }
+            { threshold: [0.5, 0.7] }
         );
 
         Object.values(observerRefs.current).forEach((el) => {
@@ -89,6 +89,17 @@ export const CommunityPage = () => {
 
         await socialService.toggleLike(user.id, post.id);
     };
+
+    const togglePlayPause = (e: React.MouseEvent<HTMLVideoElement>) => {
+        const video = e.currentTarget;
+        if (video.paused) {
+            video.play().catch(() => { });
+        } else {
+            video.pause();
+        }
+    };
+
+
 
     return (
         <div className="min-h-screen bg-black pb-20">
@@ -164,27 +175,37 @@ export const CommunityPage = () => {
                             ) : (
                                 <div className="bg-neutral-900 w-full relative aspect-[4/5] max-h-[500px] overflow-hidden rounded-sm">
                                     {post.type === 'video' ? (
-                                        <div className="w-full h-full flex items-center justify-center bg-black">
+                                        <div className="w-full h-full flex items-center justify-center bg-black group">
                                             <video
                                                 ref={el => {
                                                     if (el) {
-                                                        if (playingPostId === post.id) el.play().catch(() => { });
-                                                        else el.pause();
+                                                        if (playingPostId === post.id) {
+                                                            const promise = el.play();
+                                                            if (promise !== undefined) {
+                                                                promise.catch(() => { });
+                                                            }
+                                                        } else {
+                                                            el.pause();
+                                                        }
                                                     }
                                                 }}
                                                 src={post.media_url}
-                                                className="w-full h-full object-contain"
+                                                className="w-full h-full object-contain cursor-pointer"
                                                 playsInline
                                                 loop
                                                 muted
-                                                onClick={(e) => {
-                                                    const v = e.target as HTMLVideoElement;
-                                                    v.muted = !v.muted;
-                                                }}
+                                                onClick={togglePlayPause}
                                             />
-                                            <div className="absolute bottom-3 right-3 bg-black/50 p-1.5 rounded-full backdrop-blur-sm pointer-events-none">
-                                                <Music2 size={12} className="text-white animate-pulse" />
-                                            </div>
+                                            <button
+                                                className="absolute bottom-3 right-3 bg-black/50 p-1.5 rounded-full backdrop-blur-sm text-white hover:bg-black/70 transition-colors active:scale-95"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    const v = e.currentTarget.parentElement?.querySelector('video');
+                                                    if (v) v.muted = !v.muted;
+                                                }}
+                                            >
+                                                <Music2 size={12} />
+                                            </button>
                                         </div>
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center bg-black">
