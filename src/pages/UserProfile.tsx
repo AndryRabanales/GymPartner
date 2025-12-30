@@ -106,6 +106,12 @@ export const UserProfile = () => {
             return;
         }
 
+        // --- [DEV] LOCATION CHECK BYPASS ---
+        // Requested by user ("quitar rapidamente el apartado de los km")
+        navigate(`/territory/${gym.gym_id}/workout`);
+        return;
+        // -----------------------------------
+
         // 2. ERROR CASE: MISSING COORDINATES -> BLOCK
         // If it's a real gym but has no coords, we CANNOT verify, so we must DENY access.
         if (!gym.lat || !gym.lng) {
