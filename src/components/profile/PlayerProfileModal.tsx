@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { X, MapPin, Grid, Film, UserPlus, UserCheck, Heart, Swords } from 'lucide-react';
+import { X, Camera, Save, Loader, Swords, Trophy, Eye, EyeOff, UserPlus, UserCheck, Grid, Film, MapPin, Heart, Play } from 'lucide-react';
+import { FeedViewerOverlay } from '../social/FeedViewerOverlay';
 import { useAuth } from '../../context/AuthContext';
 import { userService } from '../../services/UserService';
 import { socialService, type Post } from '../../services/SocialService';
@@ -24,6 +25,7 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
 
     // Social State
     const [stats, setStats] = useState({ followersCount: 0, followingCount: 0, totalLikes: 0 });
+    const [viewedPostId, setViewedPostId] = useState<string | null>(null);
     const [isFollowing, setIsFollowing] = useState(false);
     const [activeTab, setActiveTab] = useState<'grid' | 'reels' | 'routines'>('grid');
 
@@ -224,107 +226,72 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
                         </div>
 
                         {/* TAB CONTENT (Full Width) */}
-                        <div className="w-full">
-                            {/* 1. GRID TAB (Images) */}
-                            {activeTab === 'grid' && (
-                                <div className="grid grid-cols-3 gap-1 animate-in slide-in-from-bottom-2 fade-in duration-300">
-                                    {posts.map(post => (
-                                        <div key={post.id} className="aspect-square bg-neutral-800 relative group overflow-hidden cursor-pointer" onClick={() => alert('Ver Post ' + post.id)}>
-                                            {post.type === 'video' ? (
-                                                <video src={post.media_url} className="w-full h-full object-cover" />
-                                            ) : (
-                                                <img src={post.media_url} alt="Post" className="w-full h-full object-cover" />
-                                            )}
+                        {/* 2. REELS TAB (Videos) */}
+                        {activeTab === 'reels' && (
+                            <div className="grid grid-cols-2 gap-2 animate-in slide-in-from-bottom-2 fade-in duration-300">
+                                {posts.map(post => (
+                                    <div key={post.id} className="aspect-[9/16] bg-neutral-800 rounded-lg relative overflow-hidden cursor-pointer group">
+                                        <video src={post.media_url} className="w-full h-full object-cover" />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity"></div>
+                                        <div className="absolute bottom-3 left-3 flex items-center gap-1.5 text-white text-sm font-bold drop-shadow-md">
+                                            <Heart size={14} fill="white" /> {post.likes_count}
+                                        </div>
+                                    </div>
+                                ))}
+                                {posts.length === 0 && (
+                                    <div className="col-span-2 py-12 flex flex-col items-center justify-center text-neutral-600 space-y-3 opacity-60">
+                                        <div className="w-16 h-16 rounded-full bg-neutral-800 flex items-center justify-center">
+                                            <Film size={24} />
+                                        </div>
+                                        <p className="text-sm font-bold uppercase tracking-wider">Sin reels aún</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
-                                            {/* Type Indicator */}
-                                            {post.type === 'video' && (
-                                                <div className="absolute top-2 right-2">
-                                                    <Film size={16} className="text-white drop-shadow-md" />
-                                                </div>
-                                            )}
-
-                                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 text-white text-xs font-bold">
-                                                <Heart size={12} fill="white" /> {post.likes_count}
-                                            </div>
+                        {/* 3. ROUTINES TAB (Mazos) */}
+                        {activeTab === 'routines' && (
+                            <div className="grid grid-cols-1 gap-2 animate-in slide-in-from-bottom-2 fade-in duration-300">
+                                {publicRoutines.map(routine => (
+                                    <div
+                                        key={routine.id}
+                                        onClick={() => setViewRoutine(routine)}
+                                        className="bg-neutral-800 p-4 rounded-xl border border-white/5 flex items-center gap-4 cursor-pointer hover:bg-neutral-700 transition-colors"
+                                    >
+                                        <div className="w-12 h-12 bg-neutral-900 rounded-lg flex items-center justify-center text-2xl border border-white/5">
+                                            <Swords size={20} className="text-gym-primary" />
                                         </div>
-                                    ))}
-                                    {posts.length === 0 && (
-                                        <div className="col-span-3 py-12 flex flex-col items-center justify-center text-neutral-600 space-y-3 opacity-60">
-                                            <div className="w-16 h-16 rounded-full bg-neutral-800 flex items-center justify-center">
-                                                <Grid size={24} />
-                                            </div>
-                                            <p className="text-sm font-bold uppercase tracking-wider">Sin fotos aún</p>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="font-bold text-white uppercase italic tracking-wider truncate">{routine.name}</h3>
+                                            <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest">{routine.exercises?.length || 0} Cartas</p>
                                         </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* 2. REELS TAB (Videos) */}
-                            {activeTab === 'reels' && (
-                                <div className="grid grid-cols-2 gap-2 animate-in slide-in-from-bottom-2 fade-in duration-300">
-                                    {posts.map(post => (
-                                        <div key={post.id} className="aspect-[9/16] bg-neutral-800 rounded-lg relative overflow-hidden cursor-pointer group">
-                                            <video src={post.media_url} className="w-full h-full object-cover" />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity"></div>
-                                            <div className="absolute bottom-3 left-3 flex items-center gap-1.5 text-white text-sm font-bold drop-shadow-md">
-                                                <Heart size={14} fill="white" /> {post.likes_count}
-                                            </div>
+                                    </div>
+                                ))}
+                                {publicRoutines.length === 0 && (
+                                    <div className="py-12 flex flex-col items-center justify-center text-neutral-600 space-y-3 opacity-60">
+                                        <div className="w-16 h-16 rounded-full bg-neutral-800 flex items-center justify-center">
+                                            <Swords size={24} />
                                         </div>
-                                    ))}
-                                    {posts.length === 0 && (
-                                        <div className="col-span-2 py-12 flex flex-col items-center justify-center text-neutral-600 space-y-3 opacity-60">
-                                            <div className="w-16 h-16 rounded-full bg-neutral-800 flex items-center justify-center">
-                                                <Film size={24} />
-                                            </div>
-                                            <p className="text-sm font-bold uppercase tracking-wider">Sin reels aún</p>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* 3. ROUTINES TAB (Mazos) */}
-                            {activeTab === 'routines' && (
-                                <div className="grid grid-cols-1 gap-2 animate-in slide-in-from-bottom-2 fade-in duration-300">
-                                    {publicRoutines.map(routine => (
-                                        <div
-                                            key={routine.id}
-                                            onClick={() => setViewRoutine(routine)}
-                                            className="bg-neutral-800 p-4 rounded-xl border border-white/5 flex items-center gap-4 cursor-pointer hover:bg-neutral-700 transition-colors"
-                                        >
-                                            <div className="w-12 h-12 bg-neutral-900 rounded-lg flex items-center justify-center text-2xl border border-white/5">
-                                                <Swords size={20} className="text-gym-primary" />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <h3 className="font-bold text-white uppercase italic tracking-wider truncate">{routine.name}</h3>
-                                                <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest">{routine.exercises?.length || 0} Cartas</p>
-                                            </div>
-                                        </div>
-                                    ))}
-                                    {publicRoutines.length === 0 && (
-                                        <div className="py-12 flex flex-col items-center justify-center text-neutral-600 space-y-3 opacity-60">
-                                            <div className="w-16 h-16 rounded-full bg-neutral-800 flex items-center justify-center">
-                                                <Swords size={24} />
-                                            </div>
-                                            <p className="text-sm font-bold uppercase tracking-wider">Sin mazos públicos</p>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Routine Inspector */}
-                        {viewRoutine && (
-                            <RoutineViewModal
-                                routine={viewRoutine}
-                                onClose={() => setViewRoutine(null)}
-                                onCopy={handleCopyRoutine}
-                                isCopying={copying}
-                            />
+                                        <p className="text-sm font-bold uppercase tracking-wider">Sin mazos públicos</p>
+                                    </div>
+                                )}
+                            </div>
                         )}
                     </div>
-                </div>
 
+                    {/* Routine Inspector */}
+                    {viewRoutine && (
+                        <RoutineViewModal
+                            routine={viewRoutine}
+                            onClose={() => setViewRoutine(null)}
+                            onCopy={handleCopyRoutine}
+                            isCopying={copying}
+                        />
+                    )}
+                </div>
             </div>
+
         </div>
+        </div >
     );
 };
