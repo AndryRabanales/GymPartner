@@ -10,6 +10,7 @@ export interface MediaItem {
 
 export interface Post {
     id: string;
+    virtual_id?: string; // For frontend deduplication/infinite scroll
     user_id: string;
     type: 'image' | 'video';
     media_url: string;

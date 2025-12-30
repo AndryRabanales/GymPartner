@@ -1,18 +1,11 @@
-import { useEffect, useState, useRef } from 'react';
-import { Heart, MessageCircle, Share2, Music2, Swords, Volume2, VolumeX } from 'lucide-react';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { Loader2 } from 'lucide-react';
 import { socialService, type Post } from '../services/SocialService';
 import { useAuth } from '../context/AuthContext';
-import { Link } from 'react-router-dom';
 import { CommentsSheet } from '../components/social/CommentsSheet';
 import { PlayerProfileModal } from '../components/profile/PlayerProfileModal';
 import { supabase } from '../lib/supabase';
-
-const getRoutineName = (routines: any) => {
-    if (Array.isArray(routines)) {
-        return routines[0]?.name;
-    }
-    return routines?.name;
-};
+import { ReelItem } from '../components/social/ReelItem';
 
 export const ReelsPage = () => {
     const { user } = useAuth();
@@ -22,7 +15,17 @@ export const ReelsPage = () => {
     const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(null);
     const [selectedPlayer, setSelectedPlayer] = useState<any | null>(null);
 
+    // Stable references for video elements
     const videoRefs = useRef<{ [key: string]: HTMLVideoElement }>({});
+
+    // Stable callback to register videos without re-rendering parent often
+    const registerVideoRef = useCallback((id: string, el: HTMLVideoElement | null) => {
+        if (el) {
+            videoRefs.current[id] = el;
+        } else {
+            delete videoRefs.current[id];
+        }
+    }, []);
 
     useEffect(() => {
         loadReels();
@@ -30,10 +33,8 @@ export const ReelsPage = () => {
 
     const loadReels = async () => {
         setLoading(true);
-        // Fetch ONLY videos. Enable 'flatten' to show multi-video posts as separate Items.
         const feed = await socialService.getGlobalFeed(user?.id, 'video', true);
 
-        // Check follow status for each creator in the feed
         if (user) {
             const feedWithFollow = await Promise.all(feed.map(async (post) => {
                 const isFollowing = await socialService.getFollowStatus(user.id, post.user_id);
@@ -50,7 +51,7 @@ export const ReelsPage = () => {
     const viewStartTimes = useRef<{ [key: string]: number }>({});
     const loopCounters = useRef<{ [key: string]: number }>({});
 
-    // Intersection Observer for Auto-Play, Smart Preloading & ANALYTICS
+    // Intersection Observer
     useEffect(() => {
         const observer = new IntersectionObserver(
             (entries) => {
@@ -58,52 +59,35 @@ export const ReelsPage = () => {
                     const video = entry.target as HTMLVideoElement;
                     const isVisible = entry.intersectionRatio >= 0.7;
 
-                    // Identify the Post ID from the video element ref
+                    // Find Post ID by reference equality
+                    // Note: videoRefs.current is stable, but we iterate keys
                     const currentId = Object.keys(videoRefs.current).find(key => videoRefs.current[key] === video);
                     if (!currentId) return;
 
                     if (isVisible) {
-                        // Play current video
                         video.currentTime = 0;
                         video.play().catch(() => { });
                         video.preload = 'auto';
 
-                        // ⏱️ START TIMER for Analytics
                         viewStartTimes.current[currentId] = Date.now();
-                        loopCounters.current[currentId] = 0; // Reset loops on fresh view
-
-                        // Smart Preload Next Video
-                        const currentIndex = posts.findIndex(p => ((p as any).virtual_id || p.id) === currentId);
-                        if (currentIndex !== -1 && currentIndex < posts.length - 1) {
-                            const nextPost = posts[currentIndex + 1];
-                            const nextVideo = videoRefs.current[(nextPost as any).virtual_id || nextPost.id];
-                            if (nextVideo) {
-                                nextVideo.preload = 'auto';
-                            }
-                        }
+                        loopCounters.current[currentId] = 0;
 
                     } else {
                         video.pause();
 
-                        // ⏱️ LOG VIEW (Analytics)
+                        // Log Analytics
                         const startTime = viewStartTimes.current[currentId];
                         if (startTime) {
                             const durationSeconds = (Date.now() - startTime) / 1000;
-
-                            // Only log significant views (> 1 second) to filter accidental swipes
                             if (durationSeconds > 1.0) {
                                 const vidDuration = video.duration || 10;
                                 const percentage = Math.min(1.0, durationSeconds / vidDuration);
                                 const loops = loopCounters.current[currentId] || 0;
-
-                                // Extract clean ID (remove virtual suffix if present)
                                 const cleanId = currentId.split('_')[0];
 
-                                console.log(`[ReelsAnalytics] Viewed ${cleanId} for ${durationSeconds.toFixed(1)}s (${(percentage * 100).toFixed(0)}%), Loops: ${loops}`);
-
+                                console.log(`[Analytics] ${cleanId}: ${durationSeconds.toFixed(1)}s, ${loops} loops`);
                                 socialService.logView(cleanId, user?.id || null, durationSeconds, percentage, loops);
                             }
-
                             delete viewStartTimes.current[currentId];
                             delete loopCounters.current[currentId];
                         }
@@ -113,24 +97,25 @@ export const ReelsPage = () => {
             { threshold: 0.7 }
         );
 
+        // Observer needs to re-attach when posts/refs change
+        // Since we are using stable keys, we iterate current refs
+        // We use a timeout to let refs attach? No, useEffect is fine.
         Object.values(videoRefs.current).forEach((video) => {
             if (video) observer.observe(video);
         });
 
         return () => observer.disconnect();
-    }, [posts, user]);
+    }, [posts]); // Re-run when posts update (load more)
 
-    // ... (rest of file)
+    /* --- Handlers --- */
 
-
-
-    const handleLike = async (post: Post, e: React.MouseEvent) => {
-        e.stopPropagation(); // Prevent toggling mute
+    const handleLike = async (post: Post) => { // Removed 'e' as ReelItem handles stopPropagation
         if (!user) return alert("Inicia sesión para dar like ❤️");
 
         const isLiked = post.user_has_liked;
         const newCount = (post.likes_count || 0) + (isLiked ? -1 : 1);
 
+        // Optimistic Update
         setPosts(prev => prev.map(p => p.id === post.id ? {
             ...p,
             user_has_liked: !isLiked,
@@ -140,25 +125,20 @@ export const ReelsPage = () => {
         try {
             await socialService.toggleLike(user.id, post.id);
         } catch (error) {
-            console.error("Like failed, reverting:", error);
-            // Revert state
+            // Revert
             setPosts(prev => prev.map(p => p.id === post.id ? {
                 ...p,
                 user_has_liked: isLiked,
                 likes_count: post.likes_count || 0
             } : p));
-            alert("No se pudo dar like. Intenta de nuevo.");
         }
     };
 
-    const handleFollow = async (post: any, e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (!user) return alert("Inicia sesión para seguir a este atleta.");
-        if (post.user_id === user.id) return; // Can't follow self
+    const handleFollow = async (post: Post) => {
+        if (!user) return alert("Inicia sesión para seguir.");
+        if (post.user_id === user.id) return;
 
-        const isFollowing = post.is_following;
-
-        // Optimistic Update
+        const isFollowing = (post as any).is_following;
         setPosts(prev => prev.map(p => p.user_id === post.user_id ? { ...p, is_following: !isFollowing } : p));
 
         if (isFollowing) {
@@ -166,51 +146,6 @@ export const ReelsPage = () => {
         } else {
             await socialService.followUser(user.id, post.user_id);
         }
-    };
-
-    const handleShare = async (post: Post) => {
-        try {
-            if (navigator.share) {
-                await navigator.share({
-                    title: `GymPartner: ${post.profiles?.username}`,
-                    text: post.caption || 'Mira este entrenamiento épico en GymPartner 💪',
-                    url: window.location.href // Ideally, deep link to specific post
-                });
-            } else {
-                await navigator.clipboard.writeText(window.location.href);
-                alert('Enlace copiado al portapapeles 📋');
-            }
-        } catch (error) {
-            console.log('Error sharing:', error);
-        }
-    };
-
-    const handleDoubleTap = (post: Post, e: React.MouseEvent) => {
-        e.stopPropagation();
-
-        // Show Heart Animation logic would go here (requires new state tracking coordinates)
-        // For MVP Speed: trigger like immediately and maybe a visual feedback container
-        handleLike(post, e);
-
-        // Visual Feedback (Temporary)
-        const heart = document.createElement('div');
-        heart.innerHTML = '❤️';
-        heart.style.position = 'absolute';
-        heart.style.left = `${e.clientX}px`;
-        heart.style.top = `${e.clientY}px`;
-        heart.style.fontSize = '100px';
-        heart.style.transform = 'translate(-50%, -50%) scale(0)';
-        heart.style.transition = 'all 0.5s ease-out';
-        heart.style.pointerEvents = 'none';
-        heart.style.zIndex = '100';
-        document.body.appendChild(heart);
-
-        requestAnimationFrame(() => {
-            heart.style.transform = 'translate(-50%, -50%) scale(1.5) rotate(-15deg)';
-            heart.style.opacity = '0';
-        });
-
-        setTimeout(() => heart.remove(), 1000);
     };
 
     const handleOpenProfile = async (userId: string) => {
@@ -224,7 +159,7 @@ export const ReelsPage = () => {
 
             if (!profile) return;
 
-            // 2. Calculate Rank (Heavy-ish but necessary for consistent UI)
+            // 2. Calculate Rank
             const { count } = await supabase
                 .from('profiles')
                 .select('id', { count: 'exact', head: true })
@@ -242,172 +177,81 @@ export const ReelsPage = () => {
                 banner_url: profile.custom_settings?.banner_url,
                 featured_routine_id: profile.featured_routine_id
             };
-
             setSelectedPlayer(player);
-
         } catch (error) {
-            console.error('Error fetching profile:', error);
+            console.error(error);
+        }
+    };
+
+    const handleShare = async (post: Post) => {
+        if (navigator.share) {
+            navigator.share({
+                title: `GymPartner: ${post.profiles?.username}`,
+                text: post.caption,
+                url: window.location.href
+            }).catch(() => { });
+        } else {
+            navigator.clipboard.writeText(window.location.href);
+            alert('¡Link copiado!');
         }
     };
 
     return (
-        <div className="h-full bg-black overflow-y-scroll snap-y snap-mandatory custom-scrollbar relative">
+        <div className="flex flex-col h-[100dvh] bg-black relative">
+            {/* Header / Top Bar (Optional, usually Reels are full screen) */}
 
-            {loading && (
-                <div className="h-full w-full flex items-center justify-center snap-center">
-                    <div className="w-8 h-8 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
-                </div>
-            )}
-
-            {!loading && posts.length === 0 && (
-                <div className="h-full w-full flex flex-col items-center justify-center snap-center text-white">
-                    <p className="font-bold text-xl mb-2">Sin Reels aún 🎬</p>
-                    <p className="text-neutral-500 text-sm">Sé el primero en subir uno.</p>
-                </div>
-            )}
-
-            {posts.map((post) => (
-                <div key={(post as any).virtual_id || post.id} className="h-full w-full snap-center bg-black relative">
-
-                    {/* VIDEO CONTAINER */}
-                    <div
-                        className="w-full h-full relative"
-                        onDoubleClick={(e) => handleDoubleTap(post, e)}
-                    >
-                        <video
-                            ref={el => { if (el) (videoRefs.current as any)[(post as any).virtual_id || post.id] = el }}
-                            src={post.media_url}
-                            className="w-full h-full object-cover"
-                            playsInline
-                            loop
-                            preload="none"
+            <div className="flex-1 h-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide bg-black" id="reels-container">
+                {loading ? (
+                    <div className="h-full flex flex-col items-center justify-center text-white space-y-4">
+                        <Loader2 className="animate-spin text-blue-500" size={40} />
+                        <p className="text-sm font-medium animate-pulse">Curating your customized feed...</p>
+                    </div>
+                ) : (
+                    posts.map((post) => (
+                        <ReelItem
+                            key={(post as any).virtual_id || post.id}
+                            post={post}
                             muted={muted}
-                            poster={post.media_url.includes('cloudinary') ? post.media_url.replace(/\.(mp4|mov|webm)$/i, '.jpg') : undefined}
-                            onClick={() => setMuted(!muted)}
-                            onEnded={() => {
-                                const id = (post as any).virtual_id || post.id;
-                                if (loopCounters.current[id] !== undefined) {
-                                    loopCounters.current[id]++;
-                                }
+                            currentUserId={user?.id}
+                            onToggleMute={() => setMuted(!muted)}
+                            onLike={handleLike}
+                            onComment={(p) => setActiveCommentPostId(p.id)}
+                            onShare={handleShare}
+                            onFollow={handleFollow}
+                            onProfileClick={handleOpenProfile}
+                            onVideoRef={registerVideoRef}
+                            onLoop={(id) => {
+                                loopCounters.current[id] = (loopCounters.current[id] || 0) + 1;
                             }}
                         />
+                    ))
+                )}
 
-                        {/* MUTE INDICATOR */}
-                        <div className="absolute top-3 right-3 bg-black/50 p-1.5 rounded-full backdrop-blur-sm pointer-events-none">
-                            {muted ? <VolumeX size={14} className="text-white" /> : <Volume2 size={14} className="text-white" />}
-                        </div>
-
-                        {/* OVERLAY CONTENT (Gradient) */}
-                        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
-
-                        {/* RIGHT ACTIONS BAR */}
-                        <div className="absolute bottom-4 right-1.5 flex flex-col items-center gap-4 z-20">
-
-                            <div className="flex flex-col items-center gap-px">
-                                <button onClick={(e) => { e.stopPropagation(); handleLike(post, e); }} className="p-1.5 transition-transform active:scale-75">
-                                    <Heart size={28} className={post.user_has_liked ? "text-red-500 fill-red-500" : "text-white drop-shadow-lg"} strokeWidth={1.5} />
-                                </button>
-                                <span className="text-white text-[10px] font-bold drop-shadow-md">{post.likes_count}</span>
-                            </div>
-
-                            <button onClick={(e) => { e.stopPropagation(); setActiveCommentPostId(post.id); }} className="flex flex-col items-center gap-px p-1.5 transition-transform active:scale-75">
-                                <MessageCircle size={26} className="text-white drop-shadow-lg" strokeWidth={1.5} />
-                                <span className="text-white text-[10px] font-bold drop-shadow-md">Chat</span>
-                            </button>
-
-                            <button onClick={(e) => { e.stopPropagation(); handleShare(post); }} className="flex flex-col items-center gap-px p-1.5 transition-transform active:scale-75">
-                                <Share2 size={24} className="text-white drop-shadow-lg" strokeWidth={1.5} />
-                                <span className="text-white text-[10px] font-bold drop-shadow-md">Share</span>
-                            </button>
-
-                            <div className="w-8 h-8 rounded-full bg-neutral-800 border border-white/20 flex items-center justify-center animate-spin-slow mt-2">
-                                <Music2 size={12} className="text-white" />
-                            </div>
-                        </div>
-
-                        {/* BOTTOM INFO (Instagram Style) */}
-                        <div className="absolute bottom-2 left-2 right-14 z-20 text-white text-left pb-1">
-
-                            {/* User Row */}
-                            <div className="flex items-center gap-2 mb-2">
-                                <button
-                                    onClick={() => handleOpenProfile(post.user_id)}
-                                    className="w-8 h-8 rounded-full bg-neutral-800 border border-white overflow-hidden relative"
-                                >
-                                    <img src={post.profiles?.avatar_url || 'https://i.pravatar.cc/150'} alt="User" className="w-full h-full object-cover" />
-                                </button>
-
-                                <div className="flex flex-col justify-center">
-                                    <div className="flex items-center gap-2">
-                                        <button onClick={() => handleOpenProfile(post.user_id)} className="font-bold text-sm hover:underline shadow-black drop-shadow-md">
-                                            {post.profiles?.username}
-                                        </button>
-                                        {user?.id !== post.user_id && (
-                                            <button
-                                                onClick={(e) => handleFollow(post, e)}
-                                                className={`text-[10px] px-2 py-0.5 rounded border transition-colors font-semibold uppercase tracking-wide ${(post as any).is_following
-                                                    ? 'bg-transparent border-white/50 text-white/70'
-                                                    : 'bg-white/20 border-white text-white hover:bg-white hover:text-black'
-                                                    }`}
-                                            >
-                                                {(post as any).is_following ? 'Siguiendo' : 'Seguir'}
-                                            </button>
-                                        )}
-                                    </div>
-                                    {/* Audio Line (under name like Insta) */}
-                                    <div className="flex items-center gap-1 opacity-90">
-                                        <Music2 size={10} />
-                                        <span className="text-[10px] marquee line-clamp-1">{post.caption ? 'Sonido Original' : 'Audio Original'} - {post.profiles?.username}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* 🧠 AI DEBUG SCORE (Visible for Verification) */}
-                            {post.debug_score !== undefined && (
-                                <div className="mb-2 bg-yellow-500/20 border border-yellow-500/50 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-mono text-yellow-500 inline-block">
-                                    <span className="font-extrabold mr-1">AI RANK:</span>
-                                    {Math.round(post.debug_score)}
-                                </div>
-                            )}
-
-                            {/* Caption */}
-                            <p className="text-xs opacity-95 mb-2 line-clamp-2 leading-tight pr-2 drop-shadow-sm font-light">
-                                <span className="font-semibold mr-1">{post.profiles?.username}</span>
-                                {post.caption}
-                            </p>
-
-                            {/* Routine Link */}
-                            {post.linked_routine_id && post.routines && (
-                                <Link to="/arsenal" className="inline-flex items-center gap-1.5 bg-neutral-800/40 backdrop-blur-md px-2 py-1 rounded-full border border-white/10 mb-1">
-                                    <Swords size={10} className="text-yellow-500" />
-                                    <span className="text-[10px]">
-                                        {getRoutineName(post.routines) || 'Rutina Linkeada'}
-                                    </span>
-                                </Link>
-                            )}
-                        </div>
+                {/* Empty State */}
+                {!loading && posts.length === 0 && (
+                    <div className="h-full w-full flex flex-col items-center justify-center snap-center text-white">
+                        <p className="font-bold text-xl mb-2">Sin Reels aún 🎬</p>
+                        <p className="text-neutral-500 text-sm">Sé el primero en subir uno.</p>
                     </div>
-                </div>
-            ))}
+                )}
+            </div>
 
-            {
-                activeCommentPostId && (
-                    <CommentsSheet
-                        postId={activeCommentPostId}
-                        onClose={() => setActiveCommentPostId(null)}
-                    />
-                )
-            }
+            {/* Modals */}
+            {activeCommentPostId && (
+                <CommentsSheet
+                    postId={activeCommentPostId}
+                    onClose={() => setActiveCommentPostId(null)}
+                />
+            )}
 
-            {
-                selectedPlayer && (
-                    <PlayerProfileModal
-                        player={selectedPlayer}
-                        onClose={() => setSelectedPlayer(null)}
-                    />
-                )
-            }
-
-        </div >
+            {selectedPlayer && (
+                <PlayerProfileModal
+                    player={selectedPlayer}
+                    onClose={() => setSelectedPlayer(null)}
+                />
+            )}
+        </div>
     );
 };
+
+export default ReelsPage;
