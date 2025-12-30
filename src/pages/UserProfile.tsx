@@ -387,7 +387,7 @@ export const UserProfile = () => {
     const userAvatar = profile?.avatar_url || user.user_metadata.avatar_url || 'https://i.pravatar.cc/300';
 
     return (
-        <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-8">
+        <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-8 pb-24">
             {/* ... content ... */}
             {/* Header Profile Card - LoL/Gymrat Design - FIXED LAYOUT */}
             <div
