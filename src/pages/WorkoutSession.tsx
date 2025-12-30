@@ -524,7 +524,7 @@ export const WorkoutSession = () => {
     );
 
     return (
-        <div className="min-h-screen bg-neutral-950 text-white pb-64 relative overflow-hidden">
+        <div className="min-h-screen bg-neutral-950 text-white pb-64 relative">
             {/* Background Ambient Effects */}
             <div className="fixed top-0 left-0 w-full h-1/2 bg-gradient-to-b from-red-900/10 to-transparent pointer-events-none" />
 
