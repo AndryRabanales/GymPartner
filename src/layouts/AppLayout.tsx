@@ -5,6 +5,7 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 import { UploadModal } from '../components/social/UploadModal';
 import { BottomNav } from '../components/navigation/BottomNav';
 import { useBottomNav } from '../context/BottomNavContext';
+import { ActiveWorkoutOverlay } from '../components/ActiveWorkoutOverlay';
 
 export const AppLayout = () => {
     const { user, signOut } = useAuth();
@@ -153,6 +154,9 @@ export const AppLayout = () => {
                 {/* Spacer to prevent BottomNav overlap (Only when BottomNav is visible AND NOT on Reels) */}
                 {shouldShowBottomNav && !isReelsPage && <div className="h-24 shrink-0" />}
             </main>
+
+            {/* Global Overlay for Active Workout - Persistent Bubble */}
+            <ActiveWorkoutOverlay />
 
             {/* Global Modals */}
             {isUploadModalOpen && <UploadModal onClose={() => setIsUploadModalOpen(false)} onSuccess={() => setIsUploadModalOpen(false)} />}

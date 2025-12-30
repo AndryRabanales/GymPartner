@@ -95,6 +95,9 @@ export const WorkoutSession = () => {
                 timestamp: Date.now()
             };
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
+
+            // Notify global overlay
+            window.dispatchEvent(new Event('workout-session-update'));
         }
     }, [sessionId, startTime, activeExercises, resolvedGymId, loading]);
 
@@ -469,6 +472,7 @@ export const WorkoutSession = () => {
 
             // 2. Clear Local Storage
             localStorage.removeItem(LOCAL_STORAGE_KEY);
+            window.dispatchEvent(new Event('workout-session-update'));
 
             // 3. Reset Local State completely
             setSessionId(null);
@@ -568,6 +572,9 @@ export const WorkoutSession = () => {
 
                 // 🧹 CLEAR LOCAL STORAGE ON FINISH
                 localStorage.removeItem(LOCAL_STORAGE_KEY);
+                window.dispatchEvent(new Event('workout-session-update'));
+
+                // Removed blocking alert.
 
                 // Removed blocking alert. 
                 // We'll rely on the UI showing "Guardando..." or similar via loading state, 
