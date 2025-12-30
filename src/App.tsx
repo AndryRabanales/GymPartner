@@ -14,6 +14,7 @@ import WorkoutDetailPage from './pages/WorkoutDetailPage';
 import { RankingPage } from './pages/RankingPage';
 import { CommunityPage } from './pages/CommunityPage';
 import { ReelsPage } from './pages/ReelsPage';
+import { NotificationsPage } from './pages/NotificationsPage';
 
 
 
@@ -34,6 +35,7 @@ function App() {
             <Route path="builder" element={<RoutineBuilder />} />
             <Route path="ranking" element={<RankingPage />} />
             <Route path="community" element={<CommunityPage />} />
+            <Route path="notifications" element={<NotificationsPage />} />
             <Route path="stats" element={<StatsPage />} />
             <Route path="history" element={<HistoryPage />} />
             <Route path="history/:sessionId" element={<WorkoutDetailPage />} />
