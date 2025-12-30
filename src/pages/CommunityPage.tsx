@@ -135,7 +135,7 @@ export const CommunityPage = () => {
                             key={post.id}
                             ref={el => { if (el) observerRefs.current[post.id] = el }}
                             data-post-id={post.id}
-                            className={`border-b border-white/5 pb-4 mb-4 ${index === 0 ? 'mt-4' : ''}`}
+                            className={`border-b border-white/5 pb-4 mb-4 ${index === 0 ? 'mt-32' : ''}`}
                         >
 
                             {/* Post Header */}
@@ -227,8 +227,8 @@ export const CommunityPage = () => {
                             )}
 
                             {/* Actions */}
-                            <div className="px-3 py-1">
-                                <div className="flex items-center gap-2.5 mb-1.5">
+                            <div className="px-3 py-1 relative z-50">
+                                <div className="flex items-center gap-2.5 mb-1.5" style={{ position: 'relative', zIndex: 100 }}>
                                     <button
                                         onClick={() => handleLike(post)}
                                         onTouchEnd={(e) => {
