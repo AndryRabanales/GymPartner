@@ -108,7 +108,7 @@ export const ReelItem: React.FC<ReelItemProps> = React.memo(({
                 <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
 
                 {/* RIGHT ACTIONS BAR */}
-                <div className="absolute bottom-16 right-1.5 flex flex-col items-center gap-4 z-20">
+                <div className="absolute bottom-6 right-2 flex flex-col items-center gap-4 z-20">
                     <div className="flex flex-col items-center gap-px">
                         <button onClick={(e) => { e.stopPropagation(); onLike(post); }} className="p-1.5 transition-transform active:scale-75">
                             <Heart size={28} className={post.user_has_liked ? "text-red-500 fill-red-500" : "text-white drop-shadow-lg"} strokeWidth={1.5} />
@@ -132,7 +132,7 @@ export const ReelItem: React.FC<ReelItemProps> = React.memo(({
                 </div>
 
                 {/* BOTTOM INFO */}
-                <div className="absolute bottom-16 left-2 right-14 z-20 text-white text-left pb-1">
+                <div className="absolute bottom-6 left-3 right-16 z-20 text-white text-left pb-1">
 
                     {/* User Row */}
                     <div className="flex items-center gap-2 mb-2">
