@@ -22,7 +22,7 @@ export const GymProfile = () => {
     // Location Logic
     const { location: userLocation, loading: locationLoading } = useGeolocation();
     const [distance, setDistance] = useState<number | null>(null);
-    const MAX_DISTANCE_KM = 0.05; // 50 meters (Literally Inside)
+    const MAX_DISTANCE_KM = 100.0; // DEV MODE: 100km (Was 0.05km / 50m)
 
     useEffect(() => {
         if (gymId) {
