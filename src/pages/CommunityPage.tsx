@@ -64,6 +64,12 @@ export const CommunityPage = () => {
 
     useEffect(() => {
         loadFeed();
+
+        // Listen for new posts being created
+        const handlePostCreated = () => loadFeed();
+        window.addEventListener('postCreated', handlePostCreated);
+
+        return () => window.removeEventListener('postCreated', handlePostCreated);
     }, []);
 
     const loadFeed = async () => {

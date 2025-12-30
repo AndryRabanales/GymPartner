@@ -26,6 +26,12 @@ export const ReelsPage = () => {
 
     useEffect(() => {
         loadReels();
+
+        // Listen for new posts being created
+        const handlePostCreated = () => loadReels();
+        window.addEventListener('postCreated', handlePostCreated);
+
+        return () => window.removeEventListener('postCreated', handlePostCreated);
     }, []);
 
     const loadReels = async () => {

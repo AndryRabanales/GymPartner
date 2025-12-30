@@ -294,6 +294,10 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
 
             if (result.success) {
                 setStep('success');
+
+                // ✨ Notify all feed pages to refresh
+                window.dispatchEvent(new CustomEvent('postCreated'));
+
                 setTimeout(() => {
                     onSuccess();
                     onClose();
