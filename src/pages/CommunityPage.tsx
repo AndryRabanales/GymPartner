@@ -147,12 +147,12 @@ export const CommunityPage = () => {
                         <p className="text-neutral-500 text-sm mb-6">Sé el primero en subir un post.</p>
                     </div>
                 ) : (
-                    posts.map((post) => (
+                    posts.map((post, index) => (
                         <div
                             key={post.id}
                             ref={el => { if (el) observerRefs.current[post.id] = el }}
                             data-post-id={post.id}
-                            className="border-b border-white/5 pb-4 mb-4"
+                            className={`border-b border-white/5 pb-4 mb-4 ${index === 0 ? 'mt-4' : ''}`}
                         >
 
                             {/* Post Header */}
@@ -248,7 +248,8 @@ export const CommunityPage = () => {
                                 <div className="flex items-center gap-2.5 mb-1.5">
                                     <button
                                         onClick={() => handleLike(post)}
-                                        className="transition-transform active:scale-95"
+                                        className="transition-transform active:scale-95 cursor-pointer"
+                                        style={{ touchAction: 'manipulation' }}
                                     >
                                         <Heart
                                             size={20}
@@ -257,7 +258,8 @@ export const CommunityPage = () => {
                                     </button>
                                     <button
                                         onClick={() => setActiveCommentPostId(post.id)}
-                                        className="text-white hover:text-neutral-300 transition-transform active:scale-95"
+                                        className="text-white hover:text-neutral-300 transition-transform active:scale-95 cursor-pointer"
+                                        style={{ touchAction: 'manipulation' }}
                                     >
                                         <MessageCircle size={20} />
                                     </button>
