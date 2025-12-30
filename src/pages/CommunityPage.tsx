@@ -115,7 +115,7 @@ export const CommunityPage = () => {
         <div className="bg-black min-h-full">
             {/* Header (Mobile style) */}
             <div className="sticky top-0 z-30 bg-black/90 backdrop-blur-md border-b border-white/5 px-4 h-10 flex items-center justify-center">
-                <span className="font-black italic text-white tracking-tighter text-lg">GYM<span className="text-yellow-500">TOK</span></span>
+                <span className="font-black italic text-white tracking-tighter text-lg">GYM<span className="text-yellow-500">JUMPS</span></span>
             </div>
 
             <div className="max-w-md mx-auto">
@@ -135,7 +135,7 @@ export const CommunityPage = () => {
                             key={post.id}
                             ref={el => { if (el) observerRefs.current[post.id] = el }}
                             data-post-id={post.id}
-                            className={`border-b border-white/5 pb-4 mb-4 ${index === 0 ? 'mt-32' : ''}`}
+                            className={`border-b border-white/5 pb-4 mb-4 ${index === 0 ? 'mt-4' : ''}`}
                         >
 
                             {/* Post Header */}
