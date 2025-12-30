@@ -582,7 +582,7 @@ export const UserProfile = () => {
                         Mis Territorios
                     </h2>
                     <button
-                        onClick={() => setSkipOnboarding(false)}
+                        onClick={() => navigate('/map')}
                         className="flex items-center gap-2 px-4 py-2 rounded-full bg-gym-primary/10 border border-gym-primary/30 text-gym-primary text-xs font-black uppercase tracking-widest hover:bg-gym-primary hover:text-black transition-all hover:scale-105 hover:shadow-[0_0_15px_rgba(229,255,0,0.3)]"
                     >
                         <Search size={14} strokeWidth={3} />
