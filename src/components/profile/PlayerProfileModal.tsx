@@ -273,8 +273,18 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
                         {activeTab === 'reels' && (
                             <div className="grid grid-cols-2 gap-2 animate-in slide-in-from-bottom-2 fade-in duration-300">
                                 {posts.map(post => (
-                                    <div key={post.id} className="aspect-[9/16] bg-neutral-800 rounded-lg relative overflow-hidden cursor-pointer group">
-                                        <video src={post.media_url} className="w-full h-full object-cover" />
+                                    <div
+                                        key={post.id}
+                                        className="aspect-[9/16] bg-neutral-800 rounded-lg relative overflow-hidden cursor-pointer group"
+                                        onClick={() => setViewedPostId(post.id)}
+                                    >
+                                        <video
+                                            src={post.media_url}
+                                            className="w-full h-full object-cover"
+                                            muted
+                                            playsInline
+                                            onError={(e) => console.error("Reel Video Error:", post.id, e)}
+                                        />
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity"></div>
                                         <div className="absolute bottom-3 left-3 flex items-center gap-1.5 text-white text-sm font-bold drop-shadow-md">
                                             <Heart size={14} fill="white" /> {post.likes_count}
