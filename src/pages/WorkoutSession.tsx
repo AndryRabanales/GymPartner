@@ -524,7 +524,7 @@ export const WorkoutSession = () => {
     );
 
     return (
-        <div className="min-h-screen bg-neutral-950 text-white pb-32 relative overflow-hidden">
+        <div className="min-h-screen bg-neutral-950 text-white pb-64 relative overflow-hidden">
             {/* Background Ambient Effects */}
             <div className="fixed top-0 left-0 w-full h-1/2 bg-gradient-to-b from-red-900/10 to-transparent pointer-events-none" />
 
@@ -802,20 +802,11 @@ export const WorkoutSession = () => {
                 activeExercises.length > 0 && (
                     <div className="fixed bottom-0 left-0 w-full px-4 pb-6 pt-12 bg-gradient-to-t from-neutral-950 via-neutral-950/95 to-transparent z-50 flex items-end gap-3 pointer-events-none">
 
-                        {/* Add Exercise (Compact Red) */}
-                        <button
-                            onClick={() => setShowAddModal(true)}
-                            className="pointer-events-auto bg-neutral-900 border border-neutral-800 text-white p-4 rounded-2xl shadow-lg hover:bg-neutral-800 hover:border-white/20 active:scale-95 transition-all flex flex-col items-center justify-center gap-1 min-w-[80px]"
-                        >
-                            <Plus size={24} className="text-red-500" strokeWidth={3} />
-                            <span className="text-[10px] font-black uppercase tracking-widest">Añadir</span>
-                        </button>
-
-                        {/* Finish Workout (Expanded Yellow) */}
+                        {/* Finish Workout (Expanded Yellow - Full Width) */}
                         <button
                             onClick={handleFinish}
                             disabled={loading || isFinished}
-                            className={`pointer-events-auto flex-1 font-black uppercase tracking-wider py-4 rounded-2xl shadow-[0_0_20px_rgba(234,179,8,0.2)] flex items-center justify-center gap-2 transform active:scale-95 transition-all text-lg h-full border border-yellow-500/20 ${isFinished ? 'bg-green-500 text-black' : 'bg-gym-primary hover:bg-yellow-400 text-black'
+                            className={`pointer-events-auto w-full font-black uppercase tracking-wider py-4 rounded-2xl shadow-[0_0_20px_rgba(234,179,8,0.2)] flex items-center justify-center gap-2 transform active:scale-95 transition-all text-lg h-full border border-yellow-500/20 ${isFinished ? 'bg-green-500 text-black' : 'bg-gym-primary hover:bg-yellow-400 text-black'
                                 }`}
                         >
                             {loading || isFinished ? (
