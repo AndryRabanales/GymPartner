@@ -12,9 +12,10 @@ export const AppLayout = () => {
     const location = useLocation();
     const isReelsPage = location.pathname === '/reels';
 
-    // Hide BottomNav during workout sessions and gym territory pages
+    // Hide BottomNav during workout sessions, gym territory pages, and profile pages
     const isWorkoutPage = location.pathname === '/workout' || location.pathname.includes('/territory/');
-    const shouldShowBottomNav = user && !isWorkoutPage;
+    const isProfilePage = location.pathname === '/profile' || location.pathname === '/';
+    const shouldShowBottomNav = user && !isWorkoutPage && !isProfilePage;
 
     return (
         <div className="h-[100dvh] bg-neutral-950 text-white flex flex-col overflow-hidden">
