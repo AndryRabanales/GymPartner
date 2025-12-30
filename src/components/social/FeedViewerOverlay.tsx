@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { X, Heart, MessageCircle, Share2, MoreHorizontal, Music2, Swords } from 'lucide-react';
+import { X, Heart, MessageCircle, Share2, MoreHorizontal, Music2, Swords, Volume2, VolumeX } from 'lucide-react';
 import type { Post } from '../../services/SocialService';
 import { useAuth } from '../../context/AuthContext';
 import { socialService } from '../../services/SocialService';
@@ -11,13 +11,16 @@ interface FeedViewerOverlayProps {
     initialPostId: string;
     posts: Post[];
     onClose: () => void;
+    variant?: 'feed' | 'reel';
 }
 
-export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPostId, posts, onClose }) => {
+export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPostId, posts, onClose, variant = 'feed' }) => {
     const { user } = useAuth();
     const [localPosts, setLocalPosts] = useState<Post[]>(posts);
     const [playingPostId, setPlayingPostId] = useState<string | null>(null);
     const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(null);
+    const [muted, setMuted] = useState(false);
+
     const containerRef = useRef<HTMLDivElement>(null);
     const itemRefs = useRef<{ [key: string]: HTMLDivElement }>({});
 
@@ -80,7 +83,8 @@ export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPos
         } catch (error) { console.log(error); }
     };
 
-    const handleLike = async (post: Post) => {
+    const handleLike = async (post: Post, e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
         if (!user) return;
 
         // Optimistic Update
@@ -105,6 +109,147 @@ export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPos
         }
     };
 
+    // --- REEL VARIANT RENDER ---
+    if (variant === 'reel') {
+        return (
+            <div className="fixed inset-0 bg-black z-[60] flex flex-col animate-in slide-in-from-bottom duration-200">
+                {/* Close Button (Floating) */}
+                <button
+                    onClick={onClose}
+                    className="absolute top-4 right-4 z-50 w-10 h-10 flex items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-md"
+                >
+                    <X size={24} />
+                </button>
+
+                {/* Vertical Snap Container */}
+                <div
+                    ref={containerRef}
+                    className="h-full w-full bg-black overflow-y-scroll snap-y snap-mandatory custom-scrollbar"
+                >
+                    {localPosts.map((post) => (
+                        <div
+                            key={post.id}
+                            ref={el => { if (el) itemRefs.current[post.id] = el }}
+                            data-post-id={post.id}
+                            className="h-full w-full relative snap-center flex items-center justify-center bg-black"
+                        >
+                            <div className="relative w-full h-full md:max-w-md md:h-[95vh] md:rounded-xl overflow-hidden bg-neutral-900">
+                                {/* Video / Media */}
+                                {post.media && post.media.length > 0 ? (
+                                    <MediaCarousel media={post.media} isPlaying={playingPostId === post.id} />
+                                ) : (
+                                    <video
+                                        ref={el => {
+                                            if (el) {
+                                                if (playingPostId === post.id) {
+                                                    el.currentTime = 0;
+                                                    el.play().catch(() => { });
+                                                } else {
+                                                    el.pause();
+                                                }
+                                            }
+                                        }}
+                                        src={post.media_url}
+                                        className="w-full h-full object-cover cursor-pointer"
+                                        playsInline
+                                        loop
+                                        muted={muted}
+                                        onClick={togglePlayPause}
+                                    />
+                                )}
+
+                                {/* Mute Toggle */}
+                                <button
+                                    className="absolute top-4 left-4 bg-black/50 p-2 rounded-full backdrop-blur-sm text-white z-30"
+                                    onClick={(e) => { e.stopPropagation(); setMuted(!muted); }}
+                                >
+                                    {muted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+                                </button>
+
+                                {/* Gradient Overlay */}
+                                <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/90 via-black/30 to-transparent pointer-events-none" />
+
+                                {/* RIGHT ACTIONS BAR */}
+                                <div className="absolute bottom-6 right-2 flex flex-col items-center gap-5 z-40">
+                                    <div className="flex flex-col items-center gap-1">
+                                        <button onClick={(e) => handleLike(post, e)} className="p-2 transition-transform active:scale-75">
+                                            <Heart size={30} className={post.user_has_liked ? "text-red-500 fill-red-500" : "text-white drop-shadow-lg"} strokeWidth={1.5} />
+                                        </button>
+                                        <span className="text-white text-xs font-bold drop-shadow-md">{post.likes_count}</span>
+                                    </div>
+
+                                    <button onClick={(e) => { e.stopPropagation(); setActiveCommentPostId(post.id); }} className="flex flex-col items-center gap-1 p-2 transition-transform active:scale-75">
+                                        <MessageCircle size={28} className="text-white drop-shadow-lg" strokeWidth={1.5} />
+                                        <span className="text-white text-xs font-bold drop-shadow-md">Chat</span>
+                                    </button>
+
+                                    <button onClick={(e) => { e.stopPropagation(); handleShare(post); }} className="flex flex-col items-center gap-1 p-2 transition-transform active:scale-75">
+                                        <Share2 size={26} className="text-white drop-shadow-lg" strokeWidth={1.5} />
+                                        <span className="text-white text-xs font-bold drop-shadow-md">Share</span>
+                                    </button>
+
+                                    <div className="w-9 h-9 rounded-full bg-neutral-800 border border-white/20 flex items-center justify-center animate-spin-slow mt-2">
+                                        <Music2 size={14} className="text-white" />
+                                    </div>
+                                </div>
+
+                                {/* BOTTOM INFO */}
+                                <div className="absolute bottom-4 left-4 right-16 z-40 text-white text-left">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className="w-9 h-9 rounded-full bg-neutral-800 border border-white overflow-hidden">
+                                            {post.profiles?.avatar_url ? (
+                                                <img src={post.profiles.avatar_url} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <div className="w-full h-full bg-gym-primary flex items-center justify-center font-bold text-black text-xs">
+                                                    {post.profiles?.username?.[0] || '?'}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <span className="font-bold text-sm shadow-black drop-shadow-md block">
+                                                {post.profiles?.username}
+                                            </span>
+                                            {post.linked_routine_id && (
+                                                <div className="flex items-center gap-1 text-[10px] text-yellow-400 font-bold">
+                                                    <Swords size={10} />
+                                                    <span>Rutina vinculada</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Caption */}
+                                    <p className="text-sm opacity-95 mb-2 line-clamp-2 leading-snug drop-shadow-sm font-light">
+                                        {post.caption}
+                                    </p>
+
+                                    {/* Audio Line */}
+                                    <div className="flex items-center gap-2 opacity-80">
+                                        <Music2 size={12} />
+                                        <span className="text-xs marquee line-clamp-1">Sonido Original - {post.profiles?.username}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* COMMENTS SHEET OVERLAY */}
+                {activeCommentPostId && (
+                    <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/50 backdrop-blur-sm" onClick={() => setActiveCommentPostId(null)}>
+                        <div onClick={e => e.stopPropagation()} className="w-full max-w-md">
+                            <CommentsSheet
+                                postId={activeCommentPostId}
+                                onClose={() => setActiveCommentPostId(null)}
+                            />
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    // --- DEFAULT (FEED/CARD) VARIANT RENDER ---
     return (
         <div className="fixed inset-0 bg-black z-[60] flex flex-col animate-in slide-in-from-bottom duration-200">
             {/* Header */}
