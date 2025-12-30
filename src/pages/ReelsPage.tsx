@@ -197,7 +197,7 @@ export const ReelsPage = () => {
     };
 
     return (
-        <div className="flex flex-col h-[100dvh] bg-black relative">
+        <div className="flex flex-col h-full bg-black relative">
             {/* Header / Top Bar (Optional, usually Reels are full screen) */}
 
             <div className="flex-1 h-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide bg-black" id="reels-container">
