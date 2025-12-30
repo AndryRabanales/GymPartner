@@ -311,7 +311,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess }) 
     };
 
     return (
-        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="bg-neutral-900 border border-neutral-800 w-full max-w-4xl rounded-xl overflow-hidden relative shadow-2xl flex flex-col md:flex-row max-h-[90vh]">
 
                 {/* Header */}

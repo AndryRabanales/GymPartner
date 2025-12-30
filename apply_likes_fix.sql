@@ -1,30 +1,58 @@
+-- ==============================================================================
+-- 🛠️ MASTER FIX FOR GYM PARTNER LIKES (V3 - No ID Column Version)
+-- Run this in Supabase SQL Editor.
+-- ==============================================================================
 
--- 1. Ensure `post_likes` has a UNIQUE composite key to prevent duplicates
-ALTER TABLE post_likes
-ADD CONSTRAINT post_likes_user_id_post_id_key UNIQUE (user_id, post_id);
+-- 1. CLEANUP BAD DATA
+DELETE FROM post_likes 
+WHERE user_id NOT IN (SELECT id FROM profiles) 
+   OR post_id NOT IN (SELECT id FROM posts);
 
--- 2. Execute the FK fixes from the user's file (inlining them here for atomicity)
--- POSTS TABLE
-ALTER TABLE posts 
-    DROP CONSTRAINT IF EXISTS posts_user_id_fkey,
-    ADD CONSTRAINT posts_user_id_fkey FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE;
+-- 2. ELIMINATE DUPLICATE LIKES (Using CTID since ID column is missing)
+-- Keeps one row per user/post pair
+DELETE FROM post_likes
+WHERE ctid NOT IN (
+  SELECT min(ctid)
+  FROM post_likes
+  GROUP BY user_id, post_id
+);
 
--- COMMENTS TABLE
-ALTER TABLE comments 
-    DROP CONSTRAINT IF EXISTS comments_user_id_fkey,
-    ADD CONSTRAINT comments_user_id_fkey FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE;
+-- 3. FK CONSTRAINTS
+-- POSTS
+ALTER TABLE posts DROP CONSTRAINT IF EXISTS posts_user_id_fkey;
+ALTER TABLE posts ADD CONSTRAINT posts_user_id_fkey FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE;
 
--- FOLLOWS TABLE
-ALTER TABLE follows 
-    DROP CONSTRAINT IF EXISTS follows_follower_id_fkey,
-    DROP CONSTRAINT IF EXISTS follows_following_id_fkey,
-    ADD CONSTRAINT follows_follower_id_fkey FOREIGN KEY (follower_id) REFERENCES profiles(id) ON DELETE CASCADE,
-    ADD CONSTRAINT follows_following_id_fkey FOREIGN KEY (following_id) REFERENCES profiles(id) ON DELETE CASCADE;
+-- POST_LIKES
+ALTER TABLE post_likes DROP CONSTRAINT IF EXISTS post_likes_user_id_fkey;
+ALTER TABLE post_likes ADD CONSTRAINT post_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE;
 
--- POST_LIKES TABLE
-ALTER TABLE post_likes 
-    DROP CONSTRAINT IF EXISTS post_likes_user_id_fkey,
-    ADD CONSTRAINT post_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE;
+ALTER TABLE post_likes DROP CONSTRAINT IF EXISTS post_likes_post_id_fkey;
+ALTER TABLE post_likes ADD CONSTRAINT post_likes_post_id_fkey FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE;
 
--- RELOAD MAP
+-- 4. UNIQUE CONSTRAINT
+ALTER TABLE post_likes DROP CONSTRAINT IF EXISTS post_likes_user_id_post_id_key;
+ALTER TABLE post_likes ADD CONSTRAINT post_likes_user_id_post_id_key UNIQUE (user_id, post_id);
+
+-- 5. 🚨 ROW LEVEL SECURITY (RLS)
+ALTER TABLE post_likes ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Likes are viewable by everyone" ON post_likes;
+DROP POLICY IF EXISTS "Users can insert their own likes" ON post_likes;
+DROP POLICY IF EXISTS "Users can delete their own likes" ON post_likes;
+DROP POLICY IF EXISTS "Enable read access for all users" ON post_likes;
+DROP POLICY IF EXISTS "Enable insert for authenticated users only" ON post_likes;
+
+CREATE POLICY "Likes are viewable by everyone" 
+ON post_likes FOR SELECT 
+USING ( true );
+
+CREATE POLICY "Users can insert their own likes" 
+ON post_likes FOR INSERT 
+WITH CHECK ( auth.uid() = user_id );
+
+CREATE POLICY "Users can delete their own likes" 
+ON post_likes FOR DELETE 
+USING ( auth.uid() = user_id );
+
+-- 6. REFRESH
 NOTIFY pgrst, 'reload config';
