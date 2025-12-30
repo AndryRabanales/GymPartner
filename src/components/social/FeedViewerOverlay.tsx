@@ -1,6 +1,7 @@
+```typescript
 import React, { useRef, useEffect, useState } from 'react';
-import { X, Heart, MessageCircle, Share2, Volume2, VolumeX, AlertTriangle } from 'lucide-react';
-import { Post } from '../../services/SocialService';
+import { X, Heart, MessageCircle, Share2, Volume2, VolumeX } from 'lucide-react';
+import type { Post } from '../../services/SocialService';
 import { useAuth } from '../../context/AuthContext';
 import { socialService } from '../../services/SocialService';
 
@@ -88,8 +89,8 @@ export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPos
                 className="flex-1 overflow-y-scroll snap-y snap-mandatory scroll-smooth no-scrollbar"
                 style={{ height: '100dvh' }}
             >
-                {posts.map((post, index) => {
-                    const isActive = index === currentIndex;
+                {posts.map((post) => {
+                    // Removed unused isActive
                     return (
                         <div
                             key={post.id}
@@ -123,10 +124,10 @@ export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPos
                                         <div className="w-8 h-8 rounded-full bg-neutral-800 overflow-hidden">
                                             {/* Avatar fallback if not available in post object, assume passed or generic */}
                                             <div className="w-full h-full bg-gym-primary flex items-center justify-center font-bold text-black text-xs">
-                                                {post.username?.[0]}
+                                                {post.profiles?.username?.[0] || '?'}
                                             </div>
                                         </div>
-                                        <span className="font-bold text-white text-sm">{post.username}</span>
+                                        <span className="font-bold text-white text-sm">{post.profiles?.username || 'Usuario'}</span>
                                     </div>
                                     <button onClick={() => setMuted(!muted)} className="p-2 text-white/80">
                                         {muted ? <VolumeX size={20} /> : <Volume2 size={20} />}
@@ -139,7 +140,7 @@ export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPos
                                 <div className="flex items-center gap-6">
                                     <button
                                         onClick={(e) => handleLike(post, e)}
-                                        className={`flex flex-col items-center gap-1 ${post.user_has_liked ? 'text-red-500' : 'text-white'}`}
+                                        className={`flex flex - col items - center gap - 1 ${ post.user_has_liked ? 'text-red-500' : 'text-white' } `}
                                     >
                                         <Heart size={24} fill={post.user_has_liked ? "currentColor" : "none"} />
                                         <span className="text-xs font-bold">{post.likes_count}</span>
@@ -147,7 +148,7 @@ export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPos
 
                                     <button className="flex flex-col items-center gap-1 text-white">
                                         <MessageCircle size={24} />
-                                        <span className="text-xs font-bold">{post.comments_count || 0}</span>
+                                        <span className="text-xs font-bold">0</span> {/* Placeholder for comments_count */}
                                     </button>
 
                                     <button className="flex flex-col items-center gap-1 text-white">

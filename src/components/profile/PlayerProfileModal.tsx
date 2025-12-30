@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Camera, Save, Loader, Swords, Trophy, Eye, EyeOff, UserPlus, UserCheck, Grid, Film, MapPin, Heart, Play } from 'lucide-react';
+import { X, Swords, Grid, Film, MapPin, Heart, UserPlus, UserCheck } from 'lucide-react';
 import { FeedViewerOverlay } from '../social/FeedViewerOverlay';
 import { useAuth } from '../../context/AuthContext';
 import { userService } from '../../services/UserService';
