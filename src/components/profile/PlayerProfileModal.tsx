@@ -241,7 +241,7 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
                                                 className="w-full h-full object-cover"
                                                 muted
                                                 playsInline
-                                                onError={(e) => console.error("Grid Video Error:", post.id)}
+                                                onError={(e) => console.error("Grid Video Error:", post.id, e)}
                                             />
                                         ) : (
                                             <img src={post.media_url} alt="Post" className="w-full h-full object-cover" />
