@@ -151,8 +151,8 @@ export const GymMap = () => {
         // Distance Check
         if (userLocation) {
             const dist = getDistance(userLocation.lat, userLocation.lng, selectedGym.lat, selectedGym.lng);
-            if (dist > 100.0) {
-                alert(`Estás demasiado lejos (${dist.toFixed(2)}km). Debes estar a menos de 100km para conquistar este territorio.`);
+            if (dist > 0.02) {
+                alert(`Estás demasiado lejos (${dist.toFixed(2)}km). Debes estar a menos de 0.02km (20m) para conquistar este territorio.`);
                 return;
             }
         } else {
@@ -503,18 +503,18 @@ export const GymMap = () => {
                                 ) : (
                                     <button
                                         onClick={handleUnlock}
-                                        disabled={!userLocation || !selectedGym.lat || getDistance(userLocation.lat, userLocation.lng, selectedGym.lat, selectedGym.lng) > 100.0}
+                                        disabled={!userLocation || !selectedGym.lat || getDistance(userLocation.lat, userLocation.lng, selectedGym.lat, selectedGym.lng) > 0.02}
                                         className="w-full bg-gym-primary text-black font-black text-lg italic py-4 rounded-2xl hover:bg-yellow-400 transition-all hover:scale-[1.02] flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(250,204,21,0.3)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:shadow-none bg-neutral-800 disabled:bg-neutral-800 disabled:text-neutral-500"
                                     >
                                         <Lock size={20} strokeWidth={2.5} />
-                                        {(!userLocation || !selectedGym.lat || getDistance(userLocation.lat, userLocation.lng, selectedGym.lat, selectedGym.lng) > 100.0)
+                                        {(!userLocation || !selectedGym.lat || getDistance(userLocation.lat, userLocation.lng, selectedGym.lat, selectedGym.lng) > 0.02)
                                             ? 'ESTÁS MUY LEJOS'
                                             : 'CONQUISTAR AHORA'}
                                     </button>
                                 )}
-                                {selectedGym.lat && userLocation && getDistance(userLocation.lat, userLocation.lng, selectedGym.lat, selectedGym.lng) > 100.0 && !selectedGym.is_unlocked && (
+                                {selectedGym.lat && userLocation && getDistance(userLocation.lat, userLocation.lng, selectedGym.lat, selectedGym.lng) > 0.02 && !selectedGym.is_unlocked && (
                                     <p className="text-red-500 text-xs text-center font-bold mt-2">
-                                        ⛔ A {getDistance(userLocation.lat, userLocation.lng, selectedGym.lat, selectedGym.lng).toFixed(2)}km (Max 100km)
+                                        ⛔ A {getDistance(userLocation.lat, userLocation.lng, selectedGym.lat, selectedGym.lng).toFixed(2)}km (Max 0.02km)
                                     </p>
                                 )}
                             </div>
