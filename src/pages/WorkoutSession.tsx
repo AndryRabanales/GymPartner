@@ -40,6 +40,7 @@ export const WorkoutSession = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const { gymId: routeGymId } = useParams<{ gymId: string }>();
+    const LOCAL_STORAGE_KEY = `gp_workout_session_${user?.id}`; // Unique per user
 
     // State
     const [loading, setLoading] = useState(true);
@@ -80,6 +81,22 @@ export const WorkoutSession = () => {
         const interval = setInterval(tick, 1000);
         return () => clearInterval(interval);
     }, [startTime, isFinished]);
+
+    // 💾 AUTO-SAVE EFFECT (Local Persistence)
+    useEffect(() => {
+        if (loading) return; // Don't save during initialization
+
+        if (activeExercises.length > 0 || sessionId) {
+            const stateToSave = {
+                sessionId,
+                startTime, // Date object serializes to string
+                activeExercises,
+                resolvedGymId,
+                timestamp: Date.now()
+            };
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
+        }
+    }, [sessionId, startTime, activeExercises, resolvedGymId, loading]);
 
     // Init Logic
     useEffect(() => {
@@ -134,20 +151,52 @@ export const WorkoutSession = () => {
             setRoutines(localRoutines);
             setUserSettings(settings);
 
-            // 3. Start or Resume Session
-            const active = await workoutService.getActiveSession(userId);
+            setRoutines(localRoutines);
+            setUserSettings(settings);
 
-            if (active) {
-                console.log('♻️ Sesión activa encontrada:', active.id);
-                setSessionId(active.id);
-                setStartTime(new Date(active.started_at)); // Set Start Time (RESTORED)
-            } else {
-                console.log('✨ No hay sesión activa. Preparando nueva batalla.');
-                setSessionId(null);
-                setStartTime(null);
-                setElapsedTime("00:00");
-                setActiveExercises([]);
-                setIsFinished(false);
+            // 3. Priority: Restore from LocalStorage (Client-side persistence)
+            const savedState = localStorage.getItem(LOCAL_STORAGE_KEY);
+            let restored = false;
+
+            if (savedState) {
+                try {
+                    const parsed = JSON.parse(savedState);
+                    // Check if data is not ancient (e.g. < 24h)? Optional.
+                    // For now, adhere to user request: "NEVER DELETE"
+
+                    if (parsed.activeExercises && parsed.activeExercises.length > 0) {
+                        console.log("📂 Restoring session from LocalStorage...");
+                        setSessionId(parsed.sessionId);
+                        setStartTime(parsed.startTime ? new Date(parsed.startTime) : null);
+                        setActiveExercises(parsed.activeExercises);
+                        // If resolvedGymId changed (moved to another physical gym), we might warn? 
+                        // But let's keep consistency with stored session.
+
+                        // If we have a sessionId, verify it's still active in DB? 
+                        // Optimistically trust local state for inputs.
+                        restored = true;
+                    }
+                } catch (e) {
+                    console.error("Local Restore failed:", e);
+                }
+            }
+
+            if (!restored) {
+                // 4. Fallback: Check DB for active session
+                const active = await workoutService.getActiveSession(userId);
+
+                if (active) {
+                    console.log('♻️ Sesión activa encontrada en DB:', active.id);
+                    setSessionId(active.id);
+                    setStartTime(new Date(active.started_at));
+                } else {
+                    console.log('✨ No hay sesión activa. Preparando nueva batalla.');
+                    setSessionId(null);
+                    setStartTime(null);
+                    setElapsedTime("00:00");
+                    setActiveExercises([]);
+                    setIsFinished(false);
+                }
             }
 
         } catch (error) {
@@ -489,6 +538,10 @@ export const WorkoutSession = () => {
 
             if (result.success) {
                 console.log('✅ Sesión terminada exitosamente');
+
+                // 🧹 CLEAR LOCAL STORAGE ON FINISH
+                localStorage.removeItem(LOCAL_STORAGE_KEY);
+
                 // Removed blocking alert. 
                 // We'll rely on the UI showing "Guardando..." or similar via loading state, 
                 // or we could add a specific "Finished" state to show a success message briefly.
