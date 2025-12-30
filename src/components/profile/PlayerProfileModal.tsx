@@ -226,6 +226,49 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
                         </div>
 
                         {/* TAB CONTENT (Full Width) */}
+                        {/* 1. GRID TAB (Images) */}
+                        {activeTab === 'grid' && (
+                            <div className="grid grid-cols-3 gap-1 animate-in slide-in-from-bottom-2 fade-in duration-300">
+                                {posts.map(post => (
+                                    <div
+                                        key={post.id}
+                                        className="aspect-square bg-neutral-800 relative group overflow-hidden cursor-pointer"
+                                        onClick={() => setViewedPostId(post.id)}
+                                    >
+                                        {post.type === 'video' ? (
+                                            <video
+                                                src={post.media_url}
+                                                className="w-full h-full object-cover"
+                                                muted
+                                                playsInline
+                                                onError={(e) => console.error("Grid Video Error:", post.id)}
+                                            />
+                                        ) : (
+                                            <img src={post.media_url} alt="Post" className="w-full h-full object-cover" />
+                                        )}
+
+                                        {/* Type Indicator */}
+                                        {post.type === 'video' && (
+                                            <div className="absolute top-2 right-2">
+                                                <Film size={16} className="text-white drop-shadow-md" />
+                                            </div>
+                                        )}
+
+                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 text-white text-xs font-bold">
+                                            <Heart size={12} fill="white" /> {post.likes_count}
+                                        </div>
+                                    </div>
+                                ))}
+                                {posts.length === 0 && (
+                                    <div className="col-span-3 py-12 flex flex-col items-center justify-center text-neutral-600 space-y-3 opacity-60">
+                                        <div className="w-16 h-16 rounded-full bg-neutral-800 flex items-center justify-center">
+                                            <Grid size={24} />
+                                        </div>
+                                        <p className="text-sm font-bold uppercase tracking-wider">Sin fotos aún</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                         {/* 2. REELS TAB (Videos) */}
                         {activeTab === 'reels' && (
                             <div className="grid grid-cols-2 gap-2 animate-in slide-in-from-bottom-2 fade-in duration-300">
