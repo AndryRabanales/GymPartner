@@ -11,7 +11,11 @@ ALTER TABLE post_media ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public posts are viewable by everyone" ON posts;
 DROP POLICY IF EXISTS "Public media are viewable by everyone" ON post_media;
 DROP POLICY IF EXISTS "Users can insert their own posts" ON posts;
+DROP POLICY IF EXISTS "Users can update their own posts" ON posts;
+DROP POLICY IF EXISTS "Users can delete their own posts" ON posts;
 DROP POLICY IF EXISTS "Users can insert media" ON post_media;
+DROP POLICY IF EXISTS "Users can update media" ON post_media;
+DROP POLICY IF EXISTS "Users can delete media" ON post_media;
 
 -- Create OPEN Policies (Public Read, Owner Write)
 CREATE POLICY "Public posts are viewable by everyone" 
@@ -24,6 +28,10 @@ WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Users can update their own posts" 
 ON posts FOR UPDATE 
+USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own posts" 
+ON posts FOR DELETE 
 USING (auth.uid() = user_id);
 
 -- Same for Media
