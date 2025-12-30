@@ -12,6 +12,10 @@ export const AppLayout = () => {
     const location = useLocation();
     const isReelsPage = location.pathname === '/reels';
 
+    // Hide BottomNav during workout sessions and gym territory pages
+    const isWorkoutPage = location.pathname === '/workout' || location.pathname.includes('/territory/');
+    const shouldShowBottomNav = user && !isWorkoutPage;
+
     return (
         <div className="h-[100dvh] bg-neutral-950 text-white flex flex-col overflow-hidden">
             {/* Top Navigation - Hidden only on Reels */}
@@ -143,16 +147,16 @@ export const AppLayout = () => {
             {/* Main Content (Scrollable Area) */}
             <main className="flex-1 overflow-y-auto custom-scrollbar relative flex flex-col">
                 <Outlet />
-                {/* Spacer to prevent BottomNav overlap on scrollable pages (Only when logged in and BottomNav is visible) */}
-                {user && !isReelsPage && <div className="h-24 shrink-0" />}
+                {/* Spacer to prevent BottomNav overlap (Only when BottomNav is visible) */}
+                {shouldShowBottomNav && !isReelsPage && <div className="h-24 shrink-0" />}
             </main>
 
             {/* Global Modals */}
             {isUploadModalOpen && <UploadModal onClose={() => setIsUploadModalOpen(false)} onSuccess={() => setIsUploadModalOpen(false)} />}
 
             {/* MOBILE BOTTOM NAVIGATION (Static Block at Bottom) */}
-            {/* Only show when user is authenticated */}
-            {user && <BottomNav onUploadClick={() => setIsUploadModalOpen(true)} />}
+            {/* Hidden when: logged out, in workout session, or in gym territory pages */}
+            {shouldShowBottomNav && <BottomNav onUploadClick={() => setIsUploadModalOpen(true)} />}
 
             {/* Premium GymRat Footer */}
 
