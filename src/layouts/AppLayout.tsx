@@ -131,7 +131,7 @@ export const AppLayout = () => {
             )}
 
             {/* Main Content */}
-            <main className="flex-1 flex flex-col mb-16 md:mb-0">
+            <main className={`flex-1 flex flex-col ${isReelsPage ? '' : 'mb-16 md:mb-0'}`}>
                 <Outlet />
             </main>
 

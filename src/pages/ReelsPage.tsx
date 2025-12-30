@@ -188,7 +188,7 @@ export const ReelsPage = () => {
     };
 
     return (
-        <div className="h-full bg-black overflow-y-scroll snap-y snap-mandatory custom-scrollbar relative">
+        <div className="h-[calc(100dvh-4rem-env(safe-area-inset-bottom))] bg-black overflow-y-scroll snap-y snap-mandatory custom-scrollbar relative">
 
             {loading && (
                 <div className="h-full w-full flex items-center justify-center snap-center">
@@ -204,11 +204,11 @@ export const ReelsPage = () => {
             )}
 
             {posts.map((post) => (
-                <div key={(post as any).virtual_id || post.id} className="h-full w-full max-w-md mx-auto relative snap-center flex items-center justify-center bg-black border-b border-neutral-800 md:border-none">
+                <div key={(post as any).virtual_id || post.id} className="h-full w-full snap-center bg-black relative">
 
                     {/* VIDEO CONTAINER */}
                     <div
-                        className="relative w-[98%] h-[92%] mb-14 md:w-full md:h-full md:max-h-[85vh] md:mb-0 rounded-xl overflow-hidden shadow-2xl ring-1 ring-white/10 bg-black"
+                        className="w-full h-full relative"
                         onDoubleClick={(e) => handleDoubleTap(post, e)}
                     >
                         <video
