@@ -151,9 +151,6 @@ export const WorkoutSession = () => {
             setRoutines(localRoutines);
             setUserSettings(settings);
 
-            setRoutines(localRoutines);
-            setUserSettings(settings);
-
             // 3. Priority: Restore from LocalStorage (Client-side persistence)
             const savedState = localStorage.getItem(LOCAL_STORAGE_KEY);
             let restored = false;
@@ -929,6 +926,7 @@ export const WorkoutSession = () => {
                     )
                 }
 
-            </div >
-            )
-}
+            </div>
+        </div>
+    );
+};
