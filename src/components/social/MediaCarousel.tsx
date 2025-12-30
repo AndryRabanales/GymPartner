@@ -93,6 +93,7 @@ export const MediaCarousel: React.FC<MediaCarouselProps> = ({ media, isPlaying =
                                     className="w-full h-full object-contain cursor-pointer"
                                     playsInline
                                     loop
+                                    preload="none"
                                     muted={index !== currentIndex}
                                     poster={item.url.includes('cloudinary') ? item.url.replace(/\.(mp4|mov|webm)$/i, '.jpg') : undefined}
                                     onClick={(e) => {

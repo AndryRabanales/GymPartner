@@ -47,22 +47,41 @@ export const ReelsPage = () => {
         setLoading(false);
     };
 
-    // Intersection Observer for Auto-Play & Pause
+    // Intersection Observer for Auto-Play & Smart Preloading
     useEffect(() => {
         const observer = new IntersectionObserver(
             (entries) => {
                 entries.forEach((entry) => {
                     const video = entry.target as HTMLVideoElement;
-                    if (entry.isIntersecting) {
-                        // Play when fully visible
-                        video.currentTime = 0; // Restart
+                    const isVisible = entry.intersectionRatio >= 0.7;
+
+                    if (isVisible) {
+                        // Play current video
+                        video.currentTime = 0;
                         video.play().catch(() => { });
+                        video.preload = 'auto';
+
+                        // Smart Preload Next Video
+                        const currentId = Object.keys(videoRefs.current).find(key => videoRefs.current[key] === video);
+                        if (currentId) {
+                            const currentIndex = posts.findIndex(p => ((p as any).virtual_id || p.id) === currentId);
+                            if (currentIndex !== -1 && currentIndex < posts.length - 1) {
+                                const nextPost = posts[currentIndex + 1];
+                                const nextVideo = videoRefs.current[(nextPost as any).virtual_id || nextPost.id];
+                                if (nextVideo) {
+                                    nextVideo.preload = 'auto';
+                                }
+                            }
+                        }
+
                     } else {
                         video.pause();
+                        // Optional: Reset preload to save bandwidth if scrolled away
+                        // video.preload = 'none'; 
                     }
                 });
             },
-            { threshold: 0.7 } // Needs 70% visibility
+            { threshold: 0.7 }
         );
 
         Object.values(videoRefs.current).forEach((video) => {
@@ -217,6 +236,7 @@ export const ReelsPage = () => {
                             className="w-full h-full object-cover"
                             playsInline
                             loop
+                            preload="none"
                             muted={muted}
                             poster={post.media_url.includes('cloudinary') ? post.media_url.replace(/\.(mp4|mov|webm)$/i, '.jpg') : undefined}
                             onClick={() => setMuted(!muted)}

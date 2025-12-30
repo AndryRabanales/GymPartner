@@ -193,6 +193,7 @@ export const CommunityPage = () => {
                                                 className="w-full h-full object-contain cursor-pointer"
                                                 playsInline
                                                 loop
+                                                preload="none"
                                                 muted
                                                 onClick={togglePlayPause}
                                             />
