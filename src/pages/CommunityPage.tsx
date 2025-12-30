@@ -75,22 +75,8 @@ export const CommunityPage = () => {
     };
 
     const handleLike = async (post: Post) => {
-        if (!user) return alert("Inicia sesión para dar like ❤️");
-
-        // Validate post ID
-        if (!post.id) {
-            console.error("❌ Post ID is missing:", post);
-            alert("Error: Post inválido. Recarga la página.");
-            return;
-        }
-
-        console.log("🔍 DEBUG handleLike:", {
-            postId: post.id,
-            userId: user.id,
-            currentLikeStatus: post.user_has_liked,
-            likesCount: post.likes_count,
-            postObject: post
-        });
+        if (!user) return;
+        if (!post.id) return;
 
         // Optimistic Update
         const isLiked = post.user_has_liked;
@@ -103,17 +89,14 @@ export const CommunityPage = () => {
         } : p));
 
         try {
-            const result = await socialService.toggleLike(user.id, post.id);
-            console.log("✅ Like successful:", result);
+            await socialService.toggleLike(user.id, post.id);
         } catch (error) {
-            console.error("❌ Like failed, reverting:", error);
-            // Revert state
+            // Revert state silently
             setPosts(prev => prev.map(p => p.id === post.id ? {
                 ...p,
                 user_has_liked: isLiked,
                 likes_count: post.likes_count || 0
             } : p));
-            alert("Error al dar like: " + (error as Error).message);
         }
     };
 
@@ -248,8 +231,12 @@ export const CommunityPage = () => {
                                 <div className="flex items-center gap-2.5 mb-1.5">
                                     <button
                                         onClick={() => handleLike(post)}
+                                        onTouchEnd={(e) => {
+                                            e.preventDefault();
+                                            handleLike(post);
+                                        }}
                                         className="transition-transform active:scale-95 cursor-pointer"
-                                        style={{ touchAction: 'manipulation' }}
+                                        style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                                     >
                                         <Heart
                                             size={20}
@@ -258,8 +245,12 @@ export const CommunityPage = () => {
                                     </button>
                                     <button
                                         onClick={() => setActiveCommentPostId(post.id)}
+                                        onTouchEnd={(e) => {
+                                            e.preventDefault();
+                                            setActiveCommentPostId(post.id);
+                                        }}
                                         className="text-white hover:text-neutral-300 transition-transform active:scale-95 cursor-pointer"
-                                        style={{ touchAction: 'manipulation' }}
+                                        style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                                     >
                                         <MessageCircle size={20} />
                                     </button>
