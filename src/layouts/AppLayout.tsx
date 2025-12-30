@@ -1,4 +1,4 @@
-import { MapPin, LogIn, LogOut, PlusSquare } from 'lucide-react';
+import { MapPin, LogIn, LogOut, Trophy } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link, Outlet } from 'react-router-dom';
@@ -60,21 +60,14 @@ export const AppLayout = () => {
 
                         {/* Actions Area */}
                         <div className="flex items-center gap-3">
-                            {/* Map Quick Action */}
-                            <Link to="/map" className="hidden sm:flex w-10 h-10 rounded-full bg-neutral-900 border border-neutral-800 items-center justify-center text-neutral-400 hover:text-gym-primary hover:border-gym-primary/50 transition-all hover:shadow-[0_0_15px_rgba(234,179,8,0.15)] group">
-                                <MapPin size={18} className="group-hover:scale-110 transition-transform" />
+                            {/* HEADER ACTIONS: MAP & RANKING (Moved from Bottom) */}
+                            <Link to="/map" className="flex w-10 h-10 rounded-full bg-neutral-900 border border-neutral-800 items-center justify-center text-neutral-400 hover:text-gym-primary hover:border-gym-primary/50 transition-all hover:shadow-[0_0_15px_rgba(234,179,8,0.15)] group">
+                                <MapPin size={20} className="group-hover:scale-110 transition-transform" />
                             </Link>
 
-                            {/* Create Post Action (Logged In) */}
-                            {user && (
-                                <button
-                                    onClick={() => setIsUploadModalOpen(true)}
-                                    className="w-10 h-10 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400 hover:text-yellow-500 hover:border-yellow-500/50 transition-all hover:shadow-[0_0_15px_rgba(234,179,8,0.15)] group active:scale-95"
-                                    title="Nuevo Post"
-                                >
-                                    <PlusSquare size={20} className="group-hover:scale-110 transition-transform" />
-                                </button>
-                            )}
+                            <Link to="/ranking" className="flex w-10 h-10 rounded-full bg-neutral-900 border border-neutral-800 items-center justify-center text-neutral-400 hover:text-yellow-400 hover:border-yellow-400/50 transition-all hover:shadow-[0_0_15px_rgba(250,204,21,0.15)] group">
+                                <Trophy size={20} className="group-hover:scale-110 transition-transform" />
+                            </Link>
 
                             {user ? (
                                 <div className="relative group z-50">
