@@ -242,6 +242,15 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                                             e.stopPropagation();
                                             const newStatus = !routine.is_public;
 
+                                            // 🛡️ LIMIT CHECK: Max 5 Public Routines
+                                            if (newStatus) {
+                                                const publicCount = routines.filter(r => r.is_public).length;
+                                                if (publicCount >= 5) {
+                                                    alert("⚠️ Límite Alcanzado: Solo puedes tener 5 rutinas públicas visibles en el Ranking. Oculta otra para activar esta.");
+                                                    return;
+                                                }
+                                            }
+
                                             // Optimistic Update
                                             setRoutines(prev => prev.map(r => r.id === routine.id ? { ...r, is_public: newStatus } : r));
 
