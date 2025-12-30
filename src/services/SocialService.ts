@@ -297,7 +297,8 @@ class SocialService {
             .from('posts')
             .select(`
                 *,
-                post_likes (count)
+                post_likes (count),
+                profiles!fk_posts_profiles (username, avatar_url)
             `)
             .eq('user_id', userId)
             .order('created_at', { ascending: false });
@@ -319,7 +320,8 @@ class SocialService {
         // Transform to include simple counts
         return postsWithMedia.map((post: any) => ({
             ...post,
-            likes_count: post.post_likes?.[0]?.count || 0
+            likes_count: post.post_likes?.[0]?.count || 0,
+            profiles: post.profiles // Explicitly ensure profile is passed
         }));
     }
 

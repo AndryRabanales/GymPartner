@@ -5,6 +5,8 @@ import { useAuth } from '../../context/AuthContext';
 import { socialService } from '../../services/SocialService';
 import { MediaCarousel } from './MediaCarousel';
 
+import { CommentsSheet } from './CommentsSheet';
+
 interface FeedViewerOverlayProps {
     initialPostId: string;
     posts: Post[];
@@ -14,6 +16,7 @@ interface FeedViewerOverlayProps {
 export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPostId, posts, onClose }) => {
     const { user } = useAuth();
     const [playingPostId, setPlayingPostId] = useState<string | null>(null);
+    const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const itemRefs = useRef<{ [key: string]: HTMLDivElement }>({});
 
@@ -56,12 +59,24 @@ export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPos
         return () => observer.disconnect();
     }, [posts]);
 
+    const handleShare = async (post: Post) => {
+        try {
+            if (navigator.share) {
+                await navigator.share({
+                    title: `GymPartner: ${post.profiles?.username}`,
+                    text: post.caption || 'Checa este post en GymPartner',
+                    url: window.location.href
+                });
+            } else {
+                await navigator.clipboard.writeText(window.location.href);
+                alert('Link copiado al portapapeles 📋');
+            }
+        } catch (error) { console.log(error); }
+    };
+
     const handleLike = async (post: Post) => {
         if (!user) return;
-        // Optimistic update handled by parent or local state if strictly needed, 
-        // but for now we follow the pattern (api call + visual feedback if component re-renders)
         await socialService.toggleLike(user.id, post.id);
-        // Note: Real state sync would require updating the 'posts' prop or internal state
     };
 
     const togglePlayPause = (e: React.MouseEvent<HTMLVideoElement>) => {
@@ -104,9 +119,17 @@ export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPos
                             <div className="flex items-center justify-between px-3 py-2">
                                 <div className="flex items-center gap-2">
                                     <div className="w-8 h-8 rounded-full bg-neutral-800 overflow-hidden border border-white/10">
-                                        <div className="w-full h-full bg-gym-primary flex items-center justify-center font-bold text-black text-xs">
-                                            {post.profiles?.username?.[0] || '?'}
-                                        </div>
+                                        {post.profiles?.avatar_url ? (
+                                            <img
+                                                src={post.profiles.avatar_url}
+                                                alt={post.profiles.username}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full bg-gym-primary flex items-center justify-center font-bold text-black text-xs">
+                                                {post.profiles?.username?.[0] || '?'}
+                                            </div>
+                                        )}
                                     </div>
                                     <div>
                                         <div className="flex items-center gap-1">
@@ -186,11 +209,13 @@ export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPos
                                         />
                                     </button>
                                     <button
+                                        onClick={() => setActiveCommentPostId(post.id)}
                                         className="text-white hover:text-neutral-300 transition-transform active:scale-95"
                                     >
                                         <MessageCircle size={24} />
                                     </button>
                                     <button
+                                        onClick={() => handleShare(post)}
                                         className="text-white hover:text-neutral-300 ml-auto transition-transform active:scale-95"
                                     >
                                         <Share2 size={24} />
@@ -208,13 +233,30 @@ export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPos
                                     <span className="text-sm text-white/90">{post.caption}</span>
                                 </div>
                                 <div className="mt-1">
-                                    <button className="text-neutral-500 text-xs">Ver los comentarios</button>
+                                    <button
+                                        onClick={() => setActiveCommentPostId(post.id)}
+                                        className="text-neutral-500 text-xs hover:text-neutral-300"
+                                    >
+                                        Ver los comentarios
+                                    </button>
                                 </div>
                             </div>
                         </div>
                     ))}
                 </div>
             </div>
+
+            {/* COMMENTS SHEET OVERLAY */}
+            {activeCommentPostId && (
+                <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/50 backdrop-blur-sm" onClick={() => setActiveCommentPostId(null)}>
+                    <div onClick={e => e.stopPropagation()} className="w-full max-w-md">
+                        <CommentsSheet
+                            postId={activeCommentPostId}
+                            onClose={() => setActiveCommentPostId(null)}
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
