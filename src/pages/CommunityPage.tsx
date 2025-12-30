@@ -64,15 +64,6 @@ export const CommunityPage = () => {
 
     useEffect(() => {
         loadFeed();
-
-        // Listen for new posts being created
-        const handlePostCreated = () => {
-            // Small delay to ensure DB transaction is committed  
-            setTimeout(() => loadFeed(), 500);
-        };
-        window.addEventListener('postCreated', handlePostCreated);
-
-        return () => window.removeEventListener('postCreated', handlePostCreated);
     }, []);
 
     const loadFeed = async () => {

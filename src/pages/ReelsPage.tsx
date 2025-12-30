@@ -26,15 +26,6 @@ export const ReelsPage = () => {
 
     useEffect(() => {
         loadReels();
-
-        // Listen for new posts being created
-        const handlePostCreated = () => {
-            // Small delay to ensure DB transaction is committed
-            setTimeout(() => loadReels(), 500);
-        };
-        window.addEventListener('postCreated', handlePostCreated);
-
-        return () => window.removeEventListener('postCreated', handlePostCreated);
     }, []);
 
     const loadReels = async () => {
