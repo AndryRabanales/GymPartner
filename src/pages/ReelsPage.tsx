@@ -207,7 +207,7 @@ export const ReelsPage = () => {
     };
 
     return (
-        <div className="h-[calc(100dvh-4rem-env(safe-area-inset-bottom))] bg-black overflow-y-scroll snap-y snap-mandatory custom-scrollbar relative">
+        <div className="h-full bg-black overflow-y-scroll snap-y snap-mandatory custom-scrollbar relative">
 
             {loading && (
                 <div className="h-full w-full flex items-center justify-center snap-center">

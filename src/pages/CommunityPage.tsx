@@ -102,7 +102,7 @@ export const CommunityPage = () => {
 
 
     return (
-        <div className="min-h-screen bg-black pb-20">
+        <div className="bg-black min-h-full">
             {/* Header (Mobile style) */}
             <div className="sticky top-0 z-30 bg-black/90 backdrop-blur-md border-b border-white/5 px-4 h-10 flex items-center justify-center">
                 <span className="font-black italic text-white tracking-tighter text-lg">GYM<span className="text-yellow-500">TOK</span></span>

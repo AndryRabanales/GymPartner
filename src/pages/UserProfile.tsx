@@ -230,7 +230,7 @@ export const UserProfile = () => {
 
     if (!user) {
         return (
-            <div className="flex flex-col bg-neutral-950 flex-1">
+            <div className="flex flex-col bg-neutral-950 flex-1 h-full">
                 {/* Hero Section */}
                 <div className="flex-1 flex flex-col items-center justify-center p-4 py-12 md:py-20 text-center relative overflow-hidden">
                     {/* Background Glow */}
