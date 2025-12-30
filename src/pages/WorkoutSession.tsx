@@ -793,40 +793,42 @@ export const WorkoutSession = () => {
                         ))}
                     </div>
                 )}      {/* Finish Button at Bottom */}
-                {activeExercises.length > 0 && (
-                    <div className="mt-8 mb-4">
+                {/* Finish Button Removed from here - Moved to Fixed Footer */}
+            </div>
+
+
+            {/* Fixed Bottom Action Bar (Dual Buttons) */}
+            {
+                activeExercises.length > 0 && (
+                    <div className="fixed bottom-0 left-0 w-full px-4 pb-6 pt-12 bg-gradient-to-t from-neutral-950 via-neutral-950/95 to-transparent z-50 flex items-end gap-3 pointer-events-none">
+
+                        {/* Add Exercise (Compact Red) */}
+                        <button
+                            onClick={() => setShowAddModal(true)}
+                            className="pointer-events-auto bg-neutral-900 border border-neutral-800 text-white p-4 rounded-2xl shadow-lg hover:bg-neutral-800 hover:border-white/20 active:scale-95 transition-all flex flex-col items-center justify-center gap-1 min-w-[80px]"
+                        >
+                            <Plus size={24} className="text-red-500" strokeWidth={3} />
+                            <span className="text-[10px] font-black uppercase tracking-widest">Añadir</span>
+                        </button>
+
+                        {/* Finish Workout (Expanded Yellow) */}
                         <button
                             onClick={handleFinish}
                             disabled={loading || isFinished}
-                            className={`w-full font-black uppercase tracking-wider py-4 rounded-xl shadow-[0_0_20px_rgba(234,179,8,0.4)] flex items-center justify-center gap-3 transform active:scale-95 transition-all text-xl ${isFinished ? 'bg-green-500 text-black' : 'bg-yellow-500 hover:bg-yellow-400 text-black'
+                            className={`pointer-events-auto flex-1 font-black uppercase tracking-wider py-4 rounded-2xl shadow-[0_0_20px_rgba(234,179,8,0.2)] flex items-center justify-center gap-2 transform active:scale-95 transition-all text-lg h-full border border-yellow-500/20 ${isFinished ? 'bg-green-500 text-black' : 'bg-gym-primary hover:bg-yellow-400 text-black'
                                 }`}
                         >
                             {loading || isFinished ? (
                                 <>
-                                    <Loader className="animate-spin" size={24} />
-                                    {isFinished ? 'FINALIZADO!' : 'GUARDANDO...'}
+                                    <Loader className="animate-spin" size={20} />
+                                    {isFinished ? 'FINALIZADO' : 'GUARDANDO'}
                                 </>
                             ) : (
                                 <>
-                                    <Save size={24} strokeWidth={2.5} />
-                                    TERMINAR ENTRENAMIENTO
+                                    <Save size={20} strokeWidth={2.5} />
+                                    TERMINAR RUTINA
                                 </>
                             )}
-                        </button>
-                    </div>
-                )}
-            </div>
-
-
-            {/* Fab Add Button (Only if exercises exist) */}
-            {
-                activeExercises.length > 0 && (
-                    <div className="fixed bottom-6 left-0 w-full px-4 flex justify-center z-50 pointer-events-none">
-                        <button
-                            onClick={() => setShowAddModal(true)}
-                            className="pointer-events-auto bg-red-600 text-white font-black py-4 px-10 rounded-2xl shadow-[0_10px_40px_rgba(220,38,38,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center gap-3 text-lg border border-red-500/50 backdrop-blur-md"
-                        >
-                            <Plus size={24} strokeWidth={3} /> AÑADIR EJERCICIO
                         </button>
                     </div>
                 )
