@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { userService } from '../../services/UserService';
 import { socialService, type Post } from '../../services/SocialService';
 import { RoutineViewModal } from './RoutineViewModal';
+import { useBottomNav } from '../../context/BottomNavContext';
 
 interface PlayerProfileModalProps {
     player: {
@@ -22,6 +23,7 @@ interface PlayerProfileModalProps {
 
 export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, onClose }) => {
     const { user } = useAuth();
+    const { hideBottomNav, showBottomNav } = useBottomNav();
 
     // Social State
     const [stats, setStats] = useState({ followersCount: 0, followingCount: 0, totalLikes: 0 });
@@ -34,6 +36,14 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
     const [publicRoutines, setPublicRoutines] = useState<any[]>([]);
     const [viewRoutine, setViewRoutine] = useState<any | null>(null);
     const [copying, setCopying] = useState(false);
+
+    // Hide BottomNav when modal opens, show when it closes
+    useEffect(() => {
+        hideBottomNav();
+        return () => {
+            showBottomNav();
+        };
+    }, [hideBottomNav, showBottomNav]);
 
     // Initial Load
     useEffect(() => {

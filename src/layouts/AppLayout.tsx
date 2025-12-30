@@ -4,9 +4,11 @@ import { useAuth } from '../context/AuthContext';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { UploadModal } from '../components/social/UploadModal';
 import { BottomNav } from '../components/navigation/BottomNav';
+import { useBottomNav } from '../context/BottomNavContext';
 
 export const AppLayout = () => {
     const { user, signOut } = useAuth();
+    const { isBottomNavVisible } = useBottomNav();
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const location = useLocation();
@@ -15,7 +17,7 @@ export const AppLayout = () => {
     // Hide BottomNav during workout sessions, gym territory pages, arsenal, stats, and history
     const isWorkoutPage = location.pathname === '/workout' || location.pathname.includes('/territory/');
     const isContentPage = location.pathname === '/arsenal' || location.pathname === '/stats' || location.pathname === '/history' || location.pathname.startsWith('/history/');
-    const shouldShowBottomNav = user && !isWorkoutPage && !isContentPage;
+    const shouldShowBottomNav = user && !isWorkoutPage && !isContentPage && isBottomNavVisible;
 
     return (
         <div className="h-[100dvh] bg-neutral-950 text-white flex flex-col overflow-hidden">
