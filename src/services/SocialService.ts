@@ -24,6 +24,8 @@ export interface Post {
     // Aggregated/Joined data
     likes_count?: number;
     user_has_liked?: boolean;
+    views_count?: number; // Added
+    debug_score?: number; // 🧠 AI Score for visualization
     profiles?: {
         username: string;
         avatar_url: string;
@@ -448,6 +450,7 @@ class SocialService {
                 : 0, // Raw query doesn't fetch comment count easily without aggregate
 
             views_count: row.views_count,
+            debug_score: row.rank_score, // 🧠 Map the AI Score for frontend visualization
 
             // Liked Status
             user_has_liked: row.user_has_liked !== undefined
