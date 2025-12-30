@@ -67,6 +67,20 @@ class WorkoutService {
         return { success: true };
     }
 
+    // Cancel/Discard active session (Hard Delete)
+    async discardSession(sessionId: string): Promise<boolean> {
+        const { error } = await supabase
+            .from('workout_sessions')
+            .delete()
+            .eq('id', sessionId);
+
+        if (error) {
+            console.error('Error discarding session:', error);
+            return false;
+        }
+        return true;
+    }
+
     // Log a single set (The "Hit")
     async logSet(setData: WorkoutSetData): Promise<{ data?: any; error?: any }> {
         // Validation / Clamping to avoid DB overflow (numeric(6,2) -> max 9999.99)

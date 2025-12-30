@@ -456,6 +456,36 @@ export const WorkoutSession = () => {
         }
     };
 
+    const handleCancelSession = async () => {
+        if (!window.confirm("⚠️ ¿CANCELAR ENTRENAMIENTO?\n\nSe perderán todos los datos y el progreso actual. Esta acción no se puede deshacer.")) return;
+
+        setLoading(true);
+        try {
+            // 1. Delete from DB if exists
+            if (sessionId) {
+                console.log("🗑️ Discarding session from DB:", sessionId);
+                await workoutService.discardSession(sessionId);
+            }
+
+            // 2. Clear Local Storage
+            localStorage.removeItem(LOCAL_STORAGE_KEY);
+
+            // 3. Reset Local State completely
+            setSessionId(null);
+            setStartTime(null);
+            setElapsedTime("00:00");
+            setActiveExercises([]);
+            setIsFinished(false);
+
+            console.log("✨ Session discarded and reset.");
+        } catch (error) {
+            console.error("Error cancelling session:", error);
+            alert("Error al cancelar sesión. Intenta de nuevo.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleFinish = async () => {
         setIsFinished(true); // STOP TIMER IMMEDIATELY
         if (!sessionId) {
@@ -841,6 +871,16 @@ export const WorkoutSession = () => {
                                 </div>
                             </div>
                         ))}
+
+                        <div className="px-4 pb-4">
+                            <button
+                                onClick={handleCancelSession}
+                                className="w-full py-4 rounded-xl border border-red-900/30 text-red-700 bg-red-950/10 hover:bg-red-900/20 hover:text-red-500 font-black uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2 mb-4"
+                            >
+                                <Trash2 size={16} /> Cancelar y Reiniciar
+                            </button>
+                        </div>
+
                         <div className="h-48 w-full" /> {/* Spacer to prevent fixed button overlap */}
                     </div>
                 )}
