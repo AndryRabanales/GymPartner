@@ -1,8 +1,10 @@
+```
 import React, { useRef, useEffect, useState } from 'react';
-import { X, Heart, MessageCircle, Share2, Volume2, VolumeX } from 'lucide-react';
+import { X, Heart, MessageCircle, Share2, MoreHorizontal, Music2, Swords } from 'lucide-react';
 import type { Post } from '../../services/SocialService';
 import { useAuth } from '../../context/AuthContext';
 import { socialService } from '../../services/SocialService';
+import { MediaCarousel } from './MediaCarousel';
 
 interface FeedViewerOverlayProps {
     initialPostId: string;
@@ -12,154 +14,209 @@ interface FeedViewerOverlayProps {
 
 export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPostId, posts, onClose }) => {
     const { user } = useAuth();
-    const [currentIndex, setCurrentIndex] = useState(0);
-    const [muted, setMuted] = useState(false);
+    const [playingPostId, setPlayingPostId] = useState<string | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
-    const videoRefs = useRef<{ [key: string]: HTMLVideoElement }>({});
+    const itemRefs = useRef<{ [key: string]: HTMLDivElement }>({});
 
-    // Find initial index
+    // Scroll to initial post
     useEffect(() => {
-        const index = posts.findIndex(p => p.id === initialPostId);
-        if (index !== -1) {
-            setCurrentIndex(index);
-            // Scroll to initial post
+        if (initialPostId && itemRefs.current[initialPostId]) {
             setTimeout(() => {
-                containerRef.current?.scrollTo({
-                    top: index * window.innerHeight,
-                    behavior: 'instant'
-                });
+                itemRefs.current[initialPostId]?.scrollIntoView({ behavior: 'auto', block: 'center' });
             }, 100);
         }
-    }, [initialPostId, posts]);
+    }, [initialPostId]);
 
-    // Handle Scroll for Auto-Play
+    // Smart Auto-Play Observer
     useEffect(() => {
-        const handleScroll = () => {
-            if (!containerRef.current) return;
-            const index = Math.round(containerRef.current.scrollTop / window.innerHeight);
-            if (index !== currentIndex) {
-                setCurrentIndex(index);
-            }
-        };
+        const observer = new IntersectionObserver(
+            (entries) => {
+                let maxRatio = 0;
+                let maxId = null;
 
-        const container = containerRef.current;
-        container?.addEventListener('scroll', handleScroll);
-        return () => container?.removeEventListener('scroll', handleScroll);
-    }, [currentIndex]);
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
+                        if (entry.intersectionRatio > maxRatio) {
+                            maxRatio = entry.intersectionRatio;
+                            maxId = entry.target.getAttribute('data-post-id');
+                        }
+                    }
+                });
 
-    // Play/Pause based on Active Index
-    useEffect(() => {
-        posts.forEach((post, index) => {
-            const video = videoRefs.current[post.id];
-            if (video) {
-                if (index === currentIndex) {
-                    video.currentTime = 0;
-                    video.play().catch(err => console.log("Autoplay blocked:", err));
-                } else {
-                    video.pause();
+                if (maxId) {
+                    setPlayingPostId(maxId);
                 }
-            }
+            },
+            { threshold: [0.5, 0.7], root: containerRef.current }
+        );
+
+        Object.values(itemRefs.current).forEach((el) => {
+            if (el) observer.observe(el);
         });
-    }, [currentIndex, posts]);
 
-    const handleLike = async (post: Post, e: React.MouseEvent) => {
-        e.stopPropagation();
+        return () => observer.disconnect();
+    }, [posts]);
+
+    const handleLike = async (post: Post) => {
         if (!user) return;
-
-        // Optimistic update (This relies on parent state updates if valid, but here local only for visual)
-        // Ideally we update parent too, but for now visual feedback:
-        // Note: Real state sync requires a callback or context, simplified here.
+        // Optimistic update handled by parent or local state if strictly needed, 
+        // but for now we follow the pattern (api call + visual feedback if component re-renders)
         await socialService.toggleLike(user.id, post.id);
+        // Note: Real state sync would require updating the 'posts' prop or internal state
+    };
+
+    const togglePlayPause = (e: React.MouseEvent<HTMLVideoElement>) => {
+        const video = e.currentTarget;
+        if (video.paused) {
+            video.play().catch(() => { });
+        } else {
+            video.pause();
+        }
     };
 
     return (
-        <div className="fixed inset-0 bg-black z-[60] flex flex-col animate-in zoom-in-95 duration-200">
-            {/* Close Button */}
-            <button
-                onClick={onClose}
-                className="absolute top-4 right-4 z-20 bg-black/50 p-2 rounded-full text-white hover:bg-white/20 transition-colors"
-            >
-                <X size={24} />
-            </button>
+        <div className="fixed inset-0 bg-black z-[60] flex flex-col animate-in slide-in-from-bottom duration-200">
+            {/* Header */}
+            <div className="h-14 border-b border-white/10 flex items-center justify-between px-4 bg-black/90 backdrop-blur z-20 sticky top-0">
+                <div className="w-8"></div> {/* Spacer */}
+                <span className="text-white font-bold text-sm uppercase tracking-widest">Publicaciones</span>
+                <button
+                    onClick={onClose}
+                    className="w-8 h-8 flex items-center justify-center rounded-full bg-neutral-800 text-white hover:bg-neutral-700"
+                >
+                    <X size={20} />
+                </button>
+            </div>
 
-            {/* Vertical Scroll Container */}
+            {/* Scrollable Feed */}
             <div
                 ref={containerRef}
-                className="flex-1 overflow-y-scroll snap-y snap-mandatory scroll-smooth no-scrollbar"
-                style={{ height: '100dvh' }}
+                className="flex-1 overflow-y-auto bg-black pb-20 custom-scrollbar"
             >
-                {posts.map((post) => {
-                    // Removed unused isActive
-                    return (
+                <div className="max-w-md mx-auto pt-4">
+                    {posts.map((post) => (
                         <div
                             key={post.id}
-                            className="w-full h-[100dvh] snap-start relative bg-neutral-900 flex items-center justify-center"
+                            ref={el => { if (el) itemRefs.current[post.id] = el }}
+                            data-post-id={post.id}
+                            className="border-b border-white/5 pb-6 mb-6 last:border-0"
                         >
-                            {post.type === 'video' ? (
-                                <video
-                                    ref={el => { if (el) videoRefs.current[post.id] = el }}
-                                    src={post.media_url}
-                                    className="w-full h-full object-cover"
-                                    loop
-                                    muted={muted}
-                                    playsInline
-                                    onError={(e) => {
-                                        console.error("Video Error:", post.id, e);
-                                        // Hide broken video or show badge
-                                    }}
-                                />
+                            {/* Post Header */}
+                            <div className="flex items-center justify-between px-3 py-2">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 rounded-full bg-neutral-800 overflow-hidden border border-white/10">
+                                        <div className="w-full h-full bg-gym-primary flex items-center justify-center font-bold text-black text-xs">
+                                            {post.profiles?.username?.[0] || '?'}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center gap-1">
+                                            <span className="font-bold text-sm text-white">
+                                                {post.profiles?.username || 'Usuario'}
+                                            </span>
+                                        </div>
+                                        {post.linked_routine_id && (
+                                            <div className="flex items-center gap-1 text-[10px] text-yellow-500">
+                                                <Swords size={10} />
+                                                <span>Rutina vinculada</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                <button className="text-neutral-400">
+                                    <MoreHorizontal size={16} />
+                                </button>
+                            </div>
+
+                            {/* Media */}
+                            {post.media && post.media.length > 0 ? (
+                                <MediaCarousel media={post.media} isPlaying={playingPostId === post.id} />
                             ) : (
-                                <img
-                                    src={post.media_url}
-                                    alt="Post"
-                                    className="w-full h-full object-contain bg-black"
-                                />
+                                <div className="bg-neutral-900 w-full relative aspect-[4/5] max-h-[500px] overflow-hidden rounded-sm">
+                                    {post.type === 'video' ? (
+                                        <div className="w-full h-full flex items-center justify-center bg-black group">
+                                            <video
+                                                ref={el => {
+                                                    if (el) {
+                                                        if (playingPostId === post.id) {
+                                                            const promise = el.play();
+                                                            if (promise !== undefined) {
+                                                                promise.catch(() => { });
+                                                            }
+                                                        } else {
+                                                            el.pause();
+                                                        }
+                                                    }
+                                                }}
+                                                src={post.media_url}
+                                                className="w-full h-full object-contain cursor-pointer"
+                                                playsInline
+                                                loop
+                                                muted
+                                                onClick={togglePlayPause}
+                                            />
+                                            <button
+                                                className="absolute bottom-3 right-3 bg-black/50 p-1.5 rounded-full backdrop-blur-sm text-white hover:bg-black/70 transition-colors active:scale-95"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    const v = e.currentTarget.parentElement?.querySelector('video');
+                                                    if (v) v.muted = !v.muted;
+                                                }}
+                                            >
+                                                <Music2 size={12} />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center bg-black">
+                                            <img src={post.media_url} alt="Post" className="w-full h-full object-contain" />
+                                        </div>
+                                    )}
+                                </div>
                             )}
 
-                            {/* Post Overlay Info */}
-                            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent pt-20">
-                                <div className="flex items-center justify-between mb-2">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-8 h-8 rounded-full bg-neutral-800 overflow-hidden">
-                                            {/* Avatar fallback if not available in post object, assume passed or generic */}
-                                            <div className="w-full h-full bg-gym-primary flex items-center justify-center font-bold text-black text-xs">
-                                                {post.profiles?.username?.[0] || '?'}
-                                            </div>
-                                        </div>
-                                        <span className="font-bold text-white text-sm">{post.profiles?.username || 'Usuario'}</span>
-                                    </div>
-                                    <button onClick={() => setMuted(!muted)} className="p-2 text-white/80">
-                                        {muted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+                            {/* Actions */}
+                            <div className="px-3 py-3">
+                                <div className="flex items-center gap-4 mb-3">
+                                    <button
+                                        onClick={() => handleLike(post)}
+                                        className="transition-transform active:scale-95"
+                                    >
+                                        <Heart
+                                            size={24}
+                                            className={post.user_has_liked ? "text-red-500 fill-red-500" : "text-white"}
+                                        />
+                                    </button>
+                                    <button
+                                        className="text-white hover:text-neutral-300 transition-transform active:scale-95"
+                                    >
+                                        <MessageCircle size={24} />
+                                    </button>
+                                    <button
+                                        className="text-white hover:text-neutral-300 ml-auto transition-transform active:scale-95"
+                                    >
+                                        <Share2 size={24} />
                                     </button>
                                 </div>
 
-                                <p className="text-white text-sm mb-4 line-clamp-2">{post.caption}</p>
+                                {/* Likes Count */}
+                                <div className="mb-2">
+                                    <span className="font-bold text-sm text-white">{post.likes_count} Me gusta</span>
+                                </div>
 
-                                {/* Actions Bar */}
-                                <div className="flex items-center gap-6">
-                                    <button
-                                        onClick={(e) => handleLike(post, e)}
-                                        className={`flex flex-col items-center gap-1 ${post.user_has_liked ? 'text-red-500' : 'text-white'}`}
-                                    >
-                                        <Heart size={24} fill={post.user_has_liked ? "currentColor" : "none"} />
-                                        <span className="text-xs font-bold">{post.likes_count}</span>
-                                    </button>
-
-                                    <button className="flex flex-col items-center gap-1 text-white">
-                                        <MessageCircle size={24} />
-                                        <span className="text-xs font-bold">0</span> {/* Placeholder for comments_count */}
-                                    </button>
-
-                                    <button className="flex flex-col items-center gap-1 text-white">
-                                        <Share2 size={24} />
-                                        <span className="text-xs font-bold">Share</span>
-                                    </button>
+                                {/* Caption */}
+                                <div>
+                                    <span className="font-bold text-white mr-2 text-sm">{post.profiles?.username}</span>
+                                    <span className="text-sm text-white/90">{post.caption}</span>
+                                </div>
+                                <div className="mt-1">
+                                     <button className="text-neutral-500 text-xs">Ver los comentarios</button>
                                 </div>
                             </div>
                         </div>
-                    );
-                })}
+                    ))}
+                </div>
             </div>
         </div>
     );
 };
+```
