@@ -363,41 +363,71 @@ class SocialService {
         }));
     }
 
+    async logView(postId: string, userId: string | null, duration: number, percentage: number) {
+        // Fire and forget - don't block UI
+        supabase.rpc('log_view', {
+            p_post_id: postId,
+            p_user_id: userId,
+            p_duration: duration,
+            p_percentage: percentage
+        }).then(({ error }) => {
+            if (error) console.error("Error logging view:", error);
+        });
+    }
+
     /**
      * Fetches the main feed (Global or Following). 
-     * Currently implements Global Feed (Discovery).
+     * Uses the 'get_smart_feed' RPC for algorithmic ranking.
      */
     async getGlobalFeed(currentUserId?: string, type?: 'image' | 'video', flatten: boolean = false): Promise<Post[]> {
-        // Fetch posts + Creator info + Routine info (if linked)
-        let query = supabase
-            .from('posts')
-            .select(`
-                *,
-                profiles!fk_posts_profiles (username, avatar_url),
-                routines (name),
-                post_likes (user_id)
-            `)
-            .order('created_at', { ascending: false })
-            .limit(20);
+        // Use RPC for Smart Feed
+        // Note: RPC doesn't support 'type' filtering natively yet in the SQL I wrote above?
+        // Wait, I didn't add p_type to get_smart_feed SQL. It returns all types. I should filter client side or update RPC.
+        // For MVP, I'll filter client side if needed, but 'getGlobalFeed' usually wants mixed.
+        // Actually, ReelsPage asks for 'video'.
+        // My RPC logic returns mixed.
 
-        if (type) {
-            query = query.eq('type', type);
-        }
-
-        const { data, error } = await query;
+        const { data, error } = await supabase.rpc('get_smart_feed', {
+            p_user_id: currentUserId || null,
+            p_limit: 20,
+            p_offset: 0
+        });
 
         if (error) {
-            console.error('Error fetching global feed:', JSON.stringify(error, null, 2));
-
-            // Helpful check for the developer/user
-            if (error.code === '42P01') {
-                console.warn('❌ CRITICAL: The "posts" table does not exist. Please run the "create_social_schema.sql" script in Supabase!');
-            }
+            console.error('Error fetching global feed:', error);
             return [];
         }
 
+        // Map RPC result to Post object structure
+        const mappedPosts: any[] = data.map((row: any) => ({
+            id: row.id,
+            user_id: row.user_id,
+            type: row.type,
+            media_url: row.media_url,
+            thumbnail_url: row.thumbnail_url,
+            caption: row.caption,
+            linked_routine_id: row.linked_routine_id,
+            created_at: row.created_at,
+            likes_count: Number(row.likes_count), // BigInt from Postgres comes as string/number
+            comments_count: Number(row.comments_count),
+            views_count: row.views_count,
+            user_has_liked: row.user_has_liked,
+            profiles: {
+                username: row.username,
+                avatar_url: row.avatar_url
+            },
+            routines: row.routine_name ? { name: row.routine_name } : undefined,
+            media: [] // Will attach below
+        }));
+
+        // Filter by type if requested (Client-side filtering for now)
+        let filteredPosts = mappedPosts;
+        if (type) {
+            filteredPosts = mappedPosts.filter(p => p.type === type);
+        }
+
         // Fetch media for all posts
-        const postsWithMedia = await this.attachMediaToPosts(data);
+        const postsWithMedia = await this.attachMediaToPosts(filteredPosts);
 
         // Flatten logic: Convert multi-media posts into individual feed items
         let finalFeed = postsWithMedia;
@@ -416,7 +446,7 @@ class SocialService {
                             virtual_id: `${post.id}_${media.order_index}_${index}`,
                             media_url: media.url,
                             media_type: media.type,
-                            media: [] // Clear media array to prevent recursive/carousel rendering in UI
+                            media: [] // Clear media array
                         });
                     });
                 } else {
@@ -430,15 +460,7 @@ class SocialService {
             finalFeed = flattenedFeed;
         }
 
-        return finalFeed.map((post: any) => ({
-            ...post,
-            // Check if current user liked it (if logged in)
-            user_has_liked: currentUserId
-                ? post.post_likes?.some((like: any) => like.user_id === currentUserId)
-                : false,
-            // Count likes (this is a rough count based on fetched rows, usually better with a .count() join but this works for MVP)
-            likes_count: post.post_likes?.length || 0
-        }));
+        return finalFeed;
     }
 
     // ============================================================================

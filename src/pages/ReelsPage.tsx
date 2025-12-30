@@ -47,7 +47,9 @@ export const ReelsPage = () => {
         setLoading(false);
     };
 
-    // Intersection Observer for Auto-Play & Smart Preloading
+    const viewStartTimes = useRef<{ [key: string]: number }>({});
+
+    // Intersection Observer for Auto-Play, Smart Preloading & ANALYTICS
     useEffect(() => {
         const observer = new IntersectionObserver(
             (entries) => {
@@ -55,29 +57,52 @@ export const ReelsPage = () => {
                     const video = entry.target as HTMLVideoElement;
                     const isVisible = entry.intersectionRatio >= 0.7;
 
+                    // Identify the Post ID from the video element ref
+                    const currentId = Object.keys(videoRefs.current).find(key => videoRefs.current[key] === video);
+                    if (!currentId) return;
+
                     if (isVisible) {
                         // Play current video
                         video.currentTime = 0;
                         video.play().catch(() => { });
                         video.preload = 'auto';
 
+                        // ⏱️ START TIMER for Analytics
+                        viewStartTimes.current[currentId] = Date.now();
+
                         // Smart Preload Next Video
-                        const currentId = Object.keys(videoRefs.current).find(key => videoRefs.current[key] === video);
-                        if (currentId) {
-                            const currentIndex = posts.findIndex(p => ((p as any).virtual_id || p.id) === currentId);
-                            if (currentIndex !== -1 && currentIndex < posts.length - 1) {
-                                const nextPost = posts[currentIndex + 1];
-                                const nextVideo = videoRefs.current[(nextPost as any).virtual_id || nextPost.id];
-                                if (nextVideo) {
-                                    nextVideo.preload = 'auto';
-                                }
+                        const currentIndex = posts.findIndex(p => ((p as any).virtual_id || p.id) === currentId);
+                        if (currentIndex !== -1 && currentIndex < posts.length - 1) {
+                            const nextPost = posts[currentIndex + 1];
+                            const nextVideo = videoRefs.current[(nextPost as any).virtual_id || nextPost.id];
+                            if (nextVideo) {
+                                nextVideo.preload = 'auto';
                             }
                         }
 
                     } else {
                         video.pause();
-                        // Optional: Reset preload to save bandwidth if scrolled away
-                        // video.preload = 'none'; 
+
+                        // ⏱️ LOG VIEW (Analytics)
+                        const startTime = viewStartTimes.current[currentId];
+                        if (startTime) {
+                            const durationSeconds = (Date.now() - startTime) / 1000;
+
+                            // Only log significant views (> 1 second) to filter accidental swipes
+                            if (durationSeconds > 1.0) {
+                                const vidDuration = video.duration || 10;
+                                const percentage = Math.min(1.0, durationSeconds / vidDuration);
+
+                                // Extract clean ID (remove virtual suffix if present)
+                                const cleanId = currentId.split('_')[0];
+
+                                console.log(`[ReelsAnalytics] Viewed ${cleanId} for ${durationSeconds.toFixed(1)}s (${(percentage * 100).toFixed(0)}%)`);
+
+                                socialService.logView(cleanId, user?.id || null, durationSeconds, percentage);
+                            }
+
+                            delete viewStartTimes.current[currentId];
+                        }
                     }
                 });
             },
@@ -89,7 +114,7 @@ export const ReelsPage = () => {
         });
 
         return () => observer.disconnect();
-    }, [posts]);
+    }, [posts, user]);
 
     const handleLike = async (post: Post, e: React.MouseEvent) => {
         e.stopPropagation(); // Prevent toggling mute
