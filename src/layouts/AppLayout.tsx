@@ -14,8 +14,8 @@ export const AppLayout = () => {
 
     return (
         <div className="h-[100dvh] bg-neutral-950 text-white flex flex-col overflow-hidden">
-            {/* Navbar - Premium Glassmorphism (Hidden on Reels) */}
-            {!isReelsPage && (
+            {/* Top Navigation - Hidden on Reels and when logged out */}
+            {user && !isReelsPage && (
                 <nav className="border-b border-white/5 bg-neutral-950/80 backdrop-blur-xl sticky top-0 z-50 transition-all duration-300 shrink-0">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="flex items-center justify-between h-16 sm:h-20">
@@ -151,8 +151,8 @@ export const AppLayout = () => {
             {isUploadModalOpen && <UploadModal onClose={() => setIsUploadModalOpen(false)} onSuccess={() => setIsUploadModalOpen(false)} />}
 
             {/* MOBILE BOTTOM NAVIGATION (Static Block at Bottom) */}
-            {/* Conditional Rendering logic for 'active' or specific pages can be handled here if needed, but flex layout handles visibility automatically */}
-            <BottomNav onUploadClick={() => setIsUploadModalOpen(true)} />
+            {/* Only show when user is authenticated */}
+            {user && <BottomNav onUploadClick={() => setIsUploadModalOpen(true)} />}
 
             {/* Premium GymRat Footer */}
 
