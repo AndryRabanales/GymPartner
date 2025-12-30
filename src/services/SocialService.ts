@@ -386,11 +386,10 @@ class SocialService {
      * Fetches the main feed (Global or Following) using Smart Feed Algorithm.
      */
     async getGlobalFeed(currentUserId?: string, type?: 'image' | 'video', flatten: boolean = false): Promise<Post[]> {
-
-        // Use Smart Feed V2 (which now supports p_type filtering on server side)
+        // Force Algorithm V3 usage for ALL feeds (Reels & Community)
         let { data, error } = await supabase.rpc('get_smart_feed_v2', {
             p_user_id: currentUserId || null,
-            p_limit: 20,
+            p_limit: 40, // Increased limit for better ranking diversity
             p_offset: 0,
             p_type: type || null // Pass filters to SQL
         });

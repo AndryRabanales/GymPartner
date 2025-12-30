@@ -63,8 +63,8 @@ BEGIN
 END $$;
 
 
--- 3. REPAIR SMART FEED RPC (V3 - Robust & Filtered)
---    This handles the "p_type" filter correctly so Reels aren't empty.
+-- 3. REPAIR SMART FEED RPC (V3 - AGGRESSIVE INTERACTION)
+--    This handles the "p_type" filter and uses exponential decay (Gravity)
 CREATE OR REPLACE FUNCTION get_smart_feed_v2(
     p_user_id UUID DEFAULT NULL,
     p_limit INTEGER DEFAULT 10,
@@ -91,6 +91,19 @@ CREATE OR REPLACE FUNCTION get_smart_feed_v2(
 ) AS $$
 BEGIN
     RETURN QUERY
+    WITH engagement_stats AS (
+        SELECT 
+            p.id as post_id,
+            (SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.id) as l_count,
+            (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) as c_count,
+            -- Estimate loops from viral_score or sum if we had the column, 
+            -- here we use a derived engagement factor (likes + comments) as base
+            -- and multiply by boost_factor which is influenced by logView
+            COALESCE(p.views_count, 0) as v_count,
+            COALESCE(p.retention_score, 0) as r_score,
+            COALESCE(p.boost_factor, 1.0) as b_factor
+        FROM posts p
+    )
     SELECT 
         p.id,
         p.user_id,
@@ -102,10 +115,10 @@ BEGIN
         p.created_at,
         
         -- Counts
-        (SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.id) as likes_count,
-        (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) as comments_count,
-        COALESCE(p.views_count, 0) as views_count, 
-        COALESCE(p.retention_score, 0) as retention_score,
+        est.l_count as likes_count,
+        est.c_count as comments_count,
+        est.v_count as views_count, 
+        est.r_score as retention_score,
         
         -- User Context
         CASE WHEN p_user_id IS NOT NULL THEN
@@ -117,23 +130,30 @@ BEGIN
         pr.avatar_url,
         r.name as routine_name,
 
-        -- 🧪 ALGORITHM V2.0 (Safe Version)
+        -- 🧪 ALGORITHM V3.0 (AGGRESSIVE DECAY)
+        -- Gravity: (BaseScore) / (TimeHours + 2)^1.8
+        -- We multiply by 1000 to keep the numbers readable in Rank Score
         (
-            (COALESCE((SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.id), 0) * 3.0) + 
-            (COALESCE((SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id), 0) * 6.0) +  
-            (COALESCE(p.retention_score, 0) * 0.5) +
-            (CASE 
-                WHEN p.created_at > NOW() - INTERVAL '24 hours' THEN 100 
-                ELSE 0 
-            END) +
-            (random() * 30.0)
-        ) * COALESCE(p.boost_factor, 1.0) as rank_score
+            (
+                (est.l_count * 15.0) +      -- 1 Like = 15 points
+                (est.c_count * 25.0) +      -- 1 Comment = 25 points
+                (est.r_score * 2.0) +       -- Retention impact
+                (random() * 5.0)            -- Slight shuffle for variety
+            ) 
+            * est.b_factor                  -- Boost Factor (Loops multiply score heavily)
+            * 1000.0                        -- Scale factor
+            / 
+            POWER(
+                (EXTRACT(EPOCH FROM (NOW() - p.created_at)) / 3600.0) + 2.0, 
+                1.3 -- Decay speed (1.8 is fast, 1.2 is moderate)
+            )
+        )::NUMERIC as rank_score
 
     FROM posts p
+    JOIN engagement_stats est ON p.id = est.post_id
     LEFT JOIN profiles pr ON p.user_id = pr.id
     LEFT JOIN routines r ON p.linked_routine_id = r.id
     
-    -- ✅ CRITICAL FIX: Server-side Type Filtering
     WHERE (p_type IS NULL OR p.type = p_type)
     
     ORDER BY rank_score DESC, p.created_at DESC

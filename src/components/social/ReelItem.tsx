@@ -168,12 +168,6 @@ export const ReelItem: React.FC<ReelItemProps> = React.memo(({
                         </div>
                     </div>
 
-                    {/* 🧠 AI DEBUG SCORE */}
-                    <div className="mb-2 bg-yellow-500/20 border border-yellow-500/50 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-mono text-yellow-500 inline-block">
-                        <span className="font-extrabold mr-1">AI RANK:</span>
-                        {post.debug_score !== undefined ? Math.round(post.debug_score) : 'N/A'}
-                    </div>
-
                     {/* Caption */}
                     <p className="text-xs opacity-95 mb-2 line-clamp-2 leading-tight pr-2 drop-shadow-sm font-light">
                         <span className="font-semibold mr-1">{post.profiles?.username}</span>
