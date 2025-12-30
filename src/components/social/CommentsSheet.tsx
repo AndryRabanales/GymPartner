@@ -111,8 +111,8 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ postId, onClose })
                 <div ref={messagesEndRef} />
             </div>
 
-            {/* Input */}
-            <form onSubmit={handleSubmit} className="p-4 border-t border-white/5 bg-neutral-900 pb-8 md:pb-4">
+            {/* Input - Added padding to clear BottomNav */}
+            <form onSubmit={handleSubmit} className="p-4 border-t border-white/5 bg-neutral-900 pb-24 md:pb-4">
                 <div className="relative flex items-center gap-2">
                     <input
                         type="text"
