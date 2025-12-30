@@ -572,6 +572,20 @@ export const UserProfile = () => {
                     </div>
                     <span className="font-bold text-neutral-200 group-hover:text-white text-xs md:text-base">Historial</span>
                 </Link>
+
+                {/* INVITE FRIENDS - MOVED HERE */}
+                <button
+                    onClick={() => setShowReferralModal(true)}
+                    className="col-span-2 sm:col-span-1 group bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/20 hover:border-yellow-500/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md"
+                >
+                    <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-yellow-500 text-black flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-yellow-500/20">
+                        <UserPlus size={18} strokeWidth={2.5} />
+                    </div>
+                    <div className="flex flex-col">
+                        <span className="font-black text-yellow-500 text-xs md:text-base">INVITAR</span>
+                        <span className="text-[10px] font-bold text-yellow-500/70">+250 XP</span>
+                    </div>
+                </button>
             </div>
 
             {/* TERRITORIES SECTION (PASSPORT) */}
@@ -721,20 +735,7 @@ export const UserProfile = () => {
 
             </div>
 
-            {/* 3. FLOAT: REFERRAL REWARD BUTTON */}
-            <div className="fixed bottom-6 right-6 z-40">
-                <button
-                    onClick={() => setShowReferralModal(true)}
-                    className="bg-yellow-500 text-black font-black py-2 px-5 rounded-3xl shadow-[0_0_30px_rgba(234,179,8,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3 border-4 border-black group animate-in slide-in-from-bottom-10 duration-700"
-                    title="Invitar Reclutas (+250 XP)"
-                >
-                    <UserPlus size={28} className="group-hover:rotate-12 transition-transform duration-300" strokeWidth={2.5} />
-                    <div className="flex flex-col items-start leading-none">
-                        <span className="text-sm md:text-base uppercase tracking-wider font-black">INVITAR AMIGOS</span>
-                        <span className="text-[10px] md:text-xs font-bold text-black/70 uppercase tracking-tight">Gana +250 XP</span>
-                    </div>
-                </button>
-            </div>
+
 
             {/* MODALS */}
             <ReferralModal

@@ -1,12 +1,12 @@
-import { Dumbbell, MapPin, Menu, LogIn, Trophy, Users, LogOut, PlusSquare, Film } from 'lucide-react';
+import { MapPin, LogIn, LogOut, PlusSquare } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link, Outlet } from 'react-router-dom';
 import { UploadModal } from '../components/social/UploadModal';
+import { BottomNav } from '../components/navigation/BottomNav';
 
 export const AppLayout = () => {
     const { user, signOut } = useAuth();
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
     return (
@@ -113,7 +113,10 @@ export const AppLayout = () => {
                                         </div>
                                     </div>
                                 </div>
-                            ) : (
+                            ) : null}
+
+                            {/* Desktop/Mobile Login Link if not logged in */}
+                            {!user && (
                                 <Link
                                     to="/login"
                                     className="hidden md:flex items-center gap-2 bg-gym-primary text-black hover:bg-yellow-400 px-6 py-2.5 rounded-full text-sm font-black tracking-wide transition-all shadow-[0_0_20px_rgba(250,204,21,0.15)] hover:shadow-[0_0_30px_rgba(250,204,21,0.3)] hover:-translate-y-0.5 no-underline"
@@ -122,75 +125,27 @@ export const AppLayout = () => {
                                     <span>ENTRAR</span>
                                 </Link>
                             )}
-
-                            {/* Mobile Menu Button - Glassy */}
-                            <button
-                                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                                className="md:hidden w-10 h-10 rounded-xl bg-neutral-900 border border-white/10 flex items-center justify-center text-neutral-400 hover:text-white hover:border-gym-primary/50 transition-all active:scale-95"
-                            >
-                                <Menu size={20} />
-                            </button>
                         </div>
                     </div>
                 </div>
 
-                {/* Mobile Menu Overlay */}
-                {isMobileMenuOpen && (
-                    <div className="md:hidden absolute top-[calc(100%+1px)] left-0 w-full bg-neutral-950/95 backdrop-blur-2xl border-b border-white/10 shadow-2xl animate-in slide-in-from-top-2 duration-200">
-                        <div className="flex flex-col p-4 space-y-2">
-                            {[
-                                { to: "/", label: "INICIO", icon: <Dumbbell size={18} className="text-gym-primary" /> },
-                                { to: "/reels", label: "REELS", icon: <Film size={18} className="text-pink-500" /> },
-                                { to: "/map", label: "MAPA", icon: <MapPin size={18} className="text-blue-400" /> },
-                                { to: "/ranking", label: "RANKINGS", icon: <Trophy size={18} className="text-yellow-400" /> },
-                                { to: "/community", label: "COMUNIDAD", icon: <Users size={18} className="text-green-400" /> }
-                            ].map((item) => (
-                                <Link
-                                    key={item.to}
-                                    to={item.to}
-                                    onClick={() => setIsMobileMenuOpen(false)}
-                                    className="px-4 py-4 rounded-2xl bg-neutral-900/50 border border-white/5 hover:bg-white/10 text-neutral-300 hover:text-white font-bold text-sm flex items-center gap-4 transition-all no-underline"
-                                >
-                                    {item.icon}
-                                    <span>{item.label}</span>
-                                </Link>
-                            ))}
+                {/* Mobile Menu Overlay - REMOVED (Replaced by Bottom Nav) */}
 
-                            {/* Mobile User Actions */}
-                            {user && (
-                                <>
-                                    <div className="h-px bg-white/5 my-2"></div>
-                                    <button
-                                        onClick={() => { setIsMobileMenuOpen(false); setIsUploadModalOpen(true); }}
-                                        className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl bg-neutral-900/50 border border-white/5 hover:bg-white/10 text-neutral-300 hover:text-white font-bold text-sm transition-all"
-                                    >
-                                        <PlusSquare size={18} className="text-yellow-500" />
-                                        <span>CREAR POST</span>
-                                    </button>
-                                    <div className="h-px bg-white/5 my-2"></div>
-                                    <button
-                                        onClick={() => { signOut(); setIsMobileMenuOpen(false); }}
-                                        className="mt-2 w-full flex items-center justify-center gap-2 bg-red-500/10 border border-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 rounded-2xl py-4 font-black tracking-wide text-sm transition-all"
-                                    >
-                                        <span>CERRAR SESIÓN</span>
-                                    </button>
-                                </>
-                            )}
-                        </div>
-                    </div>
-                )}
             </nav>
 
             {/* Main Content */}
-            <main className="flex-1 flex flex-col">
+            <main className="flex-1 flex flex-col mb-16 md:mb-0">
                 <Outlet />
             </main>
 
             {/* Global Modals */}
             {isUploadModalOpen && <UploadModal onClose={() => setIsUploadModalOpen(false)} onSuccess={() => setIsUploadModalOpen(false)} />}
 
+            {/* MOBILE BOTTOM NAVIGATION */}
+            <BottomNav onUploadClick={() => setIsUploadModalOpen(true)} />
+
             {/* Premium GymRat Footer */}
-            <footer className="border-t border-neutral-900 bg-neutral-950 pt-16 pb-8 mt-auto relative overflow-hidden">
+            <footer className="border-t border-neutral-900 bg-neutral-950 pt-16 pb-24 md:pb-8 mt-auto relative overflow-hidden">
                 {/* Background Grid Pattern */}
                 <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none"></div>
 
