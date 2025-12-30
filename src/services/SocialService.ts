@@ -292,12 +292,12 @@ class SocialService {
     /**
      * Fetches posts for a specific user's profile (Grid or Reels tab).
      */
-    async getUserPosts(userId: string, type?: 'image' | 'video'): Promise<Post[]> {
+    async getUserPosts(userId: string, type?: 'image' | 'video', currentUserId?: string): Promise<Post[]> {
         let query = supabase
             .from('posts')
             .select(`
                 *,
-                post_likes (count),
+                post_likes (user_id),
                 profiles!fk_posts_profiles (username, avatar_url)
             `)
             .eq('user_id', userId)
@@ -317,11 +317,14 @@ class SocialService {
         // Fetch media for all posts
         const postsWithMedia = await this.attachMediaToPosts(data);
 
-        // Transform to include simple counts
+        // Transform
         return postsWithMedia.map((post: any) => ({
             ...post,
-            likes_count: post.post_likes?.[0]?.count || 0,
-            profiles: post.profiles // Explicitly ensure profile is passed
+            likes_count: post.post_likes?.length || 0,
+            user_has_liked: currentUserId
+                ? post.post_likes?.some((like: any) => like.user_id === currentUserId)
+                : false,
+            profiles: post.profiles
         }));
     }
 

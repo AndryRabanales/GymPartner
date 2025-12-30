@@ -54,13 +54,13 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
     // Fetch Posts/Routines when tab changes
     useEffect(() => {
         if (activeTab === 'grid') {
-            socialService.getUserPosts(player.id).then(setPosts);
+            socialService.getUserPosts(player.id, undefined, user?.id).then(setPosts);
         } else if (activeTab === 'reels') {
-            socialService.getUserPosts(player.id, 'video').then(setPosts);
+            socialService.getUserPosts(player.id, 'video', user?.id).then(setPosts);
         } else if (activeTab === 'routines') {
             userService.getUserPublicRoutines(player.id).then(setPublicRoutines);
         }
-    }, [activeTab, player.id]);
+    }, [activeTab, player.id, user?.id]);
 
     const handleFollowToggle = async () => {
         if (!user) return;

@@ -15,10 +15,16 @@ interface FeedViewerOverlayProps {
 
 export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPostId, posts, onClose }) => {
     const { user } = useAuth();
+    const [localPosts, setLocalPosts] = useState<Post[]>(posts);
     const [playingPostId, setPlayingPostId] = useState<string | null>(null);
     const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const itemRefs = useRef<{ [key: string]: HTMLDivElement }>({});
+
+    // Update local posts if prop changes (rare in this modal context but good practice)
+    useEffect(() => {
+        setLocalPosts(posts);
+    }, [posts]);
 
     // Scroll to initial post
     useEffect(() => {
@@ -57,7 +63,7 @@ export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPos
         });
 
         return () => observer.disconnect();
-    }, [posts]);
+    }, [localPosts]);
 
     const handleShare = async (post: Post) => {
         try {
@@ -76,6 +82,17 @@ export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPos
 
     const handleLike = async (post: Post) => {
         if (!user) return;
+
+        // Optimistic Update
+        const isLiked = post.user_has_liked;
+        const newCount = (post.likes_count || 0) + (isLiked ? -1 : 1);
+
+        setLocalPosts(prev => prev.map(p => p.id === post.id ? {
+            ...p,
+            user_has_liked: !isLiked,
+            likes_count: newCount
+        } : p));
+
         await socialService.toggleLike(user.id, post.id);
     };
 
@@ -108,7 +125,7 @@ export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPos
                 className="flex-1 overflow-y-auto bg-black pb-20 custom-scrollbar"
             >
                 <div className="max-w-md mx-auto pt-4">
-                    {posts.map((post) => (
+                    {localPosts.map((post) => (
                         <div
                             key={post.id}
                             ref={el => { if (el) itemRefs.current[post.id] = el }}
