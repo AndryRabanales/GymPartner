@@ -1098,9 +1098,9 @@ export const MyArsenal = () => {
                         <button
                             onClick={handleSaveRoutine}
                             disabled={isSaving}
-                            className="md:hidden w-8 h-8 flex items-center justify-center bg-gym-primary rounded-lg text-black shadow-[0_0_15px_rgba(250,204,21,0.3)]"
+                            className="md:hidden w-12 h-12 flex items-center justify-center bg-green-500 hover:bg-green-400 rounded-xl text-white shadow-[0_0_15px_rgba(34,197,94,0.5)] transition-all active:scale-95"
                         >
-                            {isSaving ? <Loader size={14} className="animate-spin" /> : <Check size={16} strokeWidth={3} />}
+                            {isSaving ? <Loader size={20} className="animate-spin" /> : <Check size={28} strokeWidth={4} />}
                         </button>
 
                         {/* Desktop Save Button (Full) */}
