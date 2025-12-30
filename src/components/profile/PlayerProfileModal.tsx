@@ -291,7 +291,14 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
                 </div>
             </div>
 
+            {/* Feed Viewer Overlay */}
+            {viewedPostId && (
+                <FeedViewerOverlay
+                    initialPostId={viewedPostId}
+                    posts={posts}
+                    onClose={() => setViewedPostId(null)}
+                />
+            )}
         </div>
-        </div >
     );
 };
