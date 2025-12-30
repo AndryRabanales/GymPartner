@@ -365,7 +365,6 @@ class SocialService {
 
     async logView(postId: string, userId: string | null, duration: number, percentage: number, loops: number = 0) {
         // Fire and forget - don't block UI
-        // Use v2 logic if available, passing loops
         supabase.rpc('log_view_v2', {
             p_post_id: postId,
             p_user_id: userId,
@@ -374,58 +373,61 @@ class SocialService {
             p_loops: loops
         }).then(({ error }) => {
             if (error) {
-                // Fallback to V1 if V2 not deployed yet
-                console.warn("log_view_v2 failed, trying V1:", error.message);
-                supabase.rpc('log_view', {
-                    p_post_id: postId,
-                    p_user_id: userId,
-                    p_duration: duration,
-                    p_percentage: percentage
-                });
+                // Silent fail or fallback
+                console.warn("Analytics error:", error.message);
             }
         });
     }
 
     /**
-     * Fetches the main feed (Global or Following). 
-     * Uses the 'get_smart_feed_v2' RPC for algorithmic ranking V2.
+     * Fetches the main feed (Global or Following) using Smart Feed Algorithm.
      */
     async getGlobalFeed(currentUserId?: string, type?: 'image' | 'video', flatten: boolean = false): Promise<Post[]> {
 
-        // Try V2 Algorithm
+        // Use Smart Feed V2 (which now supports p_type filtering on server side)
         let { data, error } = await supabase.rpc('get_smart_feed_v2', {
             p_user_id: currentUserId || null,
             p_limit: 20,
-            p_offset: 0
+            p_offset: 0,
+            p_type: type || null // Pass filters to SQL
         });
 
-        // Fallback to V1 if V2 function doesn't exist
+        // Fallback: If RPC fails (e.g., function not found), use raw query
         if (error) {
-            console.log('Smart Feed V2 not available, falling back to V1 or standard query...');
-            const v1 = await supabase.rpc('get_smart_feed', {
-                p_user_id: currentUserId || null,
-                p_limit: 20,
-                p_offset: 0
-            });
-            if (!v1.error) {
-                data = v1.data;
-                error = null;
-            } else {
-                // Final Fallback: Raw Query
-                console.error('Smart Feed V1 also failed. Using raw query.');
-                // ... (We return empty here for brevity or implement raw fallback)
+            console.warn('Smart Feed V2 unavailable. Using fallback query.', error.message);
+
+            let query = supabase
+                .from('posts')
+                .select(`
+                    *,
+                    profiles!fk_posts_profiles (username, avatar_url),
+                    routines (name),
+                    post_likes (user_id)
+                `)
+                .order('created_at', { ascending: false })
+                .limit(20);
+
+            if (type) {
+                query = query.eq('type', type);
             }
+
+            const result = await query;
+            data = result.data;
+            error = result.error as any;
         }
 
         if (error || !data) {
-            // If all RPCs fail, return empty (standard query logic removed to force adoption of algo or simple failover)
-            // Re-implementing raw query fallback inline is complex due to flattening logic duplication.
-            // We'll assume the user runs the SQL script.
-            console.error('Error fetching global feed (All methods failed):', error);
+            console.error('Error fetching global feed:', error);
             return [];
         }
 
-        // Map RPC result to Post object structure
+        // Map RPC result (or Query result) to Post object structure
+        // Note: Raw query returns nested objects, RPC returns flat fields.
+        // We need to handle both shapes if we support fallback, 
+        // BUT for simplicity in this repair, we assume RPC structure mostly or force standard mapping.
+        // Actually, fallback query returns different shape (profiles is object vs username string).
+        // Let's assume RPC works if SQL script is run.
+
         const mappedPosts: any[] = data.map((row: any) => ({
             id: row.id,
             user_id: row.user_id,
@@ -435,53 +437,55 @@ class SocialService {
             caption: row.caption,
             linked_routine_id: row.linked_routine_id,
             created_at: row.created_at,
-            likes_count: Number(row.likes_count), // BigInt from Postgres comes as string/number
-            comments_count: Number(row.comments_count),
+
+            // Likes/Comments are counts in RPC, or arrays in Raw Query
+            likes_count: typeof row.likes_count === 'number' || typeof row.likes_count === 'string'
+                ? Number(row.likes_count)
+                : (row.post_likes?.length || 0),
+
+            comments_count: typeof row.comments_count === 'number' || typeof row.comments_count === 'string'
+                ? Number(row.comments_count)
+                : 0, // Raw query doesn't fetch comment count easily without aggregate
+
             views_count: row.views_count,
-            user_has_liked: row.user_has_liked,
-            profiles: {
+
+            // Liked Status
+            user_has_liked: row.user_has_liked !== undefined
+                ? row.user_has_liked
+                : (currentUserId ? row.post_likes?.some((l: any) => l.user_id === currentUserId) : false),
+
+            // Profiles (RPC returns flat username/avatar, Query returns object)
+            profiles: row.profiles || {
                 username: row.username,
                 avatar_url: row.avatar_url
             },
-            routines: row.routine_name ? { name: row.routine_name } : undefined,
+
+            routines: row.routines || (row.routine_name ? { name: row.routine_name } : undefined),
+
             media: [] // Will attach below
         }));
 
-        // Filter by type if requested (Client-side filtering for now)
-        let filteredPosts = mappedPosts;
-        if (type) {
-            filteredPosts = mappedPosts.filter(p => p.type === type);
-        }
+        // Fetch media for all posts (Universal for both methods)
+        const postsWithMedia = await this.attachMediaToPosts(mappedPosts);
 
-        // Fetch media for all posts
-        const postsWithMedia = await this.attachMediaToPosts(filteredPosts);
-
-        // Flatten logic: Convert multi-media posts into individual feed items
+        // Flatten logic
         let finalFeed = postsWithMedia;
-
         if (flatten) {
             const flattenedFeed: any[] = [];
-
             postsWithMedia.forEach((post: any) => {
                 const mediaItems = post.media || [];
-
                 if (mediaItems.length > 0) {
-                    // Create a feed item for EACH media file
                     mediaItems.forEach((media: any, index: number) => {
                         flattenedFeed.push({
                             ...post,
                             virtual_id: `${post.id}_${media.order_index}_${index}`,
                             media_url: media.url,
                             media_type: media.type,
-                            media: [] // Clear media array
+                            media: []
                         });
                     });
                 } else {
-                    // Fallback for legacy posts
-                    flattenedFeed.push({
-                        ...post,
-                        virtual_id: post.id
-                    });
+                    flattenedFeed.push({ ...post, virtual_id: post.id });
                 }
             });
             finalFeed = flattenedFeed;

@@ -120,6 +120,10 @@ export const ReelsPage = () => {
         return () => observer.disconnect();
     }, [posts, user]);
 
+    // ... (rest of file)
+
+
+
     const handleLike = async (post: Post, e: React.MouseEvent) => {
         e.stopPropagation(); // Prevent toggling mute
         if (!user) return alert("Inicia sesión para dar like ❤️");

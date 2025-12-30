@@ -40,7 +40,6 @@ export const WorkoutSession = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const { gymId: routeGymId } = useParams<{ gymId: string }>();
-    const LOCAL_STORAGE_KEY = `gp_workout_session_${user?.id}`; // Unique per user
 
     // State
     const [loading, setLoading] = useState(true);
@@ -81,25 +80,6 @@ export const WorkoutSession = () => {
         const interval = setInterval(tick, 1000);
         return () => clearInterval(interval);
     }, [startTime, isFinished]);
-
-    // 💾 AUTO-SAVE EFFECT (Local Persistence)
-    useEffect(() => {
-        if (loading) return; // Don't save during initialization
-
-        if (activeExercises.length > 0 || sessionId) {
-            const stateToSave = {
-                sessionId,
-                startTime, // Date object serializes to string
-                activeExercises,
-                resolvedGymId,
-                timestamp: Date.now()
-            };
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
-
-            // Notify global overlay
-            window.dispatchEvent(new Event('workout-session-update'));
-        }
-    }, [sessionId, startTime, activeExercises, resolvedGymId, loading]);
 
     // Init Logic
     useEffect(() => {
@@ -154,49 +134,20 @@ export const WorkoutSession = () => {
             setRoutines(localRoutines);
             setUserSettings(settings);
 
-            // 3. Priority: Restore from LocalStorage (Client-side persistence)
-            const savedState = localStorage.getItem(LOCAL_STORAGE_KEY);
-            let restored = false;
+            // 3. Start or Resume Session
+            const active = await workoutService.getActiveSession(userId);
 
-            if (savedState) {
-                try {
-                    const parsed = JSON.parse(savedState);
-                    // Check if data is not ancient (e.g. < 24h)? Optional.
-                    // For now, adhere to user request: "NEVER DELETE"
-
-                    if (parsed.activeExercises && parsed.activeExercises.length > 0) {
-                        console.log("📂 Restoring session from LocalStorage...");
-                        setSessionId(parsed.sessionId);
-                        setStartTime(parsed.startTime ? new Date(parsed.startTime) : null);
-                        setActiveExercises(parsed.activeExercises);
-                        // If resolvedGymId changed (moved to another physical gym), we might warn? 
-                        // But let's keep consistency with stored session.
-
-                        // If we have a sessionId, verify it's still active in DB? 
-                        // Optimistically trust local state for inputs.
-                        restored = true;
-                    }
-                } catch (e) {
-                    console.error("Local Restore failed:", e);
-                }
-            }
-
-            if (!restored) {
-                // 4. Fallback: Check DB for active session
-                const active = await workoutService.getActiveSession(userId);
-
-                if (active) {
-                    console.log('♻️ Sesión activa encontrada en DB:', active.id);
-                    setSessionId(active.id);
-                    setStartTime(new Date(active.started_at));
-                } else {
-                    console.log('✨ No hay sesión activa. Preparando nueva batalla.');
-                    setSessionId(null);
-                    setStartTime(null);
-                    setElapsedTime("00:00");
-                    setActiveExercises([]);
-                    setIsFinished(false);
-                }
+            if (active) {
+                console.log('♻️ Sesión activa encontrada:', active.id);
+                setSessionId(active.id);
+                setStartTime(new Date(active.started_at)); // Set Start Time (RESTORED)
+            } else {
+                console.log('✨ No hay sesión activa. Preparando nueva batalla.');
+                setSessionId(null);
+                setStartTime(null);
+                setElapsedTime("00:00");
+                setActiveExercises([]);
+                setIsFinished(false);
             }
 
         } catch (error) {
@@ -459,37 +410,6 @@ export const WorkoutSession = () => {
         }
     };
 
-    const handleCancelSession = async () => {
-        if (!window.confirm("⚠️ ¿CANCELAR ENTRENAMIENTO?\n\nSe perderán todos los datos y el progreso actual. Esta acción no se puede deshacer.")) return;
-
-        setLoading(true);
-        try {
-            // 1. Delete from DB if exists
-            if (sessionId) {
-                console.log("🗑️ Discarding session from DB:", sessionId);
-                await workoutService.discardSession(sessionId);
-            }
-
-            // 2. Clear Local Storage
-            localStorage.removeItem(LOCAL_STORAGE_KEY);
-            window.dispatchEvent(new Event('workout-session-update'));
-
-            // 3. Reset Local State completely
-            setSessionId(null);
-            setStartTime(null);
-            setElapsedTime("00:00");
-            setActiveExercises([]);
-            setIsFinished(false);
-
-            console.log("✨ Session discarded and reset.");
-        } catch (error) {
-            console.error("Error cancelling session:", error);
-            alert("Error al cancelar sesión. Intenta de nuevo.");
-        } finally {
-            setLoading(false);
-        }
-    };
-
     const handleFinish = async () => {
         setIsFinished(true); // STOP TIMER IMMEDIATELY
         if (!sessionId) {
@@ -569,13 +489,6 @@ export const WorkoutSession = () => {
 
             if (result.success) {
                 console.log('✅ Sesión terminada exitosamente');
-
-                // 🧹 CLEAR LOCAL STORAGE ON FINISH
-                localStorage.removeItem(LOCAL_STORAGE_KEY);
-                window.dispatchEvent(new Event('workout-session-update'));
-
-                // Removed blocking alert.
-
                 // Removed blocking alert. 
                 // We'll rely on the UI showing "Guardando..." or similar via loading state, 
                 // or we could add a specific "Finished" state to show a success message briefly.
@@ -611,7 +524,7 @@ export const WorkoutSession = () => {
     );
 
     return (
-        <div className="min-h-screen bg-neutral-950 text-white pb-64 relative">
+        <div className="min-h-screen bg-neutral-950 text-white pb-32 relative overflow-hidden">
             {/* Background Ambient Effects */}
             <div className="fixed top-0 left-0 w-full h-1/2 bg-gradient-to-b from-red-900/10 to-transparent pointer-events-none" />
 
@@ -878,102 +791,99 @@ export const WorkoutSession = () => {
                                 </div>
                             </div>
                         ))}
-
-                        <div className="px-4 pb-4">
-                            <button
-                                onClick={handleCancelSession}
-                                className="w-full py-4 rounded-xl border border-red-900/30 text-red-700 bg-red-950/10 hover:bg-red-900/20 hover:text-red-500 font-black uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2 mb-4"
-                            >
-                                <Trash2 size={16} /> Cancelar y Reiniciar
-                            </button>
-                        </div>
-
-                        <div className="h-48 w-full" /> {/* Spacer to prevent fixed button overlap */}
+                    </div>
+                )}      {/* Finish Button at Bottom */}
+                {activeExercises.length > 0 && (
+                    <div className="mt-8 mb-4">
+                        <button
+                            onClick={handleFinish}
+                            disabled={loading || isFinished}
+                            className={`w-full font-black uppercase tracking-wider py-4 rounded-xl shadow-[0_0_20px_rgba(234,179,8,0.4)] flex items-center justify-center gap-3 transform active:scale-95 transition-all text-xl ${isFinished ? 'bg-green-500 text-black' : 'bg-yellow-500 hover:bg-yellow-400 text-black'
+                                }`}
+                        >
+                            {loading || isFinished ? (
+                                <>
+                                    <Loader className="animate-spin" size={24} />
+                                    {isFinished ? 'FINALIZADO!' : 'GUARDANDO...'}
+                                </>
+                            ) : (
+                                <>
+                                    <Save size={24} strokeWidth={2.5} />
+                                    TERMINAR ENTRENAMIENTO
+                                </>
+                            )}
+                        </button>
                     </div>
                 )}
-
-
-                {/* Fixed Bottom Action Bar (Dual Buttons) */}
-                {
-                    activeExercises.length > 0 && (
-                        <div className="fixed bottom-0 left-0 w-full px-4 pb-6 pt-12 bg-gradient-to-t from-neutral-950 via-neutral-950/95 to-transparent z-50 flex items-end gap-3 pointer-events-none">
-
-                            {/* Finish Workout (Expanded Yellow - Full Width) */}
-                            <button
-                                onClick={handleFinish}
-                                disabled={loading || isFinished}
-                                className={`pointer-events-auto w-full font-black uppercase tracking-wider py-4 rounded-2xl shadow-[0_0_20px_rgba(234,179,8,0.2)] flex items-center justify-center gap-2 transform active:scale-95 transition-all text-lg h-full border border-yellow-500/20 ${isFinished ? 'bg-green-500 text-black' : 'bg-gym-primary hover:bg-yellow-400 text-black'
-                                    }`}
-                            >
-                                {loading || isFinished ? (
-                                    <>
-                                        <Loader className="animate-spin" size={20} />
-                                        {isFinished ? 'FINALIZADO' : 'GUARDANDO'}
-                                    </>
-                                ) : (
-                                    <>
-                                        <Save size={20} strokeWidth={2.5} />
-                                        TERMINAR RUTINA
-                                    </>
-                                )}
-                            </button>
-                        </div>
-                    )
-                }
-
-                {/* Exercise Selector Modal */}
-                {
-                    showAddModal && (
-                        <div className="fixed inset-0 bg-black/95 z-50 p-6 flex flex-col animate-in fade-in duration-200">
-                            <div className="flex justify-between items-center mb-8">
-                                <div>
-                                    <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">Armería</h2>
-                                    <p className="text-neutral-500 text-sm">Elige tu arma para esta batalla.</p>
-                                </div>
-                                <button onClick={() => setShowAddModal(false)} className="bg-neutral-900 p-2 rounded-full text-white hover:bg-neutral-800"><Flame size={20} /></button>
-                            </div>
-
-                            <div className="flex-1 overflow-y-auto space-y-3 pr-2">
-                                {arsenal.length === 0 ? (
-                                    <div className="text-center mt-20">
-                                        <p className="text-neutral-500 mb-4">Tu Arsenal está vacío.</p>
-                                        <Link to="/arsenal" className="text-red-500 font-bold underline">Ir a registrar máquinas</Link>
-                                    </div>
-                                ) : (
-                                    arsenal.map(item => {
-                                        // Resolve Category info
-                                        // @ts-ignore
-                                        const defaultCat = EQUIPMENT_CATEGORIES[item.category];
-                                        const customCat = userSettings.categories.find(c => c.id === item.category);
-                                        const catLabel = customCat?.label || defaultCat?.label || item.category;
-                                        const catIcon = customCat?.icon || defaultCat?.icon;
-
-                                        return (
-                                            <button
-                                                key={item.id}
-                                                onClick={() => addExercise(item)}
-                                                className="w-full text-left bg-neutral-900 border border-neutral-800 p-5 rounded-2xl hover:bg-neutral-800 hover:border-red-500/50 transition-all flex items-center justify-between group"
-                                            >
-                                                <div>
-                                                    <span className="font-black text-lg text-white group-hover:text-red-500 transition-colors uppercase italic flex items-center gap-2">
-                                                        {item.name}
-                                                        {catIcon && <span className="text-base not-italic grayscale group-hover:grayscale-0">{catIcon}</span>}
-                                                    </span>
-                                                    <p className="text-xs text-neutral-500 font-bold tracking-widest mt-1">{catLabel}</p>
-                                                </div>
-                                                <div className="bg-neutral-950 p-2 rounded-lg text-neutral-600 group-hover:text-white transition-colors">
-                                                    <Plus size={20} />
-                                                </div>
-                                            </button>
-                                        );
-                                    })
-                                )}
-                            </div>
-                        </div>
-                    )
-                }
-
             </div>
-        </div>
-    );
-};
+
+
+            {/* Fab Add Button (Only if exercises exist) */}
+            {
+                activeExercises.length > 0 && (
+                    <div className="fixed bottom-6 left-0 w-full px-4 flex justify-center z-50 pointer-events-none">
+                        <button
+                            onClick={() => setShowAddModal(true)}
+                            className="pointer-events-auto bg-red-600 text-white font-black py-4 px-10 rounded-2xl shadow-[0_10px_40px_rgba(220,38,38,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center gap-3 text-lg border border-red-500/50 backdrop-blur-md"
+                        >
+                            <Plus size={24} strokeWidth={3} /> AÑADIR EJERCICIO
+                        </button>
+                    </div>
+                )
+            }
+
+            {/* Exercise Selector Modal */}
+            {
+                showAddModal && (
+                    <div className="fixed inset-0 bg-black/95 z-50 p-6 flex flex-col animate-in fade-in duration-200">
+                        <div className="flex justify-between items-center mb-8">
+                            <div>
+                                <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">Armería</h2>
+                                <p className="text-neutral-500 text-sm">Elige tu arma para esta batalla.</p>
+                            </div>
+                            <button onClick={() => setShowAddModal(false)} className="bg-neutral-900 p-2 rounded-full text-white hover:bg-neutral-800"><Flame size={20} /></button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto space-y-3 pr-2">
+                            {arsenal.length === 0 ? (
+                                <div className="text-center mt-20">
+                                    <p className="text-neutral-500 mb-4">Tu Arsenal está vacío.</p>
+                                    <Link to="/arsenal" className="text-red-500 font-bold underline">Ir a registrar máquinas</Link>
+                                </div>
+                            ) : (
+                                arsenal.map(item => {
+                                    // Resolve Category info
+                                    // @ts-ignore
+                                    const defaultCat = EQUIPMENT_CATEGORIES[item.category];
+                                    const customCat = userSettings.categories.find(c => c.id === item.category);
+                                    const catLabel = customCat?.label || defaultCat?.label || item.category;
+                                    const catIcon = customCat?.icon || defaultCat?.icon;
+
+                                    return (
+                                        <button
+                                            key={item.id}
+                                            onClick={() => addExercise(item)}
+                                            className="w-full text-left bg-neutral-900 border border-neutral-800 p-5 rounded-2xl hover:bg-neutral-800 hover:border-red-500/50 transition-all flex items-center justify-between group"
+                                        >
+                                            <div>
+                                                <span className="font-black text-lg text-white group-hover:text-red-500 transition-colors uppercase italic flex items-center gap-2">
+                                                    {item.name}
+                                                    {catIcon && <span className="text-base not-italic grayscale group-hover:grayscale-0">{catIcon}</span>}
+                                                </span>
+                                                <p className="text-xs text-neutral-500 font-bold tracking-widest mt-1">{catLabel}</p>
+                                            </div>
+                                            <div className="bg-neutral-950 p-2 rounded-lg text-neutral-600 group-hover:text-white transition-colors">
+                                                <Plus size={20} />
+                                            </div>
+                                        </button>
+                                    );
+                                })
+                            )}
+                        </div>
+                    </div>
+                )
+            }
+
+        </div >
+    )
+}
