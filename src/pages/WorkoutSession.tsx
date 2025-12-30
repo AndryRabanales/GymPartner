@@ -791,92 +791,91 @@ export const WorkoutSession = () => {
                                 </div>
                             </div>
                         ))}
+                        <div className="h-48 w-full" /> {/* Spacer to prevent fixed button overlap */}
                     </div>
-                )}      {/* Finish Button at Bottom */}
-                {/* Finish Button Removed from here - Moved to Fixed Footer */}
-            </div>
+                )}
 
 
-            {/* Fixed Bottom Action Bar (Dual Buttons) */}
-            {
-                activeExercises.length > 0 && (
-                    <div className="fixed bottom-0 left-0 w-full px-4 pb-6 pt-12 bg-gradient-to-t from-neutral-950 via-neutral-950/95 to-transparent z-50 flex items-end gap-3 pointer-events-none">
+                {/* Fixed Bottom Action Bar (Dual Buttons) */}
+                {
+                    activeExercises.length > 0 && (
+                        <div className="fixed bottom-0 left-0 w-full px-4 pb-6 pt-12 bg-gradient-to-t from-neutral-950 via-neutral-950/95 to-transparent z-50 flex items-end gap-3 pointer-events-none">
 
-                        {/* Finish Workout (Expanded Yellow - Full Width) */}
-                        <button
-                            onClick={handleFinish}
-                            disabled={loading || isFinished}
-                            className={`pointer-events-auto w-full font-black uppercase tracking-wider py-4 rounded-2xl shadow-[0_0_20px_rgba(234,179,8,0.2)] flex items-center justify-center gap-2 transform active:scale-95 transition-all text-lg h-full border border-yellow-500/20 ${isFinished ? 'bg-green-500 text-black' : 'bg-gym-primary hover:bg-yellow-400 text-black'
-                                }`}
-                        >
-                            {loading || isFinished ? (
-                                <>
-                                    <Loader className="animate-spin" size={20} />
-                                    {isFinished ? 'FINALIZADO' : 'GUARDANDO'}
-                                </>
-                            ) : (
-                                <>
-                                    <Save size={20} strokeWidth={2.5} />
-                                    TERMINAR RUTINA
-                                </>
-                            )}
-                        </button>
-                    </div>
-                )
-            }
-
-            {/* Exercise Selector Modal */}
-            {
-                showAddModal && (
-                    <div className="fixed inset-0 bg-black/95 z-50 p-6 flex flex-col animate-in fade-in duration-200">
-                        <div className="flex justify-between items-center mb-8">
-                            <div>
-                                <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">Armería</h2>
-                                <p className="text-neutral-500 text-sm">Elige tu arma para esta batalla.</p>
-                            </div>
-                            <button onClick={() => setShowAddModal(false)} className="bg-neutral-900 p-2 rounded-full text-white hover:bg-neutral-800"><Flame size={20} /></button>
+                            {/* Finish Workout (Expanded Yellow - Full Width) */}
+                            <button
+                                onClick={handleFinish}
+                                disabled={loading || isFinished}
+                                className={`pointer-events-auto w-full font-black uppercase tracking-wider py-4 rounded-2xl shadow-[0_0_20px_rgba(234,179,8,0.2)] flex items-center justify-center gap-2 transform active:scale-95 transition-all text-lg h-full border border-yellow-500/20 ${isFinished ? 'bg-green-500 text-black' : 'bg-gym-primary hover:bg-yellow-400 text-black'
+                                    }`}
+                            >
+                                {loading || isFinished ? (
+                                    <>
+                                        <Loader className="animate-spin" size={20} />
+                                        {isFinished ? 'FINALIZADO' : 'GUARDANDO'}
+                                    </>
+                                ) : (
+                                    <>
+                                        <Save size={20} strokeWidth={2.5} />
+                                        TERMINAR RUTINA
+                                    </>
+                                )}
+                            </button>
                         </div>
+                    )
+                }
 
-                        <div className="flex-1 overflow-y-auto space-y-3 pr-2">
-                            {arsenal.length === 0 ? (
-                                <div className="text-center mt-20">
-                                    <p className="text-neutral-500 mb-4">Tu Arsenal está vacío.</p>
-                                    <Link to="/arsenal" className="text-red-500 font-bold underline">Ir a registrar máquinas</Link>
+                {/* Exercise Selector Modal */}
+                {
+                    showAddModal && (
+                        <div className="fixed inset-0 bg-black/95 z-50 p-6 flex flex-col animate-in fade-in duration-200">
+                            <div className="flex justify-between items-center mb-8">
+                                <div>
+                                    <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">Armería</h2>
+                                    <p className="text-neutral-500 text-sm">Elige tu arma para esta batalla.</p>
                                 </div>
-                            ) : (
-                                arsenal.map(item => {
-                                    // Resolve Category info
-                                    // @ts-ignore
-                                    const defaultCat = EQUIPMENT_CATEGORIES[item.category];
-                                    const customCat = userSettings.categories.find(c => c.id === item.category);
-                                    const catLabel = customCat?.label || defaultCat?.label || item.category;
-                                    const catIcon = customCat?.icon || defaultCat?.icon;
+                                <button onClick={() => setShowAddModal(false)} className="bg-neutral-900 p-2 rounded-full text-white hover:bg-neutral-800"><Flame size={20} /></button>
+                            </div>
 
-                                    return (
-                                        <button
-                                            key={item.id}
-                                            onClick={() => addExercise(item)}
-                                            className="w-full text-left bg-neutral-900 border border-neutral-800 p-5 rounded-2xl hover:bg-neutral-800 hover:border-red-500/50 transition-all flex items-center justify-between group"
-                                        >
-                                            <div>
-                                                <span className="font-black text-lg text-white group-hover:text-red-500 transition-colors uppercase italic flex items-center gap-2">
-                                                    {item.name}
-                                                    {catIcon && <span className="text-base not-italic grayscale group-hover:grayscale-0">{catIcon}</span>}
-                                                </span>
-                                                <p className="text-xs text-neutral-500 font-bold tracking-widest mt-1">{catLabel}</p>
-                                            </div>
-                                            <div className="bg-neutral-950 p-2 rounded-lg text-neutral-600 group-hover:text-white transition-colors">
-                                                <Plus size={20} />
-                                            </div>
-                                        </button>
-                                    );
-                                })
-                            )}
+                            <div className="flex-1 overflow-y-auto space-y-3 pr-2">
+                                {arsenal.length === 0 ? (
+                                    <div className="text-center mt-20">
+                                        <p className="text-neutral-500 mb-4">Tu Arsenal está vacío.</p>
+                                        <Link to="/arsenal" className="text-red-500 font-bold underline">Ir a registrar máquinas</Link>
+                                    </div>
+                                ) : (
+                                    arsenal.map(item => {
+                                        // Resolve Category info
+                                        // @ts-ignore
+                                        const defaultCat = EQUIPMENT_CATEGORIES[item.category];
+                                        const customCat = userSettings.categories.find(c => c.id === item.category);
+                                        const catLabel = customCat?.label || defaultCat?.label || item.category;
+                                        const catIcon = customCat?.icon || defaultCat?.icon;
+
+                                        return (
+                                            <button
+                                                key={item.id}
+                                                onClick={() => addExercise(item)}
+                                                className="w-full text-left bg-neutral-900 border border-neutral-800 p-5 rounded-2xl hover:bg-neutral-800 hover:border-red-500/50 transition-all flex items-center justify-between group"
+                                            >
+                                                <div>
+                                                    <span className="font-black text-lg text-white group-hover:text-red-500 transition-colors uppercase italic flex items-center gap-2">
+                                                        {item.name}
+                                                        {catIcon && <span className="text-base not-italic grayscale group-hover:grayscale-0">{catIcon}</span>}
+                                                    </span>
+                                                    <p className="text-xs text-neutral-500 font-bold tracking-widest mt-1">{catLabel}</p>
+                                                </div>
+                                                <div className="bg-neutral-950 p-2 rounded-lg text-neutral-600 group-hover:text-white transition-colors">
+                                                    <Plus size={20} />
+                                                </div>
+                                            </button>
+                                        );
+                                    })
+                                )}
+                            </div>
                         </div>
-                    </div>
-                )
-            }
+                    )
+                }
 
-        </div >
-    )
+            </div >
+            )
 }
