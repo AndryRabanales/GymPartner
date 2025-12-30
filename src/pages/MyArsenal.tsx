@@ -711,7 +711,7 @@ export const MyArsenal = () => {
     const handleSaveRoutine = async () => {
         if (!user) return;
         if (!routineName.trim()) {
-            alert("¡Tu estrategia necesita un nombre!");
+            alert("⚠️ ¡Tu estrategia necesita un nombre!");
             return;
         }
         if (selectedItems.size === 0) {
@@ -1120,10 +1120,11 @@ export const MyArsenal = () => {
                         <div className="w-full md:w-1/3">
                             <input
                                 type="text"
-                                placeholder="Nombre de la Rutina..."
+                                placeholder="Nombre de la Rutina (Obligatorio)..."
                                 value={routineName}
                                 onChange={(e) => setRoutineName(e.target.value)}
-                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-base text-white placeholder-white/30 focus:outline-none focus:border-gym-primary/50 focus:bg-white/10 transition-all font-medium"
+                                required
+                                className={`w-full bg-white/5 border rounded-xl px-4 py-3 text-base text-white placeholder-white/30 focus:outline-none focus:bg-white/10 transition-all font-medium ${!routineName.trim() ? 'border-red-500/50 focus:border-red-500' : 'border-white/10 focus:border-gym-primary/50'}`}
                             />
                         </div>
 
