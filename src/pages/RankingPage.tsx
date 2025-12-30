@@ -152,9 +152,9 @@ export const RankingPage = () => {
     }
 
     return (
-        <div className="min-h-screen bg-neutral-950 pb-20">
+        <div className="bg-neutral-950 pb-20">
             {/* Header */}
-            <div className="sticky top-16 z-30 bg-neutral-950/80 backdrop-blur-md border-b border-white/5 p-4">
+            <div className="sticky top-0 z-30 bg-neutral-950/95 backdrop-blur-xl border-b border-white/5 p-4 shadow-2xl shadow-black/50">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
                     <h1 className="text-2xl font-black text-white italic uppercase tracking-tighter flex items-center gap-2">
                         <Trophy className="text-yellow-500" />
