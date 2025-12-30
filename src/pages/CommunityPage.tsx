@@ -66,7 +66,10 @@ export const CommunityPage = () => {
         loadFeed();
 
         // Listen for new posts being created
-        const handlePostCreated = () => loadFeed();
+        const handlePostCreated = () => {
+            // Small delay to ensure DB transaction is committed  
+            setTimeout(() => loadFeed(), 500);
+        };
         window.addEventListener('postCreated', handlePostCreated);
 
         return () => window.removeEventListener('postCreated', handlePostCreated);
@@ -83,6 +86,21 @@ export const CommunityPage = () => {
     const handleLike = async (post: Post) => {
         if (!user) return alert("Inicia sesión para dar like ❤️");
 
+        // Validate post ID
+        if (!post.id) {
+            console.error("❌ Post ID is missing:", post);
+            alert("Error: Post inválido. Recarga la página.");
+            return;
+        }
+
+        console.log("🔍 DEBUG handleLike:", {
+            postId: post.id,
+            userId: user.id,
+            currentLikeStatus: post.user_has_liked,
+            likesCount: post.likes_count,
+            postObject: post
+        });
+
         // Optimistic Update
         const isLiked = post.user_has_liked;
         const newCount = (post.likes_count || 0) + (isLiked ? -1 : 1);
@@ -94,15 +112,17 @@ export const CommunityPage = () => {
         } : p));
 
         try {
-            await socialService.toggleLike(user.id, post.id);
+            const result = await socialService.toggleLike(user.id, post.id);
+            console.log("✅ Like successful:", result);
         } catch (error) {
-            console.error("Like failed, reverting:", error);
+            console.error("❌ Like failed, reverting:", error);
             // Revert state
             setPosts(prev => prev.map(p => p.id === post.id ? {
                 ...p,
                 user_has_liked: isLiked,
                 likes_count: post.likes_count || 0
             } : p));
+            alert("Error al dar like: " + (error as Error).message);
         }
     };
 
