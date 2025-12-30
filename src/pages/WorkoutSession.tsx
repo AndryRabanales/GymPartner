@@ -249,9 +249,27 @@ export const WorkoutSession = () => {
                         category: item.target_muscle_group || item.category || 'Custom'
                     });
                 } else {
-                    // Track missing exercise
-                    const exerciseName = detail.equipment?.name || detail.name || 'Ejercicio desconocido';
-                    missingExercises.push(exerciseName);
+                    // FALLBACK: Ghost Exercise (Not in local inventory, but exists in routine)
+                    // We allow it to run so the user can workout anywhere.
+                    const ghostName = detail.equipment?.name || detail.name || 'Ejercicio Externo';
+                    console.log(`👻 Creating Ghost Exercise: ${ghostName}`);
+
+                    const ghostMetrics = detail.equipment?.metrics || defaultMetrics;
+
+                    exercisesToAdd.push({
+                        id: Math.random().toString(),
+                        equipmentId: detail.exercise_id || Math.random().toString(),
+                        equipmentName: ghostName,
+                        metrics: ghostMetrics as any,
+                        sets: [{
+                            id: Math.random().toString(),
+                            weight: 0,
+                            reps: 0,
+                            custom: {},
+                            completed: false
+                        }],
+                        category: detail.equipment?.target_muscle_group || 'General'
+                    });
                 }
             });
         } else {
