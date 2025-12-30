@@ -1,4 +1,3 @@
-```
 import React, { useRef, useEffect, useState } from 'react';
 import { X, Heart, MessageCircle, Share2, MoreHorizontal, Music2, Swords } from 'lucide-react';
 import type { Post } from '../../services/SocialService';
@@ -209,7 +208,7 @@ export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPos
                                     <span className="text-sm text-white/90">{post.caption}</span>
                                 </div>
                                 <div className="mt-1">
-                                     <button className="text-neutral-500 text-xs">Ver los comentarios</button>
+                                    <button className="text-neutral-500 text-xs">Ver los comentarios</button>
                                 </div>
                             </div>
                         </div>
@@ -219,4 +218,3 @@ export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPos
         </div>
     );
 };
-```
