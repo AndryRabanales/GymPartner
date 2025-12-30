@@ -261,6 +261,7 @@ class WorkoutService {
                 user_id: userId,
                 gym_id: gymId || null, // Explicitly handle null for Global
                 name: name,
+                is_public: false, // Default to HIDDEN (Private)
                 created_at: new Date().toISOString()
             })
             .select()
