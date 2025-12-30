@@ -1,4 +1,3 @@
-```typescript
 import React, { useRef, useEffect, useState } from 'react';
 import { X, Heart, MessageCircle, Share2, Volume2, VolumeX } from 'lucide-react';
 import type { Post } from '../../services/SocialService';
@@ -140,7 +139,7 @@ export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPos
                                 <div className="flex items-center gap-6">
                                     <button
                                         onClick={(e) => handleLike(post, e)}
-                                        className={`flex flex - col items - center gap - 1 ${ post.user_has_liked ? 'text-red-500' : 'text-white' } `}
+                                        className={`flex flex-col items-center gap-1 ${post.user_has_liked ? 'text-red-500' : 'text-white'}`}
                                     >
                                         <Heart size={24} fill={post.user_has_liked ? "currentColor" : "none"} />
                                         <span className="text-xs font-bold">{post.likes_count}</span>
