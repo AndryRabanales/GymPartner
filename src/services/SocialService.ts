@@ -423,6 +423,10 @@ class SocialService {
             return [];
         }
 
+        if (data.length > 0) {
+            console.log(`[Algorithm V4] Top post rank: ${Math.round(data[0].rank_score)} | Feed size: ${data.length}`);
+        }
+
         // Map RPC result (or Query result) to Post object structure
         // Note: Raw query returns nested objects, RPC returns flat fields.
         // We need to handle both shapes if we support fallback, 
