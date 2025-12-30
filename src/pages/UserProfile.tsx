@@ -99,189 +99,223 @@ export const UserProfile = () => {
         console.log("📍 Verificando Ubicación para:", gym.gym_name, { lat: gym.lat, lng: gym.lng });
 
         // 1. SPECIAL CASE: PERSONAL GYM (Intentionally 0,0) -> ALLOW
-        // We use lat=0, lng=0 as the signature for the Personal Arsenal
         if (gym.lat === 0 && gym.lng === 0) {
             console.log("🏠 Personal Gym Detected - Bypassing Location Check");
             navigate(`/territory/${gym.gym_id}/workout`);
             return;
         }
 
-        // Threshold: 100km (DEV MODE: User requested 100km radius)
-        const ALLOWED_RADIUS_METERS = 100000; // Was 200
-
-        if (distanceMeters <= ALLOWED_RADIUS_METERS) {
-            // SUCCESS
-            navigate(`/territory/${gym.gym_id}/workout`);
-        } else {
-            // FAIL
+        // 2. ERROR CASE: MISSING COORDINATES -> BLOCK
+        if (!gym.lat || !gym.lng) {
             setLocationError({
                 isOpen: true,
                 gymName: gym.gym_name,
-                distanceMeters: distanceMeters,
-                errorType: 'DISTANCE'
+                distanceMeters: null,
+                errorType: 'NO_COORDS'
             });
+            return;
         }
-        setVerifyingLocation(null);
-    },
-    (error) => {
-        console.error("Geolocation Error:", error);
-        setLocationError({
-            isOpen: true,
-            gymName: gym.gym_name,
-            distanceMeters: null,
-            errorType: 'GPS_ERROR'
-        });
-        setVerifyingLocation(null);
-    },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+
+        setVerifyingLocation(gym.gym_id);
+
+        if (!navigator.geolocation) {
+            setLocationError({
+                isOpen: true,
+                gymName: gym.gym_name,
+                distanceMeters: null,
+                errorType: 'GPS_ERROR'
+            });
+            setVerifyingLocation(null);
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const userLat = position.coords.latitude;
+                const userLng = position.coords.longitude;
+
+                // Calculate Distance
+                const distanceKm = getDistanceFromLatLonInKm(userLat, userLng, gym.lat!, gym.lng!);
+                const distanceMeters = distanceKm * 1000;
+
+                console.log(`[Location Check] Gym: ${gym.gym_name}, Dist: ${distanceMeters.toFixed(2)}m`);
+
+                // Threshold: 100km (DEV MODE: User requested 100km radius)
+                const ALLOWED_RADIUS_METERS = 100000; // Was 200
+
+                if (distanceMeters <= ALLOWED_RADIUS_METERS) {
+                    // SUCCESS
+                    navigate(`/territory/${gym.gym_id}/workout`);
+                } else {
+                    // FAIL
+                    setLocationError({
+                        isOpen: true,
+                        gymName: gym.gym_name,
+                        distanceMeters: distanceMeters,
+                        errorType: 'DISTANCE'
+                    });
+                }
+                setVerifyingLocation(null);
+            },
+            (error) => {
+                console.error("Geolocation Error:", error);
+                setLocationError({
+                    isOpen: true,
+                    gymName: gym.gym_name,
+                    distanceMeters: null,
+                    errorType: 'GPS_ERROR'
+                });
+                setVerifyingLocation(null);
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         );
     };
 
-const loadUserData = async () => {
-    try {
-        setLoading(true);
-        if (!supabase) return;
-        const { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user!.id)
-            .maybeSingle();
-
-        if (error) throw error;
-        if (data) setProfile(data);
-
-        // REFERRAL CHECK: If user has a pending referral code and hasn't been referred yet
-        const pendingRef = sessionStorage.getItem('gym_referral_id');
-        if (pendingRef && data && !data.referred_by && pendingRef !== user!.id) {
-            console.log("🔗 Processing Referral:", pendingRef);
-            const { error: refError } = await supabase
+    const loadUserData = async () => {
+        try {
+            setLoading(true);
+            if (!supabase) return;
+            const { data, error } = await supabase
                 .from('profiles')
-                .update({ referred_by: pendingRef })
-                .eq('id', user!.id);
+                .select('*')
+                .eq('id', user!.id)
+                .maybeSingle();
 
-            if (!refError) {
-                sessionStorage.removeItem('gym_referral_id');
-                alert("🎖️ ¡Has sido reclutado con éxito! Tu comandante recibirá su recompensa pronto.");
-            } else {
-                console.error("Referral Error:", refError);
+            if (error) throw error;
+            if (data) setProfile(data);
+
+            // REFERRAL CHECK: If user has a pending referral code and hasn't been referred yet
+            const pendingRef = sessionStorage.getItem('gym_referral_id');
+            if (pendingRef && data && !data.referred_by && pendingRef !== user!.id) {
+                console.log("🔗 Processing Referral:", pendingRef);
+                const { error: refError } = await supabase
+                    .from('profiles')
+                    .update({ referred_by: pendingRef })
+                    .eq('id', user!.id);
+
+                if (!refError) {
+                    sessionStorage.removeItem('gym_referral_id');
+                    alert("🎖️ ¡Has sido reclutado con éxito! Tu comandante recibirá su recompensa pronto.");
+                } else {
+                    console.error("Referral Error:", refError);
+                }
             }
+
+            const loadGyms = async () => {
+                if (!user) return;
+                const gyms = await userService.getUserGyms(user.id);
+
+                // Sort: Home Base First
+                const sortedGyms = gyms.sort((a, b) => {
+                    if (a.is_home_base === b.is_home_base) return 0;
+                    return a.is_home_base ? -1 : 1;
+                });
+
+                setUserGyms(sortedGyms);
+            };
+            await loadGyms();
+
+        } catch (error) {
+            console.error('Error loading user data:', error);
+        } finally {
+            setLoading(false);
         }
+    };
 
-        const loadGyms = async () => {
-            if (!user) return;
-            const gyms = await userService.getUserGyms(user.id);
 
-            // Sort: Home Base First
-            const sortedGyms = gyms.sort((a, b) => {
-                if (a.is_home_base === b.is_home_base) return 0;
-                return a.is_home_base ? -1 : 1;
-            });
 
-            setUserGyms(sortedGyms);
-        };
-        await loadGyms();
-
-    } catch (error) {
-        console.error('Error loading user data:', error);
-    } finally {
-        setLoading(false);
+    if (authLoading) { // Only check authLoading here, actual loading handled below
+        return <div className="min-h-screen flex items-center justify-center text-gym-primary"><Loader className="animate-spin" size={32} /></div>;
     }
-};
 
+    if (!user) {
+        return (
+            <div className="flex flex-col bg-neutral-950 flex-1">
+                {/* Hero Section */}
+                <div className="flex-1 flex flex-col items-center justify-center p-4 py-12 md:py-20 text-center relative overflow-hidden">
+                    {/* Background Glow */}
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gym-primary/10 rounded-full blur-[100px] pointer-events-none"></div>
 
+                    <div className="relative z-10 max-w-3xl">
+                        <div className="bg-gym-primary/10 w-fit mx-auto px-4 py-1.5 rounded-full border border-gym-primary/20 mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                            <span className="text-gym-primary font-bold text-sm tracking-wide">LA EVOLUCIÓN DEL ENTRENAMIENTO</span>
+                        </div>
 
-if (authLoading) { // Only check authLoading here, actual loading handled below
-    return <div className="min-h-screen flex items-center justify-center text-gym-primary"><Loader className="animate-spin" size={32} /></div>;
-}
+                        <h1 className="text-4xl md:text-7xl font-black text-white mb-4 leading-tight animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-100 uppercase italic">
+                            Tu Gimnasio <br />
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-gym-primary to-yellow-200">Inteligente</span>
+                        </h1>
 
-if (!user) {
-    return (
-        <div className="flex flex-col bg-neutral-950 flex-1">
-            {/* Hero Section */}
-            <div className="flex-1 flex flex-col items-center justify-center p-4 py-12 md:py-20 text-center relative overflow-hidden">
-                {/* Background Glow */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gym-primary/10 rounded-full blur-[100px] pointer-events-none"></div>
+                        <p className="text-lg md:text-xl text-neutral-400 mb-8 max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200">
+                            Deja de adivinar. Domina tu entorno. <br />
+                            Mapa de máquinas, rastreo de batallas y rango social en una sola app.
+                        </p>
 
-                <div className="relative z-10 max-w-3xl">
-                    <div className="bg-gym-primary/10 w-fit mx-auto px-4 py-1.5 rounded-full border border-gym-primary/20 mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                        <span className="text-gym-primary font-bold text-sm tracking-wide">LA EVOLUCIÓN DEL ENTRENAMIENTO</span>
+                        <div className="flex flex-col sm:flex-row gap-4 justify-center animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-300">
+                            <Link
+                                to="/login"
+                                className="bg-gym-primary text-black font-black text-xl px-12 py-5 rounded-[2rem] hover:bg-yellow-400 transition-all transform hover:scale-105 shadow-2xl shadow-gym-primary/40 flex items-center justify-center gap-3 no-underline italic tracking-tighter"
+                            >
+                                <LogIn size={28} strokeWidth={3} />
+                                <span>INICIAR MISIÓN</span>
+                            </Link>
+                        </div>
                     </div>
+                </div>
 
-                    <h1 className="text-4xl md:text-7xl font-black text-white mb-4 leading-tight animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-100 uppercase italic">
-                        Tu Gimnasio <br />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-gym-primary to-yellow-200">Inteligente</span>
-                    </h1>
-
-                    <p className="text-lg md:text-xl text-neutral-400 mb-8 max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200">
-                        Deja de adivinar. Domina tu entorno. <br />
-                        Mapa de máquinas, rastreo de batallas y rango social en una sola app.
-                    </p>
-
-                    <div className="flex flex-col sm:flex-row gap-4 justify-center animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-300">
-                        <Link
-                            to="/login"
-                            className="bg-gym-primary text-black font-black text-xl px-12 py-5 rounded-[2rem] hover:bg-yellow-400 transition-all transform hover:scale-105 shadow-2xl shadow-gym-primary/40 flex items-center justify-center gap-3 no-underline italic tracking-tighter"
-                        >
-                            <LogIn size={28} strokeWidth={3} />
-                            <span>INICIAR MISIÓN</span>
-                        </Link>
+                {/* Features Grid */}
+                <div className="grid grid-cols-3 gap-1 px-1 bg-neutral-900 border-t border-white/5">
+                    <div className="bg-neutral-950 p-4 md:p-10 text-center hover:bg-neutral-900 transition-colors group cursor-default">
+                        <div className="bg-blue-500/10 w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl flex items-center justify-center mx-auto mb-4 md:mb-6 group-hover:bg-blue-500/20 transition-colors">
+                            <MapPin size={24} className="text-blue-500 md:hidden" />
+                            <MapPin size={32} className="text-blue-500 hidden md:block" />
+                        </div>
+                        <h3 className="text-sm md:text-xl font-bold text-white mb-2 uppercase italic tracking-tighter">La Sede</h3>
+                        <p className="text-[10px] md:text-sm text-neutral-500 leading-tight">Localiza tu gimnasio en el mapa y establece tu base de entrenamiento.</p>
+                    </div>
+                    <div className="bg-neutral-950 p-4 md:p-10 text-center hover:bg-neutral-900 transition-colors group cursor-default">
+                        <div className="bg-purple-500/10 w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl flex items-center justify-center mx-auto mb-4 md:mb-6 group-hover:bg-purple-500/20 transition-colors">
+                            <Dumbbell size={24} className="text-purple-500 md:hidden" />
+                            <Dumbbell size={32} className="text-purple-500 hidden md:block" />
+                        </div>
+                        <h3 className="text-sm md:text-xl font-bold text-white mb-2 uppercase italic tracking-tighter">El Arsenal</h3>
+                        <p className="text-[10px] md:text-sm text-neutral-500 leading-tight">Inventario digital de máquinas. Sabe qué equipamiento tienes antes de llegar.</p>
+                    </div>
+                    <div className="bg-neutral-950 p-4 md:p-10 text-center hover:bg-neutral-900 transition-colors group cursor-default">
+                        <div className="bg-green-500/10 w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl flex items-center justify-center mx-auto mb-4 md:mb-6 group-hover:bg-green-500/20 transition-colors">
+                            <Swords size={24} className="text-green-500 md:hidden" />
+                            <Swords size={32} className="text-green-500 hidden md:block" />
+                        </div>
+                        <h3 className="text-sm md:text-xl font-bold text-white mb-2 uppercase italic tracking-tighter">Entrenamiento</h3>
+                        <p className="text-[10px] md:text-sm text-neutral-500 leading-tight">Tracker de entrenamiento de guerra. Series, reps y progreso real.</p>
                     </div>
                 </div>
             </div>
+        );
+    }
 
-            {/* Features Grid */}
-            <div className="grid grid-cols-3 gap-1 px-1 bg-neutral-900 border-t border-white/5">
-                <div className="bg-neutral-950 p-4 md:p-10 text-center hover:bg-neutral-900 transition-colors group cursor-default">
-                    <div className="bg-blue-500/10 w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl flex items-center justify-center mx-auto mb-4 md:mb-6 group-hover:bg-blue-500/20 transition-colors">
-                        <MapPin size={24} className="text-blue-500 md:hidden" />
-                        <MapPin size={32} className="text-blue-500 hidden md:block" />
-                    </div>
-                    <h3 className="text-sm md:text-xl font-bold text-white mb-2 uppercase italic tracking-tighter">La Sede</h3>
-                    <p className="text-[10px] md:text-sm text-neutral-500 leading-tight">Localiza tu gimnasio en el mapa y establece tu base de entrenamiento.</p>
-                </div>
-                <div className="bg-neutral-950 p-4 md:p-10 text-center hover:bg-neutral-900 transition-colors group cursor-default">
-                    <div className="bg-purple-500/10 w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl flex items-center justify-center mx-auto mb-4 md:mb-6 group-hover:bg-purple-500/20 transition-colors">
-                        <Dumbbell size={24} className="text-purple-500 md:hidden" />
-                        <Dumbbell size={32} className="text-purple-500 hidden md:block" />
-                    </div>
-                    <h3 className="text-sm md:text-xl font-bold text-white mb-2 uppercase italic tracking-tighter">El Arsenal</h3>
-                    <p className="text-[10px] md:text-sm text-neutral-500 leading-tight">Inventario digital de máquinas. Sabe qué equipamiento tienes antes de llegar.</p>
-                </div>
-                <div className="bg-neutral-950 p-4 md:p-10 text-center hover:bg-neutral-900 transition-colors group cursor-default">
-                    <div className="bg-green-500/10 w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl flex items-center justify-center mx-auto mb-4 md:mb-6 group-hover:bg-green-500/20 transition-colors">
-                        <Swords size={24} className="text-green-500 md:hidden" />
-                        <Swords size={32} className="text-green-500 hidden md:block" />
-                    </div>
-                    <h3 className="text-sm md:text-xl font-bold text-white mb-2 uppercase italic tracking-tighter">Entrenamiento</h3>
-                    <p className="text-[10px] md:text-sm text-neutral-500 leading-tight">Tracker de entrenamiento de guerra. Series, reps y progreso real.</p>
-                </div>
-            </div>
-        </div>
-    );
-}
+    if (loading) {
+        return <div className="min-h-screen flex items-center justify-center text-gym-primary"><Loader className="animate-spin" size={32} /></div>;
+    }
 
-if (loading) {
-    return <div className="min-h-screen flex items-center justify-center text-gym-primary"><Loader className="animate-spin" size={32} /></div>;
-}
+    // IF USER HAS NO GYMS YET -> SHOW TACTICAL ONBOARDING
+    if (userGyms.length === 0 && !skipOnboarding) {
+        return (
+            <div className="max-w-4xl mx-auto p-4 md:p-12 min-h-[80vh] flex flex-col items-center justify-center relative overflow-hidden">
+                {/* BACK BUTTON */}
+                <button
+                    onClick={() => setSkipOnboarding(true)}
+                    className="absolute top-4 left-4 z-50 flex items-center gap-2 text-neutral-400 hover:text-white transition-colors font-bold uppercase tracking-widest text-xs md:text-sm bg-black/20 backdrop-blur-md px-4 py-2 rounded-full border border-white/5 hover:border-white/20"
+                >
+                    <ArrowLeft size={18} />
+                    <span>Regresar</span>
+                </button>
 
-// IF USER HAS NO GYMS YET -> SHOW TACTICAL ONBOARDING
-if (userGyms.length === 0 && !skipOnboarding) {
-    return (
-        <div className="max-w-4xl mx-auto p-4 md:p-12 min-h-[80vh] flex flex-col items-center justify-center relative overflow-hidden">
-            {/* BACK BUTTON */}
-            <button
-                onClick={() => setSkipOnboarding(true)}
-                className="absolute top-4 left-4 z-50 flex items-center gap-2 text-neutral-400 hover:text-white transition-colors font-bold uppercase tracking-widest text-xs md:text-sm bg-black/20 backdrop-blur-md px-4 py-2 rounded-full border border-white/5 hover:border-white/20"
-            >
-                <ArrowLeft size={18} />
-                <span>Regresar</span>
-            </button>
+                {/* Background Radar Effect */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] border border-gym-primary/10 rounded-full animate-[pulse-ring_4s_linear_infinite] pointer-events-none"></div>
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] border border-gym-primary/5 rounded-full animate-[pulse-ring_6s_linear_infinite] pointer-events-none"></div>
 
-            {/* Background Radar Effect */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] border border-gym-primary/10 rounded-full animate-[pulse-ring_4s_linear_infinite] pointer-events-none"></div>
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] border border-gym-primary/5 rounded-full animate-[pulse-ring_6s_linear_infinite] pointer-events-none"></div>
-
-            <style>{`
+                <style>{`
                     @keyframes pulse-ring {
                         0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
                         50% { opacity: 0.3; }
@@ -289,436 +323,436 @@ if (userGyms.length === 0 && !skipOnboarding) {
                     }
                 `}</style>
 
-            <div className="relative z-10 w-full text-center space-y-8">
-                <div className="flex flex-col items-center gap-4">
-                    <div className="w-20 h-20 bg-gym-primary/10 rounded-3xl flex items-center justify-center border border-gym-primary/20 shadow-[0_0_30px_rgba(250,204,21,0.1)]">
-                        <MapPin className="text-gym-primary w-10 h-10 animate-bounce" />
-                    </div>
-                    <div className="space-y-2">
-                        <h1 className="text-4xl md:text-6xl font-black text-white italic uppercase tracking-tighter leading-none">
-                            RECLAMA TU <span className="text-gym-primary">PRIMERA BASE</span>
-                        </h1>
-                        <p className="text-neutral-500 font-bold tracking-widest uppercase text-xs md:text-sm">
-                            Detectando territorio no explorado... Busca tu gimnasio en el mapa.
-                        </p>
-                    </div>
-                </div>
-
-                <div className="flex flex-col items-center gap-4">
-                    <div className="bg-neutral-900/50 backdrop-blur-xl border border-white/5 p-6 rounded-[2.5rem] shadow-2xl flex justify-center">
-                        <Link
-                            to="/map"
-                            className="bg-gym-primary text-black font-black text-xl px-12 py-5 rounded-[2rem] hover:bg-yellow-400 transition-all transform hover:scale-105 shadow-2xl shadow-gym-primary/40 flex items-center justify-center gap-3 no-underline italic tracking-tighter animate-bounce"
-                        >
-                            <MapPin size={28} strokeWidth={3} />
-                            <span>ABRIR MAPA TÁCTICO</span>
-                        </Link>
-                    </div>
-
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto opacity-60">
-                    <div className="bg-neutral-900/50 p-4 rounded-2xl border border-white/5 space-y-1">
-                        <div className="text-xl">🛡️</div>
-                        <div className="text-[10px] font-black text-white uppercase tracking-widest">Protege tu zona</div>
-                    </div>
-                    <div className="bg-neutral-900/50 p-4 rounded-2xl border border-white/5 space-y-1">
-                        <div className="text-xl">📈</div>
-                        <div className="text-[10px] font-black text-white uppercase tracking-widest">Gana XP Real</div>
-                    </div>
-                    <div className="bg-neutral-900/50 p-4 rounded-2xl border border-white/5 space-y-1">
-                        <div className="text-xl">⚒️</div>
-                        <div className="text-[10px] font-black text-white uppercase tracking-widest">Arma tu Arsenal</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-// DASHBOARD VIEW
-const displayProfile = profile || {
-    username: user.user_metadata.full_name,
-    avatar_url: user.user_metadata.avatar_url,
-    description: 'New Recruit',
-    xp: 0,
-    rank: 'Novato' as UserRank,
-    checkins_count: 0,
-    photos_count: 0
-};
-
-// Use new leveling logic
-const { currentLevel, progressPercent } = getXPProgress(displayProfile.xp);
-const realRank = getRankFromXP(displayProfile.xp);
-const userAvatar = profile?.avatar_url || user.user_metadata.avatar_url || 'https://i.pravatar.cc/300';
-
-return (
-    <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-8">
-        {/* ... content ... */}
-        {/* Header Profile Card - LoL/Gymrat Design - FIXED LAYOUT */}
-        <div
-            className="bg-neutral-900 border border-neutral-800 rounded-3xl p-2 sm:p-6 flex flex-col sm:flex-row items-center sm:items-start gap-2 sm:gap-6 relative overflow-hidden transition-all shadow-2xl group"
-            style={profile?.custom_settings?.banner_url ? {
-                backgroundImage: `url(${profile.custom_settings.banner_url})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center'
-            } : {}}
-        >
-            {/* Banner Overlay for Readability */}
-            {profile?.custom_settings?.banner_url && (
-                <div className="absolute inset-0 bg-black/60 z-0 transition-opacity group-hover:bg-black/50"></div>
-            )}
-
-            {/* Background Texture REMOVED - Clean Dark Gradient instead */}
-            <div className="absolute top-0 right-0 w-full h-full pointer-events-none bg-gradient-to-bl from-neutral-800/10 to-transparent z-0"></div>
-
-            {/* Avatar Section: LoL Style Ring (CONTAINED AND CENTERED) */}
-            <div className="relative shrink-0 z-10 transition-all">
-                <div className="relative w-36 h-36 sm:w-48 sm:h-48 flex items-center justify-center">
-
-                    {/* 0. Gold Glow (Now INSIDE so it moves WITH the avatar) */}
-                    <div className="absolute inset-0 bg-yellow-500/20 rounded-full blur-2xl transform scale-100 pointer-events-none"></div>
-
-                    {/* 1. Base Ring (Dark Metal) */}
-                    <svg className="absolute inset-0 w-full h-full -rotate-90 drop-shadow-lg overflow-visible" viewBox="0 0 160 160">
-                        <circle
-                            cx="80" cy="80" r="74"
-                            fill="transparent"
-                            stroke="#1F1F1F"
-                            strokeWidth="6"
-                        />
-                    </svg>
-
-                    {/* 2. Progress Ring (Gold Flow) */}
-                    <svg className="absolute inset-0 w-full h-full -rotate-90 drop-shadow-[0_0_15px_rgba(234,179,8,0.5)] overflow-visible" viewBox="0 0 160 160">
-                        <circle
-                            cx="80" cy="80" r="74"
-                            fill="transparent"
-                            stroke="#EAB308"
-                            strokeWidth="6"
-                            strokeDasharray="465" /* 2 * PI * 74 ≈ 465 */
-                            strokeDashoffset={465 - (Math.min(progressPercent, 100) / 100) * 465}
-                            strokeLinecap="round"
-                            className="transition-all duration-1000 ease-out"
-                        />
-                    </svg>
-
-                    {/* Avatar Image - INCREASED SIZE FOR VISIBILITY */}
-                    <div className="w-[115px] h-[115px] sm:w-[150px] sm:h-[150px] rounded-full overflow-hidden border-4 border-neutral-900 z-10 bg-neutral-800 shadow-inner relative">
-                        <img
-                            src={userAvatar}
-                            alt="Profile"
-                            className="w-full h-full object-cover scale-110" // Slight zoom to appreciate face better
-                        />
-                    </div>
-
-                    {/* Level Badge - Hextech Gem (Bottom Center) */}
-                    <div className="absolute bottom-0 left-0 right-0 mx-auto w-10 z-20 filter drop-shadow-lg">
-                        <div className="relative w-10 h-10 flex items-center justify-center">
-                            {/* Hexagon Shape CSS */}
-                            <div className="absolute inset-0 bg-gradient-to-b from-yellow-400 to-yellow-700 clip-path-hexagon"></div>
-                            <div className="absolute inset-[2px] bg-neutral-900 clip-path-hexagon flex items-center justify-center">
-                                <span className="text-yellow-400 font-black text-sm leading-none">
-                                    {Math.floor(currentLevel)}
-                                </span>
-                            </div>
+                <div className="relative z-10 w-full text-center space-y-8">
+                    <div className="flex flex-col items-center gap-4">
+                        <div className="w-20 h-20 bg-gym-primary/10 rounded-3xl flex items-center justify-center border border-gym-primary/20 shadow-[0_0_30px_rgba(250,204,21,0.1)]">
+                            <MapPin className="text-gym-primary w-10 h-10 animate-bounce" />
                         </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* User Info Section */}
-            <div className="flex-1 text-center sm:text-left space-y-1 z-10 pt-2 w-full">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div className="space-y-0 text-center sm:text-left">
-                        {/* Name: Golden Shock (High Visibility & Energy) */}
-                        <h1 className="text-3xl sm:text-4xl font-black text-yellow-400 tracking-tighter uppercase italic drop-shadow-[0_0_20px_rgba(255,255,255,0.4)] animate-pulse leading-none mb-1">
-                            {profile?.username || user.user_metadata.full_name}
-                        </h1>
-
-                        {/* Rank: Dark Glass Pill */}
-                        <div className="flex flex-col sm:flex-row items-center sm:items-center gap-3 mb-4">
-                            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-black/40 border border-yellow-500/30 rounded-full backdrop-blur-md shadow-lg group hover:border-yellow-500/60 transition-colors">
-                                <Trophy size={14} className="text-yellow-500" />
-                                <span className="text-yellow-500 font-bold text-xs tracking-widest uppercase">
-                                    {realRank}
-                                </span>
-                            </div>
-                            <span className="text-neutral-500 text-xs font-bold tracking-[0.2em] uppercase hidden sm:block">
-                                {userGyms.find(g => g.is_home_base) ? (
-                                    <div className="flex items-center gap-2 text-yellow-500 animate-pulse">
-                                        <Star size={14} fill="currentColor" />
-                                        <span className="truncate max-w-[200px]">{userGyms.find(g => g.is_home_base)?.gym_name}</span>
-                                    </div>
-                                ) : (
-                                    <div className="flex items-center gap-2 text-neutral-500 group-hover:text-blue-400 transition-colors">
-                                        <Swords size={14} />
-                                        <span>AGENTE LIBRE</span>
-                                    </div>
-                                )}
-                            </span>
-                        </div>
-
-                        {/* SOCIAL STATS ROW (Unified Design) */}
-                        {/* SOCIAL STATS ROW (Grid for Perfect Symmetry) */}
-                        <div className="grid grid-cols-3 divide-x divide-white/10 bg-black/60 backdrop-blur-md rounded-2xl py-3 border border-white/10 shadow-xl mt-4 w-full max-w-xs mx-auto">
-                            <div className="flex flex-col items-center justify-center group cursor-pointer hover:bg-white/5 transition-colors py-1" onClick={() => setShowSocialProfile(true)}>
-                                <span className="font-black text-xl text-white leading-none mb-1 drop-shadow-md">{socialStats.followersCount}</span>
-                                <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest text-shadow-sm">Seguidores</span>
-                            </div>
-                            <div className="flex flex-col items-center justify-center group cursor-pointer hover:bg-white/5 transition-colors py-1" onClick={() => setShowSocialProfile(true)}>
-                                <span className="font-black text-xl text-white leading-none mb-1 drop-shadow-md">{socialStats.followingCount}</span>
-                                <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest text-shadow-sm">Seguidos</span>
-                            </div>
-                            <div className="flex flex-col items-center justify-center group cursor-pointer hover:bg-white/5 transition-colors py-1">
-                                <span className="font-black text-xl text-white leading-none mb-1 text-red-500 drop-shadow-md">{socialStats.totalLikes}</span>
-                                <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest text-shadow-sm">Likes</span>
-                            </div>
+                        <div className="space-y-2">
+                            <h1 className="text-4xl md:text-6xl font-black text-white italic uppercase tracking-tighter leading-none">
+                                RECLAMA TU <span className="text-gym-primary">PRIMERA BASE</span>
+                            </h1>
+                            <p className="text-neutral-500 font-bold tracking-widest uppercase text-xs md:text-sm">
+                                Detectando territorio no explorado... Busca tu gimnasio en el mapa.
+                            </p>
                         </div>
                     </div>
 
-                    {/* Edit Button - PREMIUM GLASS PENCIL */}
-                    <div className="absolute top-4 right-4 sm:static sm:order-last">
-                        <button
-                            onClick={() => setShowEditProfile(true)}
-                            className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all backdrop-blur-md shadow-sm group"
-                        >
-                            <Edit2 size={18} className="group-hover:scale-110 transition-transform" />
-                        </button>
-                    </div>
-                </div>
-
-                {/* Stats & Territories */}
-                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 mt-2">
-                    {/* XP Badge - FIXED VISIBILITY */}
-                    <div className="bg-yellow-500/10 border border-yellow-500/20 px-2 py-1 rounded-full flex items-center gap-1.5 text-yellow-400 font-bold text-[10px] sm:text-xs shadow-sm backdrop-blur-sm">
-                        <Trophy size={12} className="sm:w-4 sm:h-4" />
-                        <span>{Math.floor(displayProfile.xp)} XP</span>
-                    </div>
-
-                    {/* Gym Tags - FIXED BORDERS & BACKGROUND */}
-                    {userGyms.map(gym => (
-                        <Link key={gym.gym_id} to={`/territory/${gym.gym_id}`} className="bg-neutral-800 border border-neutral-700 px-2 py-1 rounded-full flex items-center gap-1.5 text-neutral-300 text-[10px] sm:text-xs hover:border-gym-primary/50 hover:text-white hover:bg-neutral-700 transition-all no-underline shadow-sm hover:shadow-[0_0_15px_rgba(250,204,21,0.1)]">
-                            <MapPin size={12} className={`sm:w-4 sm:h-4 ${gym.is_home_base ? "text-gym-primary" : "text-neutral-500"}`} />
-                            <span className="truncate max-w-[90px] sm:max-w-[120px]">{gym.gym_name}</span>
-                        </Link>
-                    ))}
-                </div>
-            </div>
-        </div>
-
-        {/* Quick Actions / Passport Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-4">
-            <button
-                onClick={() => setShowSocialProfile(true)}
-                className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-yellow-500/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md cursor-pointer"
-            >
-                <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-yellow-500/5 flex items-center justify-center group-hover:scale-110 transition-transform border border-yellow-500/10">
-                    <Grid className="text-yellow-500 w-4 h-4 md:w-6 md:h-6" />
-                </div>
-                <span className="font-bold text-neutral-200 group-hover:text-white text-xs md:text-base">Mis Posts</span>
-            </button>
-            <Link to="/arsenal" className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-blue-500/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md">
-                <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-blue-500/5 flex items-center justify-center group-hover:scale-110 transition-transform border border-blue-500/10">
-                    <Dumbbell className="text-blue-500 w-4 h-4 md:w-6 md:h-6" />
-                </div>
-                <span className="font-bold text-neutral-200 group-hover:text-white text-xs md:text-base">Mi Arsenal</span>
-            </Link>
-
-            <Link to="/stats" className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-green-500/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md">
-                <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-green-500/5 flex items-center justify-center group-hover:scale-110 transition-transform border border-green-500/10">
-                    <LineChart className="text-green-500 w-4 h-4 md:w-6 md:h-6" />
-                </div>
-                <span className="font-bold text-neutral-200 group-hover:text-white text-xs md:text-base">Stats</span>
-            </Link>
-
-            <Link to="/history" className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-orange-500/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md">
-                <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-orange-500/5 flex items-center justify-center group-hover:scale-110 transition-transform border border-orange-500/10">
-                    <History className="text-orange-500 w-4 h-4 md:w-6 md:h-6" />
-                </div>
-                <span className="font-bold text-neutral-200 group-hover:text-white text-xs md:text-base">Historial</span>
-            </Link>
-        </div>
-
-        {/* TERRITORIES SECTION (PASSPORT) */}
-        <div className="space-y-4">
-            <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-white flex items-center gap-2 tracking-tight">
-                    <MapPin className="text-gym-primary" />
-                    Mis Territorios
-                </h2>
-                <button
-                    onClick={() => setSkipOnboarding(false)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-gym-primary/10 border border-gym-primary/30 text-gym-primary text-xs font-black uppercase tracking-widest hover:bg-gym-primary hover:text-black transition-all hover:scale-105 hover:shadow-[0_0_15px_rgba(229,255,0,0.3)]"
-                >
-                    <Search size={14} strokeWidth={3} />
-                    Encontrar Gimnasios
-                </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {userGyms.map(gym => {
-                    const hasArsenal = (gym.equipment_count || 0) > 0;
-
-                    return (
-                        <div key={gym.gym_id} className={`bg-neutral-900 border ${gym.is_home_base ? 'border-yellow-500/50 shadow-[0_0_20px_rgba(234,179,8,0.1)]' : 'border-neutral-800'} p-3 md:p-6 rounded-xl md:rounded-2xl flex items-center justify-between group hover:border-gym-primary/30 transition-colors shadow-sm relative overflow-hidden`}>
-                            <Link to={`/territory/${gym.gym_id}`} className="flex-1 min-w-0 mr-3 no-underline">
-                                <h3 className={`font-bold text-sm md:text-lg mb-0.5 md:mb-1 transition-colors truncate max-w-[200px] md:max-w-none flex items-center gap-2 ${gym.is_home_base ? 'text-yellow-400' : 'text-white group-hover:text-gym-primary'}`}>
-                                    {gym.gym_name}
-                                    {gym.is_home_base && <Star size={14} fill="currentColor" className="text-yellow-500" />}
-                                </h3>
-                                <div className="flex items-center gap-2 text-xs md:text-sm text-neutral-400">
-                                    {gym.is_home_base && (
-                                        <span className="bg-yellow-500/20 text-yellow-500 px-1.5 py-0.5 rounded text-[10px] md:text-xs font-bold border border-yellow-500/20 flex items-center gap-1">
-                                            <Star size={10} fill="currentColor" />
-                                            SEDE PRINCIPAL
-                                        </span>
-                                    )}
-                                    <span>Items: {gym.equipment_count || 0}</span>
-                                </div>
+                    <div className="flex flex-col items-center gap-4">
+                        <div className="bg-neutral-900/50 backdrop-blur-xl border border-white/5 p-6 rounded-[2.5rem] shadow-2xl flex justify-center">
+                            <Link
+                                to="/map"
+                                className="bg-gym-primary text-black font-black text-xl px-12 py-5 rounded-[2rem] hover:bg-yellow-400 transition-all transform hover:scale-105 shadow-2xl shadow-gym-primary/40 flex items-center justify-center gap-3 no-underline italic tracking-tighter animate-bounce"
+                            >
+                                <MapPin size={28} strokeWidth={3} />
+                                <span>ABRIR MAPA TÁCTICO</span>
                             </Link>
+                        </div>
 
-                            {/* ACTION BUTTONS */}
-                            <div className="flex items-center gap-2 shrink-0">
-                                {hasArsenal ? (
-                                    <>
-                                        {/* 1. START WORKOUT (Location Locked) */}
-                                        <button
-                                            onClick={() => handleStartWorkout(gym)}
-                                            disabled={verifyingLocation === gym.gym_id}
-                                            className={`bg-gym-primary text-black p-2 md:px-4 md:py-3 rounded-lg md:rounded-xl transition-all hover:scale-105 font-bold text-xs md:text-sm flex items-center gap-2 shadow-[0_0_10px_rgba(250,204,21,0.2)] ${verifyingLocation === gym.gym_id ? 'opacity-80 cursor-wait' : ''}`}
-                                            title="Iniciar Entrenamiento (Requiere Ubicación)"
-                                        >
-                                            {verifyingLocation === gym.gym_id ? (
-                                                <Loader size={16} className="animate-spin" />
-                                            ) : (
-                                                <Swords size={16} strokeWidth={2.5} />
-                                            )}
-                                            <span className="hidden md:inline">
-                                                {verifyingLocation === gym.gym_id ? 'VERIFICANDO...' : 'INICIAR'}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto opacity-60">
+                        <div className="bg-neutral-900/50 p-4 rounded-2xl border border-white/5 space-y-1">
+                            <div className="text-xl">🛡️</div>
+                            <div className="text-[10px] font-black text-white uppercase tracking-widest">Protege tu zona</div>
+                        </div>
+                        <div className="bg-neutral-900/50 p-4 rounded-2xl border border-white/5 space-y-1">
+                            <div className="text-xl">📈</div>
+                            <div className="text-[10px] font-black text-white uppercase tracking-widest">Gana XP Real</div>
+                        </div>
+                        <div className="bg-neutral-900/50 p-4 rounded-2xl border border-white/5 space-y-1">
+                            <div className="text-xl">⚒️</div>
+                            <div className="text-[10px] font-black text-white uppercase tracking-widest">Arma tu Arsenal</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // DASHBOARD VIEW
+    const displayProfile = profile || {
+        username: user.user_metadata.full_name,
+        avatar_url: user.user_metadata.avatar_url,
+        description: 'New Recruit',
+        xp: 0,
+        rank: 'Novato' as UserRank,
+        checkins_count: 0,
+        photos_count: 0
+    };
+
+    // Use new leveling logic
+    const { currentLevel, progressPercent } = getXPProgress(displayProfile.xp);
+    const realRank = getRankFromXP(displayProfile.xp);
+    const userAvatar = profile?.avatar_url || user.user_metadata.avatar_url || 'https://i.pravatar.cc/300';
+
+    return (
+        <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-8">
+            {/* ... content ... */}
+            {/* Header Profile Card - LoL/Gymrat Design - FIXED LAYOUT */}
+            <div
+                className="bg-neutral-900 border border-neutral-800 rounded-3xl p-2 sm:p-6 flex flex-col sm:flex-row items-center sm:items-start gap-2 sm:gap-6 relative overflow-hidden transition-all shadow-2xl group"
+                style={profile?.custom_settings?.banner_url ? {
+                    backgroundImage: `url(${profile.custom_settings.banner_url})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center'
+                } : {}}
+            >
+                {/* Banner Overlay for Readability */}
+                {profile?.custom_settings?.banner_url && (
+                    <div className="absolute inset-0 bg-black/60 z-0 transition-opacity group-hover:bg-black/50"></div>
+                )}
+
+                {/* Background Texture REMOVED - Clean Dark Gradient instead */}
+                <div className="absolute top-0 right-0 w-full h-full pointer-events-none bg-gradient-to-bl from-neutral-800/10 to-transparent z-0"></div>
+
+                {/* Avatar Section: LoL Style Ring (CONTAINED AND CENTERED) */}
+                <div className="relative shrink-0 z-10 transition-all">
+                    <div className="relative w-36 h-36 sm:w-48 sm:h-48 flex items-center justify-center">
+
+                        {/* 0. Gold Glow (Now INSIDE so it moves WITH the avatar) */}
+                        <div className="absolute inset-0 bg-yellow-500/20 rounded-full blur-2xl transform scale-100 pointer-events-none"></div>
+
+                        {/* 1. Base Ring (Dark Metal) */}
+                        <svg className="absolute inset-0 w-full h-full -rotate-90 drop-shadow-lg overflow-visible" viewBox="0 0 160 160">
+                            <circle
+                                cx="80" cy="80" r="74"
+                                fill="transparent"
+                                stroke="#1F1F1F"
+                                strokeWidth="6"
+                            />
+                        </svg>
+
+                        {/* 2. Progress Ring (Gold Flow) */}
+                        <svg className="absolute inset-0 w-full h-full -rotate-90 drop-shadow-[0_0_15px_rgba(234,179,8,0.5)] overflow-visible" viewBox="0 0 160 160">
+                            <circle
+                                cx="80" cy="80" r="74"
+                                fill="transparent"
+                                stroke="#EAB308"
+                                strokeWidth="6"
+                                strokeDasharray="465" /* 2 * PI * 74 ≈ 465 */
+                                strokeDashoffset={465 - (Math.min(progressPercent, 100) / 100) * 465}
+                                strokeLinecap="round"
+                                className="transition-all duration-1000 ease-out"
+                            />
+                        </svg>
+
+                        {/* Avatar Image - INCREASED SIZE FOR VISIBILITY */}
+                        <div className="w-[115px] h-[115px] sm:w-[150px] sm:h-[150px] rounded-full overflow-hidden border-4 border-neutral-900 z-10 bg-neutral-800 shadow-inner relative">
+                            <img
+                                src={userAvatar}
+                                alt="Profile"
+                                className="w-full h-full object-cover scale-110" // Slight zoom to appreciate face better
+                            />
+                        </div>
+
+                        {/* Level Badge - Hextech Gem (Bottom Center) */}
+                        <div className="absolute bottom-0 left-0 right-0 mx-auto w-10 z-20 filter drop-shadow-lg">
+                            <div className="relative w-10 h-10 flex items-center justify-center">
+                                {/* Hexagon Shape CSS */}
+                                <div className="absolute inset-0 bg-gradient-to-b from-yellow-400 to-yellow-700 clip-path-hexagon"></div>
+                                <div className="absolute inset-[2px] bg-neutral-900 clip-path-hexagon flex items-center justify-center">
+                                    <span className="text-yellow-400 font-black text-sm leading-none">
+                                        {Math.floor(currentLevel)}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* User Info Section */}
+                <div className="flex-1 text-center sm:text-left space-y-1 z-10 pt-2 w-full">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div className="space-y-0 text-center sm:text-left">
+                            {/* Name: Golden Shock (High Visibility & Energy) */}
+                            <h1 className="text-3xl sm:text-4xl font-black text-yellow-400 tracking-tighter uppercase italic drop-shadow-[0_0_20px_rgba(255,255,255,0.4)] animate-pulse leading-none mb-1">
+                                {profile?.username || user.user_metadata.full_name}
+                            </h1>
+
+                            {/* Rank: Dark Glass Pill */}
+                            <div className="flex flex-col sm:flex-row items-center sm:items-center gap-3 mb-4">
+                                <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-black/40 border border-yellow-500/30 rounded-full backdrop-blur-md shadow-lg group hover:border-yellow-500/60 transition-colors">
+                                    <Trophy size={14} className="text-yellow-500" />
+                                    <span className="text-yellow-500 font-bold text-xs tracking-widest uppercase">
+                                        {realRank}
+                                    </span>
+                                </div>
+                                <span className="text-neutral-500 text-xs font-bold tracking-[0.2em] uppercase hidden sm:block">
+                                    {userGyms.find(g => g.is_home_base) ? (
+                                        <div className="flex items-center gap-2 text-yellow-500 animate-pulse">
+                                            <Star size={14} fill="currentColor" />
+                                            <span className="truncate max-w-[200px]">{userGyms.find(g => g.is_home_base)?.gym_name}</span>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-2 text-neutral-500 group-hover:text-blue-400 transition-colors">
+                                            <Swords size={14} />
+                                            <span>AGENTE LIBRE</span>
+                                        </div>
+                                    )}
+                                </span>
+                            </div>
+
+                            {/* SOCIAL STATS ROW (Unified Design) */}
+                            {/* SOCIAL STATS ROW (Grid for Perfect Symmetry) */}
+                            <div className="grid grid-cols-3 divide-x divide-white/10 bg-black/60 backdrop-blur-md rounded-2xl py-3 border border-white/10 shadow-xl mt-4 w-full max-w-xs mx-auto">
+                                <div className="flex flex-col items-center justify-center group cursor-pointer hover:bg-white/5 transition-colors py-1" onClick={() => setShowSocialProfile(true)}>
+                                    <span className="font-black text-xl text-white leading-none mb-1 drop-shadow-md">{socialStats.followersCount}</span>
+                                    <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest text-shadow-sm">Seguidores</span>
+                                </div>
+                                <div className="flex flex-col items-center justify-center group cursor-pointer hover:bg-white/5 transition-colors py-1" onClick={() => setShowSocialProfile(true)}>
+                                    <span className="font-black text-xl text-white leading-none mb-1 drop-shadow-md">{socialStats.followingCount}</span>
+                                    <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest text-shadow-sm">Seguidos</span>
+                                </div>
+                                <div className="flex flex-col items-center justify-center group cursor-pointer hover:bg-white/5 transition-colors py-1">
+                                    <span className="font-black text-xl text-white leading-none mb-1 text-red-500 drop-shadow-md">{socialStats.totalLikes}</span>
+                                    <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest text-shadow-sm">Likes</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Edit Button - PREMIUM GLASS PENCIL */}
+                        <div className="absolute top-4 right-4 sm:static sm:order-last">
+                            <button
+                                onClick={() => setShowEditProfile(true)}
+                                className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all backdrop-blur-md shadow-sm group"
+                            >
+                                <Edit2 size={18} className="group-hover:scale-110 transition-transform" />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Stats & Territories */}
+                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 mt-2">
+                        {/* XP Badge - FIXED VISIBILITY */}
+                        <div className="bg-yellow-500/10 border border-yellow-500/20 px-2 py-1 rounded-full flex items-center gap-1.5 text-yellow-400 font-bold text-[10px] sm:text-xs shadow-sm backdrop-blur-sm">
+                            <Trophy size={12} className="sm:w-4 sm:h-4" />
+                            <span>{Math.floor(displayProfile.xp)} XP</span>
+                        </div>
+
+                        {/* Gym Tags - FIXED BORDERS & BACKGROUND */}
+                        {userGyms.map(gym => (
+                            <Link key={gym.gym_id} to={`/territory/${gym.gym_id}`} className="bg-neutral-800 border border-neutral-700 px-2 py-1 rounded-full flex items-center gap-1.5 text-neutral-300 text-[10px] sm:text-xs hover:border-gym-primary/50 hover:text-white hover:bg-neutral-700 transition-all no-underline shadow-sm hover:shadow-[0_0_15px_rgba(250,204,21,0.1)]">
+                                <MapPin size={12} className={`sm:w-4 sm:h-4 ${gym.is_home_base ? "text-gym-primary" : "text-neutral-500"}`} />
+                                <span className="truncate max-w-[90px] sm:max-w-[120px]">{gym.gym_name}</span>
+                            </Link>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Quick Actions / Passport Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-4">
+                <button
+                    onClick={() => setShowSocialProfile(true)}
+                    className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-yellow-500/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md cursor-pointer"
+                >
+                    <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-yellow-500/5 flex items-center justify-center group-hover:scale-110 transition-transform border border-yellow-500/10">
+                        <Grid className="text-yellow-500 w-4 h-4 md:w-6 md:h-6" />
+                    </div>
+                    <span className="font-bold text-neutral-200 group-hover:text-white text-xs md:text-base">Mis Posts</span>
+                </button>
+                <Link to="/arsenal" className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-blue-500/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md">
+                    <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-blue-500/5 flex items-center justify-center group-hover:scale-110 transition-transform border border-blue-500/10">
+                        <Dumbbell className="text-blue-500 w-4 h-4 md:w-6 md:h-6" />
+                    </div>
+                    <span className="font-bold text-neutral-200 group-hover:text-white text-xs md:text-base">Mi Arsenal</span>
+                </Link>
+
+                <Link to="/stats" className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-green-500/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md">
+                    <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-green-500/5 flex items-center justify-center group-hover:scale-110 transition-transform border border-green-500/10">
+                        <LineChart className="text-green-500 w-4 h-4 md:w-6 md:h-6" />
+                    </div>
+                    <span className="font-bold text-neutral-200 group-hover:text-white text-xs md:text-base">Stats</span>
+                </Link>
+
+                <Link to="/history" className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-orange-500/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md">
+                    <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-orange-500/5 flex items-center justify-center group-hover:scale-110 transition-transform border border-orange-500/10">
+                        <History className="text-orange-500 w-4 h-4 md:w-6 md:h-6" />
+                    </div>
+                    <span className="font-bold text-neutral-200 group-hover:text-white text-xs md:text-base">Historial</span>
+                </Link>
+            </div>
+
+            {/* TERRITORIES SECTION (PASSPORT) */}
+            <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-2xl font-bold text-white flex items-center gap-2 tracking-tight">
+                        <MapPin className="text-gym-primary" />
+                        Mis Territorios
+                    </h2>
+                    <button
+                        onClick={() => setSkipOnboarding(false)}
+                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-gym-primary/10 border border-gym-primary/30 text-gym-primary text-xs font-black uppercase tracking-widest hover:bg-gym-primary hover:text-black transition-all hover:scale-105 hover:shadow-[0_0_15px_rgba(229,255,0,0.3)]"
+                    >
+                        <Search size={14} strokeWidth={3} />
+                        Encontrar Gimnasios
+                    </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {userGyms.map(gym => {
+                        const hasArsenal = (gym.equipment_count || 0) > 0;
+
+                        return (
+                            <div key={gym.gym_id} className={`bg-neutral-900 border ${gym.is_home_base ? 'border-yellow-500/50 shadow-[0_0_20px_rgba(234,179,8,0.1)]' : 'border-neutral-800'} p-3 md:p-6 rounded-xl md:rounded-2xl flex items-center justify-between group hover:border-gym-primary/30 transition-colors shadow-sm relative overflow-hidden`}>
+                                <Link to={`/territory/${gym.gym_id}`} className="flex-1 min-w-0 mr-3 no-underline">
+                                    <h3 className={`font-bold text-sm md:text-lg mb-0.5 md:mb-1 transition-colors truncate max-w-[200px] md:max-w-none flex items-center gap-2 ${gym.is_home_base ? 'text-yellow-400' : 'text-white group-hover:text-gym-primary'}`}>
+                                        {gym.gym_name}
+                                        {gym.is_home_base && <Star size={14} fill="currentColor" className="text-yellow-500" />}
+                                    </h3>
+                                    <div className="flex items-center gap-2 text-xs md:text-sm text-neutral-400">
+                                        {gym.is_home_base && (
+                                            <span className="bg-yellow-500/20 text-yellow-500 px-1.5 py-0.5 rounded text-[10px] md:text-xs font-bold border border-yellow-500/20 flex items-center gap-1">
+                                                <Star size={10} fill="currentColor" />
+                                                SEDE PRINCIPAL
                                             </span>
-                                        </button>
+                                        )}
+                                        <span>Items: {gym.equipment_count || 0}</span>
+                                    </div>
+                                </Link>
 
-                                        {/* 2. CONFIGURE ARSENAL */}
+                                {/* ACTION BUTTONS */}
+                                <div className="flex items-center gap-2 shrink-0">
+                                    {hasArsenal ? (
+                                        <>
+                                            {/* 1. START WORKOUT (Location Locked) */}
+                                            <button
+                                                onClick={() => handleStartWorkout(gym)}
+                                                disabled={verifyingLocation === gym.gym_id}
+                                                className={`bg-gym-primary text-black p-2 md:px-4 md:py-3 rounded-lg md:rounded-xl transition-all hover:scale-105 font-bold text-xs md:text-sm flex items-center gap-2 shadow-[0_0_10px_rgba(250,204,21,0.2)] ${verifyingLocation === gym.gym_id ? 'opacity-80 cursor-wait' : ''}`}
+                                                title="Iniciar Entrenamiento (Requiere Ubicación)"
+                                            >
+                                                {verifyingLocation === gym.gym_id ? (
+                                                    <Loader size={16} className="animate-spin" />
+                                                ) : (
+                                                    <Swords size={16} strokeWidth={2.5} />
+                                                )}
+                                                <span className="hidden md:inline">
+                                                    {verifyingLocation === gym.gym_id ? 'VERIFICANDO...' : 'INICIAR'}
+                                                </span>
+                                            </button>
+
+                                            {/* 2. CONFIGURE ARSENAL */}
+                                            <Link
+                                                to={`/territory/${gym.gym_id}/arsenal`}
+                                                className="bg-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-700 p-2 md:px-4 md:py-3 rounded-lg md:rounded-xl transition-all font-bold text-xs md:text-sm flex items-center gap-2"
+                                                title="Configurar Arsenal"
+                                            >
+                                                <Dumbbell size={16} />
+                                                <span className="hidden md:inline">CONFIG</span>
+                                            </Link>
+                                        </>
+                                    ) : (
+                                        /* NO ARSENAL - SINGLE CONFIG BUTTON */
                                         <Link
                                             to={`/territory/${gym.gym_id}/arsenal`}
                                             className="bg-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-700 p-2 md:px-4 md:py-3 rounded-lg md:rounded-xl transition-all font-bold text-xs md:text-sm flex items-center gap-2"
-                                            title="Configurar Arsenal"
                                         >
-                                            <Dumbbell size={16} />
-                                            <span className="hidden md:inline">CONFIG</span>
+                                            <Plus size={16} />
+                                            <span className="hidden md:inline">CONFIGURAR</span>
                                         </Link>
-                                    </>
-                                ) : (
-                                    /* NO ARSENAL - SINGLE CONFIG BUTTON */
-                                    <Link
-                                        to={`/territory/${gym.gym_id}/arsenal`}
-                                        className="bg-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-700 p-2 md:px-4 md:py-3 rounded-lg md:rounded-xl transition-all font-bold text-xs md:text-sm flex items-center gap-2"
-                                    >
-                                        <Plus size={16} />
-                                        <span className="hidden md:inline">CONFIGURAR</span>
-                                    </Link>
-                                )}
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                    );
-                })}
+                        );
+                    })}
 
-                {/* Add New Territory Button */}
+                    {/* Add New Territory Button */}
+
+                </div>
+            </div>
+
+            {/* Add Gym Modal */}
+
+
+            {/* EDIT PROFILE MODAL */}
+            {showEditProfile && profile && (
+                <EditProfileModal
+                    user={user}
+                    currentUsername={profile.username || user.user_metadata.full_name}
+                    currentAvatarUrl={profile.avatar_url || user.user_metadata.avatar_url}
+                    currentBannerUrl={profile.custom_settings?.banner_url}
+                    currentFeaturedRoutineId={profile.featured_routine_id}
+                    onClose={() => setShowEditProfile(false)}
+                    onUpdate={loadUserData}
+                />
+            )}
+
+            {/* SOCIAL PROFILE MODAL */}
+            {showSocialProfile && user && (
+                <PlayerProfileModal
+                    player={{
+                        id: user.id,
+                        username: profile?.username || user.user_metadata.full_name,
+                        avatar_url: profile?.avatar_url || user.user_metadata.avatar_url,
+                        xp: profile?.xp || 0,
+                        rank: (profile?.rank || 0) as number, // Cast if enum mismatch
+                        banner_url: profile?.custom_settings?.banner_url
+                    }}
+                    onClose={() => setShowSocialProfile(false)}
+                />
+            )}
+
+            {/* TUTORIAL MODAL */}
+            {showTutorial && (
+                <TacticalTutorialModal
+                    onClose={() => {
+                        handleCloseTutorial();
+                        setForceMission(false);
+                    }}
+                    showMapMission={userGyms.length === 0 || forceMission}
+                />
+            )}
+
+
+            <div className="flex flex-col items-center gap-4 mt-12 pb-12 opacity-50 hover:opacity-100 transition-opacity">
+                {/* 1. TUTORIAL RESET */}
+                <button
+                    onClick={() => {
+                        setForceMission(true);
+                        setShowTutorial(true);
+                    }}
+                    className="flex items-center gap-2 px-6 py-2 rounded-full border border-neutral-800 bg-neutral-900/50 text-neutral-500 text-xs font-medium hover:bg-neutral-800 hover:text-white hover:border-neutral-700 transition-all"
+                >
+                    <span>Ver Tutorial de Inicio</span>
+                </button>
+
 
             </div>
-        </div>
 
-        {/* Add Gym Modal */}
+            {/* 3. FLOAT: REFERRAL REWARD BUTTON */}
+            <div className="fixed bottom-6 right-6 z-40">
+                <button
+                    onClick={() => setShowReferralModal(true)}
+                    className="bg-yellow-500 text-black font-black py-2 px-5 rounded-3xl shadow-[0_0_30px_rgba(234,179,8,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3 border-4 border-black group animate-in slide-in-from-bottom-10 duration-700"
+                    title="Invitar Reclutas (+250 XP)"
+                >
+                    <UserPlus size={28} className="group-hover:rotate-12 transition-transform duration-300" strokeWidth={2.5} />
+                    <div className="flex flex-col items-start leading-none">
+                        <span className="text-sm md:text-base uppercase tracking-wider font-black">INVITAR AMIGOS</span>
+                        <span className="text-[10px] md:text-xs font-bold text-black/70 uppercase tracking-tight">Gana +250 XP</span>
+                    </div>
+                </button>
+            </div>
 
-
-        {/* EDIT PROFILE MODAL */}
-        {showEditProfile && profile && (
-            <EditProfileModal
+            {/* MODALS */}
+            <ReferralModal
+                isOpen={showReferralModal}
+                onClose={() => setShowReferralModal(false)}
                 user={user}
-                currentUsername={profile.username || user.user_metadata.full_name}
-                currentAvatarUrl={profile.avatar_url || user.user_metadata.avatar_url}
-                currentBannerUrl={profile.custom_settings?.banner_url}
-                currentFeaturedRoutineId={profile.featured_routine_id}
-                onClose={() => setShowEditProfile(false)}
-                onUpdate={loadUserData}
+            />    {/* LOCATION ACCESS MODAL */}
+            <LocationAccessModal
+                isOpen={locationError.isOpen}
+                onClose={() => setLocationError(prev => ({ ...prev, isOpen: false }))}
+                gymName={locationError.gymName}
+                distanceMeters={locationError.distanceMeters}
+                maxDistance={200}
+                errorType={locationError.errorType}
             />
-        )}
-
-        {/* SOCIAL PROFILE MODAL */}
-        {showSocialProfile && user && (
-            <PlayerProfileModal
-                player={{
-                    id: user.id,
-                    username: profile?.username || user.user_metadata.full_name,
-                    avatar_url: profile?.avatar_url || user.user_metadata.avatar_url,
-                    xp: profile?.xp || 0,
-                    rank: (profile?.rank || 0) as number, // Cast if enum mismatch
-                    banner_url: profile?.custom_settings?.banner_url
-                }}
-                onClose={() => setShowSocialProfile(false)}
-            />
-        )}
-
-        {/* TUTORIAL MODAL */}
-        {showTutorial && (
-            <TacticalTutorialModal
-                onClose={() => {
-                    handleCloseTutorial();
-                    setForceMission(false);
-                }}
-                showMapMission={userGyms.length === 0 || forceMission}
-            />
-        )}
-
-
-        <div className="flex flex-col items-center gap-4 mt-12 pb-12 opacity-50 hover:opacity-100 transition-opacity">
-            {/* 1. TUTORIAL RESET */}
-            <button
-                onClick={() => {
-                    setForceMission(true);
-                    setShowTutorial(true);
-                }}
-                className="flex items-center gap-2 px-6 py-2 rounded-full border border-neutral-800 bg-neutral-900/50 text-neutral-500 text-xs font-medium hover:bg-neutral-800 hover:text-white hover:border-neutral-700 transition-all"
-            >
-                <span>Ver Tutorial de Inicio</span>
-            </button>
-
 
         </div>
-
-        {/* 3. FLOAT: REFERRAL REWARD BUTTON */}
-        <div className="fixed bottom-6 right-6 z-40">
-            <button
-                onClick={() => setShowReferralModal(true)}
-                className="bg-yellow-500 text-black font-black py-2 px-5 rounded-3xl shadow-[0_0_30px_rgba(234,179,8,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3 border-4 border-black group animate-in slide-in-from-bottom-10 duration-700"
-                title="Invitar Reclutas (+250 XP)"
-            >
-                <UserPlus size={28} className="group-hover:rotate-12 transition-transform duration-300" strokeWidth={2.5} />
-                <div className="flex flex-col items-start leading-none">
-                    <span className="text-sm md:text-base uppercase tracking-wider font-black">INVITAR AMIGOS</span>
-                    <span className="text-[10px] md:text-xs font-bold text-black/70 uppercase tracking-tight">Gana +250 XP</span>
-                </div>
-            </button>
-        </div>
-
-        {/* MODALS */}
-        <ReferralModal
-            isOpen={showReferralModal}
-            onClose={() => setShowReferralModal(false)}
-            user={user}
-        />    {/* LOCATION ACCESS MODAL */}
-        <LocationAccessModal
-            isOpen={locationError.isOpen}
-            onClose={() => setLocationError(prev => ({ ...prev, isOpen: false }))}
-            gymName={locationError.gymName}
-            distanceMeters={locationError.distanceMeters}
-            maxDistance={200}
-            errorType={locationError.errorType}
-        />
-
-    </div>
-);
+    );
 };
 
 // --- HELPER FUNCTIONS ---
