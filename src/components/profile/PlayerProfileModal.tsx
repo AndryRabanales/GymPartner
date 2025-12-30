@@ -350,6 +350,7 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
                     initialPostId={viewedPostId}
                     posts={posts}
                     onClose={() => setViewedPostId(null)}
+                    variant={activeTab === 'reels' ? 'reel' : 'feed'}
                 />
             )}
         </div>
