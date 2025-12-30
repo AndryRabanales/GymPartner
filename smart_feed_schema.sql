@@ -1,53 +1,44 @@
 -- ==============================================================================
--- 🧠 SMART FEED ALGORITHM & ANALYTICS SCHEMA
+-- 🧠 SMART FEED ALGORITHM V2.0 (TikTok-Style)
 -- ==============================================================================
 
--- 1. TRACKING TABLE: post_views
--- Stores raw view data for historical analysis and precise recalculations
-CREATE TABLE IF NOT EXISTS post_views (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
-    user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL, -- Nullable for anonymous views
-    duration_seconds NUMERIC DEFAULT 0,
-    percentage_watched NUMERIC DEFAULT 0, -- 0.0 to 1.0 (e.g. 0.85 = 85%)
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
+-- 1. ENHANCED TRACKING: post_views
+-- Added 'times_looped' to track obsessiveness (Rewatch Factor)
+ALTER TABLE post_views ADD COLUMN IF NOT EXISTS times_looped INTEGER DEFAULT 0;
 
--- Index for fast aggregation
-CREATE INDEX IF NOT EXISTS idx_post_views_post_id ON post_views(post_id);
-CREATE INDEX IF NOT EXISTS idx_post_views_user_id ON post_views(user_id);
-
-
--- 2. CACHING COLUMNS on posts table
--- Avoids recalculating sums on every feed fetch
+-- 2. CACHING & HEATING
+-- viral_score: pre-calculated ranking score
+-- boost_factor: manual or automated multiplier for "Heating" (New videos get 1.0, Paid/Featured get 2.0+)
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'posts' AND column_name = 'views_count') THEN
-        ALTER TABLE posts ADD COLUMN views_count INTEGER DEFAULT 0;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'posts' AND column_name = 'viral_score') THEN
+        ALTER TABLE posts ADD COLUMN viral_score NUMERIC DEFAULT 0;
     END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'posts' AND column_name = 'retention_score') THEN
-        ALTER TABLE posts ADD COLUMN retention_score NUMERIC DEFAULT 0; -- 0 to 100 score
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'posts' AND column_name = 'boost_factor') THEN
+        ALTER TABLE posts ADD COLUMN boost_factor NUMERIC DEFAULT 1.0;
     END IF;
 END $$;
 
 
--- 3. FUNCTION: log_view
--- Atomically logs a view and updates the post's cached stats
-CREATE OR REPLACE FUNCTION log_view(
+-- 3. ALGORITHM: log_view_v2 (Handles Loops)
+CREATE OR REPLACE FUNCTION log_view_v2(
     p_post_id UUID,
     p_user_id UUID,
     p_duration NUMERIC,
-    p_percentage NUMERIC
+    p_percentage NUMERIC,
+    p_loops INTEGER DEFAULT 0
 ) RETURNS VOID AS $$
 BEGIN
     -- A. Insert raw record
-    INSERT INTO post_views (post_id, user_id, duration_seconds, percentage_watched)
-    VALUES (p_post_id, p_user_id, p_duration, p_percentage);
+    INSERT INTO post_views (post_id, user_id, duration_seconds, percentage_watched, times_looped)
+    VALUES (p_post_id, p_user_id, p_duration, p_percentage, p_loops);
 
-    -- B. Update Post Aggregate Stats 
-    -- We use a simple incremental update for views, and a weighted rolling average for retention
-    -- NewAvg = ((OldAvg * OldCount) + NewVal) / (OldCount + 1)
+    -- B. Update Post Aggregates (Incremental)
+    -- Complex weighted update for viral_score could happen here, or via cron. 
+    -- For real-time effect, we update a simple score here.
+    
+    -- Retention Logic: Moving Average
+    -- Viral Logic: (Loops * 5) + (Full Watches * 2)
     UPDATE posts
     SET 
         views_count = views_count + 1,
@@ -60,10 +51,8 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 
--- 4. FUNCTION: get_smart_feed
--- Returns posts sorted by the "Smart Score"
--- Score = (Likes * 3) + (Comments * 5) + (Views * 0.1) + (Retention * 2) + Chaos
-CREATE OR REPLACE FUNCTION get_smart_feed(
+-- 4. THE TIKTOK FORMULA: get_smart_feed_v2
+CREATE OR REPLACE FUNCTION get_smart_feed_v2(
     p_user_id UUID DEFAULT NULL,
     p_limit INTEGER DEFAULT 10,
     p_offset INTEGER DEFAULT 0
@@ -84,7 +73,7 @@ CREATE OR REPLACE FUNCTION get_smart_feed(
     username TEXT,
     avatar_url TEXT,
     routine_name TEXT,
-    rank_score NUMERIC -- Debugging purposes
+    debug_score NUMERIC
 ) AS $$
 BEGIN
     RETURN QUERY
@@ -98,37 +87,57 @@ BEGIN
         p.linked_routine_id,
         p.created_at,
         
-        -- Aggregates (Subqueries are faster than massive joins for paginated feeds sometimes, 
-        -- but here we rely on the VIEW-like join structure or cached counts)
+        -- Counts
         (SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.id) as likes_count,
         (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) as comments_count,
         p.views_count,
         p.retention_score,
         
-        -- User Interaction
+        -- User Context
         CASE WHEN p_user_id IS NOT NULL THEN
             EXISTS (SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = p_user_id)
         ELSE FALSE END as user_has_liked,
 
-        -- Profiles Join
+        -- Joins
         pr.username,
         pr.avatar_url,
-        
-        -- Routine Join
         r.name as routine_name,
 
-        -- 🧮 THE ALGORITHM
+        -- � ALGORITHM V2.0
         (
-            ((SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.id) * 3.0) +  -- Likes weight: 3
-            ((SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) * 5.0) +      -- Comments weight: 5
-            (COALESCE(p.views_count, 0) * 0.1) +                                    -- Views weight: 0.1
-            (COALESCE(p.retention_score, 0) * 2.0) +                                -- Retention weight: 2
-            (random() * 20.0)                                                       -- Chaos Factor: 0-20
-        ) as rank_score
+            -- 1. ENGAGEMENT (The "Social Proof")
+            ((SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.id) * 3.0) + 
+            ((SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) * 6.0) +  
+            
+            -- 2. RETENTION (The "Quality Signal" - CRITICAL for TikTok)
+            -- High retention (>80%) gets exponential boost
+            (COALESCE(p.retention_score, 0) * 0.5) +
+            (CASE WHEN p.retention_score > 90 THEN 100 WHEN p.retention_score > 80 THEN 50 ELSE 0 END) +
+
+            -- 3. FRESHNESS (The "Heating")
+            -- New videos (<24h) get massive boost to test them
+            (CASE 
+                WHEN p.created_at > NOW() - INTERVAL '24 hours' THEN 100 
+                WHEN p.created_at > NOW() - INTERVAL '3 days' THEN 50 
+                ELSE 0 
+            END) +
+
+            -- 4. VIRALITY (Rewatchability - inferred from simple view count velocity if we had it, but here we use raw view count dampener)
+            -- We don't want old viral videos to dominate forever, so we dampen high view counts: log(views)
+            (LN(GREATEST(p.views_count, 1)) * 5.0) +
+            
+            -- 5. CHAOS (The "Discovery")
+            (random() * 30.0)
+
+        ) * p.boost_factor as rank_score
 
     FROM posts p
     LEFT JOIN profiles pr ON p.user_id = pr.id
     LEFT JOIN routines r ON p.linked_routine_id = r.id
+    
+    -- EXCLUSION FILTER: Don't show videos already deeply watched by this user? 
+    -- For MVP we skip typical exclusions to ensure content availability.
+    
     ORDER BY rank_score DESC
     LIMIT p_limit OFFSET p_offset;
 END;

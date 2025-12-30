@@ -48,6 +48,7 @@ export const ReelsPage = () => {
     };
 
     const viewStartTimes = useRef<{ [key: string]: number }>({});
+    const loopCounters = useRef<{ [key: string]: number }>({});
 
     // Intersection Observer for Auto-Play, Smart Preloading & ANALYTICS
     useEffect(() => {
@@ -69,6 +70,7 @@ export const ReelsPage = () => {
 
                         // ⏱️ START TIMER for Analytics
                         viewStartTimes.current[currentId] = Date.now();
+                        loopCounters.current[currentId] = 0; // Reset loops on fresh view
 
                         // Smart Preload Next Video
                         const currentIndex = posts.findIndex(p => ((p as any).virtual_id || p.id) === currentId);
@@ -92,16 +94,18 @@ export const ReelsPage = () => {
                             if (durationSeconds > 1.0) {
                                 const vidDuration = video.duration || 10;
                                 const percentage = Math.min(1.0, durationSeconds / vidDuration);
+                                const loops = loopCounters.current[currentId] || 0;
 
                                 // Extract clean ID (remove virtual suffix if present)
                                 const cleanId = currentId.split('_')[0];
 
-                                console.log(`[ReelsAnalytics] Viewed ${cleanId} for ${durationSeconds.toFixed(1)}s (${(percentage * 100).toFixed(0)}%)`);
+                                console.log(`[ReelsAnalytics] Viewed ${cleanId} for ${durationSeconds.toFixed(1)}s (${(percentage * 100).toFixed(0)}%), Loops: ${loops}`);
 
-                                socialService.logView(cleanId, user?.id || null, durationSeconds, percentage);
+                                socialService.logView(cleanId, user?.id || null, durationSeconds, percentage, loops);
                             }
 
                             delete viewStartTimes.current[currentId];
+                            delete loopCounters.current[currentId];
                         }
                     }
                 });
@@ -276,6 +280,12 @@ export const ReelsPage = () => {
                             muted={muted}
                             poster={post.media_url.includes('cloudinary') ? post.media_url.replace(/\.(mp4|mov|webm)$/i, '.jpg') : undefined}
                             onClick={() => setMuted(!muted)}
+                            onEnded={() => {
+                                const id = (post as any).virtual_id || post.id;
+                                if (loopCounters.current[id] !== undefined) {
+                                    loopCounters.current[id]++;
+                                }
+                            }}
                         />
 
                         {/* MUTE INDICATOR */}
