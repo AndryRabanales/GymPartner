@@ -8,6 +8,7 @@ import { BottomNav } from '../components/navigation/BottomNav';
 export const AppLayout = () => {
     const { user, signOut } = useAuth();
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+    const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const location = useLocation();
     const isReelsPage = location.pathname === '/reels';
 
@@ -73,9 +74,10 @@ export const AppLayout = () => {
                                 </Link>
 
                                 {user ? (
-                                    <div className="relative group z-50">
+                                    <div className="relative z-50">
                                         <button
-                                            className="flex items-center gap-3 bg-neutral-900/50 hover:bg-neutral-800 pl-1 pr-4 py-1 rounded-full border border-white/5 hover:border-white/20 transition-all group-hover:shadow-lg group-hover:shadow-black/50"
+                                            onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                                            className="flex items-center gap-3 bg-neutral-900/50 hover:bg-neutral-800 pl-1 pr-4 py-1 rounded-full border border-white/5 hover:border-white/20 transition-all shadow-lg shadow-black/50"
                                         >
                                             <div className="relative w-8 h-8">
                                                 <div className="absolute inset-0 bg-gradient-to-tr from-yellow-400 to-orange-500 rounded-full animate-pulse opacity-20"></div>
@@ -90,24 +92,32 @@ export const AppLayout = () => {
                                             </span>
                                         </button>
 
-                                        {/* Dropdown Menu */}
-                                        <div className="absolute right-0 mt-4 w-60 bg-neutral-950/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl py-2 opacity-0 invisible group-focus-within:opacity-100 group-focus-within:visible transition-all duration-200 transform origin-top-right translate-y-2 group-focus-within:translate-y-0 z-[100]">
-                                            <div className="px-4 py-3 border-b border-white/5 mb-2 bg-white/2">
-                                                <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mb-1">Cuenta</p>
-                                                <p className="text-sm font-bold text-white truncate">{user.user_metadata.full_name}</p>
-                                            </div>
+                                        {/* Dropdown Menu - CONTROLLED STATE */}
+                                        {isUserMenuOpen && (
+                                            <>
+                                                {/* Backdrop to close on click outside */}
+                                                <div className="fixed inset-0 z-[90]" onClick={() => setIsUserMenuOpen(false)}></div>
 
+                                                <div className="absolute right-0 mt-4 w-60 bg-neutral-950/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl py-2 animate-in fade-in slide-in-from-top-2 duration-200 z-[100]">
+                                                    <div className="px-4 py-3 border-b border-white/5 mb-2 bg-white/2">
+                                                        <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mb-1">Cuenta</p>
+                                                        <p className="text-sm font-bold text-white truncate">{user.user_metadata.full_name}</p>
+                                                    </div>
 
-
-                                            <div className="border-t border-white/5 mt-2 pt-2 mx-2">
-                                                <button
-                                                    onClick={() => signOut()}
-                                                    className="w-full text-left px-4 py-3 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors font-bold flex items-center gap-3 rounded-xl"
-                                                >
-                                                    <LogOut size={16} /> Cerrar Sesión
-                                                </button>
-                                            </div>
-                                        </div>
+                                                    <div className="border-t border-white/5 mt-2 pt-2 mx-2">
+                                                        <button
+                                                            onClick={() => {
+                                                                signOut();
+                                                                setIsUserMenuOpen(false);
+                                                            }}
+                                                            className="w-full text-left px-4 py-3 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors font-bold flex items-center gap-3 rounded-xl"
+                                                        >
+                                                            <LogOut size={16} /> Cerrar Sesión
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 ) : null}
 
