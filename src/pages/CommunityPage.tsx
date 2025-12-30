@@ -87,7 +87,17 @@ export const CommunityPage = () => {
             likes_count: newCount
         } : p));
 
-        await socialService.toggleLike(user.id, post.id);
+        try {
+            await socialService.toggleLike(user.id, post.id);
+        } catch (error) {
+            console.error("Like failed, reverting:", error);
+            // Revert state
+            setPosts(prev => prev.map(p => p.id === post.id ? {
+                ...p,
+                user_has_liked: isLiked,
+                likes_count: post.likes_count || 0
+            } : p));
+        }
     };
 
     const togglePlayPause = (e: React.MouseEvent<HTMLVideoElement>) => {

@@ -446,28 +446,54 @@ class SocialService {
     // ============================================================================
 
     async toggleLike(userId: string, postId: string): Promise<boolean> {
-        // 1. Check if exists
-        const { data: existing } = await supabase
-            .from('post_likes')
-            .select('post_id')
-            .eq('post_id', postId)
-            .eq('user_id', userId)
-            .maybeSingle();
-
-        if (existing) {
-            // UNLIKE
-            await supabase
+        try {
+            // 1. Check if exists
+            const { data: existing, error: checkError } = await supabase
                 .from('post_likes')
-                .delete()
+                .select('post_id')
                 .eq('post_id', postId)
-                .eq('user_id', userId);
-            return false; // Not liked anymore
-        } else {
-            // LIKE
-            await supabase
-                .from('post_likes')
-                .insert({ post_id: postId, user_id: userId });
-            return true; // Liked
+                .eq('user_id', userId)
+                .maybeSingle();
+
+            if (checkError) {
+                console.error("Error checking like status:", checkError);
+                throw checkError;
+            }
+
+            if (existing) {
+                // UNLIKE
+                const { error: deleteError } = await supabase
+                    .from('post_likes')
+                    .delete()
+                    .eq('post_id', postId)
+                    .eq('user_id', userId);
+
+                if (deleteError) {
+                    console.error("Error removing like:", deleteError);
+                    throw deleteError;
+                }
+                return false; // Not liked anymore
+            } else {
+                // LIKE
+                const { error: insertError } = await supabase
+                    .from('post_likes')
+                    .insert({ post_id: postId, user_id: userId });
+
+                if (insertError) {
+                    // Ignore unique constraint violations (race condition double-click)
+                    if (insertError.code === '23505') {
+                        return true;
+                    }
+                    console.error("Error adding like:", insertError);
+                    throw insertError;
+                }
+                return true; // Liked
+            }
+        } catch (error) {
+            console.error("toggleLike failed:", error);
+            // Default to false or rethrow? Expect UI to handle it.
+            // For now, let's return false so UI reverts if it was optimistic
+            throw error;
         }
     }
 
