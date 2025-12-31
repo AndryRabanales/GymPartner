@@ -251,7 +251,7 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
                                                 className="w-full h-full object-cover"
                                                 muted
                                                 playsInline
-                                                onError={(e) => console.error("Grid Video Error:", post.id, e)}
+                                            // onError={(e) => console.error("Grid Video Error:", post.id, e)} // Suppressed 416 noise
                                             />
                                         ) : (
                                             <img src={post.media_url} alt="Post" className="w-full h-full object-cover" />
@@ -293,7 +293,7 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
                                             className="w-full h-full object-cover"
                                             muted
                                             playsInline
-                                            onError={(e) => console.error("Reel Video Error:", post.id, e)}
+                                        // onError={(e) => console.error("Reel Video Error:", post.id, e)} // Suppressed 416 noise
                                         />
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity"></div>
                                         <div className="absolute bottom-3 left-3 flex items-center gap-1.5 text-white text-sm font-bold drop-shadow-md">

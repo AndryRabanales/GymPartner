@@ -40,6 +40,7 @@ export const ReelItem: React.FC<ReelItemProps> = React.memo(({
 }) => {
     const internalVideoRef = useRef<HTMLVideoElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    const [retryCount, setRetryCount] = React.useState(0);
 
     // Register ref securely
     useEffect(() => {
@@ -100,6 +101,25 @@ export const ReelItem: React.FC<ReelItemProps> = React.memo(({
                     poster={post.media_url.includes('cloudinary') ? post.media_url.replace(/\.(mp4|mov|webm)$/i, '.jpg') : undefined}
                     onClick={onToggleMute}
                     onEnded={handleInternalLoop}
+                    onError={(e) => {
+                        // FIX: Auto-Retry Logic for flaky connections (416/QUIC errors)
+                        const video = e.currentTarget;
+
+                        // Prevent infinite loops
+                        if (retryCount < 3) {
+                            console.log(`[ReelItem] Retrying video playback (Attempt ${retryCount + 1}/3)...`);
+                            e.preventDefault();
+                            e.stopPropagation();
+
+                            setTimeout(() => {
+                                setRetryCount(prev => prev + 1);
+                                video.load(); // Reloads the media resource
+                                video.play().catch(() => { }); // Attempt to resume
+                            }, 1000); // 1s delay before retry
+                        } else {
+                            console.warn("[ReelItem] Video failed to load after 3 attempts.");
+                        }
+                    }}
                 />
 
                 {/* MUTE INDICATOR */}
