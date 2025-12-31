@@ -7,6 +7,9 @@ import { CommentsSheet } from '../components/social/CommentsSheet';
 import { MediaCarousel } from '../components/social/MediaCarousel';
 import { PlayerProfileModal } from '../components/profile/PlayerProfileModal';
 
+// Seen Posts Storage Key
+const SEEN_STORAGE_KEY = 'community_seen_posts';
+
 export const CommunityPage = () => {
     const { user } = useAuth();
     const [posts, setPosts] = useState<Post[]>([]);
@@ -23,7 +26,56 @@ export const CommunityPage = () => {
     const touchStartY = useRef(0);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Smart Auto-Play Observer
+    // Helper: Get seen posts from localStorage
+    const getSeenPosts = (): string[] => {
+        try {
+            return JSON.parse(localStorage.getItem(SEEN_STORAGE_KEY) || '[]');
+        } catch {
+            return [];
+        }
+    };
+
+    // Helper: Mark post as seen
+    const markPostAsSeen = (postId: string) => {
+        const seen = getSeenPosts();
+        if (!seen.includes(postId)) {
+            seen.push(postId);
+            // Keep only last 100 seen posts
+            localStorage.setItem(SEEN_STORAGE_KEY, JSON.stringify(seen.slice(-100)));
+        }
+    };
+
+    // Helper: Rotate feed (unseen first, seen last)
+    const rotateFeed = (posts: Post[]): Post[] => {
+        const seenIds = getSeenPosts();
+        const unseen = posts.filter(p => !seenIds.includes(p.id));
+        const seen = posts.filter(p => seenIds.includes(p.id));
+        return [...unseen, ...seen];
+    };
+
+    // Helper: Shuffle top N posts (Fisher-Yates)
+    const shufflePosts = (posts: Post[], count: number = 5): Post[] => {
+        if (posts.length <= count) {
+            const shuffled = [...posts];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
+
+        const toShuffle = posts.slice(0, count);
+        const rest = posts.slice(count);
+
+        for (let i = toShuffle.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [toShuffle[i], toShuffle[j]] = [toShuffle[j], toShuffle[i]];
+        }
+
+        return [...toShuffle, ...rest];
+    };
+
+    // Smart Auto-Play Observer + Seen Posts Tracker
     useEffect(() => {
         const observer = new IntersectionObserver(
             (entries) => {
@@ -31,10 +83,16 @@ export const CommunityPage = () => {
                 let maxId = null;
 
                 entries.forEach((entry) => {
+                    // Mark as seen when 60% visible
                     if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
+                        const postId = entry.target.getAttribute('data-post-id');
+                        if (postId) {
+                            markPostAsSeen(postId);
+                        }
+
                         if (entry.intersectionRatio > maxRatio) {
                             maxRatio = entry.intersectionRatio;
-                            maxId = entry.target.getAttribute('data-post-id');
+                            maxId = postId;
                         }
                     }
                 });
@@ -43,7 +101,7 @@ export const CommunityPage = () => {
                     setPlayingPostId(maxId);
                 }
             },
-            { threshold: [0.5, 0.7] }
+            { threshold: [0.5, 0.6, 0.7] }
         );
 
         Object.values(observerRefs.current).forEach((el) => {
@@ -76,7 +134,12 @@ export const CommunityPage = () => {
         setLoading(true);
         // Using getGlobalFeed for discovery (default behavior: grouped posts, perfect for Community feed)
         const feed = await socialService.getGlobalFeed(user?.id, undefined, false);
-        setPosts(feed);
+
+        // Apply smart rotation
+        const rotated = rotateFeed(feed);
+        const shuffled = shufflePosts(rotated, 5); // Shuffle top 5 for variety
+
+        setPosts(shuffled);
         setLoading(false);
     };
 
