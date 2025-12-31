@@ -172,7 +172,11 @@ export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPos
                                 {/* RIGHT ACTIONS BAR */}
                                 <div className="absolute bottom-6 right-2 flex flex-col items-center gap-5 z-40">
                                     <div className="flex flex-col items-center gap-1">
-                                        <button onClick={(e) => handleLike(post, e)} className="p-2 transition-transform active:scale-75">
+                                        <button
+                                            onClick={(e) => handleLike(post, e)}
+                                            onTouchEnd={(e) => e.stopPropagation()}
+                                            className="p-2 transition-transform active:scale-75 cursor-pointer z-50"
+                                        >
                                             <Heart size={30} className={post.user_has_liked ? "text-red-500 fill-red-500" : "text-white drop-shadow-lg"} strokeWidth={1.5} />
                                         </button>
                                         <span className="text-white text-xs font-bold drop-shadow-md">{post.likes_count}</span>
@@ -362,8 +366,9 @@ export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPos
                             <div className="px-3 py-3">
                                 <div className="flex items-center gap-4 mb-3">
                                     <button
-                                        onClick={() => handleLike(post)}
-                                        className="transition-transform active:scale-95"
+                                        onClick={(e) => handleLike(post, e)}
+                                        onTouchEnd={(e) => e.stopPropagation()}
+                                        className="transition-transform active:scale-95 cursor-pointer"
                                     >
                                         <Heart
                                             size={24}
