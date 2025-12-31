@@ -463,7 +463,7 @@ export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPos
                                         <MessageCircle size={24} />
                                     </button>
                                     <button
-                                        onClick={(e) => handleShare(post)}
+                                        onClick={() => handleShare(post)}
                                         className="text-white hover:text-neutral-300 ml-auto transition-transform active:scale-95"
                                     >
                                         <Share2 size={24} />
