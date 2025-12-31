@@ -860,9 +860,14 @@ export const MyArsenal = () => {
                 // Get Preserved Config
                 const config = routineConfigs.get(id) || {};
 
+                // Get icon from the existing item
+                const existingItem = inventory.find(i => i.id === finalId) ||
+                    globalInventory.find(i => i.id === finalId);
+
                 finalConfigPayload.push({
                     id: finalId, // The REAL DB UUID
                     name: finalName,
+                    icon: existingItem?.icon, // [FIX] Added icon to payload
                     track_weight: config.track_weight !== undefined ? config.track_weight : true,
                     track_reps: config.track_reps !== undefined ? config.track_reps : true,
                     track_time: config.track_time || false,
