@@ -16,6 +16,7 @@ import { PlayerProfileModal } from '../components/profile/PlayerProfileModal';
 import { userService } from '../services/UserService';
 import type { UserPrimaryGym } from '../services/UserService';
 import { socialService } from '../services/SocialService';
+import { useBottomNav } from '../context/BottomNavContext';
 // seedExercisesCatalog removed
 
 
@@ -36,6 +37,7 @@ interface ProfileData {
 
 export const UserProfile = () => {
     const { user, loading: authLoading } = useAuth();
+    const { hideBottomNav, showBottomNav } = useBottomNav();
     const [profile, setProfile] = useState<ProfileData | null>(null);
     const [loading, setLoading] = useState(true);
     const [userGyms, setUserGyms] = useState<UserPrimaryGym[]>([]);
@@ -514,7 +516,10 @@ export const UserProfile = () => {
                         {/* Edit Button - PREMIUM GLASS PENCIL */}
                         <div className="absolute top-4 right-4 sm:static sm:order-last">
                             <button
-                                onClick={() => setShowEditProfile(true)}
+                                onClick={() => {
+                                    setShowEditProfile(true);
+                                    hideBottomNav();
+                                }}
                                 className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all backdrop-blur-md shadow-sm group"
                             >
                                 <Edit2 size={18} className="group-hover:scale-110 transition-transform" />
@@ -688,7 +693,10 @@ export const UserProfile = () => {
                     currentAvatarUrl={profile.avatar_url || user.user_metadata.avatar_url}
                     currentBannerUrl={profile.custom_settings?.banner_url}
                     currentFeaturedRoutineId={profile.featured_routine_id}
-                    onClose={() => setShowEditProfile(false)}
+                    onClose={() => {
+                        setShowEditProfile(false);
+                        showBottomNav();
+                    }}
                     onUpdate={loadUserData}
                 />
             )}
