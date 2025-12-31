@@ -40,10 +40,10 @@ export const AppLayout = () => {
 
                                     {/* Brand Text - GYMRAT STYLE */}
                                     <div className="flex flex-col">
-                                        <span className="font-black text-xl sm:text-2xl tracking-widest text-white italic leading-none group-hover:text-gym-primary transition-colors uppercase drop-shadow-md" style={{ fontFamily: 'Impact, sans-serif', WebkitTextStroke: '1px black' }}>
+                                        <span className="font-black text-xl sm:text-2xl tracking-widest text-white italic leading-none group-hover:text-gym-primary transition-colors uppercase drop-shadow-md" style={{ fontFamily: 'Impact, sans-serif', WebkitTextStroke: '1px black' }} translate="no">
                                             GYMPARTNER
                                         </span>
-                                        <span className="text-[10px] font-bold tracking-[0.2em] text-neutral-500 uppercase leading-none group-hover:text-white transition-colors">
+                                        <span className="text-[10px] font-bold tracking-[0.2em] text-neutral-500 uppercase leading-none group-hover:text-white transition-colors" translate="no">
                                             Intelligence
                                         </span>
                                     </div>
