@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import html2canvas from 'html2canvas';
-import { Share2, Download, X, Image as ImageIcon, Zap, Plus, Scaling, Settings, Check, Trophy, MapPin, Calendar } from 'lucide-react';
+import { Share2, Download, X, Image as ImageIcon, Zap, Plus, Scaling, Settings, Check, Trophy } from 'lucide-react';
 import { MuscleRadarChart } from './MuscleRadarChart';
 
 interface ShareOverlayProps {
@@ -471,7 +471,7 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                         <StickerWrapper id="pr" w="220px">
                             <div className="pointer-events-none p-2 drop-shadow-[0_10px_10px_rgba(0,0,0,0.8)]">
                                 <div className="space-y-4">
-                                    {displayedPrs.length > 0 ? displayedPrs.map((lift: any, idx: number) => (
+                                    {displayedPrs.length > 0 ? displayedPrs.map((lift: any) => (
                                         <div key={lift.name} className="relative flex items-end gap-3 group">
                                             <div className="w-1 h-8 bg-gym-primary rounded-full shadow-[0_0_10px_rgba(234,179,8,0.8)]" />
                                             <div>
