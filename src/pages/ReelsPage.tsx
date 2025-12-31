@@ -22,7 +22,15 @@ export const ReelsPage = () => {
     const registerVideoRef = useCallback((id: string, el: HTMLVideoElement | null) => {
         if (el) {
             videoRefs.current[id] = el;
+            // Observe video dynamically when it registers
+            if (observerRef.current) {
+                observerRef.current.observe(el);
+            }
         } else {
+            // Unobserve and clean up when video unmounts
+            if (videoRefs.current[id] && observerRef.current) {
+                observerRef.current.unobserve(videoRefs.current[id]);
+            }
             delete videoRefs.current[id];
         }
     }, []);
@@ -92,8 +100,10 @@ export const ReelsPage = () => {
     };
 
     // Intersection Observer
+    const observerRef = useRef<IntersectionObserver | null>(null);
+
     useEffect(() => {
-        const observer = new IntersectionObserver(
+        observerRef.current = new IntersectionObserver(
             (entries) => {
                 entries.forEach((entry) => {
                     const video = entry.target as HTMLVideoElement;
@@ -123,19 +133,17 @@ export const ReelsPage = () => {
             { threshold: 0.7 }
         );
 
-        Object.values(videoRefs.current).forEach((video) => {
-            if (video) observer.observe(video);
-        });
-
         return () => {
-            observer.disconnect();
+            if (observerRef.current) {
+                observerRef.current.disconnect();
+            }
             // FLUSH ALL PENDING VIEWS ON UNMOUNT / REFRESH
             Object.keys(viewStartTimes.current).forEach((id) => {
                 const video = videoRefs.current[id];
                 if (video) flushAnalytics(id, video);
             });
         };
-    }, []); // Empty deps: observer created once. Videos registered via registerVideoRef callback
+    }, []); // Observer created once on mount
 
     /* --- Handlers --- */
 
