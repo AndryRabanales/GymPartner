@@ -366,17 +366,21 @@ export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPos
                                 <MediaCarousel media={post.media} isPlaying={playingPostId === post.id} />
                             ) : (
                                 <div className="bg-neutral-900 w-full relative aspect-[4/5] max-h-[500px] overflow-hidden rounded-sm">
+                                    {post.type === 'video' ? (
+                                        <div className="w-full h-full flex items-center justify-center bg-black">
+                                            <SmartVideo
+                                                src={post.media_url}
+                                                poster={post.thumbnail_url}
+                                                isActive={playingPostId === post.id}
+                                                muted={true}
+                                                onTogglePlay={togglePlayPause}
+                                                contain={true}
+                                            />
+                                        </div>
                                     ) : (
-                                    <div className="w-full h-full flex items-center justify-center bg-black">
-                                        <SmartVideo
-                                            src={post.media_url}
-                                            poster={post.thumbnail_url}
-                                            isActive={playingPostId === post.id}
-                                            muted={true} // Default feed videos are muted
-                                            onTogglePlay={togglePlayPause}
-                                            contain={true}
-                                        />
-                                    </div>
+                                        <div className="w-full h-full flex items-center justify-center bg-black">
+                                            <img src={post.media_url} alt="Post" className="w-full h-full object-contain" />
+                                        </div>
                                     )}
                                 </div>
                             )}
