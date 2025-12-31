@@ -33,16 +33,22 @@ export const ReelsPage = () => {
 
     const loadReels = async () => {
         setLoading(true);
+        // [FIX] Read Client-Side Blacklist to prevent "Ghost Posts" on refresh
+        const localBlacklist = JSON.parse(localStorage.getItem('seen_posts_blacklist') || '[]');
+
         const feed = await socialService.getGlobalFeed(user?.id, 'video', true);
 
+        // Filter out locally seen posts immediately
+        const filteredFeed = feed.filter(p => !localBlacklist.includes(p.id));
+
         if (user) {
-            const feedWithFollow = await Promise.all(feed.map(async (post) => {
+            const feedWithFollow = await Promise.all(filteredFeed.map(async (post) => {
                 const isFollowing = await socialService.getFollowStatus(user.id, post.user_id);
                 return { ...post, is_following: isFollowing };
             }));
             setPosts(feedWithFollow as any);
         } else {
-            setPosts(feed);
+            setPosts(filteredFeed);
         }
 
         setLoading(false);
@@ -64,6 +70,17 @@ export const ReelsPage = () => {
             const percentage = Math.min(1.0, durationSeconds / vidDuration);
             const loops = loopCounters.current[id] || 0;
             const cleanId = id.split('_')[0]; // internal ID has suffix sometimes?
+
+            // [FIX] Update Client-Side Blacklist IMMEDIATELY
+            try {
+                const currentBlacklist = JSON.parse(localStorage.getItem('seen_posts_blacklist') || '[]');
+                if (!currentBlacklist.includes(cleanId)) {
+                    currentBlacklist.push(cleanId);
+                    // Keep list manageable (last 500)
+                    if (currentBlacklist.length > 500) currentBlacklist.shift();
+                    localStorage.setItem('seen_posts_blacklist', JSON.stringify(currentBlacklist));
+                }
+            } catch (e) { }
 
             console.log(`[Analytics] ${cleanId}: ${durationSeconds.toFixed(1)}s, ${loops} loops`);
             // Use keepalive if supported by service, otherwise standard intent
