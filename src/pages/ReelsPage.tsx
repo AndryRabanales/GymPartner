@@ -11,7 +11,7 @@ export const ReelsPage = () => {
     const { user } = useAuth();
     const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
-    const [muted, setMuted] = useState(true);
+    const [muted] = useState(true);
     const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(null);
     const [selectedPlayer, setSelectedPlayer] = useState<any | null>(null);
 
