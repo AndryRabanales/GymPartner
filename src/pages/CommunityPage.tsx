@@ -26,6 +26,12 @@ export const CommunityPage = () => {
     const touchStartY = useRef(0);
     const containerRef = useRef<HTMLDivElement>(null);
 
+    // Infinite Scroll State
+    const [hasMore, setHasMore] = useState(true);
+    const [page, setPage] = useState(0);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const bottomObserverRef = useRef<HTMLDivElement>(null);
+
     // Helper: Get seen posts from localStorage
     const getSeenPosts = (): string[] => {
         try {
@@ -130,22 +136,47 @@ export const CommunityPage = () => {
         loadFeed();
     }, []);
 
-    const loadFeed = async () => {
-        setLoading(true);
+    const loadFeed = async (offset: number = 0, append: boolean = false) => {
+        if (append) {
+            setLoadingMore(true);
+        } else {
+            setLoading(true);
+        }
+
         // Using getGlobalFeed for discovery (default behavior: grouped posts, perfect for Community feed)
-        const feed = await socialService.getGlobalFeed(user?.id, undefined, false);
+        const feed = await socialService.getGlobalFeed(user?.id, undefined, false, offset);
 
-        // Apply smart rotation
-        const rotated = rotateFeed(feed);
-        const shuffled = shufflePosts(rotated, 5); // Shuffle top 5 for variety
+        if (feed.length === 0) {
+            setHasMore(false);
+            if (append) setLoadingMore(false);
+            else setLoading(false);
+            return;
+        }
 
-        setPosts(shuffled);
-        setLoading(false);
+        if (append) {
+            // Apply smart rotation to new posts
+            const rotated = rotateFeed(feed);
+            setPosts(prev => [...prev, ...rotated]);
+            setLoadingMore(false);
+        } else {
+            // Apply smart rotation
+            const rotated = rotateFeed(feed);
+            const shuffled = shufflePosts(rotated, 5); // Shuffle top 5 for variety
+            setPosts(shuffled);
+            setLoading(false);
+        }
+
+        // Check if we got less than expected - means no more content
+        if (feed.length < 20) {
+            setHasMore(false);
+        }
     };
 
     const handleRefresh = async () => {
         setRefreshing(true);
-        await loadFeed();
+        setPage(0);
+        setHasMore(true);
+        await loadFeed(0, false);
         setTimeout(() => {
             setRefreshing(false);
             setPullDistance(0);
@@ -177,6 +208,36 @@ export const CommunityPage = () => {
         }
         touchStartY.current = 0;
     };
+
+    // Load More for Infinite Scroll
+    const loadMore = async () => {
+        if (!hasMore || loadingMore) return;
+        const nextPage = page + 1;
+        setPage(nextPage);
+        await loadFeed(nextPage * 20, true);
+    };
+
+    // Infinite Scroll Observer
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting && hasMore && !loadingMore && !loading) {
+                    loadMore();
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        if (bottomObserverRef.current) {
+            observer.observe(bottomObserverRef.current);
+        }
+
+        return () => {
+            if (bottomObserverRef.current) {
+                observer.unobserve(bottomObserverRef.current);
+            }
+        };
+    }, [hasMore, loadingMore, loading, page]);
 
     const handleLike = async (post: Post) => {
         if (!user) return;
@@ -413,6 +474,20 @@ export const CommunityPage = () => {
                             </div>
                         </div>
                     ))
+                )}
+
+                {/* Infinite Scroll Trigger */}
+                {!loading && hasMore && (
+                    <div ref={bottomObserverRef} className="py-8 flex justify-center">
+                        <div className="w-6 h-6 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                )}
+
+                {/* End of Feed Message */}
+                {!loading && !hasMore && posts.length > 0 && (
+                    <div className="py-8 text-center">
+                        <p className="text-neutral-500 text-xs font-medium">Ya viste todo 🎯</p>
+                    </div>
                 )}
             </div>
 

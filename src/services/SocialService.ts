@@ -433,12 +433,12 @@ class SocialService {
     /**
      * Fetches the main feed using Smart Feed Algorithm V3 (TikTok Logic).
      */
-    async getGlobalFeed(currentUserId?: string, type?: 'image' | 'video', flatten: boolean = false): Promise<Post[]> {
+    async getGlobalFeed(currentUserId?: string, type?: 'image' | 'video', flatten: boolean = false, offset: number = 0): Promise<Post[]> {
         // Force Algorithm V3 usage
         let { data, error } = await supabase.rpc('get_smart_feed_v3', {
             p_user_id: currentUserId || null,
             p_limit: 20,
-            p_offset: 0,
+            p_offset: offset,
             p_type: type || null
         });
 
