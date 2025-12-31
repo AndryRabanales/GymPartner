@@ -6,7 +6,6 @@ interface ReelItemProps {
     post: Post;
     muted: boolean;
     currentUserId?: string;
-    onToggleMute: () => void;
     onLike: (post: Post) => void;
     onComment: (post: Post) => void;
     onShare: (post: Post) => void;
@@ -28,7 +27,6 @@ export const ReelItem: React.FC<ReelItemProps> = React.memo(({
     post,
     muted,
     currentUserId,
-    onToggleMute,
     onLike,
     onComment,
     onShare,
