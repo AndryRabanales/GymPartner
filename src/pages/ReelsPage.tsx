@@ -288,7 +288,6 @@ export const ReelsPage = () => {
                             post={post}
                             muted={muted}
                             currentUserId={user?.id}
-                            onToggleMute={() => setMuted(!muted)}
                             onLike={handleLike}
                             onComment={(p) => setActiveCommentPostId(p.id)}
                             onShare={handleShare}
