@@ -25,21 +25,38 @@ const SmartVideo: React.FC<{
     const videoRef = useRef<HTMLVideoElement>(null);
     const [isLoaded, setIsLoaded] = useState(false);
 
+    // Immediate play on mount if active
     useEffect(() => {
         if (!videoRef.current) return;
-        if (isActive) {
-            videoRef.current.currentTime = 0;
-            videoRef.current.play().catch(() => { });
-        } else {
-            videoRef.current.pause();
-        }
+
+        const attemptPlay = async () => {
+            if (isActive) {
+                try {
+                    videoRef.current.currentTime = 0;
+                    await videoRef.current.play();
+                } catch (err) {
+                    console.log("Autoplay blocked, muting and retrying:", err);
+                    // Fallback to muted
+                    if (videoRef.current) {
+                        videoRef.current.muted = true;
+                        try {
+                            await videoRef.current.play();
+                        } catch (e) { console.error("Muted autoplay failed", e); }
+                    }
+                }
+            } else {
+                videoRef.current.pause();
+            }
+        };
+
+        attemptPlay();
     }, [isActive]);
 
     return (
-        <div className="relative w-full h-full bg-black">
+        <div className="relative w-full h-full bg-black flex items-center justify-center">
             {/* 1. Optimized Poster (Visible until video loads) - Background black for seamless blend */}
             <div
-                className={`absolute inset-0 z-10 transition-opacity duration-500 bg-black ${isLoaded ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+                className={`absolute inset-0 z-10 transition-opacity duration-700 bg-black flex items-center justify-center ${isLoaded ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
             >
                 {poster ? (
                     <img
@@ -49,7 +66,7 @@ const SmartVideo: React.FC<{
                     />
                 ) : (
                     // Fallback skeleton if no poster
-                    <div className="w-full h-full bg-neutral-800 animate-pulse flex items-center justify-center">
+                    <div className="w-full h-full bg-neutral-900 animate-pulse flex items-center justify-center">
                         <Music2 className="text-neutral-700 w-12 h-12" />
                     </div>
                 )}
@@ -61,11 +78,13 @@ const SmartVideo: React.FC<{
                 src={src}
                 className={`w-full h-full cursor-pointer ${contain ? 'object-contain' : 'object-cover'} relative z-0`}
                 playsInline
+                webkit-playsinline="true"
                 loop
-                muted={muted}
+                muted={muted} // controlled by prop, but fallback sets ref.muted directly temporarily
                 onLoadedData={() => setIsLoaded(true)}
                 onClick={onTogglePlay}
             />
+
         </div>
     );
 };
@@ -85,12 +104,15 @@ export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPos
         setLocalPosts(posts);
     }, [posts]);
 
-    // Scroll to initial post
+    // Scroll to initial post AND set playing immediately
     useEffect(() => {
-        if (initialPostId && itemRefs.current[initialPostId]) {
-            setTimeout(() => {
-                itemRefs.current[initialPostId]?.scrollIntoView({ behavior: 'auto', block: 'center' });
-            }, 100);
+        if (initialPostId) {
+            setPlayingPostId(initialPostId); // <--- Immediate play
+            if (itemRefs.current[initialPostId]) {
+                setTimeout(() => {
+                    itemRefs.current[initialPostId]?.scrollIntoView({ behavior: 'auto', block: 'center' });
+                }, 100);
+            }
         }
     }, [initialPostId]);
 
