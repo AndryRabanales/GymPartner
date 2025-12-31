@@ -17,6 +17,12 @@ export const CommunityPage = () => {
     const [playingPostId, setPlayingPostId] = useState<string | null>(null);
     const observerRefs = useRef<{ [key: string]: HTMLDivElement }>({});
 
+    // Pull-to-Refresh State
+    const [refreshing, setRefreshing] = useState(false);
+    const [pullDistance, setPullDistance] = useState(0);
+    const touchStartY = useRef(0);
+    const containerRef = useRef<HTMLDivElement>(null);
+
     // Smart Auto-Play Observer
     useEffect(() => {
         const observer = new IntersectionObserver(
@@ -74,6 +80,41 @@ export const CommunityPage = () => {
         setLoading(false);
     };
 
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        await loadFeed();
+        setTimeout(() => {
+            setRefreshing(false);
+            setPullDistance(0);
+        }, 500);
+    };
+
+    // Pull-to-Refresh Touch Handlers
+    const handleTouchStart = (e: React.TouchEvent) => {
+        if (containerRef.current && containerRef.current.scrollTop === 0) {
+            touchStartY.current = e.touches[0].clientY;
+        }
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (containerRef.current && containerRef.current.scrollTop === 0 && !refreshing) {
+            const touchY = e.touches[0].clientY;
+            const distance = Math.max(0, touchY - touchStartY.current);
+            if (distance > 0 && distance < 150) {
+                setPullDistance(distance);
+            }
+        }
+    };
+
+    const handleTouchEnd = () => {
+        if (pullDistance > 80 && !refreshing) {
+            handleRefresh();
+        } else {
+            setPullDistance(0);
+        }
+        touchStartY.current = 0;
+    };
+
     const handleLike = async (post: Post) => {
         if (!user) return;
         if (!post.id) return;
@@ -112,11 +153,32 @@ export const CommunityPage = () => {
 
 
     return (
-        <div className="bg-black min-h-full">
+        <div
+            ref={containerRef}
+            className="bg-black min-h-full overflow-y-auto"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+        >
             {/* Header (Mobile style) */}
             <div className="sticky top-0 z-30 bg-black/90 backdrop-blur-md border-b border-white/5 px-4 h-10 flex items-center justify-center">
                 <span className="font-black italic text-white tracking-tighter text-lg">GYM<span className="text-yellow-500">JUMPS</span></span>
             </div>
+
+            {/* Pull-to-Refresh Indicator */}
+            {pullDistance > 0 && (
+                <div
+                    className="flex items-center justify-center py-2 transition-all"
+                    style={{
+                        transform: `translateY(${Math.min(pullDistance - 80, 0)}px)`,
+                        opacity: Math.min(pullDistance / 80, 1)
+                    }}
+                >
+                    <div className={`w-6 h-6 border-4 border-yellow-500 border-t-transparent rounded-full ${refreshing ? 'animate-spin' : ''}`}
+                        style={{ transform: `rotate(${pullDistance * 3}deg)` }}
+                    />
+                </div>
+            )}
 
             <div className="max-w-md mx-auto">
                 {loading ? (
