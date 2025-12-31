@@ -48,7 +48,9 @@ export const ReelItem: React.FC<ReelItemProps> = React.memo(({
         }
     }, [post.id, post.virtual_id, onVideoRef]);
 
-    const handleInternalLoop = () => {
+    const handleInternalLoop = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+        e.currentTarget.currentTime = 0;
+        e.currentTarget.play();
         if (onLoop) onLoop(post.virtual_id || post.id);
     };
 
@@ -93,7 +95,6 @@ export const ReelItem: React.FC<ReelItemProps> = React.memo(({
                     src={post.media_url}
                     className="w-full h-full object-cover"
                     playsInline
-                    loop
                     preload="none"
                     muted={muted}
                     poster={post.media_url.includes('cloudinary') ? post.media_url.replace(/\.(mp4|mov|webm)$/i, '.jpg') : undefined}

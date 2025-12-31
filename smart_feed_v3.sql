@@ -133,11 +133,13 @@ BEGIN
                     -- REELS MODE: Prioritize Watch Time & Loop
                     WHEN p.type = 'video' THEN 
                         (p.retention_score * 50.0) +      -- W_Retention (High)
-                        (COALESCE(p.shares_count, 0) * 40.0) + -- W_Share (Viral)
+                        (COALESCE(p.shares_count, 0) * 50.0) + -- W_Share (Viral)
+                        (COALESCE(p.saves_count, 0) * 60.0) +  -- W_Save (High Intent - [ADDED])
                         (COALESCE(p.boost_factor, 1.0) * 30.0) + -- W_Loop (Rewatch)
                         (eng.lcl * 10.0) +                -- W_Like (Low)
                         (eng.ccl * 20.0)                  -- W_Comment (Med)
                     
+
                     -- POSTS MODE: Prioritize Engagement & Saves
                     ELSE 
                         (eng.lcl * 30.0) +                -- W_Like (High)
@@ -146,20 +148,26 @@ BEGIN
                         (COALESCE(p.shares_count, 0) * 20.0)   -- W_Share (Med)
                 END
             )
+            -- 🎲 CHAOS FACTOR (Jitter)
+            -- Adds 0-5 points randomly to break chronological ties for 0-engagement posts
+            + (RANDOM() * 5.0)
             -- ❄️ COLD START BOOST (Fresh Content < 24h & < 100 views)
             * (CASE 
-                WHEN p.created_at > NOW() - INTERVAL '24 hours' AND p.views_count < 100 THEN 5.0 -- 5x Chance
+                WHEN p.created_at > NOW() - INTERVAL '24 hours' AND p.views_count < 100 THEN 3.0 -- Reduced from 5.0 (Balanced)
                 ELSE 1.0 
                END)
             
             -- 🔥 VIRAL MULTIPLIER (High Virality Score)
             * (CASE 
-                WHEN p.virality_score > 50 THEN 2.0 -- Viral Boost
+                WHEN p.virality_score > 50 THEN 1.5 -- Standard Viral Boost
+                WHEN p.virality_score > 100 THEN 2.0 -- Super Viral Boost
                 ELSE 1.0 
                END)
 
-            -- 📉 TIME DECAY (Newer is better, but slower decay for viral classics)
-            / POWER((EXTRACT(EPOCH FROM (NOW() - p.created_at))/3600.0) + 2.0, 1.5)
+            -- 📉 TIME DECAY (GRAVITY)
+            -- Adjusted: Exponent 0.5 (Square Root) prevents crushing 24h+ posts.
+            -- Example: 24h old post = /5 score (instead of /36).
+            / POWER((EXTRACT(EPOCH FROM (NOW() - p.created_at))/3600.0) + 2.0, 0.5)
 
         )::NUMERIC as rank_score,
         
