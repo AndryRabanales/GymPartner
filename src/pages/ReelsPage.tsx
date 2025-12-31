@@ -135,7 +135,7 @@ export const ReelsPage = () => {
                 if (video) flushAnalytics(id, video);
             });
         };
-    }, [posts]); // Re-run when posts update (load more)
+    }, []); // Empty deps: observer created once. Videos registered via registerVideoRef callback
 
     /* --- Handlers --- */
 
