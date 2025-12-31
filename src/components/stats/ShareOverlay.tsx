@@ -82,14 +82,17 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
     const interactionMode = useRef<'drag' | 'resize' | null>(null);
     const startPos = useRef({ x: 0, y: 0 });
     const startStickerState = useRef<{ x: number, y: number, scale: number } | null>(null);
+    const dragElementRef = useRef<HTMLDivElement | null>(null);
+    const currentDragTransform = useRef<{ x: number, y: number, scale: number } | null>(null);
 
-    const handleTouchStart = (e: React.TouchEvent | React.MouseEvent, id: StickerType, mode: 'drag' | 'resize') => {
+    const handleTouchStart = (e: React.TouchEvent | React.MouseEvent, id: StickerType, mode: 'drag' | 'resize', element: HTMLDivElement) => {
         e.preventDefault();
         e.stopPropagation();
 
         setSelectedId(id);
         setShowAddMenu(false);
         interactionMode.current = mode;
+        dragElementRef.current = element;
 
         const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
         const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
@@ -99,11 +102,12 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
         const sticker = stickers.find(s => s.id === id);
         if (sticker) {
             startStickerState.current = { x: sticker.x, y: sticker.y, scale: sticker.scale };
+            currentDragTransform.current = { x: sticker.x, y: sticker.y, scale: sticker.scale };
         }
     };
 
-    const handleMove = (e: React.TouchEvent | React.MouseEvent) => {
-        if (!interactionMode.current || !selectedId || !startStickerState.current) return;
+    const handleMove = (e: TouchEvent | MouseEvent) => {
+        if (!interactionMode.current || !selectedId || !startStickerState.current || !dragElementRef.current || !currentDragTransform.current) return;
 
         const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
         const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
@@ -111,37 +115,42 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
         const dx = clientX - startPos.current.x;
         const dy = clientY - startPos.current.y;
 
-        setStickers(prev => prev.map(s => {
-            if (s.id !== selectedId) return s;
+        if (interactionMode.current === 'drag') {
+            const newX = startStickerState.current.x + dx;
+            const newY = startStickerState.current.y + dy;
+            currentDragTransform.current = { ...currentDragTransform.current, x: newX, y: newY };
+            dragElementRef.current.style.transform = `translate3d(${newX}px, ${newY}px, 0) scale(${currentDragTransform.current.scale})`;
+        }
 
-            if (interactionMode.current === 'drag') {
-                return {
-                    ...s,
-                    x: startStickerState.current!.x + dx,
-                    y: startStickerState.current!.y + dy
-                };
-            }
-
-            if (interactionMode.current === 'resize') {
-                const initialScale = startStickerState.current!.scale;
-                const scaleDelta = (dx + dy) * 0.005;
-                const newScale = Math.max(0.3, Math.min(5.0, initialScale + scaleDelta));
-                return {
-                    ...s,
-                    scale: newScale
-                };
-            }
-            return s;
-        }));
+        if (interactionMode.current === 'resize') {
+            const initialScale = startStickerState.current.scale;
+            const scaleDelta = (dx + dy) * 0.005;
+            const newScale = Math.max(0.3, Math.min(5.0, initialScale + scaleDelta));
+            currentDragTransform.current = { ...currentDragTransform.current, scale: newScale };
+            dragElementRef.current.style.transform = `translate3d(${currentDragTransform.current.x}px, ${currentDragTransform.current.y}px, 0) scale(${newScale})`;
+        }
     };
 
     const handleEnd = () => {
+        // Update state only once when drag ends
+        if (selectedId && currentDragTransform.current) {
+            setStickers(prev => prev.map(s =>
+                s.id === selectedId
+                    ? { ...s, x: currentDragTransform.current!.x, y: currentDragTransform.current!.y, scale: currentDragTransform.current!.scale }
+                    : s
+            ));
+        }
+
         interactionMode.current = null;
         startStickerState.current = null;
+        dragElementRef.current = null;
+        currentDragTransform.current = null;
     };
 
     useEffect(() => {
-        const handleGlobalMove = (e: any) => handleMove(e);
+        const handleGlobalMove = (e: TouchEvent | MouseEvent) => {
+            handleMove(e);
+        };
         const handleGlobalEnd = () => handleEnd();
 
         window.addEventListener('mousemove', handleGlobalMove);
@@ -253,19 +262,22 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
 
     const StickerWrapper = ({ id, children, w }: { id: StickerType, children: React.ReactNode, w?: string }) => {
         const s = stickers.find(st => st.id === id);
+        const elementRef = useRef<HTMLDivElement>(null);
+
         if (!s || !s.visible) return null;
         const isSelected = selectedId === id;
 
         return (
             <div
+                ref={elementRef}
                 className={`absolute top-0 left-0 origin-top-left select-none touch-none ${isSelected ? 'z-50' : 'z-10'} will-change-transform`}
                 style={{
                     transform: `translate3d(${s.x}px, ${s.y}px, 0) scale(${s.scale})`,
                     cursor: interactionMode.current && selectedId === id ? 'grabbing' : 'grab',
                     width: w || 'auto'
                 }}
-                onMouseDown={(e) => handleTouchStart(e, id, 'drag')}
-                onTouchStart={(e) => handleTouchStart(e, id, 'drag')}
+                onMouseDown={(e) => elementRef.current && handleTouchStart(e, id, 'drag', elementRef.current)}
+                onTouchStart={(e) => elementRef.current && handleTouchStart(e, id, 'drag', elementRef.current)}
             >
                 <div className={`relative transition-all ${isSelected ? 'ring-1 ring-white/50 bg-white/10 rounded-lg' : ''}`}>
                     {children}
@@ -299,8 +311,8 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
 
                             <div
                                 className="absolute -bottom-3 -right-3 w-8 h-8 flex items-center justify-center cursor-nwse-resize z-50 touch-none"
-                                onMouseDown={(e) => handleTouchStart(e, id, 'resize')}
-                                onTouchStart={(e) => handleTouchStart(e, id, 'resize')}
+                                onMouseDown={(e) => elementRef.current && handleTouchStart(e, id, 'resize', elementRef.current)}
+                                onTouchStart={(e) => elementRef.current && handleTouchStart(e, id, 'resize', elementRef.current)}
                             >
                                 <div className="w-5 h-5 bg-white rounded-full shadow-md border-2 border-gym-primary flex items-center justify-center">
                                     <Scaling size={10} className="text-black" />
