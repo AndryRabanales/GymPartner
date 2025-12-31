@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import html2canvas from 'html2canvas';
-import { Share2, Download, X, Image as ImageIcon, Zap, Plus, Scaling, Settings, Check, Trophy } from 'lucide-react';
+import { Share2, Download, X, Image as ImageIcon, Zap, Plus, Scaling, Settings, Check, Trophy, MapPin, Calendar } from 'lucide-react';
 import { MuscleRadarChart } from './MuscleRadarChart';
 
 interface ShareOverlayProps {
@@ -11,7 +11,7 @@ interface ShareOverlayProps {
 }
 
 // Granular Sticker Types
-type StickerType = 'volume' | 'workouts' | 'time' | 'radar' | 'logo' | 'date' | 'avg' | 'pr' | 'consistency';
+type StickerType = 'volume' | 'workouts' | 'time' | 'radar' | 'logo' | 'date' | 'avg' | 'pr' | 'consistency' | 'hype_weight' | 'hype_legday' | 'hype_pr' | 'stamp_gym';
 
 interface StickerState {
     id: StickerType;
@@ -38,13 +38,13 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
 
     // Radar Customization
     const [radarColor, setRadarColor] = useState('#eab308');
-    const [radarTextColor, setRadarTextColor] = useState('rgba(255,255,255,0.8)');
-    const [radarOpacity, setRadarOpacity] = useState(0.4);
-    const [radarStroke, setRadarStroke] = useState(2);
+    const [radarTextColor, setRadarTextColor] = useState('rgba(255,255,255,0.9)');
+    const [radarOpacity, setRadarOpacity] = useState(0.5);
+    const [radarStroke, setRadarStroke] = useState(3);
     // Grid & Text Customization
-    const [gridColor, setGridColor] = useState('rgba(255,255,255,0.2)');
+    const [gridColor, setGridColor] = useState('rgba(255,255,255,0.3)');
     const [gridWidth, setGridWidth] = useState(1);
-    const [textWeight, setTextWeight] = useState(700);
+    const [textWeight, setTextWeight] = useState(800);
     const [gridDash, setGridDash] = useState('');
     const [gridType, setGridType] = useState<"polygon" | "circle">('polygon');
     const [showRadarSelector, setShowRadarSelector] = useState(false);
@@ -58,15 +58,19 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
 
     // Initial Positions
     const [stickers, setStickers] = useState<StickerState[]>([
-        { id: 'logo', label: 'Marca Personal', x: 20, y: 20, scale: 1, visible: true },
-        { id: 'volume', label: 'Volumen Total', x: 20, y: 80, scale: 1, visible: true },
+        { id: 'logo', label: 'Badge Oficial', x: 20, y: 30, scale: 1, visible: true },
+        { id: 'volume', label: 'Volumen Total', x: 20, y: 100, scale: 1, visible: true },
         { id: 'workouts', label: 'Sesiones', x: 20, y: 200, scale: 1, visible: true },
-        { id: 'time', label: 'Horas Totales', x: 160, y: 200, scale: 1, visible: true },
-        { id: 'radar', label: 'Radar Muscular', x: 20, y: 300, scale: 0.8, visible: true },
-        { id: 'date', label: 'Fecha / Temporada', x: 20, y: 520, scale: 1, visible: true },
-        { id: 'avg', label: 'Promedio / Sesión', x: 20, y: 250, scale: 1, visible: false },
-        { id: 'pr', label: 'Récords / PRs', x: 20, y: 150, scale: 1, visible: false },
-        { id: 'consistency', label: 'Constancia (Heatmap)', x: 20, y: 400, scale: 0.8, visible: false },
+        { id: 'time', label: 'Tiempo Total', x: 160, y: 200, scale: 1, visible: true },
+        { id: 'radar', label: 'Radar Muscular', x: 20, y: 280, scale: 0.9, visible: true },
+        { id: 'date', label: 'Fecha', x: 20, y: 500, scale: 1, visible: true },
+        { id: 'stamp_gym', label: 'Sello Gym', x: 220, y: 40, scale: 1, visible: true },
+        { id: 'hype_weight', label: 'Light Weight', x: 120, y: 450, scale: 0.8, visible: false },
+        { id: 'hype_legday', label: 'Leg Day', x: 120, y: 450, scale: 0.8, visible: false },
+        { id: 'hype_pr', label: 'New PR', x: 120, y: 450, scale: 0.8, visible: false },
+        { id: 'pr', label: 'Lista Récords', x: 20, y: 150, scale: 1, visible: false },
+        { id: 'consistency', label: 'Heatmap', x: 20, y: 400, scale: 0.8, visible: false },
+        { id: 'avg', label: 'Promedio/Sesión', x: 20, y: 250, scale: 1, visible: false },
     ]);
 
     useEffect(() => {
@@ -121,7 +125,7 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
             if (interactionMode.current === 'resize') {
                 const initialScale = startStickerState.current!.scale;
                 const scaleDelta = (dx + dy) * 0.005;
-                const newScale = Math.max(0.3, Math.min(4.0, initialScale + scaleDelta));
+                const newScale = Math.max(0.3, Math.min(5.0, initialScale + scaleDelta));
                 return {
                     ...s,
                     scale: newScale
@@ -185,7 +189,7 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                     const dataUrl = ev.target.result as string;
                     setCustomImage(dataUrl);
                     setSelectedBg('image');
-                    setBgOpacity(0);
+                    setBgOpacity(0.2); // Default to some dimming for legibility
 
                     // Detect image aspect ratio to prevent cropping
                     const img = new Image();
@@ -263,7 +267,7 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                 onMouseDown={(e) => handleTouchStart(e, id, 'drag')}
                 onTouchStart={(e) => handleTouchStart(e, id, 'drag')}
             >
-                <div className={`relative ${isSelected ? 'ring-2 ring-gym-primary/80 rounded-lg bg-black/5' : ''}`}>
+                <div className={`relative transition-all ${isSelected ? 'ring-1 ring-white/50 bg-white/10 rounded-lg' : ''}`}>
                     {children}
                     {isSelected && (
                         <>
@@ -311,11 +315,11 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
 
     const renderHeatmapInternal = () => {
         return (
-            <div className="flex flex-wrap gap-1 w-[200px]">
-                {stats.consistencyData.slice(-28).map((day: any, i: number) => (
+            <div className="flex flex-wrap gap-1.5 w-[200px]">
+                {stats.consistencyData.slice(-20).map((day: any, i: number) => (
                     <div
                         key={i}
-                        className={`w-3 h-3 rounded-full shadow-sm ${day.count > 0 ? 'bg-green-500' : 'bg-white/20'}`}
+                        className={`w-4 h-4 rounded-md shadow-[0_2px_4px_rgba(0,0,0,0.3)] transition-all ${day.count > 0 ? 'bg-gradient-to-br from-gym-primary to-orange-500 border border-white/20' : 'bg-black/40 border border-white/5'}`}
                     />
                 ))}
             </div>
@@ -345,7 +349,7 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                         className="relative w-[320px] shadow-2xl transition-all duration-300 flex-shrink-0 bg-black overflow-hidden"
                         style={{ height: `${cardHeight}px` }}
                     >
-                        {/* 1. DYNAMIC BACKGROUND (100% SIZE = NO CROP) */}
+                        {/* 1. DYNAMIC BACKGROUND */}
                         <div className="absolute inset-0 z-0">
                             {selectedBg === 'image' && customImage ? (
                                 <img
@@ -355,7 +359,7 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                                     crossOrigin="anonymous"
                                 />
                             ) : selectedBg === 'gradient' ? (
-                                <div className="absolute inset-0 bg-gradient-to-br from-neutral-900 to-neutral-800" />
+                                <div className="absolute inset-0 bg-gradient-to-br from-neutral-900 via-black to-neutral-900" />
                             ) : (
                                 <div className="absolute inset-0 bg-black" />
                             )}
@@ -364,135 +368,139 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                         <div className="absolute inset-0 z-0 pointer-events-none" style={{ backgroundColor: `rgba(0,0,0,${bgOpacity})` }} />
 
                         <StickerWrapper id="logo">
-                            <div className="flex items-center gap-3 p-3 bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 shadow-2xl pointer-events-none group">
-                                {avatarUrl ? (
-                                    <div className="w-12 h-12 rounded-full border-[3px] border-gym-primary p-[2px] shadow-[0_0_15px_rgba(234,179,8,0.4)]">
-                                        <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover rounded-full" crossOrigin="anonymous" />
-                                    </div>
-                                ) : (
-                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gym-primary to-orange-500 flex items-center justify-center text-black font-black text-xs shadow-lg">GP</div>
-                                )}
-                                <div>
-                                    <div className="flex items-center gap-1.5">
-                                        <p className="text-white font-black text-lg tracking-tight uppercase italic leading-none">{username}</p>
-                                        <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center text-[8px] text-white">✓</div>
-                                    </div>
-                                    <p className="text-gym-primary text-[9px] font-bold uppercase tracking-[0.2em] mt-0.5">GymPartner Verified</p>
+                            <div className="flex flex-col items-start pointer-events-none drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)]">
+                                <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
+                                    {avatarUrl ? (
+                                        <img src={avatarUrl} className="w-6 h-6 rounded-full border border-gym-primary object-cover" crossOrigin="anonymous" />
+                                    ) : (
+                                        <div className="w-6 h-6 rounded-full bg-gym-primary flex items-center justify-center text-[10px] font-black text-black">GP</div>
+                                    )}
+                                    <span className="text-white font-bold text-xs tracking-tight">{username}</span>
+                                    <div className="w-3 h-3 bg-blue-500 rounded-full flex items-center justify-center text-[6px] text-white">✓</div>
+                                </div>
+                                <div className="mt-1 ml-2 flex items-center gap-1">
+                                    <div className="w-1.5 h-1.5 bg-gym-primary rounded-full animate-pulse" />
+                                    <span className="text-[8px] font-black text-white/80 uppercase tracking-[0.2em] italic">GymPartner Elite</span>
                                 </div>
                             </div>
                         </StickerWrapper>
 
                         <StickerWrapper id="volume">
-                            <div className="pointer-events-none relative group">
-                                <div className="absolute inset-0 bg-gym-primary/20 blur-xl rounded-full" />
-                                <div className="relative bg-neutral-900/80 backdrop-blur-xl border border-gym-primary/50 p-4 rounded-[2rem] flex flex-col items-center min-w-[140px] shadow-2xl">
-                                    <div className="absolute -top-3 w-8 h-8 bg-gradient-to-br from-gym-primary to-orange-500 rounded-full flex items-center justify-center text-black shadow-lg shadow-orange-500/20">
-                                        <Scaling size={14} className="animate-pulse" />
-                                    </div>
-                                    <p className="text-neutral-400 text-[9px] font-bold uppercase tracking-widest mb-0.5 mt-2">Volume Load</p>
-                                    <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-neutral-400 tracking-tighter italic leading-none">
-                                        {(stats.totalVolume / 1000).toFixed(1)}<span className="text-2xl text-gym-primary">k</span>
+                            <div className="pointer-events-none relative group flex flex-col items-start drop-shadow-[0_8px_8px_rgba(0,0,0,0.8)]">
+                                <div className="flex items-baseline gap-1">
+                                    <h1 className="text-7xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-white/50 tracking-tighter italic leading-none"
+                                        style={{ WebkitTextStroke: '1px transparent' }}>
+                                        {(stats.totalVolume / 1000).toFixed(1)}
                                     </h1>
-                                    <div className="w-full h-[2px] bg-gradient-to-r from-transparent via-gym-primary to-transparent mt-2 opacity-50" />
+                                    <span className="text-4xl font-black text-gym-primary italic transform -rotate-12 translate-y-[-10px]">k</span>
+                                </div>
+                                <div className="bg-white/10 backdrop-blur-md px-2 py-0.5 rounded text-[8px] font-bold text-white uppercase tracking-[0.3em] border border-white/10 ml-2">
+                                    Volume Load
                                 </div>
                             </div>
                         </StickerWrapper>
 
                         <StickerWrapper id="workouts">
-                            <div className="pointer-events-none relative">
-                                <div className="bg-gradient-to-br from-neutral-900 to-black border border-white/10 p-4 rounded-xl shadow-xl flex items-center gap-4">
-                                    <div className="w-12 h-12 bg-neutral-800 rounded-lg flex items-center justify-center border border-white/5 relative overflow-hidden">
-                                        <div className="absolute inset-0 bg-gym-primary/10" />
-                                        <Trophy className="text-gym-primary w-6 h-6" />
-                                    </div>
-                                    <div>
-                                        <p className="text-neutral-500 text-[9px] font-bold uppercase tracking-[0.2em]">Sessions Completed</p>
-                                        <div className="flex items-baseline gap-1">
-                                            <p className="text-3xl font-black text-white">{stats.totalWorkouts}</p>
-                                            <span className="text-[10px] text-gym-primary font-bold">UNITS</span>
-                                        </div>
+                            <div className="pointer-events-none drop-shadow-[0_4px_10px_rgba(0,0,0,0.6)]">
+                                <div className="flex items-center gap-3">
+                                    <Trophy className="text-yellow-400 w-10 h-10 drop-shadow-[0_0_10px_rgba(250,204,21,0.6)]" fill="currentColor" />
+                                    <div className="flex flex-col">
+                                        <span className="text-4xl font-black text-white leading-none italic">{stats.totalWorkouts}</span>
+                                        <span className="text-[10px] text-white/80 font-bold uppercase tracking-widest bg-yellow-400/20 px-1 rounded">Sesiones</span>
                                     </div>
                                 </div>
                             </div>
                         </StickerWrapper>
 
                         <StickerWrapper id="time">
-                            <div className="pointer-events-none p-4 relative">
-                                {/* Hexagon Shape simulated via CSS clip-path or simple border layout */}
-                                <div className="absolute inset-0 border-2 border-gym-primary/30 rounded-2xl transform rotate-3" />
-                                <div className="absolute inset-0 border-2 border-white/10 rounded-2xl transform -rotate-2 bg-black/80 backdrop-blur-md" />
+                            <div className="pointer-events-none drop-shadow-[0_4px_10px_rgba(0,0,0,0.8)] flex flex-col items-center">
+                                <div className="text-5xl font-mono font-black text-white tracking-widest leading-none border-b-2 border-gym-primary pb-1">
+                                    {Math.floor(stats.totalTimeMinutes / 60)}<span className="animate-pulse">:</span>{String(Math.round(stats.totalTimeMinutes % 60)).padStart(2, '0')}
+                                </div>
+                                <p className="text-[8px] text-gym-primary font-bold uppercase tracking-[0.4em] mt-1 shadow-black drop-shadow-md">Time Under Tension</p>
+                            </div>
+                        </StickerWrapper>
 
-                                <div className="relative z-10 flex flex-col items-center justify-center p-2">
-                                    <p className="text-gym-primary text-[8px] font-black uppercase tracking-widest mb-1">TIME UNDER TENSION</p>
-                                    <p className="text-4xl font-black text-white leading-none">{Math.round(stats.totalTimeMinutes / 60)}<span className="text-sm font-medium text-neutral-500 ml-1">HRS</span></p>
+                        <StickerWrapper id="stamp_gym">
+                            <div className="pointer-events-none opacity-80 mix-blend-screen">
+                                <div className="w-24 h-24 border-[3px] border-white/40 rounded-full flex items-center justify-center p-1 transform -rotate-12">
+                                    <div className="w-full h-full border border-white/20 rounded-full flex flex-col items-center justify-center text-center">
+                                        <p className="text-[6px] text-white font-bold uppercase tracking-[0.2em] curve-text">GymPartner • Worldwide</p>
+                                        <p className="text-2xl font-black text-white/90 italic">GYM</p>
+                                        <p className="text-xs font-bold text-gym-primary uppercase">Rat</p>
+                                        <p className="text-[6px] text-white/60 font-mono mt-1">{new Date().getFullYear()}</p>
+                                    </div>
                                 </div>
                             </div>
                         </StickerWrapper>
 
-                        <StickerWrapper id="avg">
-                            <div className="pointer-events-none p-3 bg-white text-black rounded-lg shadow-[4px_4px_0px_rgba(234,179,8,1)] transform -rotate-1">
-                                <p className="font-black text-[10px] uppercase tracking-widest opacity-60">Avg. Duration</p>
-                                <p className="text-3xl font-black italic tracking-tighter">{Math.round(stats.totalTimeMinutes / stats.totalWorkouts || 0)} min</p>
+                        <StickerWrapper id="hype_weight">
+                            <div className="pointer-events-none transform -rotate-6 drop-shadow-[0_5px_15px_rgba(0,0,0,1)]">
+                                <h2 className="text-4xl font-black text-white italic tracking-tighter leading-none"
+                                    style={{ WebkitTextStroke: '1px black' }}>
+                                    LIGHT <br /> <span className="text-gym-primary">WEIGHT</span>
+                                </h2>
                             </div>
                         </StickerWrapper>
 
-                        <StickerWrapper id="pr" w="200px">
-                            <div className="pointer-events-none p-0 relative group">
-                                {/* Glass Stats Card */}
-                                <div className="absolute inset-0 bg-gradient-to-b from-neutral-900/90 to-black/90 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl" />
+                        <StickerWrapper id="hype_legday">
+                            <div className="pointer-events-none transform rotate-3 drop-shadow-[0_5px_15px_rgba(0,0,0,1)]">
+                                <div className="bg-red-600 text-white px-3 py-1 font-black italic text-2xl uppercase skew-x-[-10deg]">
+                                    LEG DAY
+                                </div>
+                                <p className="text-[8px] text-white font-bold uppercase tracking-[0.5em] text-center mt-1">No Skip</p>
+                            </div>
+                        </StickerWrapper>
 
-                                <div className="relative z-10 p-4">
-                                    <div className="flex items-center justify-between mb-3 border-b border-white/10 pb-2">
-                                        <p className="text-gym-primary text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-1">
-                                            <Zap size={10} className="fill-gym-primary" />
-                                            ELITE METRICS
-                                        </p>
-                                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_5px_#22c55e]" />
-                                    </div>
+                        <StickerWrapper id="hype_pr">
+                            <div className="pointer-events-none drop-shadow-[0_0_20px_rgba(234,179,8,0.4)]">
+                                <h2 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600 italic tracking-tighter filter drop-shadow-[0_2px_0_rgba(255,255,255,0.5)]">
+                                    NEW PR
+                                </h2>
+                            </div>
+                        </StickerWrapper>
 
-                                    <div className="space-y-3">
-                                        {displayedPrs.length > 0 ? displayedPrs.map((lift: any) => (
-                                            <div key={lift.name} className="relative">
-                                                <div className="flex justify-between items-end mb-1">
-                                                    <span className="text-white/60 text-[10px] font-bold uppercase tracking-wider truncate max-w-[100px]">{lift.name}</span>
-                                                    <span className="text-white text-sm font-black italic">{lift.max} <span className="text-[9px] text-gym-primary not-italic">KG</span></span>
-                                                </div>
-                                                {/* Progress Bar Visual */}
-                                                <div className="w-full h-1 bg-neutral-800 rounded-full overflow-hidden">
-                                                    <div
-                                                        className="h-full bg-gradient-to-r from-gym-primary to-orange-500 rounded-full"
-                                                        style={{ width: `${Math.min(100, (lift.max / 200) * 100)}%` }}
-                                                    />
-                                                </div>
+                        <StickerWrapper id="avg">
+                            <div className="pointer-events-none flex flex-col items-center drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)]">
+                                <Scaling className="text-white w-6 h-6 mb-1" />
+                                <span className="text-3xl font-black text-white italic">{Math.round(stats.totalTimeMinutes / stats.totalWorkouts || 0)}m</span>
+                                <span className="text-[8px] font-bold text-white/60 uppercase tracking-widest">Avg. Session</span>
+                            </div>
+                        </StickerWrapper>
+
+                        <StickerWrapper id="pr" w="220px">
+                            <div className="pointer-events-none p-2 drop-shadow-[0_10px_10px_rgba(0,0,0,0.8)]">
+                                <div className="space-y-4">
+                                    {displayedPrs.length > 0 ? displayedPrs.map((lift: any, idx: number) => (
+                                        <div key={lift.name} className="relative flex items-end gap-3 group">
+                                            <div className="w-1 h-8 bg-gym-primary rounded-full shadow-[0_0_10px_rgba(234,179,8,0.8)]" />
+                                            <div>
+                                                <p className="text-white/80 text-[10px] font-bold uppercase tracking-wider leading-none mb-0.5">{lift.name}</p>
+                                                <p className="text-3xl font-black text-white italic leading-none">{lift.max}<span className="text-sm font-bold text-gym-primary not-italic ml-0.5">kg</span></p>
                                             </div>
-                                        )) : (
-                                            <div className="flex flex-col items-center py-4 opacity-50">
-                                                <Scaling size={20} className="mb-2 text-white" />
-                                                <p className="text-white/50 text-[10px] uppercase">Select Attributes</p>
-                                            </div>
-                                        )}
-                                    </div>
+                                        </div>
+                                    )) : (
+                                        <div className="flex flex-col items-center py-2 opacity-50 bg-black/40 rounded-xl">
+                                            <span className="text-white/50 text-xs">Selecciona tus PRs</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </StickerWrapper>
 
                         <StickerWrapper id="consistency">
-                            <div className="pointer-events-none p-3 bg-neutral-900/90 backdrop-blur-xl rounded-xl border border-white/10 flex flex-col items-center">
-                                <p className="text-white/60 text-[9px] font-bold uppercase tracking-[0.2em] mb-2 flex items-center gap-2">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                                    Active Streak
-                                </p>
+                            <div className="pointer-events-none p-2 drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)]">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse box-shadow-[0_0_10px_#22c55e]" />
+                                    <span className="text-white text-[10px] font-bold uppercase tracking-[0.2em] shadow-black drop-shadow-sm">Consistency</span>
+                                </div>
                                 {renderHeatmapInternal()}
                             </div>
                         </StickerWrapper>
 
                         <StickerWrapper id="radar" w="280px">
-                            <div className="relative pointer-events-none p-4">
-                                {/* Decorative corners */}
-                                <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-gym-primary rounded-tl-xl opacity-50" />
-                                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-gym-primary rounded-br-xl opacity-50" />
-
-                                <div className="w-full aspect-square opacity-90 relative z-10">
+                            <div className="relative pointer-events-none drop-shadow-[0_5px_15px_rgba(0,0,0,0.8)]">
+                                <div className="w-full aspect-square relative z-10">
                                     <MuscleRadarChart
                                         data={stats.muscleBalanceData}
                                         color={radarColor}
@@ -506,15 +514,23 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                                         gridType={gridType}
                                     />
                                 </div>
+                                {/* Legend for transparency context */}
+                                <div className="absolute bottom-2 right-2 flex items-center gap-1.5 opacity-60">
+                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: radarColor }} />
+                                    <span style={{ color: radarTextColor }} className="text-[8px] font-bold uppercase tracking-widest">Balance</span>
+                                </div>
                             </div>
                         </StickerWrapper>
 
-                        <StickerWrapper id="date" w="120px">
-                            <div className="pointer-events-none px-3 py-1.5 bg-white rounded-full flex items-center gap-2 shadow-lg opacity-80 backdrop-blur-sm">
-                                <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                                <p className="text-black font-mono text-[9px] font-bold tracking-widest uppercase">
-                                    {new Date().toLocaleDateString('en-US', { month: 'short', year: '2-digit' })}
-                                </p>
+                        <StickerWrapper id="date" w="140px">
+                            <div className="pointer-events-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                                <div className="border border-white/20 bg-white/5 backdrop-blur-sm rounded-full px-4 py-1.5 flex items-center justify-between">
+                                    <span className="text-white font-bold text-xs uppercase tracking-widest">
+                                        {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                    </span>
+                                    <span className="w-[1px] h-3 bg-white/20 mx-2" />
+                                    <span className="text-gym-primary font-black text-xs">2025</span>
+                                </div>
                             </div>
                         </StickerWrapper>
 
