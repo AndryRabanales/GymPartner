@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { X, Heart, MessageCircle, Share2, MoreHorizontal, Music2, Swords, Volume2, VolumeX } from 'lucide-react';
+import { X, Heart, MessageCircle, Share2, MoreHorizontal, Music2, Swords, VolumeX } from 'lucide-react';
 import type { Post } from '../../services/SocialService';
 import { useAuth } from '../../context/AuthContext';
 import { socialService } from '../../services/SocialService';
@@ -213,7 +213,6 @@ export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPos
                             {/* Video / Media - Matched to ReelItem.tsx structure - FULL SCREEN FORCE */}
                             <div
                                 className="w-full h-full relative"
-                                onClick={togglePlayPause}
                             >
                                 <video
                                     ref={el => {
@@ -234,6 +233,7 @@ export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPos
                                     loop
                                     muted={muted}
                                     poster={post.thumbnail_url}
+                                    onClick={togglePlayPause}
                                 />
 
                                 {/* Mute Toggle - Inside relative container */}
