@@ -51,6 +51,29 @@ export const ReelsPage = () => {
     const viewStartTimes = useRef<{ [key: string]: number }>({});
     const loopCounters = useRef<{ [key: string]: number }>({});
 
+    // Helper to log view (flushes pending session)
+    const flushAnalytics = (id: string, video: HTMLVideoElement) => {
+        const startTime = viewStartTimes.current[id];
+        if (!startTime) return;
+
+        const durationSeconds = (Date.now() - startTime) / 1000;
+
+        // Strict "Instant Seen" Logic (> 0.1s)
+        if (durationSeconds > 0.1) {
+            const vidDuration = video.duration || 10;
+            const percentage = Math.min(1.0, durationSeconds / vidDuration);
+            const loops = loopCounters.current[id] || 0;
+            const cleanId = id.split('_')[0]; // internal ID has suffix sometimes?
+
+            console.log(`[Analytics] ${cleanId}: ${durationSeconds.toFixed(1)}s, ${loops} loops`);
+            // Use keepalive if supported by service, otherwise standard intent
+            socialService.logView(cleanId, user?.id || null, durationSeconds, percentage, loops);
+        }
+
+        delete viewStartTimes.current[id];
+        delete loopCounters.current[id];
+    };
+
     // Intersection Observer
     useEffect(() => {
         const observer = new IntersectionObserver(
@@ -60,7 +83,6 @@ export const ReelsPage = () => {
                     const isVisible = entry.intersectionRatio >= 0.7;
 
                     // Find Post ID by reference equality
-                    // Note: videoRefs.current is stable, but we iterate keys
                     const currentId = Object.keys(videoRefs.current).find(key => videoRefs.current[key] === video);
                     if (!currentId) return;
 
@@ -69,46 +91,33 @@ export const ReelsPage = () => {
                         video.play().catch(() => { });
                         video.preload = 'auto';
 
-                        viewStartTimes.current[currentId] = Date.now();
-                        loopCounters.current[currentId] = 0;
+                        // Start tracking if not already tracking
+                        if (!viewStartTimes.current[currentId]) {
+                            viewStartTimes.current[currentId] = Date.now();
+                            loopCounters.current[currentId] = 0;
+                        }
 
                     } else {
                         video.pause();
-
-                        // Log Analytics
-                        const startTime = viewStartTimes.current[currentId];
-                        if (startTime) {
-                            const durationSeconds = (Date.now() - startTime) / 1000;
-
-                            // [FIX] REMOVED 1s THRESHOLD
-                            // User request: "If I see it for a microsecond, it counts as SEEN"
-                            // We use 0.1s just to filter technical flickers, but practically "instant".
-                            if (durationSeconds > 0.1) {
-                                const vidDuration = video.duration || 10;
-                                const percentage = Math.min(1.0, durationSeconds / vidDuration);
-                                const loops = loopCounters.current[currentId] || 0;
-                                const cleanId = currentId.split('_')[0];
-
-                                console.log(`[Analytics] ${cleanId}: ${durationSeconds.toFixed(1)}s, ${loops} loops`);
-                                socialService.logView(cleanId, user?.id || null, durationSeconds, percentage, loops);
-                            }
-                            delete viewStartTimes.current[currentId];
-                            delete loopCounters.current[currentId];
-                        }
+                        flushAnalytics(currentId, video);
                     }
                 });
             },
             { threshold: 0.7 }
         );
 
-        // Observer needs to re-attach when posts/refs change
-        // Since we are using stable keys, we iterate current refs
-        // We use a timeout to let refs attach? No, useEffect is fine.
         Object.values(videoRefs.current).forEach((video) => {
             if (video) observer.observe(video);
         });
 
-        return () => observer.disconnect();
+        return () => {
+            observer.disconnect();
+            // FLUSH ALL PENDING VIEWS ON UNMOUNT / REFRESH
+            Object.keys(viewStartTimes.current).forEach((id) => {
+                const video = videoRefs.current[id];
+                if (video) flushAnalytics(id, video);
+            });
+        };
     }, [posts]); // Re-run when posts update (load more)
 
     /* --- Handlers --- */
