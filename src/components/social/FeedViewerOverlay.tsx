@@ -14,6 +14,62 @@ interface FeedViewerOverlayProps {
     variant?: 'feed' | 'reel';
 }
 
+const SmartVideo: React.FC<{
+    src: string;
+    poster?: string;
+    isActive: boolean;
+    muted: boolean;
+    onTogglePlay: (e: React.MouseEvent<HTMLVideoElement> | any) => void;
+    contain?: boolean;
+}> = ({ src, poster, isActive, muted, onTogglePlay, contain = false }) => {
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const [isLoaded, setIsLoaded] = useState(false);
+
+    useEffect(() => {
+        if (!videoRef.current) return;
+        if (isActive) {
+            videoRef.current.currentTime = 0;
+            videoRef.current.play().catch(() => { });
+        } else {
+            videoRef.current.pause();
+        }
+    }, [isActive]);
+
+    return (
+        <div className="relative w-full h-full bg-neutral-900">
+            {/* 1. Optimized Poster (Visible until video loads) */}
+            <div
+                className={`absolute inset-0 z-10 transition-opacity duration-500 ${isLoaded ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+            >
+                {poster ? (
+                    <img
+                        src={poster}
+                        className={`w-full h-full ${contain ? 'object-contain' : 'object-cover'}`}
+                        alt="Loading..."
+                    />
+                ) : (
+                    // Fallback skeleton if no poster
+                    <div className="w-full h-full bg-neutral-800 animate-pulse flex items-center justify-center">
+                        <Music2 className="text-neutral-700 w-12 h-12" />
+                    </div>
+                )}
+            </div>
+
+            {/* 2. Video Element */}
+            <video
+                ref={videoRef}
+                src={src}
+                className={`w-full h-full cursor-pointer ${contain ? 'object-contain' : 'object-cover'} relative z-0`}
+                playsInline
+                loop
+                muted={muted}
+                onLoadedData={() => setIsLoaded(true)}
+                onClick={onTogglePlay}
+            />
+        </div>
+    );
+};
+
 export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPostId, posts, onClose, variant = 'feed' }) => {
     const { user } = useAuth();
     const [localPosts, setLocalPosts] = useState<Post[]>(posts);
@@ -138,23 +194,12 @@ export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPos
                                 {post.media && post.media.length > 0 ? (
                                     <MediaCarousel media={post.media} isPlaying={playingPostId === post.id} />
                                 ) : (
-                                    <video
-                                        ref={el => {
-                                            if (el) {
-                                                if (playingPostId === post.id) {
-                                                    el.currentTime = 0;
-                                                    el.play().catch(() => { });
-                                                } else {
-                                                    el.pause();
-                                                }
-                                            }
-                                        }}
+                                    <SmartVideo
                                         src={post.media_url}
-                                        className="w-full h-full object-cover cursor-pointer"
-                                        playsInline
-                                        loop
+                                        poster={post.thumbnail_url}
+                                        isActive={playingPostId === post.id}
                                         muted={muted}
-                                        onClick={togglePlayPause}
+                                        onTogglePlay={togglePlayPause}
                                     />
                                 )}
 
@@ -321,43 +366,17 @@ export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPos
                                 <MediaCarousel media={post.media} isPlaying={playingPostId === post.id} />
                             ) : (
                                 <div className="bg-neutral-900 w-full relative aspect-[4/5] max-h-[500px] overflow-hidden rounded-sm">
-                                    {post.type === 'video' ? (
-                                        <div className="w-full h-full flex items-center justify-center bg-black group">
-                                            <video
-                                                ref={el => {
-                                                    if (el) {
-                                                        if (playingPostId === post.id) {
-                                                            const promise = el.play();
-                                                            if (promise !== undefined) {
-                                                                promise.catch(() => { });
-                                                            }
-                                                        } else {
-                                                            el.pause();
-                                                        }
-                                                    }
-                                                }}
-                                                src={post.media_url}
-                                                className="w-full h-full object-contain cursor-pointer"
-                                                playsInline
-                                                loop
-                                                muted
-                                                onClick={togglePlayPause}
-                                            />
-                                            <button
-                                                className="absolute bottom-3 right-3 bg-black/50 p-1.5 rounded-full backdrop-blur-sm text-white hover:bg-black/70 transition-colors active:scale-95"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    const v = e.currentTarget.parentElement?.querySelector('video');
-                                                    if (v) v.muted = !v.muted;
-                                                }}
-                                            >
-                                                <Music2 size={12} />
-                                            </button>
-                                        </div>
                                     ) : (
-                                        <div className="w-full h-full flex items-center justify-center bg-black">
-                                            <img src={post.media_url} alt="Post" className="w-full h-full object-contain" />
-                                        </div>
+                                    <div className="w-full h-full flex items-center justify-center bg-black">
+                                        <SmartVideo
+                                            src={post.media_url}
+                                            poster={post.thumbnail_url}
+                                            isActive={playingPostId === post.id}
+                                            muted={true} // Default feed videos are muted
+                                            onTogglePlay={togglePlayPause}
+                                            contain={true}
+                                        />
+                                    </div>
                                     )}
                                 </div>
                             )}
