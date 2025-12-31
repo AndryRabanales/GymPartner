@@ -332,7 +332,7 @@ export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPos
                     )
                 }
             </div >
-
+        );
     }
 
     // --- DEFAULT (FEED/CARD) VARIANT RENDER ---
