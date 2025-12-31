@@ -79,7 +79,11 @@ export const ReelsPage = () => {
                         const startTime = viewStartTimes.current[currentId];
                         if (startTime) {
                             const durationSeconds = (Date.now() - startTime) / 1000;
-                            if (durationSeconds > 1.0) {
+
+                            // [FIX] REMOVED 1s THRESHOLD
+                            // User request: "If I see it for a microsecond, it counts as SEEN"
+                            // We use 0.1s just to filter technical flickers, but practically "instant".
+                            if (durationSeconds > 0.1) {
                                 const vidDuration = video.duration || 10;
                                 const percentage = Math.min(1.0, durationSeconds / vidDuration);
                                 const loops = loopCounters.current[currentId] || 0;
