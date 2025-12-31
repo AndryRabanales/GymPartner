@@ -49,6 +49,25 @@ export const ReelsPage = () => {
         // Filter out locally seen posts immediately
         const filteredFeed = feed.filter(p => !localBlacklist.includes(p.id));
 
+        // [NEW] Auto-Reset: If no videos left after filtering, clear blacklist and reload
+        if (filteredFeed.length === 0 && feed.length > 0) {
+            console.log('[Reels] All videos seen - Resetting feed with best content...');
+            localStorage.removeItem('seen_posts_blacklist');
+            // Reload without blacklist
+            const freshFeed = feed;
+            if (user) {
+                const feedWithFollow = await Promise.all(freshFeed.map(async (post) => {
+                    const isFollowing = await socialService.getFollowStatus(user.id, post.user_id);
+                    return { ...post, is_following: isFollowing };
+                }));
+                setPosts(feedWithFollow as any);
+            } else {
+                setPosts(freshFeed);
+            }
+            setLoading(false);
+            return;
+        }
+
         if (user) {
             const feedWithFollow = await Promise.all(filteredFeed.map(async (post) => {
                 const isFollowing = await socialService.getFollowStatus(user.id, post.user_id);
