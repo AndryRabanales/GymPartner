@@ -210,32 +210,50 @@ export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPos
                             data-post-id={post.id}
                             className="h-full w-full relative snap-center flex items-center justify-center bg-black"
                         >
-                            <div className="relative w-full h-full md:max-w-md md:h-[95vh] md:rounded-xl overflow-hidden bg-neutral-900">
-                                {/* Video / Media */}
+                            <div className="relative w-full h-full md:max-w-md md:h-[95vh] md:rounded-xl overflow-hidden bg-black">
+                                {/* Video / Media - Matched to ReelItem.tsx structure */}
                                 {post.media && post.media.length > 0 ? (
                                     <MediaCarousel media={post.media} isPlaying={playingPostId === post.id} />
                                 ) : (
-                                    <SmartVideo
-                                        src={post.media_url}
-                                        poster={post.thumbnail_url}
-                                        isActive={playingPostId === post.id}
-                                        muted={muted}
-                                        onTogglePlay={togglePlayPause}
-                                    />
+                                    <div
+                                        className="w-full h-full relative"
+                                        onClick={togglePlayPause}
+                                    >
+                                        <video
+                                            ref={el => {
+                                                // Handle ref for play/pause control
+                                                if (el) {
+                                                    if (playingPostId === post.id) {
+                                                        el.play().catch(() => { });
+                                                    } else {
+                                                        el.pause();
+                                                        el.currentTime = 0;
+                                                    }
+                                                    el.muted = muted;
+                                                }
+                                            }}
+                                            src={post.media_url}
+                                            className="w-full h-full object-cover"
+                                            playsInline
+                                            webkit-playsinline="true"
+                                            loop
+                                            muted={muted}
+                                            poster={post.thumbnail_url}
+                                        />
+
+                                        {/* Mute Toggle - Inside relative container */}
+                                        <button
+                                            className="absolute top-20 left-4 bg-black/50 p-2 rounded-full backdrop-blur-sm text-white z-30 opacity-0 transition-opacity duration-300 data-[muted=true]:opacity-100"
+                                            data-muted={muted}
+                                            onClick={(e) => { e.stopPropagation(); setMuted(!muted); }}
+                                        >
+                                            <VolumeX size={20} />
+                                        </button>
+
+                                        {/* Gradient Overlay - Exact copy from ReelItem (with opacity adjustment if needed, keeping standard) */}
+                                        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+                                    </div>
                                 )}
-
-                                {/* Mute Toggle */}
-                                <button
-                                    className="absolute top-4 left-4 bg-black/50 p-2 rounded-full backdrop-blur-sm text-white z-30"
-                                    onClick={(e) => { e.stopPropagation(); setMuted(!muted); }}
-                                >
-                                    {muted ? <VolumeX size={20} /> : <Volume2 size={20} />}
-                                </button>
-
-
-
-                                {/* Gradient Overlay - Updated to be subtler */}
-                                <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/60 via-black/20 to-transparent pointer-events-none" />
 
                                 {/* RIGHT ACTIONS BAR */}
                                 <div className="absolute bottom-6 right-2 flex flex-col items-center gap-5 z-40">
