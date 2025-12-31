@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { Heart, MessageCircle, Music2, Share2, Swords, VolumeX, Bookmark } from 'lucide-react';
+import { Heart, MessageCircle, Music2, Share2, Swords, VolumeX, Bookmark, Pause } from 'lucide-react';
 import type { Post } from '../../services/SocialService';
 
 interface ReelItemProps {
@@ -41,6 +41,7 @@ export const ReelItem: React.FC<ReelItemProps> = React.memo(({
     const internalVideoRef = useRef<HTMLVideoElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [retryCount, setRetryCount] = React.useState(0);
+    const [isPaused, setIsPaused] = React.useState(false);
 
     // Register ref securely
     useEffect(() => {
@@ -80,6 +81,20 @@ export const ReelItem: React.FC<ReelItemProps> = React.memo(({
         setTimeout(() => heart.remove(), 1000);
     };
 
+    const handleVideoClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        const video = internalVideoRef.current;
+        if (!video) return;
+
+        if (video.paused) {
+            video.play();
+            setIsPaused(false);
+        } else {
+            video.pause();
+            setIsPaused(true);
+        }
+    };
+
     return (
         <div
             ref={containerRef}
@@ -99,7 +114,7 @@ export const ReelItem: React.FC<ReelItemProps> = React.memo(({
                     preload="metadata"
                     muted={muted}
                     poster={post.media_url.includes('cloudinary') ? post.media_url.replace(/\.(mp4|mov|webm)$/i, '.jpg') : undefined}
-                    onClick={onToggleMute}
+                    onClick={handleVideoClick}
                     onEnded={handleInternalLoop}
                     onError={(e) => {
                         // FIX: Auto-Retry Logic for flaky connections (416/QUIC errors)
@@ -121,6 +136,15 @@ export const ReelItem: React.FC<ReelItemProps> = React.memo(({
                         }
                     }}
                 />
+
+                {/* Pause Icon Overlay */}
+                {isPaused && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div className="bg-black/50 backdrop-blur-sm rounded-full p-6 animate-in fade-in zoom-in duration-200">
+                            <Pause size={64} className="text-white" strokeWidth={2.5} />
+                        </div>
+                    </div>
+                )}
 
                 {/* MUTE INDICATOR */}
                 <div className="absolute top-20 left-4 bg-black/50 p-1.5 rounded-full backdrop-blur-sm pointer-events-none opacity-0 transition-opacity duration-300 data-[muted=true]:opacity-100" data-muted={muted}>
