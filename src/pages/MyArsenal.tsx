@@ -219,7 +219,21 @@ export const MyArsenal = () => {
 
             if (targetGymId) {
                 const items = await equipmentService.getInventory(targetGymId);
-                setInventory(items);
+
+                // [FIX] ALWAYS Fetch Personal Inventory Logic
+                // If the target gym is NOT the personal gym, we must ALSO fetch personal items
+                // so the user has access to their "Global Custom Exercises" everywhere.
+                let personalItems: Equipment[] = [];
+                try {
+                    const personalGymId = await userService.ensurePersonalGym(user.id);
+                    if (personalGymId && personalGymId !== targetGymId) {
+                        personalItems = await equipmentService.getInventory(personalGymId);
+                        console.log('🔗 Merged Personal Inventory:', personalItems.length, 'items');
+                    }
+                } catch (e) { console.warn('Could not fetch personal inventory linkage', e); }
+
+                // Merge: Personal Items + Gym Items (Gym items take precedence if ID conflict, although IDs should be unique)
+                setInventory([...personalItems, ...items]);
             }
 
             // NEW: Fetch Global Exercises to match cloned routine IDs
@@ -281,16 +295,15 @@ export const MyArsenal = () => {
             return;
         }
 
-        let finalGymId = (await resolveTargetGymId()) || null;
-
-        if (!finalGymId) {
-            // If no gym is active, ensure we have a "Personal Gym" container
-            try {
-                finalGymId = await userService.ensurePersonalGym(user.id);
-            } catch (e) {
-                alert("Error creando espacio personal. Intenta recargar.");
-                return;
-            }
+        // [FIX] Always save Custom Exercises to Personal Gym so they are available globally
+        // instead of attaching them to the specific physical gym currently viewed.
+        let finalGymId = null;
+        try {
+            finalGymId = await userService.ensurePersonalGym(user.id);
+        } catch (e) {
+            console.error("Error securing personal gym for custom item:", e);
+            // Fallback (unlikely)
+            finalGymId = (await resolveTargetGymId()) || null;
         }
 
         // Resolve Icon from Category (Standard or Custom)
@@ -307,7 +320,7 @@ export const MyArsenal = () => {
         const payload = {
             name: customName,
             category: customCategory,
-            gym_id: finalGymId, // Now guaranteed to have an ID
+            gym_id: finalGymId, // Now pointing to Personal Gym
             quantity: 1,
             metrics: customMetrics,
             icon: resolvedIcon // <--- SAVED TO DB
@@ -320,9 +333,10 @@ export const MyArsenal = () => {
                 await equipmentService.updateEquipment(editingItem.id, {
                     name: customName,
                     category: customCategory,
-                    metrics: customMetrics
+                    metrics: customMetrics,
+                    icon: resolvedIcon // [FIX] Added icon to update payload
                 });
-                newItem = { ...editingItem, name: customName, category: customCategory, metrics: customMetrics };
+                newItem = { ...editingItem, name: customName, category: customCategory, metrics: customMetrics, icon: resolvedIcon };
 
                 // Optimistic Update for Edit - Update in both inventories
                 setInventory(prev => prev.map(i => i.id === newItem.id ? newItem : i));
