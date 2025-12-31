@@ -319,7 +319,7 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                 {stats.consistencyData.slice(-20).map((day: any, i: number) => (
                     <div
                         key={i}
-                        className={`w-4 h-4 rounded-md shadow-[0_2px_4px_rgba(0,0,0,0.3)] transition-all ${day.count > 0 ? 'bg-gradient-to-br from-gym-primary to-orange-500 border border-white/20' : 'bg-black/40 border border-white/5'}`}
+                        className={`w-4 h-4 rounded-md shadow-[0_2px_4px_rgba(0,0,0,0.3)] transition-all ${day.count > 0 ? 'bg-gradient-to-br from-gym-primary to-orange-500 border border-white/20' : 'border border-white/5'}`}
                     />
                 ))}
             </div>
@@ -369,7 +369,7 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
 
                         <StickerWrapper id="logo">
                             <div className="flex flex-col items-start pointer-events-none drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)]">
-                                <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
+                                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full">
                                     {avatarUrl ? (
                                         <img src={avatarUrl} className="w-6 h-6 rounded-full border border-gym-primary object-cover" crossOrigin="anonymous" />
                                     ) : (
@@ -394,7 +394,7 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                                     </h1>
                                     <span className="text-4xl font-black text-gym-primary italic transform -rotate-12 translate-y-[-10px]">k</span>
                                 </div>
-                                <div className="bg-white/10 backdrop-blur-md px-2 py-0.5 rounded text-[8px] font-bold text-white uppercase tracking-[0.3em] border border-white/10 ml-2">
+                                <div className="px-2 py-0.5 rounded text-[8px] font-bold text-white uppercase tracking-[0.3em] ml-2">
                                     Volume Load
                                 </div>
                             </div>
@@ -406,7 +406,7 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                                     <Trophy className="text-yellow-400 w-10 h-10 drop-shadow-[0_0_10px_rgba(250,204,21,0.6)]" fill="currentColor" />
                                     <div className="flex flex-col">
                                         <span className="text-4xl font-black text-white leading-none italic">{stats.totalWorkouts}</span>
-                                        <span className="text-[10px] text-white/80 font-bold uppercase tracking-widest bg-yellow-400/20 px-1 rounded">Sesiones</span>
+                                        <span className="text-[10px] text-white/80 font-bold uppercase tracking-widest px-1 rounded">Sesiones</span>
                                     </div>
                                 </div>
                             </div>
@@ -480,7 +480,7 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                                             </div>
                                         </div>
                                     )) : (
-                                        <div className="flex flex-col items-center py-2 opacity-50 bg-black/40 rounded-xl">
+                                        <div className="flex flex-col items-center py-2 opacity-50 rounded-xl">
                                             <span className="text-white/50 text-xs">Selecciona tus PRs</span>
                                         </div>
                                     )}
@@ -524,7 +524,7 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
 
                         <StickerWrapper id="date" w="140px">
                             <div className="pointer-events-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                                <div className="border border-white/20 bg-white/5 backdrop-blur-sm rounded-full px-4 py-1.5 flex items-center justify-between">
+                                <div className="rounded-full px-4 py-1.5 flex items-center justify-between">
                                     <span className="text-white font-bold text-xs uppercase tracking-widest">
                                         {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                                     </span>
