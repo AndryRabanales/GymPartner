@@ -27,25 +27,24 @@ const SmartVideo: React.FC<{
 
     // Immediate play on mount if active
     useEffect(() => {
-        if (!videoRef.current) return;
+        const video = videoRef.current;
+        if (!video) return;
 
         const attemptPlay = async () => {
             if (isActive) {
                 try {
-                    videoRef.current.currentTime = 0;
-                    await videoRef.current.play();
+                    video.currentTime = 0;
+                    await video.play();
                 } catch (err) {
                     console.log("Autoplay blocked, muting and retrying:", err);
                     // Fallback to muted
-                    if (videoRef.current) {
-                        videoRef.current.muted = true;
-                        try {
-                            await videoRef.current.play();
-                        } catch (e) { console.error("Muted autoplay failed", e); }
-                    }
+                    video.muted = true;
+                    try {
+                        await video.play();
+                    } catch (e) { console.error("Muted autoplay failed", e); }
                 }
             } else {
-                videoRef.current.pause();
+                video.pause();
             }
         };
 
