@@ -1,10 +1,8 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { X, Heart, MessageCircle, Share2, MoreHorizontal, Music2, Swords, VolumeX } from 'lucide-react';
-import type { Post } from '../../services/SocialService';
+import { X, Heart, MessageCircle, Share2, MoreHorizontal, Music2, Swords, VolumeX, Bookmark } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { socialService } from '../../services/SocialService';
+import { socialService, type Post } from '../../services/SocialService';
 import { MediaCarousel } from './MediaCarousel';
-
 import { CommentsSheet } from './CommentsSheet';
 
 interface FeedViewerOverlayProps {
@@ -147,6 +145,8 @@ export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPos
 
     const handleShare = async (post: Post) => {
         try {
+            await socialService.trackShare(user?.id || 'anon', post.id); // [NEW] Track algorithm metric
+
             if (navigator.share) {
                 await navigator.share({
                     title: `GymPartner: ${post.profiles?.username}`,
@@ -158,6 +158,21 @@ export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPos
                 alert('Link copiado al portapapeles 📋');
             }
         } catch (error) { console.log(error); }
+    };
+
+    const handleSave = async (post: Post, e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
+        if (!user) return alert("Inicia sesión para guardar 🔖");
+
+        // Optimistic Update
+        const isSaved = post.user_has_saved;
+        setLocalPosts(prev => prev.map(p => p.id === post.id ? {
+            ...p,
+            user_has_saved: !isSaved,
+            saves_count: (p.saves_count || 0) + (isSaved ? -1 : 1)
+        } : p));
+
+        await socialService.toggleSave(user.id, post.id);
     };
 
     const handleLike = async (post: Post, e?: React.MouseEvent) => {
@@ -265,6 +280,12 @@ export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPos
                                 <button onClick={(e) => { e.stopPropagation(); setActiveCommentPostId(post.id); }} className="flex flex-col items-center gap-1 p-2 transition-transform active:scale-75">
                                     <MessageCircle size={28} className="text-white drop-shadow-lg" strokeWidth={1.5} />
                                     <span className="text-white text-xs font-bold drop-shadow-md">Chat</span>
+                                </button>
+
+                                {/* [NEW] SAVE BUTTON (Reel Overlay) */}
+                                <button onClick={(e) => handleSave(post, e)} className="flex flex-col items-center gap-1 p-2 transition-transform active:scale-75">
+                                    <Bookmark size={28} className={post.user_has_saved ? "text-yellow-400 fill-yellow-400" : "text-white drop-shadow-lg"} strokeWidth={1.5} />
+                                    <span className="text-white text-xs font-bold drop-shadow-md">{post.saves_count || 0}</span>
                                 </button>
 
                                 <button onClick={(e) => { e.stopPropagation(); handleShare(post); }} className="flex flex-col items-center gap-1 p-2 transition-transform active:scale-75">
@@ -442,10 +463,17 @@ export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPos
                                         <MessageCircle size={24} />
                                     </button>
                                     <button
-                                        onClick={() => handleShare(post)}
+                                        onClick={(e) => handleShare(post)}
                                         className="text-white hover:text-neutral-300 ml-auto transition-transform active:scale-95"
                                     >
                                         <Share2 size={24} />
+                                    </button>
+                                    {/* [NEW] SAVE BUTTON (Feed Card) */}
+                                    <button
+                                        onClick={(e) => handleSave(post, e)}
+                                        className="text-white hover:text-neutral-300 transition-transform active:scale-95"
+                                    >
+                                        <Bookmark size={24} className={post.user_has_saved ? "fill-white text-white" : "text-white"} />
                                     </button>
                                 </div>
 

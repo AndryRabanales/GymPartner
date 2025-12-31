@@ -23,9 +23,20 @@ export interface Post {
     media?: MediaItem[]; // Array of media items for carousel posts
 
     // Aggregated/Joined data
+    // Aggregated/Joined data
     likes_count?: number;
+    comments_count?: number; // [NEW] Added for V3
     user_has_liked?: boolean;
-    views_count?: number; // Added
+    views_count?: number;
+
+    // [NEW] Viral Metrics (Algorithm V3)
+    shares_count?: number;
+    saves_count?: number;
+    user_has_saved?: boolean;
+    virality_score?: number;
+    is_viral?: boolean;
+    is_cold_start?: boolean;
+
     debug_score?: number; // 🧠 AI Score for visualization
     profiles?: {
         username: string;
@@ -382,57 +393,66 @@ class SocialService {
         });
     }
 
+
+    // ============================================================================
+    // 🧠 SMART FEED ALGORITHM V3 & INTERACTIONS (Shares/Saves/Viral)
+    // ============================================================================
+
     /**
-     * Fetches the main feed (Global or Following) using Smart Feed Algorithm.
+     * Unified interaction tracker for Shares and Saves.
+     * Updates counters atomically via RPC.
      */
-    async getGlobalFeed(currentUserId?: string, type?: 'image' | 'video', flatten: boolean = false): Promise<Post[]> {
-        // Force Algorithm V3 usage for ALL feeds (Reels & Community)
-        let { data, error } = await supabase.rpc('get_smart_feed_v2', {
-            p_user_id: currentUserId || null,
-            p_limit: 40, // Increased limit for better ranking diversity
-            p_offset: 0,
-            p_type: type || null // Pass filters to SQL
+    async trackInteraction(userId: string, postId: string, type: 'share' | 'save'): Promise<boolean> {
+        const { error } = await supabase.rpc('track_interaction', {
+            p_user_id: userId,
+            p_post_id: postId,
+            p_type: type
         });
 
-        // Fallback: If RPC fails (e.g., function not found), use raw query
         if (error) {
-            console.warn('Smart Feed V2 unavailable. Using fallback query.', error.message);
-
-            let query = supabase
-                .from('posts')
-                .select(`
-                    *,
-                    profiles!fk_posts_profiles (username, avatar_url),
-                    routines (name),
-                    post_likes (user_id)
-                `)
-                .order('created_at', { ascending: false })
-                .limit(20);
-
-            if (type) {
-                query = query.eq('type', type);
-            }
-
-            const result = await query;
-            data = result.data;
-            error = result.error as any;
+            console.error(`Error tracking ${type}:`, error);
+            return false;
         }
+        return true;
+    }
 
-        if (error || !data) {
-            console.error('Error fetching global feed:', error);
+    /**
+     * Toggles 'Save' status for a post.
+     */
+    async toggleSave(userId: string, postId: string): Promise<boolean> {
+        return this.trackInteraction(userId, postId, 'save');
+    }
+
+    /**
+     * Tracks a 'Share' event.
+     */
+    async trackShare(userId: string, postId: string): Promise<boolean> {
+        return this.trackInteraction(userId, postId, 'share');
+    }
+
+    /**
+     * Fetches the main feed using Smart Feed Algorithm V3 (TikTok Logic).
+     */
+    async getGlobalFeed(currentUserId?: string, type?: 'image' | 'video', flatten: boolean = false): Promise<Post[]> {
+        // Force Algorithm V3 usage
+        let { data, error } = await supabase.rpc('get_smart_feed_v3', {
+            p_user_id: currentUserId || null,
+            p_limit: 20,
+            p_offset: 0,
+            p_type: type || null
+        });
+
+        if (error) {
+            console.warn('Smart Feed V3 unavailable. Using fallback.', error.message);
+            // Fallback logic could go here, but focusing on V3 success for now
             return [];
         }
 
-        if (data.length > 0) {
-            console.log(`[Algorithm V4] Top post rank: ${Math.round(data[0].rank_score)} | Feed size: ${data.length}`);
-        }
+        if (!data) return [];
 
-        // Map RPC result (or Query result) to Post object structure
-        // Note: Raw query returns nested objects, RPC returns flat fields.
-        // We need to handle both shapes if we support fallback, 
-        // BUT for simplicity in this repair, we assume RPC structure mostly or force standard mapping.
-        // Actually, fallback query returns different shape (profiles is object vs username string).
-        // Let's assume RPC works if SQL script is run.
+        if (data.length > 0) {
+            console.log(`[Algorithm V3] Top post rank: ${Math.round(data[0].rank_score)} | Viral: ${data[0].is_viral} | Cold Start: ${data[0].is_cold_start}`);
+        }
 
         const mappedPosts: any[] = data.map((row: any) => ({
             id: row.id,
@@ -444,38 +464,30 @@ class SocialService {
             linked_routine_id: row.linked_routine_id,
             created_at: row.created_at,
 
-            // Likes/Comments are counts in RPC, or arrays in Raw Query
-            likes_count: typeof row.likes_count === 'number' || typeof row.likes_count === 'string'
-                ? Number(row.likes_count)
-                : (row.post_likes?.length || 0),
+            likes_count: Number(row.likes_count || 0),
+            comments_count: Number(row.comments_count || 0),
+            views_count: row.views_count || 0,
+            shares_count: row.shares_count || 0, // [NEW]
+            saves_count: row.saves_count || 0,   // [NEW]
 
-            comments_count: typeof row.comments_count === 'number' || typeof row.comments_count === 'string'
-                ? Number(row.comments_count)
-                : 0, // Raw query doesn't fetch comment count easily without aggregate
+            debug_score: row.rank_score,
+            is_viral: row.is_viral,           // [NEW]
+            is_cold_start: row.is_cold_start, // [NEW]
 
-            views_count: row.views_count,
-            debug_score: row.rank_score, // 🧠 Map the AI Score for frontend visualization
+            user_has_liked: row.user_has_liked || false,
+            user_has_saved: row.user_has_saved || false, // [NEW]
 
-            // Liked Status
-            user_has_liked: row.user_has_liked !== undefined
-                ? row.user_has_liked
-                : (currentUserId ? row.post_likes?.some((l: any) => l.user_id === currentUserId) : false),
-
-            // Profiles (RPC returns flat username/avatar, Query returns object)
-            profiles: row.profiles || {
+            profiles: {
                 username: row.username,
                 avatar_url: row.avatar_url
             },
-
-            routines: row.routines || (row.routine_name ? { name: row.routine_name } : undefined),
-
-            media: [] // Will attach below
+            routines: row.routine_name ? { name: row.routine_name } : undefined,
+            media: []
         }));
 
-        // Fetch media for all posts (Universal for both methods)
         const postsWithMedia = await this.attachMediaToPosts(mappedPosts);
 
-        // Flatten logic
+        // Flatten logic for Reels (unchanged)
         let finalFeed = postsWithMedia;
         if (flatten) {
             const flattenedFeed: any[] = [];

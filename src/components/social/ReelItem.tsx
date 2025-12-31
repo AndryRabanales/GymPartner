@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { Heart, MessageCircle, Music2, Share2, Swords, VolumeX } from 'lucide-react';
+import { Heart, MessageCircle, Music2, Share2, Swords, VolumeX, Bookmark } from 'lucide-react';
 import type { Post } from '../../services/SocialService';
 
 interface ReelItemProps {
@@ -10,6 +10,7 @@ interface ReelItemProps {
     onLike: (post: Post) => void;
     onComment: (post: Post) => void;
     onShare: (post: Post) => void;
+    onSave: (post: Post) => void; // [NEW] - Save/Bookmark
     onFollow: (post: Post) => void;
     onProfileClick: (userId: string) => void;
     onVideoRef: (id: string, el: HTMLVideoElement | null) => void;
@@ -31,6 +32,7 @@ export const ReelItem: React.FC<ReelItemProps> = React.memo(({
     onLike,
     onComment,
     onShare,
+    onSave, // [NEW]
     onFollow,
     onProfileClick,
     onVideoRef,
@@ -81,7 +83,7 @@ export const ReelItem: React.FC<ReelItemProps> = React.memo(({
             className="snap-start relative h-full w-full bg-black overflow-hidden flex items-center justify-center border-b border-gray-900"
             id={`post-${post.virtual_id || post.id}`}
         >
-            {/* VIDEO CONTAINER */}
+            {/* ... (Video Container unchanged) */}
             <div
                 className="w-full h-full relative"
                 onDoubleClick={handleDoubleTap}
@@ -119,6 +121,12 @@ export const ReelItem: React.FC<ReelItemProps> = React.memo(({
                     <button onClick={(e) => { e.stopPropagation(); onComment(post); }} className="flex flex-col items-center gap-px p-1.5 transition-transform active:scale-75">
                         <MessageCircle size={26} className="text-white drop-shadow-lg" strokeWidth={1.5} />
                         <span className="text-white text-[10px] font-bold drop-shadow-md">Chat</span>
+                    </button>
+
+                    {/* [NEW] SAVE BUTTON */}
+                    <button onClick={(e) => { e.stopPropagation(); onSave(post); }} className="flex flex-col items-center gap-px p-1.5 transition-transform active:scale-75">
+                        <Bookmark size={26} className={post.user_has_saved ? "text-yellow-400 fill-yellow-400" : "text-white drop-shadow-lg"} strokeWidth={1.5} />
+                        <span className="text-white text-[10px] font-bold drop-shadow-md">{post.saves_count || 0}</span>
                     </button>
 
                     <button onClick={(e) => { e.stopPropagation(); onShare(post); }} className="flex flex-col items-center gap-px p-1.5 transition-transform active:scale-75">

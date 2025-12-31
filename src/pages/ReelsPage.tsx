@@ -184,16 +184,34 @@ export const ReelsPage = () => {
     };
 
     const handleShare = async (post: Post) => {
-        if (navigator.share) {
-            navigator.share({
-                title: `GymPartner: ${post.profiles?.username}`,
-                text: post.caption,
-                url: window.location.href
-            }).catch(() => { });
-        } else {
-            navigator.clipboard.writeText(window.location.href);
-            alert('¡Link copiado!');
-        }
+        try {
+            await socialService.trackShare(user?.id || 'anon', post.id); // [NEW] Track algorithm metric
+
+            if (navigator.share) {
+                await navigator.share({
+                    title: `GymPartner: ${post.profiles?.username}`,
+                    text: post.caption,
+                    url: window.location.href
+                });
+            } else {
+                await navigator.clipboard.writeText(window.location.href);
+                alert('¡Link copiado!');
+            }
+        } catch (e) { console.log(e); }
+    };
+
+    const handleSave = async (post: Post) => {
+        if (!user) return alert("Inicia sesión para guardar 🔖");
+
+        // Optimistic Update
+        const isSaved = post.user_has_saved;
+        setPosts(prev => prev.map(p => p.id === post.id ? {
+            ...p,
+            user_has_saved: !isSaved,
+            saves_count: (post.saves_count || 0) + (isSaved ? -1 : 1)
+        } : p));
+
+        await socialService.toggleSave(user.id, post.id);
     };
 
     return (
@@ -217,6 +235,7 @@ export const ReelsPage = () => {
                             onLike={handleLike}
                             onComment={(p) => setActiveCommentPostId(p.id)}
                             onShare={handleShare}
+                            onSave={handleSave} // [NEW]
                             onFollow={handleFollow}
                             onProfileClick={handleOpenProfile}
                             onVideoRef={registerVideoRef}
