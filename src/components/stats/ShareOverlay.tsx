@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import html2canvas from 'html2canvas';
-import { Share2, Download, X, Image as ImageIcon, Zap, Plus, Scaling, Settings, Check } from 'lucide-react';
+import { Share2, Download, X, Image as ImageIcon, Zap, Plus, Scaling, Settings, Check, Trophy } from 'lucide-react';
 import { MuscleRadarChart } from './MuscleRadarChart';
 
 interface ShareOverlayProps {
@@ -451,7 +451,7 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                                     </div>
 
                                     <div className="space-y-3">
-                                        {displayedPrs.length > 0 ? displayedPrs.map((lift: any, i: number) => (
+                                        {displayedPrs.length > 0 ? displayedPrs.map((lift: any) => (
                                             <div key={lift.name} className="relative">
                                                 <div className="flex justify-between items-end mb-1">
                                                     <span className="text-white/60 text-[10px] font-bold uppercase tracking-wider truncate max-w-[100px]">{lift.name}</span>
