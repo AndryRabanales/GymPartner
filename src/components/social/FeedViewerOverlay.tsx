@@ -283,7 +283,11 @@ export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPos
                                 </button>
 
                                 {/* [NEW] SAVE BUTTON (Reel Overlay) */}
-                                <button onClick={(e) => handleSave(post, e)} className="flex flex-col items-center gap-1 p-2 transition-transform active:scale-75">
+                                <button
+                                    onClick={(e) => handleSave(post, e)}
+                                    onTouchEnd={(e) => e.stopPropagation()}
+                                    className="flex flex-col items-center gap-1 p-2 transition-transform active:scale-75 cursor-pointer z-50"
+                                >
                                     <Bookmark size={28} className={post.user_has_saved ? "text-yellow-400 fill-yellow-400" : "text-white drop-shadow-lg"} strokeWidth={1.5} />
                                     <span className="text-white text-xs font-bold drop-shadow-md">{post.saves_count || 0}</span>
                                 </button>
@@ -471,6 +475,7 @@ export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPos
                                     {/* [NEW] SAVE BUTTON (Feed Card) */}
                                     <button
                                         onClick={(e) => handleSave(post, e)}
+                                        onTouchEnd={(e) => e.stopPropagation()}
                                         className="text-white hover:text-neutral-300 transition-transform active:scale-95"
                                     >
                                         <Bookmark size={24} className={post.user_has_saved ? "fill-white text-white" : "text-white"} />

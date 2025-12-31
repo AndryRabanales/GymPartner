@@ -125,7 +125,11 @@ export const ReelItem: React.FC<ReelItemProps> = React.memo(({
                     </button>
 
                     {/* [NEW] SAVE BUTTON */}
-                    <button onClick={(e) => { e.stopPropagation(); onSave(post); }} className="flex flex-col items-center gap-px p-1.5 transition-transform active:scale-75">
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onSave(post); }}
+                        onTouchEnd={(e) => e.stopPropagation()}
+                        className="flex flex-col items-center gap-px p-1.5 transition-transform active:scale-75"
+                    >
                         <Bookmark size={26} className={post.user_has_saved ? "text-yellow-400 fill-yellow-400" : "text-white drop-shadow-lg"} strokeWidth={1.5} />
                         <span className="text-white text-[10px] font-bold drop-shadow-md">{post.saves_count || 0}</span>
                     </button>
@@ -201,6 +205,8 @@ export const ReelItem: React.FC<ReelItemProps> = React.memo(({
         prev.post.id === next.post.id &&
         prev.post.user_has_liked === next.post.user_has_liked &&
         prev.post.likes_count === next.post.likes_count &&
+        prev.post.user_has_saved === next.post.user_has_saved && // [FIX] Added
+        prev.post.saves_count === next.post.saves_count &&       // [FIX] Added
         (prev.post as any).is_following === (next.post as any).is_following &&
         prev.muted === next.muted &&
         prev.post.media_url === next.post.media_url &&
