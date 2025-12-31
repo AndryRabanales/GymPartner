@@ -364,103 +364,157 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                         <div className="absolute inset-0 z-0 pointer-events-none" style={{ backgroundColor: `rgba(0,0,0,${bgOpacity})` }} />
 
                         <StickerWrapper id="logo">
-                            <div className="flex items-center gap-2 pointer-events-none p-2">
+                            <div className="flex items-center gap-3 p-3 bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 shadow-2xl pointer-events-none group">
                                 {avatarUrl ? (
-                                    <div className="w-10 h-10 rounded-full border-2 border-gym-primary overflow-hidden bg-neutral-800 shadow-lg">
-                                        <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" crossOrigin="anonymous" />
+                                    <div className="w-12 h-12 rounded-full border-[3px] border-gym-primary p-[2px] shadow-[0_0_15px_rgba(234,179,8,0.4)]">
+                                        <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover rounded-full" crossOrigin="anonymous" />
                                     </div>
                                 ) : (
-                                    <div className="w-8 h-8 rounded-lg bg-gym-primary flex items-center justify-center text-black font-black text-xs">GP</div>
+                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gym-primary to-orange-500 flex items-center justify-center text-black font-black text-xs shadow-lg">GP</div>
                                 )}
                                 <div>
-                                    <p className="text-white font-bold text-sm tracking-wide drop-shadow-md">GYMPARTNER</p>
-                                    <p className="text-white text-[10px] uppercase tracking-widest drop-shadow-md">{username}</p>
+                                    <div className="flex items-center gap-1.5">
+                                        <p className="text-white font-black text-lg tracking-tight uppercase italic leading-none">{username}</p>
+                                        <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center text-[8px] text-white">✓</div>
+                                    </div>
+                                    <p className="text-gym-primary text-[9px] font-bold uppercase tracking-[0.2em] mt-0.5">GymPartner Verified</p>
                                 </div>
                             </div>
                         </StickerWrapper>
 
                         <StickerWrapper id="volume">
-                            <div className="pointer-events-none p-2">
-                                <p className="text-white text-xs font-bold uppercase tracking-widest mb-1 drop-shadow-md">Volumen Total</p>
-                                <h1 className="text-6xl font-black text-white tracking-tighter italic drop-shadow-lg leading-none">
-                                    {(stats.totalVolume / 1000).toFixed(1)}<span className="text-3xl text-gym-primary not-italic">k</span>
-                                </h1>
+                            <div className="pointer-events-none relative group">
+                                <div className="absolute inset-0 bg-gym-primary/20 blur-xl rounded-full" />
+                                <div className="relative bg-neutral-900/80 backdrop-blur-xl border border-gym-primary/50 p-4 rounded-[2rem] flex flex-col items-center min-w-[140px] shadow-2xl">
+                                    <div className="absolute -top-3 w-8 h-8 bg-gradient-to-br from-gym-primary to-orange-500 rounded-full flex items-center justify-center text-black shadow-lg shadow-orange-500/20">
+                                        <Scaling size={14} className="animate-pulse" />
+                                    </div>
+                                    <p className="text-neutral-400 text-[9px] font-bold uppercase tracking-widest mb-0.5 mt-2">Volume Load</p>
+                                    <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-neutral-400 tracking-tighter italic leading-none">
+                                        {(stats.totalVolume / 1000).toFixed(1)}<span className="text-2xl text-gym-primary">k</span>
+                                    </h1>
+                                    <div className="w-full h-[2px] bg-gradient-to-r from-transparent via-gym-primary to-transparent mt-2 opacity-50" />
+                                </div>
                             </div>
                         </StickerWrapper>
 
                         <StickerWrapper id="workouts">
-                            <div className="pointer-events-none p-2">
-                                <p className="text-white text-[10px] font-bold uppercase tracking-widest drop-shadow-md">Sesiones</p>
-                                <p className="text-3xl font-bold text-white drop-shadow-md">{stats.totalWorkouts}</p>
+                            <div className="pointer-events-none relative">
+                                <div className="bg-gradient-to-br from-neutral-900 to-black border border-white/10 p-4 rounded-xl shadow-xl flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-neutral-800 rounded-lg flex items-center justify-center border border-white/5 relative overflow-hidden">
+                                        <div className="absolute inset-0 bg-gym-primary/10" />
+                                        <Trophy className="text-gym-primary w-6 h-6" />
+                                    </div>
+                                    <div>
+                                        <p className="text-neutral-500 text-[9px] font-bold uppercase tracking-[0.2em]">Sessions Completed</p>
+                                        <div className="flex items-baseline gap-1">
+                                            <p className="text-3xl font-black text-white">{stats.totalWorkouts}</p>
+                                            <span className="text-[10px] text-gym-primary font-bold">UNITS</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </StickerWrapper>
 
                         <StickerWrapper id="time">
-                            <div className="pointer-events-none p-2">
-                                <p className="text-white text-[10px] font-bold uppercase tracking-widest drop-shadow-md">Horas</p>
-                                <p className="text-3xl font-bold text-white drop-shadow-md">{Math.round(stats.totalTimeMinutes / 60)}</p>
+                            <div className="pointer-events-none p-4 relative">
+                                {/* Hexagon Shape simulated via CSS clip-path or simple border layout */}
+                                <div className="absolute inset-0 border-2 border-gym-primary/30 rounded-2xl transform rotate-3" />
+                                <div className="absolute inset-0 border-2 border-white/10 rounded-2xl transform -rotate-2 bg-black/80 backdrop-blur-md" />
+
+                                <div className="relative z-10 flex flex-col items-center justify-center p-2">
+                                    <p className="text-gym-primary text-[8px] font-black uppercase tracking-widest mb-1">TIME UNDER TENSION</p>
+                                    <p className="text-4xl font-black text-white leading-none">{Math.round(stats.totalTimeMinutes / 60)}<span className="text-sm font-medium text-neutral-500 ml-1">HRS</span></p>
+                                </div>
                             </div>
                         </StickerWrapper>
 
                         <StickerWrapper id="avg">
-                            <div className="pointer-events-none p-2">
-                                <p className="text-white text-[10px] font-bold uppercase tracking-widest drop-shadow-md">Promedio/Sesion</p>
-                                <p className="text-3xl font-bold text-white drop-shadow-md">{Math.round(stats.totalTimeMinutes / stats.totalWorkouts || 0)}m</p>
+                            <div className="pointer-events-none p-3 bg-white text-black rounded-lg shadow-[4px_4px_0px_rgba(234,179,8,1)] transform -rotate-1">
+                                <p className="font-black text-[10px] uppercase tracking-widest opacity-60">Avg. Duration</p>
+                                <p className="text-3xl font-black italic tracking-tighter">{Math.round(stats.totalTimeMinutes / stats.totalWorkouts || 0)} min</p>
                             </div>
                         </StickerWrapper>
 
                         <StickerWrapper id="pr" w="200px">
-                            <div className="pointer-events-none p-2">
-                                <p className="text-gym-primary text-[10px] font-bold uppercase tracking-widest mb-1 flex items-center gap-1 drop-shadow-md">
-                                    <Zap size={10} /> Mis Récords
-                                </p>
-                                <div className="space-y-2">
-                                    {displayedPrs.length > 0 ? displayedPrs.map((lift: any) => (
-                                        <div key={lift.name}>
-                                            <div className="flex justify-between items-baseline">
-                                                <span className="text-white text-xs font-bold truncate max-w-[100px]">{lift.name}</span>
-                                                <span className="text-white text-sm font-black italic">{lift.max}kg</span>
+                            <div className="pointer-events-none p-0 relative group">
+                                {/* Glass Stats Card */}
+                                <div className="absolute inset-0 bg-gradient-to-b from-neutral-900/90 to-black/90 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl" />
+
+                                <div className="relative z-10 p-4">
+                                    <div className="flex items-center justify-between mb-3 border-b border-white/10 pb-2">
+                                        <p className="text-gym-primary text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-1">
+                                            <Zap size={10} className="fill-gym-primary" />
+                                            ELITE METRICS
+                                        </p>
+                                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_5px_#22c55e]" />
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        {displayedPrs.length > 0 ? displayedPrs.map((lift: any, i: number) => (
+                                            <div key={lift.name} className="relative">
+                                                <div className="flex justify-between items-end mb-1">
+                                                    <span className="text-white/60 text-[10px] font-bold uppercase tracking-wider truncate max-w-[100px]">{lift.name}</span>
+                                                    <span className="text-white text-sm font-black italic">{lift.max} <span className="text-[9px] text-gym-primary not-italic">KG</span></span>
+                                                </div>
+                                                {/* Progress Bar Visual */}
+                                                <div className="w-full h-1 bg-neutral-800 rounded-full overflow-hidden">
+                                                    <div
+                                                        className="h-full bg-gradient-to-r from-gym-primary to-orange-500 rounded-full"
+                                                        style={{ width: `${Math.min(100, (lift.max / 200) * 100)}%` }}
+                                                    />
+                                                </div>
                                             </div>
-                                            <div className="w-full h-[2px] bg-white/20 mt-1" />
-                                        </div>
-                                    )) : (
-                                        <p className="text-white/50 text-[10px]">Selecciona tus PRs</p>
-                                    )}
+                                        )) : (
+                                            <div className="flex flex-col items-center py-4 opacity-50">
+                                                <Scaling size={20} className="mb-2 text-white" />
+                                                <p className="text-white/50 text-[10px] uppercase">Select Attributes</p>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </StickerWrapper>
 
                         <StickerWrapper id="consistency">
-                            <div className="pointer-events-none p-2">
-                                <p className="text-green-500 text-[10px] font-bold uppercase tracking-widest mb-1 drop-shadow-md">Constancia (30 Días)</p>
+                            <div className="pointer-events-none p-3 bg-neutral-900/90 backdrop-blur-xl rounded-xl border border-white/10 flex flex-col items-center">
+                                <p className="text-white/60 text-[9px] font-bold uppercase tracking-[0.2em] mb-2 flex items-center gap-2">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                                    Active Streak
+                                </p>
                                 {renderHeatmapInternal()}
                             </div>
                         </StickerWrapper>
 
                         <StickerWrapper id="radar" w="280px">
-                            <div className="w-full aspect-square pointer-events-none opacity-90 p-2">
-                                <MuscleRadarChart
-                                    data={stats.muscleBalanceData}
-                                    color={radarColor}
-                                    fillOpacity={radarOpacity}
-                                    strokeWidth={radarStroke}
-                                    textColor={radarTextColor}
-                                    gridColor={gridColor}
-                                    gridWidth={gridWidth}
-                                    textWeight={textWeight.toString()}
-                                    gridDash={gridDash}
-                                    gridType={gridType}
-                                />
+                            <div className="relative pointer-events-none p-4">
+                                {/* Decorative corners */}
+                                <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-gym-primary rounded-tl-xl opacity-50" />
+                                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-gym-primary rounded-br-xl opacity-50" />
+
+                                <div className="w-full aspect-square opacity-90 relative z-10">
+                                    <MuscleRadarChart
+                                        data={stats.muscleBalanceData}
+                                        color={radarColor}
+                                        fillOpacity={radarOpacity}
+                                        strokeWidth={radarStroke}
+                                        textColor={radarTextColor}
+                                        gridColor={gridColor}
+                                        gridWidth={gridWidth}
+                                        textWeight={textWeight.toString()}
+                                        gridDash={gridDash}
+                                        gridType={gridType}
+                                    />
+                                </div>
                             </div>
                         </StickerWrapper>
 
                         <StickerWrapper id="date" w="120px">
-                            <div className="flex items-center gap-2 pointer-events-none p-2">
-                                <div>
-                                    <p className="text-white/80 text-xs font-medium drop-shadow-md">Temporada 1</p>
-                                    <p className="text-white/60 text-[10px] drop-shadow-md">{new Date().toLocaleDateString()}</p>
-                                </div>
-                                <Zap className="text-gym-primary w-6 h-6 animate-pulse drop-shadow-md" />
+                            <div className="pointer-events-none px-3 py-1.5 bg-white rounded-full flex items-center gap-2 shadow-lg opacity-80 backdrop-blur-sm">
+                                <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                                <p className="text-black font-mono text-[9px] font-bold tracking-widest uppercase">
+                                    {new Date().toLocaleDateString('en-US', { month: 'short', year: '2-digit' })}
+                                </p>
                             </div>
                         </StickerWrapper>
 
