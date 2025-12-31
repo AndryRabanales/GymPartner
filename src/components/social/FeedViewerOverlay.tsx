@@ -211,49 +211,45 @@ export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPos
                             className="h-full w-full relative snap-center flex items-center justify-center bg-black"
                         >
                             <div className="relative w-full h-full md:max-w-md md:h-[95vh] md:rounded-xl overflow-hidden bg-black">
-                                {/* Video / Media - Matched to ReelItem.tsx structure */}
-                                {post.media && post.media.length > 0 ? (
-                                    <MediaCarousel media={post.media} isPlaying={playingPostId === post.id} />
-                                ) : (
-                                    <div
-                                        className="w-full h-full relative"
-                                        onClick={togglePlayPause}
-                                    >
-                                        <video
-                                            ref={el => {
-                                                // Handle ref for play/pause control
-                                                if (el) {
-                                                    if (playingPostId === post.id) {
-                                                        el.play().catch(() => { });
-                                                    } else {
-                                                        el.pause();
-                                                        el.currentTime = 0;
-                                                    }
-                                                    el.muted = muted;
+                                {/* Video / Media - Matched to ReelItem.tsx structure - FORCED VIDEO LAYOUT */}
+                                <div
+                                    className="w-full h-full relative"
+                                    onClick={togglePlayPause}
+                                >
+                                    <video
+                                        ref={el => {
+                                            // Handle ref for play/pause control
+                                            if (el) {
+                                                if (playingPostId === post.id) {
+                                                    el.play().catch(() => { });
+                                                } else {
+                                                    el.pause();
+                                                    el.currentTime = 0;
                                                 }
-                                            }}
-                                            src={post.media_url}
-                                            className="w-full h-full object-cover"
-                                            playsInline
-                                            webkit-playsinline="true"
-                                            loop
-                                            muted={muted}
-                                            poster={post.thumbnail_url}
-                                        />
+                                                el.muted = muted;
+                                            }
+                                        }}
+                                        src={post.media_url}
+                                        className="w-full h-full object-cover"
+                                        playsInline
+                                        webkit-playsinline="true"
+                                        loop
+                                        muted={muted}
+                                        poster={post.thumbnail_url}
+                                    />
 
-                                        {/* Mute Toggle - Inside relative container */}
-                                        <button
-                                            className="absolute top-20 left-4 bg-black/50 p-2 rounded-full backdrop-blur-sm text-white z-30 opacity-0 transition-opacity duration-300 data-[muted=true]:opacity-100"
-                                            data-muted={muted}
-                                            onClick={(e) => { e.stopPropagation(); setMuted(!muted); }}
-                                        >
-                                            <VolumeX size={20} />
-                                        </button>
+                                    {/* Mute Toggle - Inside relative container */}
+                                    <button
+                                        className="absolute top-20 left-4 bg-black/50 p-2 rounded-full backdrop-blur-sm text-white z-30 opacity-0 transition-opacity duration-300 data-[muted=true]:opacity-100"
+                                        data-muted={muted}
+                                        onClick={(e) => { e.stopPropagation(); setMuted(!muted); }}
+                                    >
+                                        <VolumeX size={20} />
+                                    </button>
 
-                                        {/* Gradient Overlay - Exact copy from ReelItem (with opacity adjustment if needed, keeping standard) */}
-                                        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
-                                    </div>
-                                )}
+                                    {/* Gradient Overlay - Exact copy from ReelItem (with opacity adjustment if needed, keeping standard) */}
+                                    <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+                                </div>
 
                                 {/* RIGHT ACTIONS BAR */}
                                 <div className="absolute bottom-6 right-2 flex flex-col items-center gap-5 z-40">
