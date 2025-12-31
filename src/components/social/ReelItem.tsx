@@ -12,6 +12,7 @@ interface ReelItemProps {
     onSave: (post: Post) => void; // [NEW] - Save/Bookmark
     onFollow: (post: Post) => void;
     onProfileClick: (userId: string) => void;
+    onToggleMute: () => void;
     onVideoRef: (id: string, el: HTMLVideoElement | null) => void;
     onLoop?: (id: string) => void;
 }
@@ -33,6 +34,7 @@ export const ReelItem: React.FC<ReelItemProps> = React.memo(({
     onSave, // [NEW]
     onFollow,
     onProfileClick,
+    onToggleMute,
     onVideoRef,
     onLoop
 }) => {
@@ -144,10 +146,21 @@ export const ReelItem: React.FC<ReelItemProps> = React.memo(({
                     </div>
                 )}
 
-                {/* MUTE INDICATOR */}
-                <div className="absolute top-20 left-4 bg-black/50 p-1.5 rounded-full backdrop-blur-sm pointer-events-none opacity-0 transition-opacity duration-300 data-[muted=true]:opacity-100" data-muted={muted}>
-                    {muted && <VolumeX size={14} className="text-white" />}
-                </div>
+                {/* MUTE/UNMUTE BUTTON - Top Right */}
+                <button
+                    onClick={(e) => { e.stopPropagation(); onToggleMute(); }}
+                    className="absolute top-4 right-4 bg-black/50 p-2.5 rounded-full backdrop-blur-sm hover:bg-black/70 active:scale-90 transition-all z-30"
+                >
+                    {muted ? (
+                        <VolumeX size={20} className="text-white" strokeWidth={2} />
+                    ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
+                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                            <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                            <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                        </svg>
+                    )}
+                </button>
 
                 {/* OVERLAY CONTENT (Gradient) */}
                 <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
