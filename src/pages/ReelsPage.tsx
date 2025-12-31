@@ -139,7 +139,7 @@ export const ReelsPage = () => {
 
     /* --- Handlers --- */
 
-    const handleLike = async (post: Post) => { // Removed 'e' as ReelItem handles stopPropagation
+    const handleLike = useCallback(async (post: Post) => { // Removed 'e' as ReelItem handles stopPropagation
         if (!user) return alert("Inicia sesión para dar like ❤️");
 
         const isLiked = post.user_has_liked;
@@ -162,9 +162,9 @@ export const ReelsPage = () => {
                 likes_count: post.likes_count || 0
             } : p));
         }
-    };
+    }, [user]);
 
-    const handleFollow = async (post: Post) => {
+    const handleFollow = useCallback(async (post: Post) => {
         if (!user) return alert("Inicia sesión para seguir.");
         if (post.user_id === user.id) return;
 
@@ -176,9 +176,9 @@ export const ReelsPage = () => {
         } else {
             await socialService.followUser(user.id, post.user_id);
         }
-    };
+    }, [user]);
 
-    const handleOpenProfile = async (userId: string) => {
+    const handleOpenProfile = useCallback(async (userId: string) => {
         try {
             // 1. Fetch exact profile details
             const { data: profile } = await supabase
@@ -211,9 +211,9 @@ export const ReelsPage = () => {
         } catch (error) {
             console.error(error);
         }
-    };
+    }, []);
 
-    const handleShare = async (post: Post) => {
+    const handleShare = useCallback(async (post: Post) => {
         try {
             await socialService.trackShare(user?.id || 'anon', post.id); // [NEW] Track algorithm metric
 
@@ -228,9 +228,9 @@ export const ReelsPage = () => {
                 alert('¡Link copiado!');
             }
         } catch (e) { console.log(e); }
-    };
+    }, [user]);
 
-    const handleSave = async (post: Post) => {
+    const handleSave = useCallback(async (post: Post) => {
         if (!user) return alert("Inicia sesión para guardar 🔖");
 
         // Optimistic Update
@@ -242,7 +242,7 @@ export const ReelsPage = () => {
         } : p));
 
         await socialService.toggleSave(user.id, post.id);
-    };
+    }, [user]);
 
     return (
         <div className="flex flex-col h-full bg-black relative">
