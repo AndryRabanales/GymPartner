@@ -96,7 +96,7 @@ export const ReelItem: React.FC<ReelItemProps> = React.memo(({
                     src={post.media_url}
                     className="w-full h-full object-cover"
                     playsInline
-                    preload="none"
+                    preload="metadata"
                     muted={muted}
                     poster={post.media_url.includes('cloudinary') ? post.media_url.replace(/\.(mp4|mov|webm)$/i, '.jpg') : undefined}
                     onClick={onToggleMute}
