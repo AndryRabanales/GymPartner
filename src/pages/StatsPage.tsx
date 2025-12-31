@@ -237,18 +237,30 @@ export const StatsPage = () => {
     return (
         <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6 pb-24">
             {/* Header */}
-            <div className="text-center mb-8 relative">
-                <h1 className="text-3xl md:text-4xl font-black text-white mb-2 tracking-tight uppercase italic">
-                    Centro de Análisis
-                </h1>
-                <p className="text-neutral-400 text-sm mb-4">Métricas y estadísticas de tu progreso</p>
+            {/* Header */}
+            <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-6 relative z-10">
+                <div className="text-center md:text-left">
+                    <h1 className="text-3xl md:text-4xl font-black text-white mb-2 tracking-tight uppercase italic relative inline-block">
+                        Centro de Análisis
+                        {/* Optional tiny decoration */}
+                        <div className="absolute -top-1 -right-3 w-2 h-2 bg-gym-primary rounded-full animate-pulse md:hidden" />
+                    </h1>
+                    <p className="text-neutral-400 text-sm">Métricas y estadísticas de tu progreso</p>
+                </div>
 
                 <button
                     onClick={() => setShowShare(true)}
-                    className="absolute top-0 right-0 p-2 bg-neutral-800 rounded-full hover:bg-neutral-700 text-gym-primary transition-colors"
-                    title="Compartir Historia"
+                    className="group relative px-5 py-2.5 bg-neutral-800/50 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden hover:border-gym-primary/50 transition-all shadow-lg hover:shadow-gym-primary/10 active:scale-95 w-full md:w-auto flex items-center justify-center gap-3"
                 >
-                    <Share2 size={20} />
+                    <div className="absolute inset-0 bg-gradient-to-r from-gym-primary/0 via-gym-primary/5 to-gym-primary/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+
+                    <div className="p-1.5 bg-neutral-800 rounded-lg border border-white/5 group-hover:bg-gym-primary group-hover:text-black transition-colors">
+                        <Share2 size={16} className="text-gym-primary group-hover:text-black transition-colors" />
+                    </div>
+                    <div className="text-left flex flex-col justify-center">
+                        <span className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider leading-none mb-0.5 group-hover:text-white transition-colors">Exportar</span>
+                        <span className="text-sm font-bold text-white leading-none group-hover:text-gym-primary transition-colors">Compartir Stats</span>
+                    </div>
                 </button>
             </div>
 
