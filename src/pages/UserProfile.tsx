@@ -237,19 +237,21 @@ export const UserProfile = () => {
     };
 
     const loadAlphaData = async () => {
-        if (!user?.id) return;
+        if (!user?.id || userGyms.length === 0) return;
 
         try {
             // Cargar historial de Alpha
             const history = await alphaService.getUserAlphaHistory(user.id);
             setAlphaHistory(history);
 
-            // Verificar si es Alpha actual en su gym principal
-            const homeGym = userGyms.find(g => g.is_home_base);
-            if (homeGym?.gym_id) {
-                const isCurrentAlpha = await alphaService.isUserAlpha(user.id, homeGym.gym_id);
-                setIsAlpha(isCurrentAlpha);
-            }
+            // Verificar si es Alpha en CUALQUIERA de sus gyms (en paralelo)
+            const alphaChecks = await Promise.all(
+                userGyms.map(gym => alphaService.isUserAlpha(user.id, gym.gym_id))
+            );
+
+            // Si es Alpha en al menos uno de sus gyms
+            const isAlphaInAnyGym = alphaChecks.some(result => result === true);
+            setIsAlpha(isAlphaInAnyGym);
         } catch (error) {
             console.error('Error loading Alpha data:', error);
         }
