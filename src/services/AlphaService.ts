@@ -29,7 +29,7 @@ export const alphaService = {
                 return null;
             }
 
-            return data;
+            return data as AlphaData | null;
         } catch (error) {
             console.error('Error in getCurrentAlpha:', error);
             return null;
