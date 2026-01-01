@@ -583,7 +583,7 @@ export const UserProfile = () => {
                                                         userRanking === 3 ? 'text-amber-600' :
                                                             'text-blue-400'}
                                             `}>
-                                                {userRanking === 1 ? '👑 TOP #1 - ALPHA' :
+                                                {userRanking === 1 ? '👑 TOP #1' :
                                                     userRanking === 2 ? '🥈 TOP #2' :
                                                         userRanking === 3 ? '🥉 TOP #3' :
                                                             `🏆 TOP #${userRanking}`}
