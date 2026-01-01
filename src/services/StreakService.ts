@@ -21,7 +21,10 @@ export const streakService = {
             .single();
 
         if (error) {
-            if (error.code === 'PGRST116') return null; // No data found
+            // PGRST116: The result contains 0 rows
+            // 406: Not Acceptable (often returned when .single() finds no rows)
+            if (error.code === 'PGRST116' || error.message.includes('406') || error.code === '406') return null;
+
             console.error('Error fetching streak:', error);
             return null;
         }
