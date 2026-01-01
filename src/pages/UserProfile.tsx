@@ -72,7 +72,6 @@ export const UserProfile = () => {
     useEffect(() => {
         if (user) {
             loadUserData();
-            loadAlphaData(); // Load Alpha status
             // Fetch Social Stats
             socialService.getProfileStats(user.id).then(setSocialStats);
 
@@ -93,6 +92,13 @@ export const UserProfile = () => {
             setLoading(false);
         }
     }, [user]);
+
+    // Load Alpha data when userGyms is ready
+    useEffect(() => {
+        if (user && userGyms.length > 0) {
+            loadAlphaData();
+        }
+    }, [user, userGyms]);
 
     const handleCloseTutorial = () => {
         setShowTutorial(false);
