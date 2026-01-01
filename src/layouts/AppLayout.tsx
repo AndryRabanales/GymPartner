@@ -6,6 +6,7 @@ import { UploadModal } from '../components/social/UploadModal';
 import { BottomNav } from '../components/navigation/BottomNav';
 import { useBottomNav } from '../context/BottomNavContext';
 import { NotificationBell } from '../components/ui/NotificationBell';
+import { RescueModal } from '../components/gamification/RescueModal';
 
 export const AppLayout = () => {
     const { user, signOut } = useAuth();
@@ -158,6 +159,7 @@ export const AppLayout = () => {
             </main>
 
             {/* Global Modals */}
+            <RescueModal />
             {isUploadModalOpen && <UploadModal onClose={() => setIsUploadModalOpen(false)} onSuccess={() => setIsUploadModalOpen(false)} />}
 
             {/* MOBILE BOTTOM NAVIGATION (Static Block at Bottom) */}

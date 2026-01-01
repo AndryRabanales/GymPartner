@@ -12,6 +12,10 @@
         "calculate-rankings": {
             "schedule": "0 0 * * 1",
             "command": "node scripts/calculate-rankings-simple.js"
+        },
+        "check-streaks": {
+            "schedule": "0 * * * *",
+            "command": "node scripts/check-streaks.js"
         }
     }
 }
