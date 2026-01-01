@@ -37,26 +37,44 @@ export const alphaService = {
     },
 
     /**
-     * Verificar si un usuario es el Alpha de un gym
-     */
-    async isUserAlpha(userId: string, gymId: string): Promise<boolean> {
+   * Obtener el ranking del usuario en un gym (1-10, o null si no está en top 10)
+   */
+    async getUserRanking(userId: string, gymId: string): Promise<number | null> {
         try {
             const { data, error } = await supabase
-                .rpc('is_user_alpha', {
-                    target_user_id: userId,
-                    target_gym_id: gymId
-                });
+                .from('gym_alphas')
+                .select('*')
+                .eq('gym_id', gymId)
+                .eq('is_current', true)
+                .order('consistency_score', { ascending: false })
+                .limit(10);
 
             if (error) {
-                console.error('Error checking if user is alpha:', error);
-                return false;
+                console.error('Error getting user ranking:', error);
+                return null;
             }
 
-            return data === true;
+            if (!data || data.length === 0) return null;
+
+            // Buscar la posición del usuario en el top 10
+            const userIndex = data.findIndex(record => record.user_id === userId);
+
+            if (userIndex === -1) return null; // No está en top 10
+
+            return userIndex + 1; // Retornar ranking (1-based)
         } catch (error) {
-            console.error('Error in isUserAlpha:', error);
-            return false;
+            console.error('Error in getUserRanking:', error);
+            return null;
         }
+    },
+
+    /**
+     * Verificar si un usuario es el Alpha de un gym
+     * @deprecated Use getUserRanking instead
+     */
+    async isUserAlpha(userId: string, gymId: string): Promise<boolean> {
+        const ranking = await this.getUserRanking(userId, gymId);
+        return ranking === 1;
     },
 
     /**

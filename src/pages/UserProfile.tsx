@@ -65,8 +65,8 @@ export const UserProfile = () => {
     // Social Stats State
     const [socialStats, setSocialStats] = useState({ followersCount: 0, followingCount: 0, totalLikes: 0 });
 
-    // Alpha Status State
-    const [isAlpha, setIsAlpha] = useState(false);
+    // Alpha/Ranking Status State
+    const [userRanking, setUserRanking] = useState<number | null>(null); // 1-10 or null
     const [alphaHistory, setAlphaHistory] = useState<any[]>([]);
 
     useEffect(() => {
@@ -244,14 +244,16 @@ export const UserProfile = () => {
             const history = await alphaService.getUserAlphaHistory(user.id);
             setAlphaHistory(history);
 
-            // Verificar si es Alpha en CUALQUIERA de sus gyms (en paralelo)
-            const alphaChecks = await Promise.all(
-                userGyms.map(gym => alphaService.isUserAlpha(user.id, gym.gym_id))
+            // Obtener ranking en CADA uno de sus gyms (en paralelo)
+            const rankings = await Promise.all(
+                userGyms.map(gym => alphaService.getUserRanking(user.id, gym.gym_id))
             );
 
-            // Si es Alpha en al menos uno de sus gyms
-            const isAlphaInAnyGym = alphaChecks.some(result => result === true);
-            setIsAlpha(isAlphaInAnyGym);
+            // Obtener el mejor ranking (el número más bajo que no sea null)
+            const validRankings = rankings.filter(r => r !== null) as number[];
+            const bestRanking = validRankings.length > 0 ? Math.min(...validRankings) : null;
+
+            setUserRanking(bestRanking);
         } catch (error) {
             console.error('Error loading Alpha data:', error);
         }
@@ -544,7 +546,7 @@ export const UserProfile = () => {
                                 </div>
                             </div>
 
-                            {/* ALPHA STATUS - Si es Alpha actual */}
+                            {/* RANKING STATUS - TOP 10 */}
                             {loading ? (
                                 // Skeleton loader mientras carga
                                 <div className="bg-neutral-800/50 border border-neutral-700 rounded-lg p-3 mt-4 w-full max-w-xs mx-auto animate-pulse">
@@ -556,14 +558,35 @@ export const UserProfile = () => {
                                         </div>
                                     </div>
                                 </div>
-                            ) : isAlpha ? (
-                                // Badge de Alpha cuando está cargado
-                                <div className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-2 border-yellow-500 rounded-lg p-3 mt-4 w-full max-w-xs mx-auto animate-in fade-in duration-500">
+                            ) : userRanking !== null ? (
+                                // Badge de Ranking cuando está cargado
+                                <div className={`
+                                    bg-gradient-to-r rounded-lg p-3 mt-4 w-full max-w-xs mx-auto animate-in fade-in duration-500 border-2
+                                    ${userRanking === 1 ? 'from-yellow-500/20 to-orange-500/20 border-yellow-500' :
+                                        userRanking === 2 ? 'from-gray-400/20 to-gray-500/20 border-gray-400' :
+                                            userRanking === 3 ? 'from-amber-700/20 to-amber-800/20 border-amber-600' :
+                                                'from-blue-500/20 to-blue-600/20 border-blue-500'}
+                                `}>
                                     <div className="flex items-center gap-2">
-                                        <Crown size={24} className="text-yellow-500 fill-yellow-500 animate-pulse" />
+                                        <Crown size={24} className={`
+                                            fill-current
+                                            ${userRanking === 1 ? 'text-yellow-500 animate-pulse' :
+                                                userRanking === 2 ? 'text-gray-400' :
+                                                    userRanking === 3 ? 'text-amber-600' :
+                                                        'text-blue-500'}
+                                        `} />
                                         <div>
-                                            <div className="text-yellow-500 font-bold text-sm">
-                                                👑 ALPHA ACTUAL
+                                            <div className={`
+                                                font-bold text-sm
+                                                ${userRanking === 1 ? 'text-yellow-500' :
+                                                    userRanking === 2 ? 'text-gray-400' :
+                                                        userRanking === 3 ? 'text-amber-600' :
+                                                            'text-blue-400'}
+                                            `}>
+                                                {userRanking === 1 ? '👑 TOP #1 - ALPHA' :
+                                                    userRanking === 2 ? '🥈 TOP #2' :
+                                                        userRanking === 3 ? '🥉 TOP #3' :
+                                                            `🏆 TOP #${userRanking}`}
                                             </div>
                                             <div className="text-white text-xs">
                                                 {userGyms.find(g => g.is_home_base)?.gym_name || 'Tu Gym'}
