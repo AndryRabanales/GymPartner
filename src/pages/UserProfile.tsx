@@ -544,7 +544,7 @@ export const UserProfile = () => {
 
                             {/* ALPHA STATUS - Si es Alpha actual */}
                             {isAlpha && (
-                                <div className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-2 border-yellow-500 rounded-lg p-3 mt-4 w-full max-w-xs mx-auto">
+                                <div className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-2 border-yellow-500 rounded-lg p-3 mt-4 w-full max-w-xs mx-auto animate-in fade-in duration-500">
                                     <div className="flex items-center gap-2">
                                         <Crown size={24} className="text-yellow-500 fill-yellow-500 animate-pulse" />
                                         <div>
@@ -561,7 +561,7 @@ export const UserProfile = () => {
 
                             {/* HISTORIAL DE ALPHA */}
                             {alphaHistory.length > 0 && (
-                                <div className="mt-4 w-full max-w-xs mx-auto">
+                                <div className="mt-4 w-full max-w-xs mx-auto animate-in fade-in duration-700 delay-150">
                                     <h3 className="text-white font-bold mb-2 flex items-center gap-2 justify-center">
                                         <Crown size={16} className="text-yellow-500" />
                                         Historial de Alpha
