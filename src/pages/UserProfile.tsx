@@ -18,21 +18,8 @@ import type { UserPrimaryGym } from '../services/UserService';
 import { socialService } from '../services/SocialService';
 import { StreakFlame } from '../components/gamification/StreakFlame';
 
-// ... (inside component)
 
-                            {/* Rank: Dark Glass Pill */}
-                            <div className="flex flex-col sm:flex-row items-center sm:items-center gap-3 mb-4">
-                                <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-black/40 border border-yellow-500/30 rounded-full backdrop-blur-md shadow-lg group hover:border-yellow-500/60 transition-colors">
-                                    <Trophy size={14} className="text-yellow-500" />
-                                    <span className="text-yellow-500 font-bold text-xs tracking-widest uppercase">
-                                        {realRank}
-                                    </span>
-                                </div>
-                                
-                                {/* STREAK FLAME */}
-                                <StreakFlame userId={user.id} />
-
-                                <span className="text-neutral-500 text-xs font-bold tracking-[0.2em] uppercase hidden sm:block">
+interface ProfileData {
     username: string;
     description: string;
     avatar_url: string;
@@ -525,6 +512,10 @@ export const UserProfile = () => {
                                         {realRank}
                                     </span>
                                 </div>
+
+                                {/* STREAK FLAME */}
+                                <StreakFlame userId={user.id} />
+
                                 <span className="text-neutral-500 text-xs font-bold tracking-[0.2em] uppercase hidden sm:block">
                                     {userGyms.find(g => g.is_home_base) ? (
                                         <div className="flex items-center gap-2 text-yellow-500 animate-pulse">
