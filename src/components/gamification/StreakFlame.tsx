@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Flame, Snowflake, Skull, Info } from 'lucide-react';
-import { streakService, UserStreak } from '../../services/StreakService';
+import { Flame, Snowflake } from 'lucide-react';
+import { streakService } from '../../services/StreakService';
+import type { UserStreak } from '../../services/StreakService';
 
 interface StreakFlameProps {
     userId: string;

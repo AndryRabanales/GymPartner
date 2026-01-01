@@ -17,6 +17,8 @@ import { userService } from '../services/UserService';
 import type { UserPrimaryGym } from '../services/UserService';
 import { socialService } from '../services/SocialService';
 import { StreakFlame } from '../components/gamification/StreakFlame';
+import { alphaService } from '../services/AlphaService';
+import { useBottomNav } from '../context/BottomNavContext';
 
 
 interface ProfileData {

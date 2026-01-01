@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Flame, Clock, AlertTriangle, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { streakService, UserStreak } from '../../services/StreakService';
+import { streakService } from '../../services/StreakService';
+import type { UserStreak } from '../../services/StreakService';
 import { useAuth } from '../../context/AuthContext';
 
 export const RescueModal = () => {
