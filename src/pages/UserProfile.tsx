@@ -543,7 +543,19 @@ export const UserProfile = () => {
                             </div>
 
                             {/* ALPHA STATUS - Si es Alpha actual */}
-                            {isAlpha && (
+                            {loading ? (
+                                // Skeleton loader mientras carga
+                                <div className="bg-neutral-800/50 border border-neutral-700 rounded-lg p-3 mt-4 w-full max-w-xs mx-auto animate-pulse">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-6 h-6 bg-neutral-700 rounded"></div>
+                                        <div className="flex-1">
+                                            <div className="h-4 bg-neutral-700 rounded w-32 mb-1"></div>
+                                            <div className="h-3 bg-neutral-700 rounded w-24"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : isAlpha ? (
+                                // Badge de Alpha cuando está cargado
                                 <div className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-2 border-yellow-500 rounded-lg p-3 mt-4 w-full max-w-xs mx-auto animate-in fade-in duration-500">
                                     <div className="flex items-center gap-2">
                                         <Crown size={24} className="text-yellow-500 fill-yellow-500 animate-pulse" />
@@ -557,7 +569,7 @@ export const UserProfile = () => {
                                         </div>
                                     </div>
                                 </div>
-                            )}
+                            ) : null}
 
                             {/* HISTORIAL DE ALPHA */}
                             {alphaHistory.length > 0 && (
