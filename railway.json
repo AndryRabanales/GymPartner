@@ -7,5 +7,11 @@
         "startCommand": "npm run start",
         "restartPolicyType": "ON_FAILURE",
         "restartPolicyMaxRetries": 5
+    },
+    "cron": {
+        "calculate-rankings": {
+            "schedule": "0 0 * * 1",
+            "command": "node scripts/calculate-rankings-simple.js"
+        }
     }
 }
