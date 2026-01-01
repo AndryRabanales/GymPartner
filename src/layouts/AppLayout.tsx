@@ -5,6 +5,7 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 import { UploadModal } from '../components/social/UploadModal';
 import { BottomNav } from '../components/navigation/BottomNav';
 import { useBottomNav } from '../context/BottomNavContext';
+import { NotificationBell } from '../components/ui/NotificationBell';
 
 export const AppLayout = () => {
     const { user, signOut } = useAuth();
@@ -79,6 +80,8 @@ export const AppLayout = () => {
                                 <Link to="/ranking" className="flex w-10 h-10 rounded-full bg-neutral-900 border border-neutral-800 items-center justify-center text-neutral-400 hover:text-yellow-400 hover:border-yellow-400/50 transition-all hover:shadow-[0_0_15px_rgba(250,204,21,0.15)] group">
                                     <Trophy size={20} className="group-hover:scale-110 transition-transform" />
                                 </Link>
+
+                                {user && <NotificationBell />}
 
                                 {user ? (
                                     <div className="relative z-50">
