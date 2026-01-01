@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { MapPin, Dumbbell, Swords, ArrowLeft, Loader, Lock } from 'lucide-react';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { getDistance } from '../utils/distance';
+import { AlphaBadge } from '../components/gamification/AlphaBadge';
 
 interface GymDetails {
     id: string;
@@ -77,6 +78,13 @@ export const GymProfile = () => {
                         <p className="text-neutral-400 text-sm">{gym.address}</p>
                     </div>
                 </div>
+
+                {/* Alpha Badge */}
+                {gymId && (
+                    <div className="mt-4">
+                        <AlphaBadge gymId={gymId} size="lg" showStats={true} />
+                    </div>
+                )}
             </div>
 
             {/* Quick Actions Grid */}

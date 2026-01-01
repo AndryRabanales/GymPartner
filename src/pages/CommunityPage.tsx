@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Heart, MessageCircle, Share2, MoreHorizontal, Music2, Swords } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MoreHorizontal, Music2, Swords, Pause } from 'lucide-react';
 import { socialService, type Post } from '../services/SocialService';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
@@ -18,6 +18,7 @@ export const CommunityPage = () => {
     const [selectedPlayer, setSelectedPlayer] = useState<any | null>(null);
 
     const [playingPostId, setPlayingPostId] = useState<string | null>(null);
+    const [pausedVideos, setPausedVideos] = useState<Set<string>>(new Set());
     const observerRefs = useRef<{ [key: string]: HTMLDivElement }>({});
 
     // Pull-to-Refresh State
@@ -265,12 +266,18 @@ export const CommunityPage = () => {
         }
     };
 
-    const togglePlayPause = (e: React.MouseEvent<HTMLVideoElement>) => {
+    const togglePlayPause = (e: React.MouseEvent<HTMLVideoElement>, postId: string) => {
         const video = e.currentTarget;
         if (video.paused) {
             video.play().catch(() => { });
+            setPausedVideos(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(postId);
+                return newSet;
+            });
         } else {
             video.pause();
+            setPausedVideos(prev => new Set(prev).add(postId));
         }
     };
 
@@ -371,7 +378,7 @@ export const CommunityPage = () => {
                             ) : (
                                 <div className="bg-neutral-900 w-full relative aspect-[4/5] max-h-[500px] overflow-hidden rounded-sm">
                                     {post.type === 'video' ? (
-                                        <div className="w-full h-full flex items-center justify-center bg-black group">
+                                        <div className="w-full h-full flex items-center justify-center bg-black group relative">
                                             <video
                                                 ref={el => {
                                                     if (el) {
@@ -380,6 +387,11 @@ export const CommunityPage = () => {
                                                             if (promise !== undefined) {
                                                                 promise.catch(() => { });
                                                             }
+                                                            setPausedVideos(prev => {
+                                                                const newSet = new Set(prev);
+                                                                newSet.delete(post.id);
+                                                                return newSet;
+                                                            });
                                                         } else {
                                                             el.pause();
                                                         }
@@ -391,8 +403,18 @@ export const CommunityPage = () => {
                                                 loop
                                                 preload="none"
                                                 muted
-                                                onClick={togglePlayPause}
+                                                onClick={(e) => togglePlayPause(e, post.id)}
                                             />
+
+                                            {/* Pause Icon Overlay */}
+                                            {pausedVideos.has(post.id) && (
+                                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                                    <div className="bg-black/50 backdrop-blur-sm rounded-full p-6 animate-in fade-in zoom-in duration-200">
+                                                        <Pause size={64} className="text-white" strokeWidth={2.5} />
+                                                    </div>
+                                                </div>
+                                            )}
+
                                             <button
                                                 className="absolute bottom-3 right-3 bg-black/50 p-1.5 rounded-full backdrop-blur-sm text-white hover:bg-black/70 transition-colors active:scale-95"
                                                 onClick={(e) => {

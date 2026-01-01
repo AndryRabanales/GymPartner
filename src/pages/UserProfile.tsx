@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Trophy, MapPin, Edit2, LogIn, Loader, Swords, Dumbbell, Plus, LineChart, History, Star, Search, ArrowLeft, UserPlus, Grid } from 'lucide-react';
+import { Trophy, MapPin, Edit2, LogIn, Loader, Swords, Dumbbell, Plus, LineChart, History, Star, Search, ArrowLeft, UserPlus, Grid, Crown } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getXPProgress, getRankFromXP } from '../types/user';
 import type { UserRank } from '../types/user';
@@ -16,6 +16,7 @@ import { PlayerProfileModal } from '../components/profile/PlayerProfileModal';
 import { userService } from '../services/UserService';
 import type { UserPrimaryGym } from '../services/UserService';
 import { socialService } from '../services/SocialService';
+import { alphaService } from '../services/AlphaService';
 import { useBottomNav } from '../context/BottomNavContext';
 // seedExercisesCatalog removed
 
@@ -64,9 +65,14 @@ export const UserProfile = () => {
     // Social Stats State
     const [socialStats, setSocialStats] = useState({ followersCount: 0, followingCount: 0, totalLikes: 0 });
 
+    // Alpha Status State
+    const [isAlpha, setIsAlpha] = useState(false);
+    const [alphaHistory, setAlphaHistory] = useState<any[]>([]);
+
     useEffect(() => {
         if (user) {
             loadUserData();
+            loadAlphaData(); // Load Alpha status
             // Fetch Social Stats
             socialService.getProfileStats(user.id).then(setSocialStats);
 
@@ -224,6 +230,24 @@ export const UserProfile = () => {
         }
     };
 
+    const loadAlphaData = async () => {
+        if (!user?.id) return;
+
+        try {
+            // Cargar historial de Alpha
+            const history = await alphaService.getUserAlphaHistory(user.id);
+            setAlphaHistory(history);
+
+            // Verificar si es Alpha actual en su gym principal
+            const homeGym = userGyms.find(g => g.is_home_base);
+            if (homeGym?.gym_id) {
+                const isCurrentAlpha = await alphaService.isUserAlpha(user.id, homeGym.gym_id);
+                setIsAlpha(isCurrentAlpha);
+            }
+        } catch (error) {
+            console.error('Error loading Alpha data:', error);
+        }
+    };
 
 
     if (authLoading) { // Only check authLoading here, actual loading handled below
@@ -511,6 +535,51 @@ export const UserProfile = () => {
                                     <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest text-shadow-sm">Likes</span>
                                 </div>
                             </div>
+
+                            {/* ALPHA STATUS - Si es Alpha actual */}
+                            {isAlpha && (
+                                <div className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-2 border-yellow-500 rounded-lg p-3 mt-4 w-full max-w-xs mx-auto">
+                                    <div className="flex items-center gap-2">
+                                        <Crown size={24} className="text-yellow-500 fill-yellow-500 animate-pulse" />
+                                        <div>
+                                            <div className="text-yellow-500 font-bold text-sm">
+                                                👑 ALPHA ACTUAL
+                                            </div>
+                                            <div className="text-white text-xs">
+                                                {userGyms.find(g => g.is_home_base)?.gym_name || 'Tu Gym'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* HISTORIAL DE ALPHA */}
+                            {alphaHistory.length > 0 && (
+                                <div className="mt-4 w-full max-w-xs mx-auto">
+                                    <h3 className="text-white font-bold mb-2 flex items-center gap-2 justify-center">
+                                        <Crown size={16} className="text-yellow-500" />
+                                        Historial de Alpha
+                                    </h3>
+                                    <div className="space-y-2">
+                                        {alphaHistory.map((record: any) => (
+                                            <div
+                                                key={record.id}
+                                                className="bg-neutral-800 rounded-lg p-3 border border-neutral-700 text-center"
+                                            >
+                                                <div className="text-white font-medium text-sm">
+                                                    {record.gym.name}
+                                                </div>
+                                                <div className="text-neutral-400 text-xs mt-1">
+                                                    Alpha {record.times_alpha}x • {record.total_weeks} semanas
+                                                </div>
+                                                <div className="text-neutral-500 text-xs mt-1">
+                                                    Última vez: {new Date(record.last_alpha_at).toLocaleDateString()}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* Edit Button - PREMIUM GLASS PENCIL */}
