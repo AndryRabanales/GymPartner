@@ -57,7 +57,7 @@ $$;
 CREATE OR REPLACE FUNCTION get_nearby_gymrats(
     current_lat float,
     current_lng float,
-    radius_km float_32 DEFAULT 100.0,
+    radius_km float DEFAULT 100.0,
     current_user_id uuid DEFAULT auth.uid()
 )
 RETURNS TABLE (
