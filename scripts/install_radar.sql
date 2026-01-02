@@ -96,7 +96,7 @@ BEGIN
             ng.lat,
             ng.lng,
             ng.dist
-        FROM public.user_primary_gyms upg
+        FROM public.user_gyms upg
         JOIN nearby_gyms ng ON upg.gym_id = ng.g_id
         WHERE upg.user_id != current_user_id -- Exclude self
         ORDER BY upg.user_id, ng.dist ASC -- Prefer closest gym for users with multiple
