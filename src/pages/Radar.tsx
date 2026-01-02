@@ -203,28 +203,28 @@ export const Radar = () => {
                                     </div>
                                 </div>
                             </div>
-
-                            {/* --- ACTION BUTTONS (At Bottom) --- */}
-                            <div className="shrink-0 flex justify-center items-center gap-8 z-30 w-full mb-2">
-                                <button
-                                    onClick={() => handleAction('skip')}
-                                    className="w-14 h-14 rounded-full bg-neutral-800 border border-neutral-700 text-neutral-500 flex items-center justify-center hover:bg-neutral-700 transition-all active:scale-90"
-                                >
-                                    <X size={24} strokeWidth={2.5} />
-                                </button>
-
-                                <button
-                                    onClick={() => handleAction('train')}
-                                    className="w-20 h-20 rounded-full bg-gym-primary text-black flex items-center justify-center shadow-[0_0_25px_rgba(234,179,8,0.25)] hover:scale-105 transition-all active:scale-95"
-                                >
-                                    <div className="flex flex-col items-center">
-                                        <Dumbbell size={32} strokeWidth={3} />
-                                        <span className="text-[9px] font-black uppercase mt-0.5">Entrenar</span>
-                                    </div>
-                                </button>
-                            </div>
-
                         </div>
+
+                        {/* --- SAFE FOOTER (Dedicated Area) --- */}
+                        <div className="shrink-0 w-full flex justify-center items-center gap-8 pb-24 pt-4 relative z-30 bg-gradient-to-t from-neutral-900 via-neutral-900 to-transparent">
+                            <button
+                                onClick={() => handleAction('skip')}
+                                className="w-14 h-14 rounded-full bg-neutral-800 border border-neutral-700 text-neutral-500 flex items-center justify-center hover:bg-neutral-700 transition-all active:scale-90"
+                            >
+                                <X size={24} strokeWidth={2.5} />
+                            </button>
+
+                            <button
+                                onClick={() => handleAction('train')}
+                                className="w-20 h-20 rounded-full bg-gym-primary text-black flex items-center justify-center shadow-[0_0_25px_rgba(234,179,8,0.25)] hover:scale-105 transition-all active:scale-95"
+                            >
+                                <div className="flex flex-col items-center">
+                                    <Dumbbell size={32} strokeWidth={3} />
+                                    <span className="text-[9px] font-black uppercase mt-0.5">Entrenar</span>
+                                </div>
+                            </button>
+                        </div>
+
                     </div>
                 )}
             </div>
