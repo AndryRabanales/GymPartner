@@ -419,14 +419,14 @@ export const UserProfile = () => {
     };
 
     // Use new leveling logic
-    const { currentLevel, progressPercent } = getXPProgress(displayProfile.xp);
-    const realRank = getRankFromXP(displayProfile.xp);
+    // const { currentLevel, progressPercent } = getXPProgress(displayProfile.xp);
+    // const realRank = getRankFromXP(displayProfile.xp);
     const userAvatar = profile?.avatar_url || user.user_metadata.avatar_url || 'https://i.pravatar.cc/300';
 
     // NEW: Calculate Dominance Tier
     const currentTier = TierService.getTier(profile?.checkins_count || 0);
     const tierProgress = TierService.getProgress(profile?.checkins_count || 0);
-    const nextTier = TierService.getNextTier(currentTier.level);
+    // const nextTier = TierService.getNextTier(currentTier.level);
 
     return (
         <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-8 pb-24">
