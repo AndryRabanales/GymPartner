@@ -19,6 +19,7 @@ export const AppLayout = () => {
     // Hide BottomNav during workout sessions, gym territory pages, arsenal, stats, and history
     const isWorkoutPage = location.pathname === '/workout' || location.pathname.includes('/territory/');
     const isContentPage = location.pathname === '/arsenal' || location.pathname === '/stats' || location.pathname === '/history' || location.pathname.startsWith('/history/');
+    const isRadarPage = location.pathname === '/radar';
     const shouldShowBottomNav = user && !isWorkoutPage && !isContentPage && isBottomNavVisible;
 
     return (
@@ -154,8 +155,8 @@ export const AppLayout = () => {
             {/* Main Content (Scrollable Area) */}
             <main className="flex-1 overflow-y-auto custom-scrollbar relative flex flex-col">
                 <Outlet />
-                {/* Spacer to prevent BottomNav overlap (Only when BottomNav is visible AND NOT on Reels) */}
-                {shouldShowBottomNav && !isReelsPage && <div className="h-24 shrink-0" />}
+                {/* Spacer to prevent BottomNav overlap (Only when BottomNav is visible AND NOT on Reels/Radar) */}
+                {shouldShowBottomNav && !isReelsPage && !isRadarPage && <div className="h-24 shrink-0" />}
             </main>
 
             {/* Global Modals */}
