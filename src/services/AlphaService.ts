@@ -22,7 +22,7 @@ export const alphaService = {
         try {
             const { data, error } = await supabase
                 .rpc('get_current_alpha', { target_gym_id: gymId })
-                .single();
+                .maybeSingle();
 
             if (error) {
                 console.error('Error getting current alpha:', error);
