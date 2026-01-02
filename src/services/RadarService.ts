@@ -49,6 +49,8 @@ export const radarService = {
             user_id: user.user_id,
             username: user.username,
             avatar_url: user.avatar_url,
+            banner_url: user.banner_url,
+            description: user.description,
             checkins_count: user.checkins_count,
             gym_id: user.gym_id,
             gym_name: user.gym_name,
