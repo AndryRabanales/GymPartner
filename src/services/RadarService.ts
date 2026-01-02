@@ -6,15 +6,17 @@ import type { TierInfo } from './TierService';
 export interface RadarUser {
     user_id: string;
     username: string;
-    avatar_url: string | null;
+    avatar_url: string;
+    banner_url?: string;
+    description?: string;
     checkins_count: number;
     gym_id: string;
     gym_name: string;
     gym_lat: number;
     gym_lng: number;
     distance_km: number;
-    // Derived
-    tier: TierInfo;
+    // Computed on frontend
+    tier: any;
 }
 
 export const radarService = {

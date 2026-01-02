@@ -66,6 +66,8 @@ RETURNS TABLE (
     user_id uuid,
     username text,
     avatar_url text,
+    banner_url text, -- New
+    description text, -- New
     checkins_count integer,
     gym_id uuid,
     gym_name text,
@@ -107,6 +109,8 @@ BEGIN
         p.id as user_id,
         COALESCE(p.username, 'Agente Desconocido') as username,
         p.avatar_url,
+        (p.custom_settings->>'banner_url')::text as banner_url, -- Extract from JSON
+        p.description,
         COALESCE(p.checkins_count, 0)::integer as checkins_count, -- Explicit Cast
         gu.g_id as gym_id,
         gu.name as gym_name,

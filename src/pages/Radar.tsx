@@ -132,92 +132,119 @@ export const Radar = () => {
                     </div>
                 )}
 
-                {/* CARD STACK - FULL SCREEN MODE */}
+                {/* CARD STACK - PROFILE STYLE */}
                 {scanComplete && nearbyUsers.length > 0 && currentUser && !loading && (
-                    <div className="relative w-full h-full flex flex-col p-2 pb-0">
+                    <div className="relative w-full h-full flex flex-col bg-black">
 
                         {/* Background Card (Next User) */}
                         {nextUser && (
-                            <div className="absolute inset-x-4 top-4 bottom-2 bg-neutral-800 rounded-3xl opacity-40 scale-95 transform translate-y-3 pointer-events-none"></div>
+                            <div className="absolute inset-0 bg-neutral-900 opacity-0 pointer-events-none"></div>
                         )}
 
-                        {/* ACTIVE CARD */}
-                        <div className="flex-1 bg-neutral-900 rounded-3xl overflow-hidden border border-neutral-800 shadow-2xl flex flex-col z-20 animate-in fade-in slide-in-from-bottom-2 duration-300 relative mb-1">
+                        {/* ACTIVE CARD CONTAINER */}
+                        <div className="flex-1 flex flex-col relative animate-in fade-in slide-in-from-bottom-4 duration-500">
 
-                            {/* Image Section - MAX HEIGHT */}
-                            <div className="relative flex-1 bg-neutral-800 overflow-hidden">
-                                <img
-                                    src={currentUser.avatar_url || `https://ui-avatars.com/api/?name=${currentUser.username}&background=random`}
-                                    alt={currentUser.username}
-                                    className="w-full h-full object-cover"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-90"></div>
+                            {/* --- BANNER SECTION (40% height) --- */}
+                            <div className="h-[45%] relative w-full bg-neutral-800 overflow-hidden">
+                                {currentUser.banner_url ? (
+                                    <img
+                                        src={currentUser.banner_url}
+                                        alt="Banner"
+                                        className="w-full h-full object-cover opacity-80"
+                                    />
+                                ) : (
+                                    <div className={`w-full h-full bg-gradient-to-br ${currentUser.tier.gradient} opacity-20 relative`}>
+                                        {/* Fallback pattern if no banner */}
+                                        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-white to-transparent"></div>
+                                    </div>
+                                )}
+                                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/20 to-black"></div>
 
                                 {/* Distance Badge */}
-                                <div className="absolute top-4 left-4 flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 shadow-lg">
+                                <div className="absolute top-4 left-4 flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 shadow-lg z-10">
                                     <MapPin size={12} className="text-gym-primary" />
                                     <span className="text-xs font-bold text-white uppercase tracking-wider">
                                         {currentUser.distance_km < 1 ? '< 1 km' : `${Math.round(currentUser.distance_km)} km`}
                                     </span>
                                 </div>
-
-                                {/* Tier Badge */}
-                                <div className={`absolute top-4 right-4 px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-widest border backdrop-blur-md shadow-lg ${currentUser.tier.borderColor} ${currentUser.tier.color} bg-black/80`}>
-                                    {currentUser.tier.name}
-                                </div>
                             </div>
 
-                            {/* Info & Actions Section - Overlay on bottom of image for 'immersive' feel, or separate block? 
-                                User wants FULL SCREEN. Let's keep it structurally separate but visually integrated. 
-                            */}
-                            <div className="relative bg-black pt-6 pb-6 px-5 border-t border-neutral-800 shrink-0">
+                            {/* --- AVATAR LAYOUT (Overlapping) --- */}
+                            <div className="px-6 -mt-20 relative z-20 flex flex-col items-center">
 
-                                <div className="flex flex-col gap-1 mb-6">
-                                    <h2 className="text-3xl font-black text-white italic tracking-tighter uppercase truncate">
+                                {/* AVATAR CIRCLE */}
+                                <div className="relative w-40 h-40">
+                                    {/* Tier Glow */}
+                                    <div className={`absolute inset-0 rounded-full blur-2xl transform scale-100 pointer-events-none ${currentUser.tier.color.replace('text-', 'bg-')}/30`}></div>
+
+                                    {/* Avatar Image */}
+                                    <div className={`w-full h-full rounded-full overflow-hidden border-4 bg-neutral-900 shadow-2xl relative z-10 ${currentUser.tier.borderColor}`}>
+                                        <img
+                                            src={currentUser.avatar_url || `https://ui-avatars.com/api/?name=${currentUser.username}&background=random`}
+                                            alt={currentUser.username}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    </div>
+
+                                    {/* Tier Badge (Hexagon or Pill) */}
+                                    <div className={`absolute -bottom-3 left-1/2 transform -translate-x-1/2 px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-lg z-20 bg-black ${currentUser.tier.borderColor} ${currentUser.tier.color}`}>
+                                        {currentUser.tier.name}
+                                    </div>
+                                </div>
+
+                                {/* USER INFO */}
+                                <div className="mt-4 text-center w-full max-w-sm">
+                                    <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase drop-shadow-lg mb-1 truncate">
                                         {currentUser.username}
-                                    </h2>
-                                    <div className="flex items-center gap-2 text-neutral-400">
-                                        <Dumbbell size={16} className={currentUser.tier.color} />
-                                        <span className="text-sm font-bold uppercase tracking-wide truncate">
+                                    </h1>
+                                    <div className="flex items-center justify-center gap-2 text-neutral-400 mb-4">
+                                        <Dumbbell size={14} className={currentUser.tier.color} />
+                                        <span className="text-sm font-bold uppercase tracking-wide truncate max-w-[200px]">
                                             {currentUser.gym_name}
                                         </span>
                                     </div>
 
-                                    {/* Stats Row */}
-                                    <div className="flex gap-4 mt-4">
-                                        <div className="bg-neutral-900 border border-neutral-800 rounded-lg px-4 py-2 flex flex-col items-center min-w-[70px]">
-                                            <span className="text-xl font-black text-white leading-none">{currentUser.checkins_count}</span>
-                                            <span className="text-[9px] text-neutral-500 uppercase font-bold">Entrenos</span>
+                                    {/* Description / Bio */}
+                                    <p className="text-neutral-300 text-sm font-medium leading-relaxed line-clamp-2 px-2 h-10 mb-6 font-primary text-opacity-80">
+                                        {currentUser.description || "Entrenando para ser el mejor. Sin excusas."}
+                                    </p>
+
+                                    {/* Stats Grid */}
+                                    <div className="grid grid-cols-2 gap-4 border-t border-neutral-800 pt-6 mt-2 w-full">
+                                        <div className="flex flex-col items-center p-3 rounded-2xl bg-neutral-900/50 border border-neutral-800">
+                                            <span className={`text-2xl font-black ${currentUser.tier.color}`}>{currentUser.checkins_count}</span>
+                                            <span className="text-[9px] text-neutral-500 uppercase font-bold tracking-widest mt-1">Entrenos</span>
                                         </div>
-                                        <div className="bg-neutral-900 border border-neutral-800 rounded-lg px-4 py-2 flex flex-col items-center min-w-[70px]">
-                                            <span className="text-xl font-black text-white leading-none">{Math.floor(Math.random() * 100) + 1}</span>
-                                            <span className="text-[9px] text-neutral-500 uppercase font-bold">Nivel</span>
+                                        <div className="flex flex-col items-center p-3 rounded-2xl bg-neutral-900/50 border border-neutral-800">
+                                            <span className="text-2xl font-black text-white">{Math.floor(Math.random() * 100) + 1}</span>
+                                            <span className="text-[9px] text-neutral-500 uppercase font-bold tracking-widest mt-1">Nivel</span>
                                         </div>
                                     </div>
                                 </div>
-
-                                {/* ACTION BUTTONS */}
-                                <div className="absolute -top-10 right-4 flex items-center gap-4">
-                                    {/* DISCARD */}
-                                    <button
-                                        onClick={() => handleAction('skip')}
-                                        className="w-16 h-16 rounded-full bg-neutral-900 border border-neutral-700 text-neutral-400 flex items-center justify-center shadow-lg hover:text-red-500 hover:border-red-500 transition-all active:scale-95"
-                                    >
-                                        <X size={28} />
-                                    </button>
-
-                                    {/* TRAIN (Main Action) */}
-                                    <button
-                                        onClick={() => handleAction('train')}
-                                        className="w-24 h-24 rounded-full bg-gym-primary text-black flex items-center justify-center shadow-[0_0_30px_rgba(234,179,8,0.4)] hover:scale-105 hover:bg-white transition-all active:scale-95 animate-in zoom-in duration-300"
-                                    >
-                                        <div className="flex flex-col items-center">
-                                            <Dumbbell size={36} strokeWidth={3} />
-                                            <span className="text-[10px] font-black uppercase mt-0.5">Entrenar</span>
-                                        </div>
-                                    </button>
-                                </div>
                             </div>
+
+                            {/* --- ACTION BUTTONS (Floating Bottom) --- */}
+                            <div className="absolute bottom-8 left-0 right-0 flex justify-center items-center gap-8 z-30 px-6">
+                                {/* DISCARD */}
+                                <button
+                                    onClick={() => handleAction('skip')}
+                                    className="w-16 h-16 rounded-full bg-neutral-900 border-2 border-neutral-700 text-neutral-400 flex items-center justify-center shadow-lg hover:border-red-500 hover:text-red-500 hover:bg-red-500/10 transition-all active:scale-95"
+                                >
+                                    <X size={32} strokeWidth={2.5} />
+                                </button>
+
+                                {/* TRAIN (Main Action) */}
+                                <button
+                                    onClick={() => handleAction('train')}
+                                    className="w-24 h-24 rounded-full bg-gym-primary text-black flex items-center justify-center shadow-[0_0_40px_rgba(234,179,8,0.3)] hover:scale-105 hover:shadow-[0_0_60px_rgba(234,179,8,0.5)] transition-all active:scale-95 group"
+                                >
+                                    <div className="flex flex-col items-center">
+                                        <Dumbbell size={36} strokeWidth={3} className="group-hover:animate-bounce" />
+                                        <span className="text-[10px] font-black uppercase mt-1 tracking-wider">Entrenar</span>
+                                    </div>
+                                </button>
+                            </div>
+
                         </div>
                     </div>
                 )}
