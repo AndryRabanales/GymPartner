@@ -208,26 +208,21 @@ export const Radar = () => {
                         {/* --- SAFE FOOTER (Dedicated Area) --- */}
                         <div className="shrink-0 w-full flex justify-center items-center gap-6 pb-20 pt-4 relative z-30 bg-gradient-to-t from-black via-black/80 to-transparent">
 
-                            {/* REJECT BUTTON - Glassmorphism */}
+                            {/* REJECT BUTTON - Minimalist Outline */}
                             <button
                                 onClick={() => handleAction('skip')}
-                                className="w-16 h-16 rounded-full bg-neutral-900/80 backdrop-blur-md border border-white/10 text-neutral-500 flex items-center justify-center hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/30 transition-all active:scale-90 group shadow-lg"
+                                className="w-14 h-14 rounded-full border border-neutral-800 bg-neutral-900/50 backdrop-blur-sm text-neutral-500 flex items-center justify-center hover:bg-neutral-800 hover:text-white transition-colors active:scale-95"
                             >
-                                <X size={28} strokeWidth={2.5} className="group-hover:rotate-90 transition-transform duration-300" />
+                                <X size={24} strokeWidth={2} />
                             </button>
 
-                            {/* ACCEPT BUTTON - Gradient & Glow "Invitation" Style */}
+                            {/* ACCEPT BUTTON - Solid Capsule "Pro" Style */}
                             <button
                                 onClick={() => handleAction('train')}
-                                className="w-20 h-20 rounded-full bg-gradient-to-br from-gym-primary via-yellow-400 to-orange-500 text-black flex items-center justify-center shadow-[0_0_30px_rgba(234,179,8,0.4)] hover:shadow-[0_0_50px_rgba(234,179,8,0.6)] hover:scale-105 transition-all duration-300 active:scale-95 border-4 border-black/20 relative group overflow-hidden"
+                                className="h-14 px-8 rounded-full bg-gym-primary text-black flex items-center gap-3 shadow-lg shadow-yellow-900/20 hover:bg-yellow-400 hover:scale-105 transition-all active:scale-95"
                             >
-                                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 rounded-full blur-xl"></div>
-                                <div className="flex flex-col items-center relative z-10">
-                                    <div className="flex items-center gap-0.5 mb-0.5">
-                                        <UserPlus size={28} strokeWidth={2} className="fill-black/5" />
-                                    </div>
-                                    <span className="text-[9px] font-black uppercase tracking-widest leading-none">Invitar</span>
-                                </div>
+                                <UserPlus size={20} strokeWidth={2.5} />
+                                <span className="text-sm font-black uppercase tracking-widest">Invitar</span>
                             </button>
                         </div>
 
