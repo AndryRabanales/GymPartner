@@ -19,6 +19,7 @@ import { socialService } from '../services/SocialService';
 import { StreakFlame } from '../components/gamification/StreakFlame';
 import { alphaService } from '../services/AlphaService';
 import { useBottomNav } from '../context/BottomNavContext';
+import { TierService } from '../services/TierService';
 
 
 interface ProfileData {
@@ -422,6 +423,11 @@ export const UserProfile = () => {
     const realRank = getRankFromXP(displayProfile.xp);
     const userAvatar = profile?.avatar_url || user.user_metadata.avatar_url || 'https://i.pravatar.cc/300';
 
+    // NEW: Calculate Dominance Tier
+    const currentTier = TierService.getTier(profile?.checkins_count || 0);
+    const tierProgress = TierService.getProgress(profile?.checkins_count || 0);
+    const nextTier = TierService.getNextTier(currentTier.level);
+
     return (
         <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-8 pb-24">
             {/* ... content ... */}
@@ -446,8 +452,8 @@ export const UserProfile = () => {
                 <div className="relative shrink-0 z-10 transition-all">
                     <div className="relative w-36 h-36 sm:w-48 sm:h-48 flex items-center justify-center">
 
-                        {/* 0. Gold Glow (Now INSIDE so it moves WITH the avatar) */}
-                        <div className="absolute inset-0 bg-yellow-500/20 rounded-full blur-2xl transform scale-100 pointer-events-none"></div>
+                        {/* 0. Tier Glow (Dynamic Color) */}
+                        <div className={`absolute inset-0 rounded-full blur-2xl transform scale-100 pointer-events-none transition-colors duration-500 ${currentTier.color.replace('text-', 'bg-')}/20`}></div>
 
                         {/* 1. Base Ring (Dark Metal) */}
                         <svg className="absolute inset-0 w-full h-full -rotate-90 drop-shadow-lg overflow-visible" viewBox="0 0 160 160">
@@ -459,22 +465,22 @@ export const UserProfile = () => {
                             />
                         </svg>
 
-                        {/* 2. Progress Ring (Gold Flow) */}
-                        <svg className="absolute inset-0 w-full h-full -rotate-90 drop-shadow-[0_0_15px_rgba(234,179,8,0.5)] overflow-visible" viewBox="0 0 160 160">
+                        {/* 2. Progress Ring (Dynamic Tier Color) */}
+                        <svg className={`absolute inset-0 w-full h-full -rotate-90 drop-shadow-[0_0_15px_currentColor] overflow-visible ${currentTier.color}`} viewBox="0 0 160 160">
                             <circle
                                 cx="80" cy="80" r="74"
                                 fill="transparent"
-                                stroke="#EAB308"
+                                stroke="currentColor"
                                 strokeWidth="6"
                                 strokeDasharray="465" /* 2 * PI * 74 ≈ 465 */
-                                strokeDashoffset={465 - (Math.min(progressPercent, 100) / 100) * 465}
+                                strokeDashoffset={465 - (Math.min(tierProgress, 100) / 100) * 465}
                                 strokeLinecap="round"
                                 className="transition-all duration-1000 ease-out"
                             />
                         </svg>
 
                         {/* Avatar Image - INCREASED SIZE FOR VISIBILITY */}
-                        <div className="w-[115px] h-[115px] sm:w-[150px] sm:h-[150px] rounded-full overflow-hidden border-4 border-neutral-900 z-10 bg-neutral-800 shadow-inner relative">
+                        <div className={`w-[115px] h-[115px] sm:w-[150px] sm:h-[150px] rounded-full overflow-hidden border-4 z-10 bg-neutral-800 shadow-inner relative transition-colors duration-500 ${currentTier.borderColor}`}>
                             <img
                                 src={userAvatar}
                                 alt="Profile"
@@ -482,14 +488,14 @@ export const UserProfile = () => {
                             />
                         </div>
 
-                        {/* Level Badge - Hextech Gem (Bottom Center) */}
-                        <div className="absolute bottom-0 left-0 right-0 mx-auto w-10 z-20 filter drop-shadow-lg">
-                            <div className="relative w-10 h-10 flex items-center justify-center">
+                        {/* Tier Badge (Bottom Center) - Replaces Level Hexagon */}
+                        <div className="absolute bottom-0 left-0 right-0 mx-auto w-12 z-20 filter drop-shadow-lg">
+                            <div className="relative w-12 h-12 flex items-center justify-center">
                                 {/* Hexagon Shape CSS */}
-                                <div className="absolute inset-0 bg-gradient-to-b from-yellow-400 to-yellow-700 clip-path-hexagon"></div>
+                                <div className={`absolute inset-0 bg-gradient-to-b ${currentTier.gradient} clip-path-hexagon`}></div>
                                 <div className="absolute inset-[2px] bg-neutral-900 clip-path-hexagon flex items-center justify-center">
-                                    <span className="text-yellow-400 font-black text-sm leading-none">
-                                        {Math.floor(currentLevel)}
+                                    <span className={`font-black text-xl leading-none ${currentTier.color}`}>
+                                        {currentTier.icon}
                                     </span>
                                 </div>
                             </div>
@@ -502,16 +508,15 @@ export const UserProfile = () => {
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div className="space-y-0 text-center sm:text-left">
                             {/* Name: Golden Shock (High Visibility & Energy) */}
-                            <h1 className="text-3xl sm:text-4xl font-black text-yellow-400 tracking-tighter uppercase italic drop-shadow-[0_0_20px_rgba(255,255,255,0.4)] animate-pulse leading-none mb-1">
+                            <h1 className={`text-3xl sm:text-4xl font-black ${currentTier.color} tracking-tighter uppercase italic drop-shadow-[0_0_20px_rgba(255,255,255,0.2)] animate-pulse leading-none mb-1`}>
                                 {profile?.username || user.user_metadata.full_name}
                             </h1>
 
                             {/* Rank: Dark Glass Pill */}
                             <div className="flex flex-col sm:flex-row items-center sm:items-center gap-3 mb-4">
-                                <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-black/40 border border-yellow-500/30 rounded-full backdrop-blur-md shadow-lg group hover:border-yellow-500/60 transition-colors">
-                                    <Trophy size={14} className="text-yellow-500" />
-                                    <span className="text-yellow-500 font-bold text-xs tracking-widest uppercase">
-                                        {realRank}
+                                <div className={`inline-flex items-center gap-2 px-4 py-1.5 bg-black/40 border ${currentTier.borderColor}/30 rounded-full backdrop-blur-md shadow-lg group hover:${currentTier.borderColor}/60 transition-colors`}>
+                                    <span className={`${currentTier.color} font-bold text-xs tracking-widest uppercase`}>
+                                        {currentTier.name} TIER
                                     </span>
                                 </div>
 
