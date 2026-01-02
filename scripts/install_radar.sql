@@ -54,6 +54,8 @@ END;
 $$;
 
 -- 2. Main Radar Function
+DROP FUNCTION IF EXISTS get_nearby_gymrats; -- FORCE DROP to allow return type change
+
 CREATE OR REPLACE FUNCTION get_nearby_gymrats(
     current_lat float,
     current_lng float,
@@ -105,7 +107,7 @@ BEGIN
         p.id as user_id,
         COALESCE(p.username, 'Agente Desconocido') as username,
         p.avatar_url,
-        COALESCE(p.checkins_count, 0) as checkins_count,
+        COALESCE(p.checkins_count, 0)::integer as checkins_count, -- Explicit Cast
         gu.g_id as gym_id,
         gu.name as gym_name,
         gu.lat as gym_lat,
