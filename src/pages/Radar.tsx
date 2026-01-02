@@ -137,7 +137,7 @@ export const Radar = () => {
                                 <img
                                     src={currentUser.banner_url}
                                     alt="Banner"
-                                    className="w-full h-full object-cover opacity-80"
+                                    className="absolute inset-0 w-full h-full object-cover opacity-80"
                                 />
                             ) : (
                                 <div className={`w-full h-full bg-gradient-to-br ${currentUser.tier.gradient} opacity-20 relative`}>
