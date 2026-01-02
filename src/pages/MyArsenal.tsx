@@ -619,19 +619,8 @@ export const MyArsenal = () => {
 
     const effectiveInventory = [...uniqueCombined];
 
-    // DEBUG: Trace merging logic for Global Exercises
-    console.log("Global Inventory Count:", globalInventory.length);
-    console.log("Selected IDs (Count):", selectedItems.size, Array.from(selectedItems).slice(0, 3));
-
-    // Check if a known item exists in Real vs Virtual
-    const checkItem = globalInventory.find(i => i.name.includes('Press Banca'));
-    if (checkItem) console.log("Example Global Item:", checkItem.id, checkItem.name);
-
-    if (effectiveInventory.length > 0 && selectedItems.size > 0) {
-        const firstSelected = Array.from(selectedItems)[0];
-        const match = effectiveInventory.find(i => i.id === firstSelected);
-        console.log("MATCH CHECK:", firstSelected, match ? "FOUND" : "NOT FOUND");
-    }
+    // Removed excessive debug logs that were causing console noise during normal renders
+    // Only log when there are actual issues to diagnose
 
     // Merge Seeds (Virtual) only if not already present by NAME in the real/global list
     COMMON_EQUIPMENT_SEEDS.forEach(seed => {
