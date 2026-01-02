@@ -83,7 +83,7 @@ export const Radar = () => {
     };
 
     const currentUser = nearbyUsers.length > 0 ? nearbyUsers[currentIndex] : null;
-    const nextUser = nearbyUsers.length > 1 ? nearbyUsers[(currentIndex + 1) % nearbyUsers.length] : null;
+
 
     return (
         <div className="h-full flex flex-col relative overflow-hidden bg-black">
