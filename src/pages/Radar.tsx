@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { radarService, type RadarUser } from '../services/RadarService';
-import { MapPin, Radar as RadarIcon, Dumbbell, X } from 'lucide-react';
+import { MapPin, Radar as RadarIcon, Dumbbell, X, UserPlus } from 'lucide-react';
 
 export const Radar = () => {
     const [nearbyUsers, setNearbyUsers] = useState<RadarUser[]>([]);
@@ -219,14 +219,14 @@ export const Radar = () => {
                             {/* ACCEPT BUTTON - Gradient & Glow "Invitation" Style */}
                             <button
                                 onClick={() => handleAction('train')}
-                                className="w-24 h-24 rounded-full bg-gradient-to-br from-gym-primary via-yellow-400 to-orange-500 text-black flex items-center justify-center shadow-[0_0_40px_rgba(234,179,8,0.4)] hover:shadow-[0_0_60px_rgba(234,179,8,0.6)] hover:scale-105 transition-all duration-300 active:scale-95 border-4 border-black/20 relative group overflow-hidden"
+                                className="w-20 h-20 rounded-full bg-gradient-to-br from-gym-primary via-yellow-400 to-orange-500 text-black flex items-center justify-center shadow-[0_0_30px_rgba(234,179,8,0.4)] hover:shadow-[0_0_50px_rgba(234,179,8,0.6)] hover:scale-105 transition-all duration-300 active:scale-95 border-4 border-black/20 relative group overflow-hidden"
                             >
                                 <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 rounded-full blur-xl"></div>
                                 <div className="flex flex-col items-center relative z-10">
-                                    <div className="flex items-center gap-0.5">
-                                        <Dumbbell size={32} strokeWidth={3} className="fill-black/10" />
+                                    <div className="flex items-center gap-0.5 mb-0.5">
+                                        <UserPlus size={28} strokeWidth={2} className="fill-black/5" />
                                     </div>
-                                    <span className="text-[10px] font-black uppercase tracking-widest mt-1">Invitar</span>
+                                    <span className="text-[9px] font-black uppercase tracking-widest leading-none">Invitar</span>
                                 </div>
                             </button>
                         </div>
