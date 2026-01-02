@@ -1,7 +1,7 @@
 
 import { supabase } from '../lib/supabase';
 import { TierService } from './TierService';
-import type { TierInfo } from './TierService';
+
 
 export interface RadarUser {
     user_id: string;
