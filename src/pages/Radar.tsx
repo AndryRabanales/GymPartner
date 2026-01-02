@@ -102,12 +102,12 @@ export const Radar = () => {
                 )}
             </div>
 
-            {/* Main Content Area */}
-            <div className="flex-1 flex flex-col justify-center items-center p-4 relative w-full max-w-md h-full">
+            {/* Main Content Area - Full Bleed */}
+            <div className="flex-1 flex flex-col relative w-full h-full overflow-hidden">
 
                 {/* IDLE/ERROR STATE */}
                 {!loading && scanComplete && nearbyUsers.length === 0 && (
-                    <div className="flex flex-col items-center justify-center text-center space-y-8 animate-in fade-in zoom-in duration-500">
+                    <div className="flex-1 flex flex-col items-center justify-center text-center space-y-8 animate-in fade-in zoom-in duration-500 p-8">
                         <div className="relative bg-neutral-900 border-2 border-dashed border-neutral-700 text-neutral-500 w-40 h-40 rounded-full flex flex-col items-center justify-center gap-2">
                             <RadarIcon size={48} className="opacity-50" />
                             <span className="font-bold text-sm tracking-widest uppercase mt-2">Zona Muerta</span>
@@ -126,32 +126,32 @@ export const Radar = () => {
 
                 {/* LOADING */}
                 {loading && (
-                    <div className="flex flex-col items-center justify-center space-y-4">
+                    <div className="flex-1 flex flex-col items-center justify-center space-y-4">
                         <div className="w-16 h-16 border-4 border-gym-primary border-t-transparent rounded-full animate-spin"></div>
                         <p className="text-gym-primary font-bold animate-pulse tracking-widest text-xs uppercase">Escanenado sector...</p>
                     </div>
                 )}
 
-                {/* CARD STACK - Full Height Flex */}
+                {/* CARD STACK - FULL SCREEN MODE */}
                 {scanComplete && nearbyUsers.length > 0 && currentUser && !loading && (
-                    <div className="relative w-full max-w-md h-full max-h-[calc(100vh-180px)] perspective-1000 flex flex-col">
+                    <div className="relative w-full h-full flex flex-col p-2 pb-0">
 
                         {/* Background Card (Next User) */}
                         {nextUser && (
-                            <div className="absolute top-4 left-0 right-0 bottom-[-10px] bg-neutral-800 rounded-3xl opacity-40 scale-95 transform translate-y-2 pointer-events-none"></div>
+                            <div className="absolute inset-x-4 top-4 bottom-2 bg-neutral-800 rounded-3xl opacity-40 scale-95 transform translate-y-3 pointer-events-none"></div>
                         )}
 
                         {/* ACTIVE CARD */}
-                        <div className="flex-1 bg-neutral-900 rounded-3xl overflow-hidden border border-neutral-800 shadow-2xl flex flex-col z-20 animate-in fade-in slide-in-from-bottom-4 duration-300 relative">
+                        <div className="flex-1 bg-neutral-900 rounded-3xl overflow-hidden border border-neutral-800 shadow-2xl flex flex-col z-20 animate-in fade-in slide-in-from-bottom-2 duration-300 relative mb-1">
 
-                            {/* Image Section - Flex Grow */}
+                            {/* Image Section - MAX HEIGHT */}
                             <div className="relative flex-1 bg-neutral-800 overflow-hidden">
                                 <img
                                     src={currentUser.avatar_url || `https://ui-avatars.com/api/?name=${currentUser.username}&background=random`}
                                     alt={currentUser.username}
                                     className="w-full h-full object-cover"
                                 />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80"></div>
+                                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-90"></div>
 
                                 {/* Distance Badge */}
                                 <div className="absolute top-4 left-4 flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 shadow-lg">
@@ -167,55 +167,56 @@ export const Radar = () => {
                                 </div>
                             </div>
 
-                            {/* Info & Actions Section - Fixed Bottom */}
-                            <div className="relative bg-black pt-4 pb-6 px-5 border-t border-neutral-800">
+                            {/* Info & Actions Section - Overlay on bottom of image for 'immersive' feel, or separate block? 
+                                User wants FULL SCREEN. Let's keep it structurally separate but visually integrated. 
+                            */}
+                            <div className="relative bg-black pt-6 pb-6 px-5 border-t border-neutral-800 shrink-0">
 
-                                <div className="flex flex-col gap-1 mb-8">
-                                    <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase truncate">
+                                <div className="flex flex-col gap-1 mb-6">
+                                    <h2 className="text-3xl font-black text-white italic tracking-tighter uppercase truncate">
                                         {currentUser.username}
                                     </h2>
                                     <div className="flex items-center gap-2 text-neutral-400">
-                                        <Dumbbell size={14} className={currentUser.tier.color} />
-                                        <span className="text-xs font-bold uppercase tracking-wide truncate">
+                                        <Dumbbell size={16} className={currentUser.tier.color} />
+                                        <span className="text-sm font-bold uppercase tracking-wide truncate">
                                             {currentUser.gym_name}
                                         </span>
                                     </div>
 
                                     {/* Stats Row */}
-                                    <div className="flex gap-4 mt-3">
-                                        <div className="bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-1.5 flex flex-col items-center min-w-[60px]">
-                                            <span className="text-base font-black text-white leading-none">{currentUser.checkins_count}</span>
-                                            <span className="text-[8px] text-neutral-500 uppercase font-bold">Entrenos</span>
+                                    <div className="flex gap-4 mt-4">
+                                        <div className="bg-neutral-900 border border-neutral-800 rounded-lg px-4 py-2 flex flex-col items-center min-w-[70px]">
+                                            <span className="text-xl font-black text-white leading-none">{currentUser.checkins_count}</span>
+                                            <span className="text-[9px] text-neutral-500 uppercase font-bold">Entrenos</span>
                                         </div>
-                                        <div className="bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-1.5 flex flex-col items-center min-w-[60px]">
-                                            <span className="text-base font-black text-white leading-none">{Math.floor(Math.random() * 100) + 1}</span>
-                                            <span className="text-[8px] text-neutral-500 uppercase font-bold">Nivel</span>
+                                        <div className="bg-neutral-900 border border-neutral-800 rounded-lg px-4 py-2 flex flex-col items-center min-w-[70px]">
+                                            <span className="text-xl font-black text-white leading-none">{Math.floor(Math.random() * 100) + 1}</span>
+                                            <span className="text-[9px] text-neutral-500 uppercase font-bold">Nivel</span>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* ACTION BUTTONS LAYOUT - ABSOLUTE OVERLAP */}
+                                {/* ACTION BUTTONS */}
                                 <div className="absolute -top-10 right-4 flex items-center gap-4">
                                     {/* DISCARD */}
                                     <button
                                         onClick={() => handleAction('skip')}
-                                        className="w-14 h-14 rounded-full bg-neutral-900 border border-neutral-700 text-neutral-400 flex items-center justify-center shadow-lg hover:text-red-500 hover:border-red-500 transition-all active:scale-95"
+                                        className="w-16 h-16 rounded-full bg-neutral-900 border border-neutral-700 text-neutral-400 flex items-center justify-center shadow-lg hover:text-red-500 hover:border-red-500 transition-all active:scale-95"
                                     >
-                                        <X size={24} />
+                                        <X size={28} />
                                     </button>
 
                                     {/* TRAIN (Main Action) */}
                                     <button
                                         onClick={() => handleAction('train')}
-                                        className="w-20 h-20 rounded-full bg-gym-primary text-black flex items-center justify-center shadow-[0_0_30px_rgba(234,179,8,0.4)] hover:scale-105 hover:bg-white transition-all active:scale-95 animate-in zoom-in duration-300"
+                                        className="w-24 h-24 rounded-full bg-gym-primary text-black flex items-center justify-center shadow-[0_0_30px_rgba(234,179,8,0.4)] hover:scale-105 hover:bg-white transition-all active:scale-95 animate-in zoom-in duration-300"
                                     >
                                         <div className="flex flex-col items-center">
-                                            <Dumbbell size={32} strokeWidth={3} />
-                                            <span className="text-[9px] font-black uppercase mt-0.5">Entrenar</span>
+                                            <Dumbbell size={36} strokeWidth={3} />
+                                            <span className="text-[10px] font-black uppercase mt-0.5">Entrenar</span>
                                         </div>
                                     </button>
                                 </div>
-
                             </div>
                         </div>
                     </div>
