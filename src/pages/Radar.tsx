@@ -127,17 +127,17 @@ export const Radar = () => {
                     </div>
                 )}
 
-                {/* ACTIVE CARD CONTAINER - FLEX COLUMN (NO OVERLAP) */}
+                {/* ACTIVE CARD CONTAINER - FLEX STRETCH */}
                 {scanComplete && nearbyUsers.length > 0 && currentUser && !loading && (
-                    <div className="flex-1 flex flex-col relative bg-neutral-900 overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-500">
+                    <div className="flex-1 flex flex-col relative bg-neutral-900 animate-in fade-in slide-in-from-bottom-8 duration-500 w-full mb-0 rounded-b-none">
 
-                        {/* --- BANNER SECTION (Compact 32%) --- */}
-                        <div className="basis-[32%] shrink-0 relative w-full bg-neutral-800 overflow-hidden">
+                        {/* --- BANNER SECTION (Larger 45%) --- */}
+                        <div className="basis-[45%] shrink-0 relative w-full bg-neutral-800 overflow-hidden">
                             {currentUser.banner_url ? (
                                 <img
                                     src={currentUser.banner_url}
                                     alt="Banner"
-                                    className="w-full h-full object-cover opacity-70"
+                                    className="w-full h-full object-cover opacity-80"
                                 />
                             ) : (
                                 <div className={`w-full h-full bg-gradient-to-br ${currentUser.tier.gradient} opacity-20 relative`}>
@@ -155,74 +155,76 @@ export const Radar = () => {
                             </div>
                         </div>
 
-                        {/* --- CONTENT SECTION (Flex Grow - Push Buttons Down) --- */}
-                        <div className="flex-1 flex flex-col items-center relative z-20 -mt-12 px-4 overflow-y-auto no-scrollbar pb-2">
+                        {/* --- CONTENT SECTION (Spread to Fill) --- */}
+                        <div className="flex-1 flex flex-col items-center justify-between relative z-20 -mt-14 px-4 pb-2 w-full">
 
-                            {/* AVATAR */}
-                            <div className="relative w-24 h-24 shrink-0 mb-2">
-                                <div className={`absolute inset-0 rounded-full blur-2xl transform scale-100 pointer-events-none ${currentUser.tier.color.replace('text-', 'bg-')}/40`}></div>
-                                <div className={`w-full h-full rounded-full overflow-hidden border-4 bg-neutral-900 shadow-2xl relative z-10 ${currentUser.tier.borderColor}`}>
-                                    <img
-                                        src={currentUser.avatar_url || `https://ui-avatars.com/api/?name=${currentUser.username}&background=random`}
-                                        alt={currentUser.username}
-                                        className="w-full h-full object-cover"
-                                    />
+                            {/* Top Info Group */}
+                            <div className="flex flex-col items-center w-full">
+                                {/* AVATAR */}
+                                <div className="relative w-28 h-28 shrink-0 mb-3">
+                                    <div className={`absolute inset-0 rounded-full blur-2xl transform scale-100 pointer-events-none ${currentUser.tier.color.replace('text-', 'bg-')}/40`}></div>
+                                    <div className={`w-full h-full rounded-full overflow-hidden border-4 bg-neutral-900 shadow-2xl relative z-10 ${currentUser.tier.borderColor}`}>
+                                        <img
+                                            src={currentUser.avatar_url || `https://ui-avatars.com/api/?name=${currentUser.username}&background=random`}
+                                            alt={currentUser.username}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    </div>
+                                    <div className={`absolute -bottom-2.5 left-1/2 transform -translate-x-1/2 px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border shadow-lg z-20 bg-black ${currentUser.tier.borderColor} ${currentUser.tier.color}`}>
+                                        {currentUser.tier.name}
+                                    </div>
                                 </div>
-                                <div className={`absolute -bottom-2 left-1/2 transform -translate-x-1/2 px-2 py-0.5 rounded-full text-[7px] font-black uppercase tracking-widest border shadow-lg z-20 bg-black ${currentUser.tier.borderColor} ${currentUser.tier.color}`}>
-                                    {currentUser.tier.name}
-                                </div>
-                            </div>
 
-                            {/* TEXT INFO */}
-                            <div className="text-center w-full flex flex-col items-center">
-                                <h1 className="text-2xl font-black text-white italic tracking-tighter uppercase drop-shadow-lg mb-1 truncate max-w-full">
+                                {/* TEXT INFO */}
+                                <h1 className="text-3xl font-black text-white italic tracking-tighter uppercase drop-shadow-lg mb-1 truncate max-w-full">
                                     {currentUser.username}
                                 </h1>
                                 <div className="flex items-center justify-center gap-1.5 text-neutral-400 mb-2">
                                     <Dumbbell size={10} className={currentUser.tier.color} />
-                                    <span className="text-[9px] font-bold uppercase tracking-wide truncate max-w-[180px]">
+                                    <span className="text-[10px] font-bold uppercase tracking-wide truncate max-w-[200px]">
                                         {currentUser.gym_name}
                                     </span>
                                 </div>
-
-                                <p className="text-neutral-400 text-[10px] font-medium leading-relaxed line-clamp-2 px-2 mb-3 max-w-xs text-opacity-80">
+                                <p className="text-neutral-400 text-[10px] font-medium leading-relaxed line-clamp-2 px-2 max-w-xs text-opacity-80 text-center">
                                     {currentUser.description || "Sin descripción."}
                                 </p>
+                            </div>
 
-                                {/* Stats Grid - Compact */}
-                                <div className="grid grid-cols-2 gap-2 w-full max-w-[180px]">
-                                    <div className="flex flex-col items-center p-1.5 rounded-lg bg-neutral-800/50 border border-neutral-700/50">
-                                        <span className={`text-lg font-black ${currentUser.tier.color}`}>{currentUser.checkins_count}</span>
-                                        <span className="text-[7px] text-neutral-500 uppercase font-bold tracking-widest">Entrenos</span>
+                            {/* Middle Stats Group */}
+                            <div className="flex-1 flex items-center justify-center w-full py-2">
+                                <div className="grid grid-cols-2 gap-3 w-full max-w-[200px]">
+                                    <div className="flex flex-col items-center p-2 rounded-lg bg-neutral-800/50 border border-neutral-700/50">
+                                        <span className={`text-xl font-black ${currentUser.tier.color}`}>{currentUser.checkins_count}</span>
+                                        <span className="text-[8px] text-neutral-500 uppercase font-bold tracking-widest">Entrenos</span>
                                     </div>
-                                    <div className="flex flex-col items-center p-1.5 rounded-lg bg-neutral-800/50 border border-neutral-700/50">
-                                        <span className="text-lg font-black text-white">{Math.floor(Math.random() * 100) + 1}</span>
-                                        <span className="text-[7px] text-neutral-500 uppercase font-bold tracking-widest">Nivel</span>
+                                    <div className="flex flex-col items-center p-2 rounded-lg bg-neutral-800/50 border border-neutral-700/50">
+                                        <span className="text-xl font-black text-white">{Math.floor(Math.random() * 100) + 1}</span>
+                                        <span className="text-[8px] text-neutral-500 uppercase font-bold tracking-widest">Nivel</span>
                                     </div>
                                 </div>
                             </div>
+
+                            {/* --- ACTION BUTTONS (At Bottom) --- */}
+                            <div className="shrink-0 flex justify-center items-center gap-8 z-30 w-full mb-2">
+                                <button
+                                    onClick={() => handleAction('skip')}
+                                    className="w-14 h-14 rounded-full bg-neutral-800 border border-neutral-700 text-neutral-500 flex items-center justify-center hover:bg-neutral-700 transition-all active:scale-90"
+                                >
+                                    <X size={24} strokeWidth={2.5} />
+                                </button>
+
+                                <button
+                                    onClick={() => handleAction('train')}
+                                    className="w-20 h-20 rounded-full bg-gym-primary text-black flex items-center justify-center shadow-[0_0_25px_rgba(234,179,8,0.25)] hover:scale-105 transition-all active:scale-95"
+                                >
+                                    <div className="flex flex-col items-center">
+                                        <Dumbbell size={32} strokeWidth={3} />
+                                        <span className="text-[9px] font-black uppercase mt-0.5">Entrenar</span>
+                                    </div>
+                                </button>
+                            </div>
+
                         </div>
-
-                        {/* --- ACTION BUTTONS (Transparent - Just Buttons) --- */}
-                        <div className="shrink-0 pt-0 pb-4 flex justify-center items-center gap-6 z-30 w-full mb-1">
-                            <button
-                                onClick={() => handleAction('skip')}
-                                className="w-12 h-12 rounded-full bg-neutral-800 border border-neutral-700 text-neutral-500 flex items-center justify-center hover:bg-neutral-700 transition-all active:scale-90"
-                            >
-                                <X size={20} strokeWidth={2.5} />
-                            </button>
-
-                            <button
-                                onClick={() => handleAction('train')}
-                                className="w-16 h-16 rounded-full bg-gym-primary text-black flex items-center justify-center shadow-[0_0_15px_rgba(234,179,8,0.2)] hover:scale-105 transition-all active:scale-95"
-                            >
-                                <div className="flex flex-col items-center">
-                                    <Dumbbell size={28} strokeWidth={3} />
-                                    <span className="text-[8px] font-black uppercase mt-0.5">Entrenar</span>
-                                </div>
-                            </button>
-                        </div>
-
                     </div>
                 )}
             </div>
