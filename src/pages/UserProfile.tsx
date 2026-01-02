@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Trophy, MapPin, Edit2, LogIn, Loader, Swords, Dumbbell, Plus, LineChart, History, Star, Search, ArrowLeft, UserPlus, Grid, Crown } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { getXPProgress, getRankFromXP } from '../types/user';
+// import { getXPProgress, getRankFromXP } from '../types/user';
 import type { UserRank } from '../types/user';
 // 1. Add import
 import { EditProfileModal } from '../components/profile/EditProfileModal';
