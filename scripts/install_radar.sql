@@ -64,7 +64,7 @@ RETURNS TABLE (
     user_id uuid,
     username text,
     avatar_url text,
-    checkins_count bigint,
+    checkins_count integer,
     gym_id uuid,
     gym_name text,
     gym_lat float,
