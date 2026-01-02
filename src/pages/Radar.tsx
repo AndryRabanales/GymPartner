@@ -206,21 +206,27 @@ export const Radar = () => {
                         </div>
 
                         {/* --- SAFE FOOTER (Dedicated Area) --- */}
-                        <div className="shrink-0 w-full flex justify-center items-center gap-8 pb-20 pt-4 relative z-30 bg-gradient-to-t from-neutral-900 via-neutral-900 to-transparent">
+                        <div className="shrink-0 w-full flex justify-center items-center gap-6 pb-20 pt-4 relative z-30 bg-gradient-to-t from-black via-black/80 to-transparent">
+
+                            {/* REJECT BUTTON - Glassmorphism */}
                             <button
                                 onClick={() => handleAction('skip')}
-                                className="w-14 h-14 rounded-full bg-neutral-800 border border-neutral-700 text-neutral-500 flex items-center justify-center hover:bg-neutral-700 transition-all active:scale-90"
+                                className="w-16 h-16 rounded-full bg-neutral-900/80 backdrop-blur-md border border-white/10 text-neutral-500 flex items-center justify-center hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/30 transition-all active:scale-90 group shadow-lg"
                             >
-                                <X size={24} strokeWidth={2.5} />
+                                <X size={28} strokeWidth={2.5} className="group-hover:rotate-90 transition-transform duration-300" />
                             </button>
 
+                            {/* ACCEPT BUTTON - Gradient & Glow "Invitation" Style */}
                             <button
                                 onClick={() => handleAction('train')}
-                                className="w-20 h-20 rounded-full bg-gym-primary text-black flex items-center justify-center shadow-[0_0_25px_rgba(234,179,8,0.25)] hover:scale-105 transition-all active:scale-95"
+                                className="w-24 h-24 rounded-full bg-gradient-to-br from-gym-primary via-yellow-400 to-orange-500 text-black flex items-center justify-center shadow-[0_0_40px_rgba(234,179,8,0.4)] hover:shadow-[0_0_60px_rgba(234,179,8,0.6)] hover:scale-105 transition-all duration-300 active:scale-95 border-4 border-black/20 relative group overflow-hidden"
                             >
-                                <div className="flex flex-col items-center">
-                                    <Dumbbell size={32} strokeWidth={3} />
-                                    <span className="text-[9px] font-black uppercase mt-0.5">Entrenar</span>
+                                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 rounded-full blur-xl"></div>
+                                <div className="flex flex-col items-center relative z-10">
+                                    <div className="flex items-center gap-0.5">
+                                        <Dumbbell size={32} strokeWidth={3} className="fill-black/10" />
+                                    </div>
+                                    <span className="text-[10px] font-black uppercase tracking-widest mt-1">Invitar</span>
                                 </div>
                             </button>
                         </div>
