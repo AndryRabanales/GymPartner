@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Heart, MessageCircle, Share2, MoreHorizontal, Music2, Swords, Pause } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MoreHorizontal, Music2, Swords, Pause, Radar } from 'lucide-react';
 import { socialService, type Post } from '../services/SocialService';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
@@ -292,8 +292,12 @@ export const CommunityPage = () => {
             onTouchEnd={handleTouchEnd}
         >
             {/* Header (Mobile style) */}
-            <div className="sticky top-0 z-30 bg-black/90 backdrop-blur-md border-b border-white/5 px-4 h-10 flex items-center justify-center">
+            <div className="sticky top-0 z-30 bg-black/90 backdrop-blur-md border-b border-white/5 px-4 h-10 flex items-center justify-between">
+                <div className="w-8"></div> {/* Spacer for centering */}
                 <span className="font-black italic text-white tracking-tighter text-lg">GYM<span className="text-yellow-500">JUMPS</span></span>
+                <Link to="/radar" className="w-8 flex justify-end text-neutral-400 hover:text-gym-primary transition-colors">
+                    <Radar size={20} />
+                </Link>
             </div>
 
             {/* Pull-to-Refresh Indicator */}
