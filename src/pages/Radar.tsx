@@ -131,8 +131,8 @@ export const Radar = () => {
                 {scanComplete && nearbyUsers.length > 0 && currentUser && !loading && (
                     <div className="flex-1 flex flex-col relative bg-neutral-900 animate-in fade-in slide-in-from-bottom-8 duration-500 w-full mb-0 rounded-b-none">
 
-                        {/* --- BANNER SECTION (Larger 45%) --- */}
-                        <div className="basis-[45%] shrink-0 relative w-full bg-neutral-800 overflow-hidden">
+                        {/* --- BANNER SECTION (Compact 38%) --- */}
+                        <div className="basis-[38%] shrink-0 relative w-full bg-neutral-800 overflow-hidden">
                             {currentUser.banner_url ? (
                                 <img
                                     src={currentUser.banner_url}
@@ -155,8 +155,8 @@ export const Radar = () => {
                             </div>
                         </div>
 
-                        {/* --- CONTENT SECTION (Spread to Fill - Lifted Bottom) --- */}
-                        <div className="flex-1 flex flex-col items-center justify-between relative z-20 -mt-14 px-4 pb-20 w-full">
+                        {/* --- CONTENT SECTION (Spread to Fill) --- */}
+                        <div className="flex-1 flex flex-col items-center justify-between relative z-20 -mt-14 px-4 w-full">
 
                             {/* Top Info Group */}
                             <div className="flex flex-col items-center w-full">
@@ -206,7 +206,7 @@ export const Radar = () => {
                         </div>
 
                         {/* --- SAFE FOOTER (Dedicated Area) --- */}
-                        <div className="shrink-0 w-full flex justify-center items-center gap-8 pb-24 pt-4 relative z-30 bg-gradient-to-t from-neutral-900 via-neutral-900 to-transparent">
+                        <div className="shrink-0 w-full flex justify-center items-center gap-8 pb-20 pt-4 relative z-30 bg-gradient-to-t from-neutral-900 via-neutral-900 to-transparent">
                             <button
                                 onClick={() => handleAction('skip')}
                                 className="w-14 h-14 rounded-full bg-neutral-800 border border-neutral-700 text-neutral-500 flex items-center justify-center hover:bg-neutral-700 transition-all active:scale-90"
