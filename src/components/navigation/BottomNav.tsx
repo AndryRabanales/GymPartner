@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Film, PlusSquare, Users, Bell } from 'lucide-react';
+import { Home, Film, PlusSquare, Users, Radar } from 'lucide-react';
 
 
 interface BottomNavProps {
@@ -51,12 +51,12 @@ export const BottomNav: React.FC<BottomNavProps> = ({ onUploadClick }) => {
                     />
                 </Link>
 
-                {/* 5. NOTIFICACIONES */}
-                <Link to="/notifications" className="flex flex-col items-center justify-center gap-1 w-14 h-full">
-                    <Bell
+                {/* 5. RADAR (GymRats) */}
+                <Link to="/radar" className="flex flex-col items-center justify-center gap-1 w-14 h-full">
+                    <Radar
                         size={24}
-                        className={isActive('/notifications') ? "text-white fill-white" : "text-neutral-500"}
-                        strokeWidth={isActive('/notifications') ? 2.5 : 2}
+                        className={isActive('/radar') ? "text-gym-primary fill-gym-primary/20" : "text-neutral-500"}
+                        strokeWidth={isActive('/radar') ? 2.5 : 2}
                     />
                 </Link>
             </div>
