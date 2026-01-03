@@ -361,7 +361,8 @@ class WorkoutService {
                 await this.linkEquipmentToRoutine(routineId, equipmentData as string[]); // Fallback to defaults
             } else {
                 // Rich config mode
-                await this.linkRichExercisesToRoutine(routineId, equipmentData);
+                const { error: linkError } = await this.linkRichExercisesToRoutine(routineId, equipmentData);
+                if (linkError) return { error: linkError };
             }
         }
 
@@ -390,7 +391,11 @@ class WorkoutService {
         }));
 
         const { error } = await supabase.from('routine_exercises').insert(exerciseRows);
-        if (error) console.error("Error saving rich exercises:", error);
+        if (error) {
+            console.error("Error saving rich exercises:", error);
+            return { error };
+        }
+        return { error: null };
     }
 
     // Helper to link equipment to routine

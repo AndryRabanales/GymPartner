@@ -269,6 +269,8 @@ class UserService {
                     track_weight,
                     track_reps,
                     track_time,
+                    track_distance,
+                    track_rpe,
                     track_pr,
                     target_sets,
                     target_reps_text,
@@ -330,14 +332,14 @@ class UserService {
                         // Helper for normalization
                         const normalize = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 
-                        const normTarget = normalize(targetName);
-                        const seed = COMMON_EQUIPMENT_SEEDS.find(s => normalize(s.name) === normTarget);
+                        const normalizeName = normalize(targetName);
+                        const seed = COMMON_EQUIPMENT_SEEDS.find(s => normalize(s.name) === normalizeName);
 
                         if (seed) {
                             finalIcon = seed.icon;
                             // console.log(`[Hydration] Recovered icon for "${targetName}": ${seed.icon}`);
                         } else {
-                            console.warn(`[Hydration] Failed to find seed for "${targetName}" (Normalized: "${normTarget}")`);
+                            console.warn(`[Hydration] Failed to find seed for "${targetName}" (Normalized: "${normalizeName}")`);
                         }
                     }
 
@@ -390,6 +392,8 @@ class UserService {
                     track_weight: ex.track_weight,
                     track_reps: ex.track_reps,
                     track_time: ex.track_time,
+                    track_distance: ex.track_distance,
+                    track_rpe: ex.track_rpe,
                     track_pr: ex.track_pr,
                     target_sets: ex.target_sets,
                     target_reps_text: ex.target_reps_text,
