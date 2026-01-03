@@ -376,7 +376,7 @@ class WorkoutService {
             routine_id: routineId,
             exercise_id: ex.id, // Use ID from config
             name: ex.name || 'Ejercicio Personalizado', // Snapshot Name!
-            icon: ex.icon, // [FIX] Added icon to persist in routine_exercises
+            // icon: ex.icon, // [REMOVED] Schema doesn't support this yet
             order_index: idx,
             track_weight: ex.track_weight !== undefined ? ex.track_weight : true,
             track_reps: ex.track_reps !== undefined ? ex.track_reps : true,
