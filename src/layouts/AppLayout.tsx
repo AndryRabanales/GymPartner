@@ -8,7 +8,10 @@ import { useBottomNav } from '../context/BottomNavContext';
 import { NotificationBell } from '../components/ui/NotificationBell';
 import { RescueModal } from '../components/gamification/RescueModal';
 
+import { ActiveWorkoutBubble } from '../components/workout/ActiveWorkoutBubble';
+
 export const AppLayout = () => {
+    // ... (keep existing hook calls)
     const { user, signOut } = useAuth();
     const { isBottomNavVisible } = useBottomNav();
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -162,6 +165,9 @@ export const AppLayout = () => {
             {/* Global Modals */}
             <RescueModal />
             {isUploadModalOpen && <UploadModal onClose={() => setIsUploadModalOpen(false)} onSuccess={() => setIsUploadModalOpen(false)} />}
+
+            {/* Active Session Bubble Check */}
+            <ActiveWorkoutBubble />
 
             {/* MOBILE BOTTOM NAVIGATION (Static Block at Bottom) */}
             {/* Hidden when: logged out, in workout session, or in gym territory pages */}
