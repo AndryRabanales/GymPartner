@@ -260,6 +260,17 @@ export const WorkoutSession = () => {
                 }
 
                 if (item) {
+                    // DEBUG: Log the raw detail object from DB
+                    console.log(`📋 RAW DETAIL from DB for ${item.name}:`, {
+                        track_weight: detail.track_weight,
+                        track_reps: detail.track_reps,
+                        track_time: detail.track_time,
+                        track_distance: detail.track_distance,
+                        track_rpe: detail.track_rpe,
+                        custom_metric: detail.custom_metric,
+                        equipment_metrics: detail.equipment?.metrics
+                    });
+
                     // Combine detail override (if any) with item metrics
                     const baseMetrics = {
                         ...(item.metrics || {}),
@@ -267,15 +278,15 @@ export const WorkoutSession = () => {
                         ...defaultMetrics // Fallback
                     };
 
-                    console.log(`🔧 Loading Metrics for ${item.name}:`, baseMetrics);
+                    console.log(`🔧 Base Metrics After Merge:`, baseMetrics);
 
                     const metrics = {
                         ...baseMetrics,
-                        weight: detail.track_weight !== undefined ? detail.track_weight : baseMetrics.weight,
-                        reps: detail.track_reps !== undefined ? detail.track_reps : baseMetrics.reps,
-                        time: detail.track_time !== undefined ? detail.track_time : baseMetrics.time,
-                        distance: detail.track_distance !== undefined ? detail.track_distance : baseMetrics.distance,
-                        rpe: detail.track_rpe !== undefined ? detail.track_rpe : baseMetrics.rpe,
+                        weight: detail.track_weight ?? baseMetrics.weight,
+                        reps: detail.track_reps ?? baseMetrics.reps,
+                        time: detail.track_time ?? baseMetrics.time,
+                        distance: detail.track_distance ?? baseMetrics.distance,
+                        rpe: detail.track_rpe ?? baseMetrics.rpe,
                     };
 
                     // Add custom metric from routine if exists
@@ -284,6 +295,8 @@ export const WorkoutSession = () => {
                         metrics[detail.custom_metric] = true;
                         console.log(`✨ Added Custom Routine Metric: ${detail.custom_metric}`);
                     }
+
+                    console.log(`✅ FINAL METRICS FOR ${item.name}:`, metrics);
 
                     // Initialize custom metrics
                     const customMetrics: Record<string, number> = {};
@@ -314,17 +327,17 @@ export const WorkoutSession = () => {
                     // FALLBACK: Ghost Exercise (Not in local inventory, but exists in routine)
                     // We allow it to run so the user can workout anywhere.
                     const ghostName = detail.equipment?.name || detail.name || 'Ejercicio Externo';
-                    console.log(`👻 Creating Ghost Exercise: ${ghostName}`);
+                    console.log(`👻 Creating Ghost Exercise: ${ghostName}`, detail);
 
                     // FIX: Respect Routine Configuration even for Ghosts
                     const baseMetrics = detail.equipment?.metrics || defaultMetrics;
                     const ghostMetrics = {
                         ...baseMetrics,
-                        weight: detail.track_weight !== undefined ? detail.track_weight : baseMetrics.weight,
-                        reps: detail.track_reps !== undefined ? detail.track_reps : baseMetrics.reps,
-                        time: detail.track_time !== undefined ? detail.track_time : baseMetrics.time,
-                        distance: detail.track_distance !== undefined ? detail.track_distance : baseMetrics.distance,
-                        rpe: detail.track_rpe !== undefined ? detail.track_rpe : baseMetrics.rpe,
+                        weight: detail.track_weight ?? baseMetrics.weight,
+                        reps: detail.track_reps ?? baseMetrics.reps,
+                        time: detail.track_time ?? baseMetrics.time,
+                        distance: detail.track_distance ?? baseMetrics.distance,
+                        rpe: detail.track_rpe ?? baseMetrics.rpe,
                     };
 
                     // Add custom metric from routine if exists
