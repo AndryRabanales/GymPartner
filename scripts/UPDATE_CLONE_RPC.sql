@@ -1,8 +1,7 @@
 -- ================================================================
--- UPDATE RPC: clone_full_routine (VERSION CORREGIDA)
+-- UPDATE RPC: clone_full_routine (VERSION CORREGIDA V2)
 -- ================================================================
--- NOTA: Primero eliminamos la función anterior porque Postgres no permite 
--- cambiar el tipo de retorno (añadimos la columna 'error') sin borrarla antes.
+-- Eliminadas columnas que no existen en PRODUCCIÓN (difficulty_level, etc.)
 
 DROP FUNCTION IF EXISTS clone_full_routine(uuid, uuid, uuid);
 
@@ -32,39 +31,37 @@ BEGIN
     END IF;
 
     -- 2. Crear Nueva Rutina en el Gym Destino
+    -- NOTA: Se eliminaron difficulty_level y estimated_duration que no existen en el esquema actual
     INSERT INTO routines (
         user_id,
         gym_id,
         name,
         created_at,
         is_public,
-        description,
-        difficulty_level,
-        estimated_duration
+        description 
+        -- Si 'description' también falla, habrá que borrarla, pero suele existir.
     ) VALUES (
         p_user_id,
         p_target_gym_id,
         v_source_routine.name,
         NOW(),
-        false, -- Privada por defecto al importar
-        v_source_routine.description,
-        v_source_routine.difficulty_level,
-        v_source_routine.estimated_duration
+        false, 
+        v_source_routine.description
     ) RETURNING id INTO v_new_routine_id;
 
     -- 3. Copiar Ejercicios (CON TODAS LAS MÉTRICAS)
     INSERT INTO routine_exercises (
         routine_id,
         exercise_id,
-        name,           -- Snapshot del nombre
+        name,           
         order_index,
         track_weight,
         track_reps,
         track_time,
-        track_distance, -- NUEVO
-        track_rpe,      -- NUEVO
-        track_pr,       -- NUEVO
-        custom_metric,  -- NUEVO
+        track_distance, 
+        track_rpe,      
+        track_pr,       
+        custom_metric,  
         target_sets,
         target_reps_text
     )
