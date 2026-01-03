@@ -18,13 +18,27 @@ interface ArsenalCardProps {
     isSelected?: boolean;
     userSettings: CustomSettings; // Changed from customCategories to full settings for metrics access
     onEdit?: (item: Equipment) => void;
+    configOverride?: any; // Routine specific configuration
 }
 
-const ArsenalCard = ({ item, isSelected, userSettings, onEdit }: ArsenalCardProps) => {
+const ArsenalCard = ({ item, isSelected, userSettings, onEdit, configOverride }: ArsenalCardProps) => {
     // Determine active metrics based on item data or fallback
-    // item.metrics is now Record<string, boolean>
-    // We map the active keys to the display definitions from userSettings (custom) + defaults
-    const activeMetricIds = item.metrics ? Object.keys(item.metrics).filter(k => item.metrics![k]) : ['weight', 'reps'];
+    // If configOverride is present (Routine Context), use it to determine active flags.
+    let activeMetricIds: string[] = [];
+
+    if (configOverride) {
+        // We are in routine context, check specific flags
+        if (configOverride.track_weight !== false && (configOverride.track_weight || item.metrics?.weight)) activeMetricIds.push('weight');
+        if (configOverride.track_reps !== false && (configOverride.track_reps || item.metrics?.reps)) activeMetricIds.push('reps');
+        if (configOverride.track_time) activeMetricIds.push('time');
+        if (configOverride.track_distance) activeMetricIds.push('distance');
+        if (configOverride.track_rpe) activeMetricIds.push('rpe');
+        if (configOverride.track_pr) activeMetricIds.push('track_pr');
+        // Custom metric string?
+    } else {
+        // Default View (Inventory)
+        activeMetricIds = item.metrics ? Object.keys(item.metrics).filter(k => item.metrics![k]) : ['weight', 'reps'];
+    }
 
     const getMetricInfo = (id: string) => {
         // 1. Check Custom
@@ -1243,6 +1257,7 @@ export const MyArsenal = () => {
                                                     isSelected={isSelected}
                                                     userSettings={userSettings}
                                                     onEdit={handleEditEquipment}  // Always allow edit (Edit or Clone)
+                                                    configOverride={routineConfigs.get(item.id)}
                                                 />
                                             </div>
                                         );
