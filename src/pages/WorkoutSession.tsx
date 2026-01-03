@@ -335,9 +335,13 @@ export const WorkoutSession = () => {
                     // We allow it to run so the user can workout anywhere.
                     const ghostName = detail.equipment?.name || detail.name || 'Ejercicio Externo';
                     console.log(`👻 Creating Ghost Exercise: ${ghostName}`, detail);
+                    console.log(`👻 detail.equipment FULL OBJECT:`, detail.equipment);
+                    console.log(`👻 detail.equipment?.metrics:`, detail.equipment?.metrics);
+                    console.log(`👻 Is detail.equipment?.metrics truthy?`, !!detail.equipment?.metrics);
 
                     // FIX: Respect Routine Configuration even for Ghosts
                     const baseMetrics = detail.equipment?.metrics || defaultMetrics;
+                    console.log(`👻 baseMetrics selected:`, baseMetrics);
 
                     // Start with baseMetrics (includes ALL metrics from equipment.metrics)
                     const ghostMetrics = {
