@@ -244,32 +244,47 @@ class WorkoutService {
 
         // 3. REMOVED routine_items fetch (404 Not Found)
 
-        // 4. Manual Join: Fetch Exercise Names from 'exercises' table (NOT 'equipment')
+        // 4. Manual Join: Fetch Exercise Names from 'gym_equipment' (and fallback to 'exercises')
         const allExercises = exercisesData || [];
         const exerciseIds = Array.from(new Set(allExercises.map(e => e.exercise_id)));
 
         let exercisesMap = new Map<string, any>();
 
         if (exerciseIds.length > 0) {
-            const { data: exData } = await supabase
-                .from('exercises')
-                .select('id, name')
+            // Try 'gym_equipment' first (Standard + Custom)
+            const { data: gymEqData } = await supabase
+                .from('gym_equipment')
+                .select('id, name, metrics')
                 .in('id', exerciseIds);
 
-            if (exData) {
-                exData.forEach(ex => exercisesMap.set(ex.id, ex));
+            if (gymEqData) {
+                gymEqData.forEach(ex => exercisesMap.set(ex.id, ex));
+            }
+
+            // identify missing IDs
+            const missingIds = exerciseIds.filter(id => !exercisesMap.has(id));
+
+            if (missingIds.length > 0) {
+                // Try 'exercises' (Legacy or Global Master if exists)
+                const { data: exData } = await supabase
+                    .from('exercises')
+                    .select('id, name')
+                    .in('id', missingIds);
+
+                if (exData) {
+                    exData.forEach(ex => exercisesMap.set(ex.id, ex));
+                }
             }
         }
 
         // 5. Merge Data
         return routinesData.map(r => {
             const myExercisesRaw = allExercises.filter(e => e.routine_id === r.id);
-            // const myItems = itemsData?.filter(i => i.routine_id === r.id) || []; // REMOVED
 
-            // Attach exercise name to exercises manually
+            // Attach exercise information
             const myExercises = myExercisesRaw.map(e => ({
                 ...e,
-                equipment: exercisesMap.get(e.exercise_id)
+                equipment: exercisesMap.get(e.exercise_id) || { name: 'Ejercicio Desconocido' } // Better fallback
             }));
 
             return {
