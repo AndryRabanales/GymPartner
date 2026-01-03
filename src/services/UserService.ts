@@ -292,7 +292,7 @@ class UserService {
                 // Try fetching with icon (Schema V2)
                 const { data: dataV2, error: errorV2 } = await supabase
                     .from('gym_equipment')
-                    .select('id, name, category, image_url, icon')
+                    .select('id, name, category, image_url, icon, metrics')
                     .in('id', exerciseIds);
 
                 if (!errorV2 && dataV2) {
@@ -303,7 +303,7 @@ class UserService {
                     // Fallback Level 1: Fetch without icon (Schema V1 - with image_url)
                     const { data: dataV1, error: errorV1 } = await supabase
                         .from('gym_equipment')
-                        .select('id, name, category, image_url')
+                        .select('id, name, category, image_url, metrics')
                         .in('id', exerciseIds);
 
                     if (!errorV1 && dataV1) {
@@ -313,7 +313,7 @@ class UserService {
                         // Fallback Level 2 (Doomsday): Fetch only base fields (Schema V0)
                         const { data: dataV0 } = await supabase
                             .from('gym_equipment')
-                            .select('id, name, category')
+                            .select('id, name, category, metrics')
                             .in('id', exerciseIds);
                         equipmentData = dataV0;
                     }
@@ -349,7 +349,8 @@ class UserService {
                         name: eq?.name || re.name || 'Ejercicio Desconocido',
                         muscle_group: eq?.category || 'General',
                         image_url: eq?.image_url, // Map image
-                        icon: finalIcon // Map icon (DB or Seed Hydrated)
+                        icon: finalIcon, // Map icon (DB or Seed Hydrated)
+                        equipment: eq // Include full equipment data (with metrics!)
                     };
                 });
             }
