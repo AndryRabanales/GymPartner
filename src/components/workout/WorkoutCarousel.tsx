@@ -9,24 +9,42 @@ interface WorkoutCarouselProps {
 
 export const WorkoutCarousel: React.FC<WorkoutCarouselProps> = ({ children, currentIndex, onIndexChange }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const isProgrammaticScroll = useRef(false);
+    const scrollTimeout = useRef<number | null>(null);
 
     // Scroll to the current index when it changes
     useEffect(() => {
         if (scrollContainerRef.current) {
             const container = scrollContainerRef.current;
             const target = container.children[currentIndex] as HTMLElement;
+
             if (target) {
-                target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+                isProgrammaticScroll.current = true;
+
+                // Clear any existing timeout
+                if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
+
+                target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); // Changed to center for better snap alignment
+
+                // Unlock after animation (approx 500ms)
+                scrollTimeout.current = window.setTimeout(() => {
+                    isProgrammaticScroll.current = false;
+                }, 600);
             }
         }
     }, [currentIndex]);
 
     // Handle manual scroll (snap)
     const handleScroll = () => {
+        if (isProgrammaticScroll.current) return;
+
         if (scrollContainerRef.current) {
             const container = scrollContainerRef.current;
             const scrollLeft = container.scrollLeft;
+            // Approximate width including gap (container width + gap is hard to guess exactly without computing styles, but offsetWidth is close)
+            // Ideally we rely on center point logic
             const width = container.offsetWidth;
+
             const newIndex = Math.round(scrollLeft / width);
 
             if (newIndex !== currentIndex) {
