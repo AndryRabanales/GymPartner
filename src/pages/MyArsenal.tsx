@@ -278,8 +278,28 @@ export const MyArsenal = () => {
 
         setCustomName(item.name);
         setCustomCategory(item.category);
-        if (item.metrics) {
-            setCustomMetrics(prev => ({ ...prev, ...item.metrics }));
+
+        // 1. Load Base Metrics from Equipment
+        let loadedMetrics = { ...item.metrics };
+
+        // 2. [FIX] Override with Routine Specifics if available
+        // This ensures that if we enabled "RPE" in this routine, the modal shows it enabled.
+        const routineOverride = routineConfigs.get(item.id);
+        if (routineOverride) {
+            loadedMetrics = {
+                ...loadedMetrics,
+                weight: routineOverride.track_weight ?? loadedMetrics.weight,
+                reps: routineOverride.track_reps ?? loadedMetrics.reps,
+                time: routineOverride.track_time ?? loadedMetrics.time,
+                distance: routineOverride.track_distance ?? loadedMetrics.distance,
+                rpe: routineOverride.track_rpe ?? loadedMetrics.rpe,
+                track_pr: routineOverride.track_pr ?? (loadedMetrics as any).track_pr
+                // Note: custom_metric string is handled elsewhere or implicitly
+            };
+        }
+
+        if (item.metrics || routineOverride) {
+            setCustomMetrics(prev => ({ ...prev, ...loadedMetrics }));
         }
         setAddingMode(true);
         setCustomMode(true);
