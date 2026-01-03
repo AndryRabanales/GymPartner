@@ -543,7 +543,10 @@ export const MyArsenal = () => {
                         track_weight: ex.track_weight,
                         track_reps: ex.track_reps,
                         track_time: ex.track_time,
-                        track_pr: ex.track_pr
+                        track_pr: ex.track_pr,
+                        track_distance: ex.track_distance,
+                        track_rpe: ex.track_rpe,
+                        custom_metric: ex.custom_metric,
                     });
                 }
             });
@@ -853,14 +856,19 @@ export const MyArsenal = () => {
                 const existingItem = inventory.find(i => i.id === finalId) ||
                     globalInventory.find(i => i.id === finalId);
 
+                const defaultMetrics = (existingItem?.metrics as any) || { weight: true, reps: true };
+
                 finalConfigPayload.push({
                     id: finalId, // The REAL DB UUID
                     name: finalName,
-                    icon: existingItem?.icon, // [FIX] Added icon to payload
-                    track_weight: config.track_weight !== undefined ? config.track_weight : true,
-                    track_reps: config.track_reps !== undefined ? config.track_reps : true,
-                    track_time: config.track_time || false,
-                    track_pr: config.track_pr || false
+                    icon: existingItem?.icon,
+                    track_weight: config.track_weight !== undefined ? config.track_weight : (defaultMetrics.weight ?? true),
+                    track_reps: config.track_reps !== undefined ? config.track_reps : (defaultMetrics.reps ?? true),
+                    track_time: config.track_time !== undefined ? config.track_time : (defaultMetrics.time || false),
+                    track_pr: config.track_pr !== undefined ? config.track_pr : (defaultMetrics.track_pr || false),
+                    track_distance: config.track_distance !== undefined ? config.track_distance : (defaultMetrics.distance || false),
+                    track_rpe: config.track_rpe !== undefined ? config.track_rpe : (defaultMetrics.rpe || false),
+                    custom_metric: config.custom_metric || defaultMetrics.custom_metric || null
                 });
             }
 

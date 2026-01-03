@@ -441,6 +441,46 @@ class WorkoutService {
 
 
 
+
+
+    /**
+     * Get the most recent log for a specific exercise and user.
+     * Used for "Smart Chips" to suggest weights/reps.
+     */
+    async getLastLog(exerciseId: string, userId: string): Promise<{ weight: number, reps: number } | null> {
+        try {
+            const { data, error } = await supabase
+                .from('workout_logs')
+                .select(`
+                    weight_kg,
+                    reps,
+                    created_at,
+                    workout_sessions!inner(user_id)
+                `)
+                .eq('workout_sessions.user_id', userId)
+                .eq('exercise_id', exerciseId)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single();
+
+            if (error) {
+                // It's normal to have no history
+                if (error.code !== 'PGRST116') {
+                    console.error('Error fetching last log:', error);
+                }
+                return null;
+            }
+
+            return {
+                weight: data.weight_kg,
+                reps: data.reps
+            };
+        } catch (err) {
+            console.error('Exception fetching last log:', err);
+            return null;
+        }
+    }
+
 }
 
 export const workoutService = new WorkoutService();

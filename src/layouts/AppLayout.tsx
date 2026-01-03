@@ -78,12 +78,14 @@ export const AppLayout = () => {
                             {/* Actions Area */}
                             <div className="flex items-center gap-3">
                                 {/* HEADER ACTIONS: MAP & RANKING (Moved from Bottom) */}
-                                <Link to="/map" className="flex w-10 h-10 rounded-full bg-neutral-900 border border-neutral-800 items-center justify-center text-neutral-400 hover:text-gym-primary hover:border-gym-primary/50 transition-all hover:shadow-[0_0_15px_rgba(234,179,8,0.15)] group">
-                                    <MapPin size={20} className="group-hover:scale-110 transition-transform" />
+                                <Link to="/map" className="flex flex-col w-14 h-14 rounded-full bg-neutral-900 border border-neutral-800 items-center justify-center text-neutral-400 hover:text-gym-primary hover:border-gym-primary/50 transition-all hover:shadow-[0_0_15px_rgba(234,179,8,0.15)] group gap-0.5">
+                                    <MapPin size={18} className="group-hover:scale-110 transition-transform" />
+                                    <span className="text-[9px] font-bold uppercase leading-none">Mapa</span>
                                 </Link>
 
-                                <Link to="/ranking" className="flex w-10 h-10 rounded-full bg-neutral-900 border border-neutral-800 items-center justify-center text-neutral-400 hover:text-yellow-400 hover:border-yellow-400/50 transition-all hover:shadow-[0_0_15px_rgba(250,204,21,0.15)] group">
-                                    <Trophy size={20} className="group-hover:scale-110 transition-transform" />
+                                <Link to="/ranking" className="flex flex-col w-14 h-14 rounded-full bg-neutral-900 border border-neutral-800 items-center justify-center text-neutral-400 hover:text-yellow-400 hover:border-yellow-400/50 transition-all hover:shadow-[0_0_15px_rgba(250,204,21,0.15)] group gap-0.5">
+                                    <Trophy size={18} className="group-hover:scale-110 transition-transform" />
+                                    <span className="text-[9px] font-bold uppercase leading-none">Rank</span>
                                 </Link>
 
                                 {user && <NotificationBell />}

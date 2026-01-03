@@ -12,7 +12,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ onUploadClick }) => {
     const isActive = (path: string) => location.pathname === path;
 
     return (
-        <div className="md:hidden w-full bg-black/95 backdrop-blur-3xl border-t border-white/10 pb-safe-area-inset-bottom shrink-0 relative z-50">
+        <div className="md:hidden w-full bg-black/95 backdrop-blur-3xl border-t border-white/10 pb-[env(safe-area-inset-bottom)] shrink-0 relative z-50">
             <div className="flex items-center justify-around h-16 px-2">
                 {/* 1. INICIO */}
                 <Link to="/" className="flex flex-col items-center justify-center gap-0.5 w-14 h-full">

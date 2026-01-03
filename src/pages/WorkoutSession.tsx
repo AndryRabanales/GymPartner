@@ -6,6 +6,16 @@ import { equipmentService, EQUIPMENT_CATEGORIES } from '../services/GymEquipment
 import { userService } from '../services/UserService';
 import { workoutService } from '../services/WorkoutService';
 import { WorkoutCarousel } from '../components/workout/WorkoutCarousel';
+import { SmartNumpad } from '../components/ui/SmartNumpad';
+
+interface NumpadTarget {
+    exerciseIndex: number;
+    setIndex: number;
+    field: string; // 'weight' | 'reps' | ...
+    value: string | number;
+    label: string;
+    suggestion?: number;
+}
 // BattleTimer removed
 import { Plus, Save, Swords, Trash2, Flame, Loader, Check, ArrowLeft, MoreVertical, X, RotateCcw } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -52,6 +62,33 @@ export const WorkoutSession = () => {
     const [showAddModal, setShowAddModal] = useState(false);
     const [resolvedGymId, setResolvedGymId] = useState<string | null>(null);
     const [showExitMenu, setShowExitMenu] = useState(false);
+
+    // Numpad State
+    const [showNumpad, setShowNumpad] = useState(false);
+    const [numpadTarget, setNumpadTarget] = useState<NumpadTarget | null>(null);
+
+    const handleNumpadOpen = (exIndex: number, sIndex: number, field: string, currentValue: number, label: string) => {
+        // Find last valid value for suggestion (Smart Chip)
+        // For now simple logic: check previous set or 0
+        let suggestion = 0;
+        if (sIndex > 0) {
+            // @ts-ignore
+            suggestion = activeExercises[exIndex].sets[sIndex - 1][field] || 0;
+        } else {
+            // Check history? Not implemented yet efficiently here.
+            suggestion = 0;
+        }
+
+        setNumpadTarget({
+            exerciseIndex: exIndex,
+            setIndex: sIndex,
+            field,
+            value: currentValue || '',
+            label,
+            suggestion
+        });
+        setShowNumpad(true);
+    };
 
     const [userSettings, setUserSettings] = useState<CustomSettings>({ categories: [], metrics: [] });
 
@@ -778,11 +815,12 @@ export const WorkoutSession = () => {
                                                         {exercise.metrics.weight && (
                                                             <div className="flex-1 min-w-[60px]">
                                                                 <input
-                                                                    type="number"
-                                                                    inputMode="decimal"
+                                                                    type="text"
+                                                                    readOnly
+                                                                    inputMode="none"
                                                                     value={set.weight === 0 ? '' : set.weight}
-                                                                    onChange={(e) => updateSet(mapIndex, setIndex, 'weight', e.target.value)}
-                                                                    className={`w-full bg-neutral-800 text-center font-black text-xl rounded-lg py-3 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${isCompleted ? 'text-neutral-500' : 'text-white'}`}
+                                                                    onClick={() => handleNumpadOpen(mapIndex, setIndex, 'weight', set.weight, 'PESO (KG)')}
+                                                                    className={`w-full bg-neutral-800 text-center font-black text-xl rounded-lg py-3 focus:ring-2 focus:ring-gym-primary outline-none transition-all cursor-pointer select-none caret-transparent ${isCompleted ? 'text-neutral-500' : 'text-white'}`}
                                                                     placeholder="0"
                                                                 />
                                                             </div>
@@ -790,11 +828,12 @@ export const WorkoutSession = () => {
                                                         {exercise.metrics.reps && (
                                                             <div className="flex-1 min-w-[60px]">
                                                                 <input
-                                                                    type="number"
-                                                                    inputMode="numeric"
+                                                                    type="text"
+                                                                    readOnly
+                                                                    inputMode="none"
                                                                     value={set.reps === 0 ? '' : set.reps}
-                                                                    onChange={(e) => updateSet(mapIndex, setIndex, 'reps', e.target.value)}
-                                                                    className={`w-full bg-neutral-800 text-center font-black text-xl rounded-lg py-3 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${isCompleted ? 'text-neutral-500' : 'text-white'}`}
+                                                                    onClick={() => handleNumpadOpen(mapIndex, setIndex, 'reps', set.reps, 'REPETICIONES')}
+                                                                    className={`w-full bg-neutral-800 text-center font-black text-xl rounded-lg py-3 focus:ring-2 focus:ring-gym-primary outline-none transition-all cursor-pointer select-none caret-transparent ${isCompleted ? 'text-neutral-500' : 'text-white'}`}
                                                                     placeholder="0"
                                                                 />
                                                             </div>
@@ -803,11 +842,12 @@ export const WorkoutSession = () => {
                                                         {exercise.metrics.time && (
                                                             <div className="flex-1 min-w-[60px]">
                                                                 <input
-                                                                    type="number"
-                                                                    inputMode="numeric"
+                                                                    type="text"
+                                                                    readOnly
+                                                                    inputMode="none"
                                                                     value={set.time || ''}
-                                                                    onChange={(e) => updateSet(mapIndex, setIndex, 'time', e.target.value)}
-                                                                    className="w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-3 text-white"
+                                                                    onClick={() => handleNumpadOpen(mapIndex, setIndex, 'time', set.time || 0, 'TIEMPO (S)')}
+                                                                    className="w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-3 text-white cursor-pointer select-none caret-transparent"
                                                                     placeholder="s"
                                                                 />
                                                             </div>
@@ -815,23 +855,25 @@ export const WorkoutSession = () => {
                                                         {exercise.metrics.distance && (
                                                             <div className="flex-1 min-w-[60px]">
                                                                 <input
-                                                                    type="number"
-                                                                    inputMode="decimal"
-                                                                    value={set.distance || ''}
-                                                                    onChange={(e) => updateSet(mapIndex, setIndex, 'distance', e.target.value)}
-                                                                    className="w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-3 text-white"
-                                                                    placeholder="m"
+                                                                    type="text"
+                                                                    readOnly
+                                                                    inputMode="none"
+                                                                    value={set.distance === 0 ? '' : set.distance}
+                                                                    onClick={() => handleNumpadOpen(mapIndex, setIndex, 'distance', set.distance || 0, 'DISTANCIA (M)')}
+                                                                    className="w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-3 text-white cursor-pointer select-none caret-transparent"
+                                                                    placeholder="0"
                                                                 />
                                                             </div>
                                                         )}
                                                         {exercise.metrics.rpe && (
                                                             <div className="flex-1 min-w-[40px]">
                                                                 <input
-                                                                    type="number"
-                                                                    inputMode="numeric"
+                                                                    type="text"
+                                                                    readOnly
+                                                                    inputMode="none"
                                                                     value={set.rpe || ''}
-                                                                    onChange={(e) => updateSet(mapIndex, setIndex, 'rpe', e.target.value)}
-                                                                    className="w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-3 text-white"
+                                                                    onClick={() => handleNumpadOpen(mapIndex, setIndex, 'rpe', set.rpe || 0, 'RPE (1-10)')}
+                                                                    className="w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-3 text-white cursor-pointer select-none caret-transparent"
                                                                     placeholder="-"
                                                                 />
                                                             </div>
@@ -843,10 +885,12 @@ export const WorkoutSession = () => {
                                                             return (
                                                                 <div key={key} className="flex-1 min-w-[60px]">
                                                                     <input
-                                                                        type="number"
+                                                                        type="text"
+                                                                        readOnly
+                                                                        inputMode="none"
                                                                         value={set.custom?.[key] || ''}
-                                                                        onChange={(e) => updateSet(mapIndex, setIndex, key, e.target.value, true)}
-                                                                        className="w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-3 text-white"
+                                                                        onClick={() => handleNumpadOpen(mapIndex, setIndex, key, set.custom?.[key] || 0, key.toUpperCase())}
+                                                                        className="w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-3 text-white cursor-pointer select-none caret-transparent"
                                                                     />
                                                                 </div>
                                                             )
@@ -983,6 +1027,58 @@ export const WorkoutSession = () => {
                     </div>
                 )
             }
+
+            {showNumpad && numpadTarget && (
+                <SmartNumpad
+                    isOpen={showNumpad}
+                    onClose={() => { setShowNumpad(false); setNumpadTarget(null); }}
+                    onSubmit={() => { setShowNumpad(false); setNumpadTarget(null); }}
+                    onInput={(key) => {
+                        const { exerciseIndex, setIndex, field, value: currentStr } = numpadTarget;
+                        const isCustom = !['weight', 'reps', 'time', 'distance', 'rpe'].includes(field);
+
+                        let newValStr = String(currentStr);
+
+                        if (key === '+2.5') {
+                            newValStr = (parseFloat(newValStr || '0') + 2.5).toString();
+                        } else if (key === '+1.25') {
+                            newValStr = (parseFloat(newValStr || '0') + 1.25).toString();
+                        } else if (typeof key === 'number') {
+                            newValStr = (newValStr === '0' && key !== 0) ? String(key) : newValStr + key;
+                            if (newValStr === '00') newValStr = '0'; // Prevent leading zeros
+                        } else if (key === '.') {
+                            if (!newValStr.includes('.')) {
+                                newValStr = (newValStr || '0') + '.';
+                            }
+                        } else {
+                            // Fallback for direct replacement if any
+                            newValStr = String(key);
+                        }
+
+                        // 1. Update Buffer (Display)
+                        setNumpadTarget(prev => prev ? ({ ...prev, value: newValStr }) : null);
+
+                        // 2. Update Persisted State (Approximate)
+                        updateSet(exerciseIndex, setIndex, field, newValStr, isCustom);
+                    }}
+                    onDelete={() => {
+                        const { exerciseIndex, setIndex, field, value: currentStr } = numpadTarget;
+                        const isCustom = !['weight', 'reps', 'time', 'distance', 'rpe'].includes(field);
+
+                        let newValStr = String(currentStr).slice(0, -1);
+                        if (newValStr === '') newValStr = '0';
+
+                        // 1. Update Buffer
+                        setNumpadTarget(prev => prev ? ({ ...prev, value: newValStr }) : null);
+
+                        // 2. Update Persisted State
+                        updateSet(exerciseIndex, setIndex, field, newValStr, isCustom);
+                    }}
+                    value={numpadTarget.value}
+                    label={numpadTarget.label}
+                    suggestion={numpadTarget.suggestion}
+                />
+            )}
 
         </div >
     )
