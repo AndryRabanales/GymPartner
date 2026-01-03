@@ -410,11 +410,11 @@ class WorkoutService {
             order_index: idx,
             track_weight: ex.track_weight !== undefined ? ex.track_weight : true,
             track_reps: ex.track_reps !== undefined ? ex.track_reps : true,
-            track_time: ex.track_time || false,
-            track_pr: ex.track_pr || false,
-            track_distance: ex.track_distance || false,
-            track_rpe: ex.track_rpe || false,
-            custom_metric: ex.custom_metric || null,
+            track_time: ex.track_time !== undefined ? ex.track_time : false,
+            track_pr: ex.track_pr !== undefined ? ex.track_pr : false,
+            track_distance: ex.track_distance !== undefined ? ex.track_distance : false,
+            track_rpe: ex.track_rpe !== undefined ? ex.track_rpe : false,
+            custom_metric: ex.custom_metric !== undefined ? ex.custom_metric : null,
             // Add other fields when DB supports them fully
             // target_sets: ex.target_sets,
         }));

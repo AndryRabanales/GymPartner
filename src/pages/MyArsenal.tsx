@@ -928,7 +928,7 @@ export const MyArsenal = () => {
                     track_pr: config.track_pr !== undefined ? config.track_pr : (defaultMetrics.track_pr ?? false),
                     track_distance: config.track_distance !== undefined ? config.track_distance : (defaultMetrics.distance ?? false),
                     track_rpe: config.track_rpe !== undefined ? config.track_rpe : (defaultMetrics.rpe ?? false),
-                    custom_metric: config.custom_metric || defaultMetrics.custom_metric || null
+                    custom_metric: config.custom_metric !== undefined ? config.custom_metric : (defaultMetrics.custom_metric ?? null)
                 });
             }
 
