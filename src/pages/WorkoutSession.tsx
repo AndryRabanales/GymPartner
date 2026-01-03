@@ -801,103 +801,111 @@ export const WorkoutSession = () => {
                                                 return (
                                                     <div
                                                         key={set.id}
-                                                        className={`flex gap-1 p-2 rounded-xl transition-all duration-300 items-center ${isCompleted
+                                                        className={`flex flex-wrap gap-2 p-3 rounded-xl transition-all duration-300 items-center ${isCompleted
                                                             ? 'bg-neutral-900/80 border border-green-500/20'
                                                             : 'bg-black/20 border border-transparent'
                                                             }`}
                                                     >
                                                         {/* Set Number */}
-                                                        <div className="w-8 flex justify-center shrink-0">
+                                                        <div className="w-8 flex justify-center shrink-0 self-center">
                                                             <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${isCompleted ? 'bg-green-500/20 text-green-500' : 'bg-neutral-800 text-neutral-400'
                                                                 }`}>
                                                                 {setIndex + 1}
                                                             </div>
                                                         </div>
 
-                                                        {/* Inputs - All larger for mobile */}
-                                                        {exercise.metrics.weight && (
-                                                            <div className="flex-1 min-w-[60px]">
-                                                                <input
-                                                                    type="text"
-                                                                    readOnly
-                                                                    inputMode="none"
-                                                                    value={set.weight === 0 ? '' : set.weight}
-                                                                    onClick={() => handleNumpadOpen(mapIndex, setIndex, 'weight', set.weight, 'PESO (KG)')}
-                                                                    className={`w-full bg-neutral-800 text-center font-black text-xl rounded-lg py-3 focus:ring-2 focus:ring-gym-primary outline-none transition-all cursor-pointer select-none caret-transparent ${isCompleted ? 'text-neutral-500' : 'text-white'}`}
-                                                                    placeholder="0"
-                                                                />
-                                                            </div>
-                                                        )}
-                                                        {exercise.metrics.reps && (
-                                                            <div className="flex-1 min-w-[60px]">
-                                                                <input
-                                                                    type="text"
-                                                                    readOnly
-                                                                    inputMode="none"
-                                                                    value={set.reps === 0 ? '' : set.reps}
-                                                                    onClick={() => handleNumpadOpen(mapIndex, setIndex, 'reps', set.reps, 'REPETICIONES')}
-                                                                    className={`w-full bg-neutral-800 text-center font-black text-xl rounded-lg py-3 focus:ring-2 focus:ring-gym-primary outline-none transition-all cursor-pointer select-none caret-transparent ${isCompleted ? 'text-neutral-500' : 'text-white'}`}
-                                                                    placeholder="0"
-                                                                />
-                                                            </div>
-                                                        )}
-                                                        {/* Add other inputs similarly larger... keeping simple for brevity but logically should match */}
-                                                        {exercise.metrics.time && (
-                                                            <div className="flex-1 min-w-[60px]">
-                                                                <input
-                                                                    type="text"
-                                                                    readOnly
-                                                                    inputMode="none"
-                                                                    value={set.time || ''}
-                                                                    onClick={() => handleNumpadOpen(mapIndex, setIndex, 'time', set.time || 0, 'TIEMPO (S)')}
-                                                                    className="w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-3 text-white cursor-pointer select-none caret-transparent"
-                                                                    placeholder="s"
-                                                                />
-                                                            </div>
-                                                        )}
-                                                        {exercise.metrics.distance && (
-                                                            <div className="flex-1 min-w-[60px]">
-                                                                <input
-                                                                    type="text"
-                                                                    readOnly
-                                                                    inputMode="none"
-                                                                    value={set.distance === 0 ? '' : set.distance}
-                                                                    onClick={() => handleNumpadOpen(mapIndex, setIndex, 'distance', set.distance || 0, 'DISTANCIA (M)')}
-                                                                    className="w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-3 text-white cursor-pointer select-none caret-transparent"
-                                                                    placeholder="0"
-                                                                />
-                                                            </div>
-                                                        )}
-                                                        {exercise.metrics.rpe && (
-                                                            <div className="flex-1 min-w-[40px]">
-                                                                <input
-                                                                    type="text"
-                                                                    readOnly
-                                                                    inputMode="none"
-                                                                    value={set.rpe || ''}
-                                                                    onClick={() => handleNumpadOpen(mapIndex, setIndex, 'rpe', set.rpe || 0, 'RPE (1-10)')}
-                                                                    className="w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-3 text-white cursor-pointer select-none caret-transparent"
-                                                                    placeholder="-"
-                                                                />
-                                                            </div>
-                                                        )}
-                                                        {/* Custom Metrics */}
-                                                        {Object.keys(exercise.metrics).map(key => {
-                                                            if (['weight', 'reps', 'time', 'distance', 'rpe'].includes(key)) return null;
-                                                            if (!exercise.metrics[key as keyof typeof exercise.metrics]) return null;
-                                                            return (
-                                                                <div key={key} className="flex-1 min-w-[60px]">
+                                                        {/* Inputs Container - Wraps on small screens */}
+                                                        <div className="flex-1 flex flex-wrap gap-2 items-center min-w-0">
+
+                                                            {exercise.metrics.weight && (
+                                                                <div className="flex-1 min-w-[80px] max-w-[120px]">
+                                                                    <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1">PESO</label>
                                                                     <input
                                                                         type="text"
                                                                         readOnly
                                                                         inputMode="none"
-                                                                        value={set.custom?.[key] || ''}
-                                                                        onClick={() => handleNumpadOpen(mapIndex, setIndex, key, set.custom?.[key] || 0, key.toUpperCase())}
-                                                                        className="w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-3 text-white cursor-pointer select-none caret-transparent"
+                                                                        value={set.weight === 0 ? '' : set.weight}
+                                                                        onClick={() => handleNumpadOpen(mapIndex, setIndex, 'weight', set.weight, 'PESO (KG)')}
+                                                                        className={`w-full bg-neutral-800 text-center font-black text-xl rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all cursor-pointer select-none caret-transparent ${isCompleted ? 'text-neutral-500' : 'text-white'}`}
+                                                                        placeholder="0"
                                                                     />
                                                                 </div>
-                                                            )
-                                                        })}
+                                                            )}
+                                                            {exercise.metrics.reps && (
+                                                                <div className="flex-1 min-w-[80px] max-w-[120px]">
+                                                                    <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1">REPS</label>
+                                                                    <input
+                                                                        type="text"
+                                                                        readOnly
+                                                                        inputMode="none"
+                                                                        value={set.reps === 0 ? '' : set.reps}
+                                                                        onClick={() => handleNumpadOpen(mapIndex, setIndex, 'reps', set.reps, 'REPETICIONES')}
+                                                                        className={`w-full bg-neutral-800 text-center font-black text-xl rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all cursor-pointer select-none caret-transparent ${isCompleted ? 'text-neutral-500' : 'text-white'}`}
+                                                                        placeholder="0"
+                                                                    />
+                                                                </div>
+                                                            )}
+                                                            {exercise.metrics.time && (
+                                                                <div className="flex-1 min-w-[80px] max-w-[120px]">
+                                                                    <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1">TIEMPO (s)</label>
+                                                                    <input
+                                                                        type="text"
+                                                                        readOnly
+                                                                        inputMode="none"
+                                                                        value={set.time || ''}
+                                                                        onClick={() => handleNumpadOpen(mapIndex, setIndex, 'time', set.time || 0, 'TIEMPO (S)')}
+                                                                        className="w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white cursor-pointer select-none caret-transparent placeholder-white/20"
+                                                                        placeholder="0s"
+                                                                    />
+                                                                </div>
+                                                            )}
+                                                            {exercise.metrics.distance && (
+                                                                <div className="flex-1 min-w-[80px] max-w-[120px]">
+                                                                    <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1">DIST (m)</label>
+                                                                    <input
+                                                                        type="text"
+                                                                        readOnly
+                                                                        inputMode="none"
+                                                                        value={set.distance === 0 ? '' : set.distance}
+                                                                        onClick={() => handleNumpadOpen(mapIndex, setIndex, 'distance', set.distance || 0, 'DISTANCIA (M)')}
+                                                                        className="w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white cursor-pointer select-none caret-transparent placeholder-white/20"
+                                                                        placeholder="0m"
+                                                                    />
+                                                                </div>
+                                                            )}
+                                                            {exercise.metrics.rpe && (
+                                                                <div className="flex-1 min-w-[60px] max-w-[80px]">
+                                                                    <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1">RPE</label>
+                                                                    <input
+                                                                        type="text"
+                                                                        readOnly
+                                                                        inputMode="none"
+                                                                        value={set.rpe || ''}
+                                                                        onClick={() => handleNumpadOpen(mapIndex, setIndex, 'rpe', set.rpe || 0, 'RPE (1-10)')}
+                                                                        className="w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white cursor-pointer select-none caret-transparent placeholder-white/20"
+                                                                        placeholder="-"
+                                                                    />
+                                                                </div>
+                                                            )}
+                                                            {/* Custom Metrics inputs */}
+                                                            {Object.keys(exercise.metrics).map(key => {
+                                                                if (['weight', 'reps', 'time', 'distance', 'rpe'].includes(key)) return null;
+                                                                if (!exercise.metrics[key as keyof typeof exercise.metrics]) return null;
+                                                                return (
+                                                                    <div key={key} className="flex-1 min-w-[80px]">
+                                                                        <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1 uppercase truncate max-w-[80px] mx-auto">{key}</label>
+                                                                        <input
+                                                                            type="text"
+                                                                            readOnly
+                                                                            inputMode="none"
+                                                                            value={set.custom?.[key] || ''}
+                                                                            onClick={() => handleNumpadOpen(mapIndex, setIndex, key, set.custom?.[key] || 0, key.toUpperCase())}
+                                                                            className="w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white cursor-pointer select-none caret-transparent"
+                                                                        />
+                                                                    </div>
+                                                                )
+                                                            })}
+                                                        </div>
                                                     </div>
                                                 );
                                             })}
