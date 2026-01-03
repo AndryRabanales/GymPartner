@@ -227,6 +227,7 @@ class WorkoutService {
                 id,
                 routine_id,
                 exercise_id,
+                name,
                 order_index,
                 track_weight,
                 track_reps,
@@ -284,7 +285,7 @@ class WorkoutService {
             // Attach exercise information
             const myExercises = myExercisesRaw.map(e => ({
                 ...e,
-                equipment: exercisesMap.get(e.exercise_id) || { name: 'Ejercicio Desconocido' } // Better fallback
+                equipment: exercisesMap.get(e.exercise_id) || { name: e.name || 'Ejercicio Desconocido' } // Better fallback
             }));
 
             return {
