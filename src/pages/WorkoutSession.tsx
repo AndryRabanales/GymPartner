@@ -42,6 +42,7 @@ interface WorkoutExercise {
         time: boolean;
         distance: boolean;
         rpe: boolean;
+        [key: string]: boolean; // Allow custom metrics (cadencia, altura, watts, etc.)
     };
     sets: WorkoutSet[];
     category?: string; // SNAPSHOT: For history persistence
@@ -300,6 +301,7 @@ export const WorkoutSession = () => {
                     }
 
                     console.log(`✅ FINAL METRICS FOR ${item.name}:`, metrics);
+                    console.log(`📊 Custom Metrics Count: ${Object.keys(metrics).filter(k => !['weight', 'reps', 'time', 'distance', 'rpe'].includes(k)).length}`);
 
                     // Initialize custom metrics
                     const customMetrics: Record<string, number> = {};
@@ -309,8 +311,10 @@ export const WorkoutSession = () => {
                     Object.keys(metricsObj).forEach(mid => {
                         if (!['weight', 'reps', 'time', 'distance', 'rpe'].includes(mid) && metricsObj[mid]) {
                             customMetrics[mid] = 0;
+                            console.log(`🎯 Initialized custom metric "${mid}" in set.custom object`);
                         }
                     });
+
 
                     exercisesToAdd.push({
                         id: Math.random().toString(),
@@ -351,7 +355,10 @@ export const WorkoutSession = () => {
                     if (detail.custom_metric) {
                         // @ts-ignore
                         ghostMetrics[detail.custom_metric] = true;
+                        console.log(`👻 Added Custom Metric to Ghost Exercise: ${detail.custom_metric}`);
                     }
+
+                    console.log(`👻 FINAL GHOST METRICS FOR ${ghostName}:`, ghostMetrics);
 
                     // Initialize custom metrics
                     const customMetrics: Record<string, number> = {};
@@ -361,6 +368,7 @@ export const WorkoutSession = () => {
                     Object.keys(metricsObj).forEach(mid => {
                         if (!['weight', 'reps', 'time', 'distance', 'rpe'].includes(mid) && metricsObj[mid]) {
                             customMetrics[mid] = 0;
+                            console.log(`👻 Initialized ghost custom metric "${mid}"`);
                         }
                     });
 
