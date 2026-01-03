@@ -224,7 +224,21 @@ export const WorkoutSession = () => {
 
                 if (item) {
                     // Combine detail override (if any) with item metrics
-                    const metrics = item.metrics || defaultMetrics;
+                    const baseMetrics = item.metrics || defaultMetrics;
+                    const metrics = {
+                        ...baseMetrics,
+                        weight: detail.track_weight !== undefined ? detail.track_weight : baseMetrics.weight,
+                        reps: detail.track_reps !== undefined ? detail.track_reps : baseMetrics.reps,
+                        time: detail.track_time !== undefined ? detail.track_time : baseMetrics.time,
+                        distance: detail.track_distance !== undefined ? detail.track_distance : baseMetrics.distance,
+                        rpe: detail.track_rpe !== undefined ? detail.track_rpe : baseMetrics.rpe,
+                    };
+
+                    // Add custom metric from routine if exists
+                    if (detail.custom_metric) {
+                        // @ts-ignore
+                        metrics[detail.custom_metric] = true;
+                    }
 
                     // Initialize custom metrics
                     const customMetrics: Record<string, number> = {};
