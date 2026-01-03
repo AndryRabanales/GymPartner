@@ -715,6 +715,9 @@ export const WorkoutSession = () => {
                                 >
                                     {showExitMenu ? <X size={20} /> : <MoreVertical size={20} />}
                                 </button>
+                                <span className="text-[10px] text-neutral-500 font-bold uppercase leading-tight max-w-[80px]">
+                                    Cancelar / Reiniciar
+                                </span>
 
                                 {!showExitMenu && (
                                     <div className="flex items-center gap-2">
