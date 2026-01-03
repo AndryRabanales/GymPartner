@@ -271,11 +271,11 @@ export const WorkoutSession = () => {
                         equipment_metrics: detail.equipment?.metrics
                     });
 
-                    // Combine detail override (if any) with item metrics
+                    // CRITICAL FIX: equipment.metrics from DB should have HIGHEST priority
                     const baseMetrics = {
-                        ...(item.metrics || {}),
-                        ...(detail.equipment?.metrics || {}), // Merge from DB detail too
-                        ...defaultMetrics // Fallback
+                        ...defaultMetrics, // Start with defaults
+                        ...(item.metrics || {}), // Local inventory override
+                        ...(detail.equipment?.metrics || {}), // DB JSONB has HIGHEST priority (custom metrics here!)
                     };
 
                     console.log(`🔧 Base Metrics After Merge:`, baseMetrics);
