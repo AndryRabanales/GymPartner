@@ -325,6 +325,21 @@ class UserService {
                 enrichedExercises = routeExs!.map(re => {
                     const eq = equipmentMap.get(re.exercise_id);
 
+                    // CRITICAL DEBUG: Log what metrics we're getting from DB
+                    console.log(`🔍 [UserService] Loading exercise "${re.name}":`, {
+                        exercise_id: re.exercise_id,
+                        has_equipment: !!eq,
+                        equipment_metrics: eq?.metrics,
+                        routine_track_flags: {
+                            track_weight: re.track_weight,
+                            track_reps: re.track_reps,
+                            track_time: re.track_time,
+                            track_distance: re.track_distance,
+                            track_rpe: re.track_rpe
+                        },
+                        custom_metric: re.custom_metric
+                    });
+
                     // Logic to recover Icon for Old Data (Hydration from Seeds)
                     let finalIcon = eq?.icon;
                     if (!finalIcon && (eq?.name || re.name)) {
