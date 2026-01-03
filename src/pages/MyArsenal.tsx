@@ -921,12 +921,13 @@ export const MyArsenal = () => {
                     id: finalId, // The REAL DB UUID
                     name: finalName,
                     icon: existingItem?.icon,
+                    // Map from config OR from equipment metrics (time -> track_time)
                     track_weight: config.track_weight !== undefined ? config.track_weight : (defaultMetrics.weight ?? true),
                     track_reps: config.track_reps !== undefined ? config.track_reps : (defaultMetrics.reps ?? true),
-                    track_time: config.track_time !== undefined ? config.track_time : (defaultMetrics.time || false),
-                    track_pr: config.track_pr !== undefined ? config.track_pr : (defaultMetrics.track_pr || false),
-                    track_distance: config.track_distance !== undefined ? config.track_distance : (defaultMetrics.distance || false),
-                    track_rpe: config.track_rpe !== undefined ? config.track_rpe : (defaultMetrics.rpe || false),
+                    track_time: config.track_time !== undefined ? config.track_time : (defaultMetrics.time ?? false),
+                    track_pr: config.track_pr !== undefined ? config.track_pr : (defaultMetrics.track_pr ?? false),
+                    track_distance: config.track_distance !== undefined ? config.track_distance : (defaultMetrics.distance ?? false),
+                    track_rpe: config.track_rpe !== undefined ? config.track_rpe : (defaultMetrics.rpe ?? false),
                     custom_metric: config.custom_metric || defaultMetrics.custom_metric || null
                 });
             }
