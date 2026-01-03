@@ -280,14 +280,17 @@ export const WorkoutSession = () => {
 
                     console.log(`🔧 Base Metrics After Merge:`, baseMetrics);
 
+                    // Start with baseMetrics (includes ALL metrics from equipment.metrics)
                     const metrics = {
-                        ...baseMetrics,
-                        weight: detail.track_weight ?? baseMetrics.weight,
-                        reps: detail.track_reps ?? baseMetrics.reps,
-                        time: detail.track_time ?? baseMetrics.time,
-                        distance: detail.track_distance ?? baseMetrics.distance,
-                        rpe: detail.track_rpe ?? baseMetrics.rpe,
+                        ...baseMetrics, // Preserve ALL metrics including custom ones
                     };
+
+                    // Override ONLY the 5 standard metrics if routine has specific settings
+                    if (detail.track_weight !== undefined) metrics.weight = detail.track_weight;
+                    if (detail.track_reps !== undefined) metrics.reps = detail.track_reps;
+                    if (detail.track_time !== undefined) metrics.time = detail.track_time;
+                    if (detail.track_distance !== undefined) metrics.distance = detail.track_distance;
+                    if (detail.track_rpe !== undefined) metrics.rpe = detail.track_rpe;
 
                     // Add custom metric from routine if exists
                     if (detail.custom_metric) {
@@ -331,14 +334,18 @@ export const WorkoutSession = () => {
 
                     // FIX: Respect Routine Configuration even for Ghosts
                     const baseMetrics = detail.equipment?.metrics || defaultMetrics;
+
+                    // Start with baseMetrics (includes ALL metrics from equipment.metrics)
                     const ghostMetrics = {
-                        ...baseMetrics,
-                        weight: detail.track_weight ?? baseMetrics.weight,
-                        reps: detail.track_reps ?? baseMetrics.reps,
-                        time: detail.track_time ?? baseMetrics.time,
-                        distance: detail.track_distance ?? baseMetrics.distance,
-                        rpe: detail.track_rpe ?? baseMetrics.rpe,
+                        ...baseMetrics, // Preserve ALL metrics including custom ones
                     };
+
+                    // Override ONLY the 5 standard metrics if routine has specific settings
+                    if (detail.track_weight !== undefined) ghostMetrics.weight = detail.track_weight;
+                    if (detail.track_reps !== undefined) ghostMetrics.reps = detail.track_reps;
+                    if (detail.track_time !== undefined) ghostMetrics.time = detail.track_time;
+                    if (detail.track_distance !== undefined) ghostMetrics.distance = detail.track_distance;
+                    if (detail.track_rpe !== undefined) ghostMetrics.rpe = detail.track_rpe;
 
                     // Add custom metric from routine if exists
                     if (detail.custom_metric) {
