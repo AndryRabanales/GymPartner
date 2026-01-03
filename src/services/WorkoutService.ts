@@ -223,7 +223,21 @@ class WorkoutService {
         // 2. Fetch Exercises (Raw, No Joins to avoid PGRST200)
         const { data: exercisesData, error: exercisesError } = await supabase
             .from('routine_exercises')
-            .select('*')
+            .select(`
+                id,
+                routine_id,
+                exercise_id,
+                order_index,
+                track_weight,
+                track_reps,
+                track_time,
+                track_distance,
+                track_rpe,
+                track_pr,
+                custom_metric,
+                target_sets,
+                target_reps_text
+            `)
             .in('routine_id', routineIds);
 
         if (exercisesError) console.warn('Error fetching routine_exercises:', exercisesError);

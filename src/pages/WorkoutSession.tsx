@@ -778,22 +778,7 @@ export const WorkoutSession = () => {
 
                                     {/* Sets Container - Scrollable part */}
                                     <div className="flex-1 overflow-y-auto p-2 pb-20">
-                                        {/* Header Row */}
-                                        <div className="flex gap-1 text-[10px] uppercase font-bold text-neutral-500 px-2 mb-2 tracking-widest text-center items-center sticky top-0 bg-[#0a0a0a] z-10 py-2">
-                                            <div className="w-8">#</div>
-                                            {/* Standard Metrics */}
-                                            {exercise.metrics.weight && <div className="flex-1 min-w-[60px]">KG</div>}
-                                            {exercise.metrics.reps && <div className="flex-1 min-w-[60px]">Reps</div>}
-                                            {exercise.metrics.time && <div className="flex-1 min-w-[60px]">Time</div>}
-                                            {exercise.metrics.distance && <div className="flex-1 min-w-[60px]">Dist</div>}
-                                            {exercise.metrics.rpe && <div className="flex-1 min-w-[40px]">RPE</div>}
-                                            {/* Custom Metrics */}
-                                            {Object.keys(exercise.metrics).map(key => {
-                                                if (['weight', 'reps', 'time', 'distance', 'rpe'].includes(key)) return null;
-                                                if (!exercise.metrics[key as keyof typeof exercise.metrics]) return null;
-                                                return <div key={key} className="flex-1 min-w-[50px] truncate">{key}</div>;
-                                            })}
-                                        </div>
+                                        {/* Header Row REMOVED - Using individual input labels now */}
 
                                         <div className="space-y-2">
                                             {exercise.sets.map((set, setIndex) => {
