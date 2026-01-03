@@ -7,7 +7,7 @@ import { userService } from '../services/UserService';
 import { workoutService } from '../services/WorkoutService';
 import { WorkoutCarousel } from '../components/workout/WorkoutCarousel';
 // BattleTimer removed
-import { Plus, Save, Swords, Trash2, Flame, Loader, Check, ArrowLeft } from 'lucide-react';
+import { Plus, Save, Swords, Trash2, Flame, Loader, Check, ArrowLeft, MoreVertical, X, RotateCcw } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 interface WorkoutSet {
@@ -51,6 +51,7 @@ export const WorkoutSession = () => {
     const [routines, setRoutines] = useState<any[]>([]); // NEW: Local Routines
     const [showAddModal, setShowAddModal] = useState(false);
     const [resolvedGymId, setResolvedGymId] = useState<string | null>(null);
+    const [showExitMenu, setShowExitMenu] = useState(false);
 
     const [userSettings, setUserSettings] = useState<CustomSettings>({ categories: [], metrics: [] });
 
@@ -376,6 +377,59 @@ export const WorkoutSession = () => {
 
 
 
+
+    // NEW: Handle Cancel
+    const handleCancelSession = async () => {
+        if (!sessionId) {
+            navigate(-1);
+            return;
+        }
+        if (window.confirm("¿Seguro que quieres cancelar? Se perderá todo el progreso de esta sesión.")) {
+            setLoading(true);
+            await workoutService.deleteSession(sessionId);
+            setLoading(false);
+            navigate(-1);
+        }
+    };
+
+    // NEW: Handle Restart
+    const handleRestartSession = async () => {
+        if (!sessionId) return;
+        if (window.confirm("¿Reiniciar entrenamiento? Se borrarán todas las series de hoy.")) {
+            setLoading(true);
+            await workoutService.deleteSession(sessionId);
+
+            setSessionId(null);
+            setStartTime(null);
+            setElapsedTime("00:00");
+            setIsFinished(false);
+
+            setActiveExercises(prev => prev.map(ex => ({
+                ...ex,
+                sets: ex.sets.map(s => ({
+                    ...s,
+                    weight: 0,
+                    reps: 0,
+                    time: 0,
+                    distance: 0,
+                    rpe: 0,
+                    custom: {},
+                    completed: false
+                }))
+            })));
+
+            const { data: newSession } = await workoutService.startSession(user!.id, resolvedGymId || undefined);
+            if (newSession) {
+                setSessionId(newSession.id);
+                setStartTime(new Date());
+            }
+
+            setLoading(false);
+            setShowExitMenu(false);
+            setCurrentExerciseIndex(0);
+        }
+    };
+
     // Helper to resolve Exercise ID (Foreign Key for workout_logs)
     const resolveExerciseId = async (equipmentName: string): Promise<string | null> => {
         try {
@@ -601,17 +655,48 @@ export const WorkoutSession = () => {
                     <div className="h-[calc(100vh-140px)] flex flex-col"> {/* Fixed height for carousel */}
 
                         {/* BATTLE HEADER & TIMER */}
-                        <div className="flex items-center justify-between mb-2 px-4 shrink-0">
-                            <div className="flex items-center gap-2">
-                                <Swords className="text-gym-primary animate-pulse" size={20} />
-                                <h2 className="text-lg font-black italic uppercase tracking-tighter text-white">
-                                    {currentExerciseIndex + 1} / {activeExercises.length}
-                                </h2>
+                        <div className="flex items-center justify-between mb-2 px-4 shrink-0 relative">
+                            {/* Replaced Title with Menu Options */}
+                            <div className="flex items-center gap-4">
+                                <button
+                                    onClick={() => setShowExitMenu(!showExitMenu)}
+                                    className="bg-neutral-900 p-2 rounded-full border border-neutral-800 text-neutral-400 hover:text-white transition-colors"
+                                >
+                                    {showExitMenu ? <X size={20} /> : <MoreVertical size={20} />}
+                                </button>
+
+                                {!showExitMenu && (
+                                    <div className="flex items-center gap-2">
+                                        <h2 className="text-lg font-black italic uppercase tracking-tighter text-white">
+                                            {currentExerciseIndex + 1} / {activeExercises.length}
+                                        </h2>
+                                    </div>
+                                )}
                             </div>
+
+                            {/* Timer */}
                             <div className="bg-neutral-900 border border-neutral-800 px-4 py-2 rounded-full flex items-center gap-3 shadow-lg">
                                 <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
                                 <span className="font-mono font-bold text-xl text-white tracking-widest">{elapsedTime}</span>
                             </div>
+
+                            {/* OPTION MENU OVERLAY */}
+                            {showExitMenu && (
+                                <div className="absolute top-14 left-4 z-50 bg-neutral-900 border border-neutral-800 rounded-xl shadow-2xl p-2 w-48 flex flex-col gap-1 animate-in slide-in-from-top-2">
+                                    <button
+                                        onClick={handleRestartSession}
+                                        className="flex items-center gap-3 w-full p-3 text-left text-sm font-bold text-white hover:bg-neutral-800 rounded-lg transition-colors"
+                                    >
+                                        <RotateCcw size={16} /> Reiniciar
+                                    </button>
+                                    <button
+                                        onClick={handleCancelSession}
+                                        className="flex items-center gap-3 w-full p-3 text-left text-sm font-bold text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                                    >
+                                        <X size={16} /> Cancelar / Salir
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         <WorkoutCarousel

@@ -67,6 +67,24 @@ class WorkoutService {
         return { success: true };
     }
 
+    // Cancel/Delete a session (The "Retreat")
+    async deleteSession(sessionId: string): Promise<{ success: boolean; error?: any }> {
+        // 1. Delete logs first (optional if cascade is set, but safer)
+        await supabase.from('workout_logs').delete().eq('session_id', sessionId);
+
+        // 2. Delete session
+        const { error } = await supabase
+            .from('workout_sessions')
+            .delete()
+            .eq('id', sessionId);
+
+        if (error) {
+            console.error('Error deleting session:', error);
+            return { success: false, error };
+        }
+        return { success: true };
+    }
+
     // Log a single set (The "Hit")
     async logSet(setData: WorkoutSetData): Promise<{ data?: any; error?: any }> {
         // Validation / Clamping to avoid DB overflow (numeric(6,2) -> max 9999.99)
