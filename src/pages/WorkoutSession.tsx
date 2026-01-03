@@ -261,7 +261,14 @@ export const WorkoutSession = () => {
 
                 if (item) {
                     // Combine detail override (if any) with item metrics
-                    const baseMetrics = item.metrics || defaultMetrics;
+                    const baseMetrics = {
+                        ...(item.metrics || {}),
+                        ...(detail.equipment?.metrics || {}), // Merge from DB detail too
+                        ...defaultMetrics // Fallback
+                    };
+
+                    console.log(`🔧 Loading Metrics for ${item.name}:`, baseMetrics);
+
                     const metrics = {
                         ...baseMetrics,
                         weight: detail.track_weight !== undefined ? detail.track_weight : baseMetrics.weight,
@@ -275,6 +282,7 @@ export const WorkoutSession = () => {
                     if (detail.custom_metric) {
                         // @ts-ignore
                         metrics[detail.custom_metric] = true;
+                        console.log(`✨ Added Custom Routine Metric: ${detail.custom_metric}`);
                     }
 
                     // Initialize custom metrics
