@@ -856,9 +856,10 @@ export const WorkoutSession = () => {
                                                 <div className="pt-8 pb-4">
                                                     <button
                                                         onClick={handleFinish}
-                                                        className="w-full bg-gradient-to-r from-yellow-400 to-yellow-600 text-black font-black uppercase tracking-widest py-6 rounded-2xl shadow-[0_0_30px_rgba(250,204,21,0.4)] flex items-center justify-center gap-3 text-xl hover:scale-[1.02] active:scale-95 transition-all"
+                                                        className="w-full bg-gradient-to-br from-yellow-400 to-orange-500 text-black font-black uppercase tracking-[0.2em] py-5 rounded-xl shadow-[0_0_30px_rgba(250,204,21,0.5)] hover:shadow-[0_0_50px_rgba(250,204,21,0.7)] text-lg hover:-translate-y-1 active:scale-95 transition-all duration-300 relative overflow-hidden group border border-yellow-300/50"
                                                     >
-                                                        <Save size={24} strokeWidth={3} /> FINALIZAR ENTRENAMIENTO
+                                                        <span className="relative z-10">Finalizar Entrenamiento</span>
+                                                        <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 blur-md" />
                                                     </button>
                                                 </div>
                                             )}
