@@ -355,6 +355,31 @@ export const MyArsenal = () => {
                 });
             }
 
+            // [FIX] Update Routine Configs immediately so the logic persists!
+            // Map the boolean metrics to the table columns format
+            const customKeys = Object.keys(customMetrics).filter(k => !['weight', 'reps', 'time', 'distance', 'rpe', 'track_pr'].includes(k) && (customMetrics as any)[k]);
+            const foundCustomMetric = customKeys.length > 0 ? customKeys[0] : null;
+
+            setRoutineConfigs(prev => {
+                const next = new Map(prev);
+                next.set(newItem.id, {
+                    track_weight: customMetrics.weight ?? true,
+                    track_reps: customMetrics.reps ?? true,
+                    track_time: customMetrics.time ?? false,
+                    track_distance: customMetrics.distance ?? false,
+                    track_rpe: customMetrics.rpe ?? false,
+                    track_pr: (customMetrics as any).track_pr ?? false,
+                    custom_metric: foundCustomMetric
+                });
+                return next;
+            });
+
+            // If creating new, auto-select it?
+            // User usually expects "Create" to "Use".
+            if (!editingItem) {
+                toggleSelection(newItem.id);
+            }
+
             // Success - Close modal and reset form
             setAddingMode(false);
             setCustomMode(false);
