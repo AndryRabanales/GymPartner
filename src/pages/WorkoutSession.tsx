@@ -308,7 +308,33 @@ export const WorkoutSession = () => {
                     const ghostName = detail.equipment?.name || detail.name || 'Ejercicio Externo';
                     console.log(`👻 Creating Ghost Exercise: ${ghostName}`);
 
-                    const ghostMetrics = detail.equipment?.metrics || defaultMetrics;
+                    // FIX: Respect Routine Configuration even for Ghosts
+                    const baseMetrics = detail.equipment?.metrics || defaultMetrics;
+                    const ghostMetrics = {
+                        ...baseMetrics,
+                        weight: detail.track_weight !== undefined ? detail.track_weight : baseMetrics.weight,
+                        reps: detail.track_reps !== undefined ? detail.track_reps : baseMetrics.reps,
+                        time: detail.track_time !== undefined ? detail.track_time : baseMetrics.time,
+                        distance: detail.track_distance !== undefined ? detail.track_distance : baseMetrics.distance,
+                        rpe: detail.track_rpe !== undefined ? detail.track_rpe : baseMetrics.rpe,
+                    };
+
+                    // Add custom metric from routine if exists
+                    if (detail.custom_metric) {
+                        // @ts-ignore
+                        ghostMetrics[detail.custom_metric] = true;
+                    }
+
+                    // Initialize custom metrics
+                    const customMetrics: Record<string, number> = {};
+                    // @ts-ignore
+                    const metricsObj = ghostMetrics as any || {};
+
+                    Object.keys(metricsObj).forEach(mid => {
+                        if (!['weight', 'reps', 'time', 'distance', 'rpe'].includes(mid) && metricsObj[mid]) {
+                            customMetrics[mid] = 0;
+                        }
+                    });
 
                     exercisesToAdd.push({
                         id: Math.random().toString(),
@@ -319,7 +345,7 @@ export const WorkoutSession = () => {
                             id: Math.random().toString(),
                             weight: 0,
                             reps: 0,
-                            custom: {},
+                            custom: customMetrics,
                             completed: false
                         }],
                         category: detail.equipment?.target_muscle_group || 'General'
