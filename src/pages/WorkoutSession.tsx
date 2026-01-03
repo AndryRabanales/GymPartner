@@ -847,10 +847,10 @@ export const WorkoutSession = () => {
                                                         </div>
 
                                                         {/* Inputs Container - Wraps on small screens */}
-                                                        <div className="flex-1 flex flex-wrap gap-2 items-center min-w-0">
+                                                        <div className="flex-1 flex flex-wrap gap-2 items-start min-w-0">
 
                                                             {exercise.metrics.weight && (
-                                                                <div className="flex-1 min-w-[80px] max-w-[120px]">
+                                                                <div className="min-w-[75px] w-[75px]">
                                                                     <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1">PESO</label>
                                                                     <input
                                                                         type="text"
@@ -864,7 +864,7 @@ export const WorkoutSession = () => {
                                                                 </div>
                                                             )}
                                                             {exercise.metrics.reps && (
-                                                                <div className="flex-1 min-w-[80px] max-w-[120px]">
+                                                                <div className="min-w-[75px] w-[75px]">
                                                                     <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1">REPS</label>
                                                                     <input
                                                                         type="text"
@@ -878,7 +878,7 @@ export const WorkoutSession = () => {
                                                                 </div>
                                                             )}
                                                             {exercise.metrics.time && (
-                                                                <div className="flex-1 min-w-[80px] max-w-[120px]">
+                                                                <div className="min-w-[75px] w-[75px]">
                                                                     <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1">TIEMPO (s)</label>
                                                                     <input
                                                                         type="text"
@@ -892,7 +892,7 @@ export const WorkoutSession = () => {
                                                                 </div>
                                                             )}
                                                             {exercise.metrics.distance && (
-                                                                <div className="flex-1 min-w-[80px] max-w-[120px]">
+                                                                <div className="min-w-[75px] w-[75px]">
                                                                     <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1">DIST (m)</label>
                                                                     <input
                                                                         type="text"
@@ -906,7 +906,7 @@ export const WorkoutSession = () => {
                                                                 </div>
                                                             )}
                                                             {exercise.metrics.rpe && (
-                                                                <div className="flex-1 min-w-[60px] max-w-[80px]">
+                                                                <div className="min-w-[60px] w-[60px]">
                                                                     <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1">RPE</label>
                                                                     <input
                                                                         type="text"
@@ -924,8 +924,8 @@ export const WorkoutSession = () => {
                                                                 if (['weight', 'reps', 'time', 'distance', 'rpe'].includes(key)) return null;
                                                                 if (!exercise.metrics[key as keyof typeof exercise.metrics]) return null;
                                                                 return (
-                                                                    <div key={key} className="flex-1 min-w-[80px]">
-                                                                        <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1 uppercase truncate max-w-[80px] mx-auto">{key}</label>
+                                                                    <div key={key} className="min-w-[75px] w-[75px]">
+                                                                        <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1 uppercase truncate">{key}</label>
                                                                         <input
                                                                             type="text"
                                                                             readOnly
