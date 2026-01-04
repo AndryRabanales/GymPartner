@@ -11,6 +11,7 @@ interface InteractiveOverlayProps {
     onNext: () => void;
     onClose: () => void;
     placement?: 'top' | 'bottom' | 'left' | 'right';
+    disableNext?: boolean;
 }
 
 export const InteractiveOverlay = ({
@@ -21,7 +22,8 @@ export const InteractiveOverlay = ({
     totalSteps,
     onNext,
     onClose,
-    placement = 'bottom'
+    placement = 'bottom',
+    disableNext = false
 }: InteractiveOverlayProps) => {
     const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
     const observerRef = useRef<ResizeObserver | null>(null);
@@ -156,15 +158,17 @@ export const InteractiveOverlay = ({
                         {message}
                     </p>
 
-                    <div className="flex justify-end pt-2">
-                        <button
-                            onClick={onNext}
-                            className="bg-gym-primary text-black font-bold text-xs px-4 py-2 rounded-lg flex items-center gap-1 hover:bg-yellow-400 transition-colors"
-                        >
-                            <span>ENTENDIDO</span>
-                            <ChevronRight size={14} strokeWidth={3} />
-                        </button>
-                    </div>
+                    {!disableNext && (
+                        <div className="flex justify-end pt-2">
+                            <button
+                                onClick={onNext}
+                                className="bg-gym-primary text-black font-bold text-xs px-4 py-2 rounded-lg flex items-center gap-1 hover:bg-yellow-400 transition-colors"
+                            >
+                                <span>ENTENDIDO</span>
+                                <ChevronRight size={14} strokeWidth={3} />
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* Arrow Pointer */}

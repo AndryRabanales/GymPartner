@@ -1056,6 +1056,7 @@ export const MyArsenal = () => {
                                 onNext={() => setAddingMode(true)}
                                 onClose={() => setTutorialStep(0)}
                                 placement="right"
+                                disableNext={true}
                             />
                         )}
 

@@ -158,6 +158,7 @@ export const GymProfile = () => {
                         localStorage.removeItem('tutorial_step');
                     }}
                     placement="top"
+                    disableNext={true}
                 />
             )}
 
