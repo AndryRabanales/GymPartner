@@ -532,6 +532,12 @@ export const MyArsenal = () => {
             }
             return next;
         });
+
+        // TUTORIAL RELEASE: If in Step 4 and selecting an item, finish tutorial
+        if (tutorialStep === 4) {
+            setTutorialStep(0);
+            localStorage.setItem('tutorial_step', '0');
+        }
     };
 
     const handleEditRoutine = async (routine: any) => {
@@ -1274,7 +1280,10 @@ export const MyArsenal = () => {
                         step={3}
                         totalSteps={4}
                         placement="bottom"
-                        onClose={() => setTutorialStep(0)}
+                        onClose={() => {
+                            setTutorialStep(0);
+                            localStorage.setItem('tutorial_step', '0');
+                        }}
                         disableNext={true}
                     />
                 )}
@@ -1293,7 +1302,10 @@ export const MyArsenal = () => {
                             localStorage.setItem('tutorial_step', '0');
                         }}
                         nextLabel="¡Entendido!"
-                        onClose={() => setTutorialStep(0)}
+                        onClose={() => {
+                            setTutorialStep(0);
+                            localStorage.setItem('tutorial_step', '0');
+                        }}
                     />
                 )}
 
