@@ -33,7 +33,6 @@ export const InteractiveOverlay = ({
         let currentElement: HTMLElement | null = null;
         let originalZIndex = '';
         let originalPosition = '';
-        let originalTransition = '';
 
         const updateRect = () => {
             const element = document.getElementById(targetId);
