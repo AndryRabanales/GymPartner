@@ -8,10 +8,11 @@ interface InteractiveOverlayProps {
     message: string;
     step: number;
     totalSteps: number;
-    onNext: () => void;
+    onNext?: () => void;
     onClose: () => void;
     placement?: 'top' | 'bottom' | 'left' | 'right';
     disableNext?: boolean;
+    nextLabel?: string;
 }
 
 export const InteractiveOverlay = ({
@@ -23,7 +24,8 @@ export const InteractiveOverlay = ({
     onNext,
     onClose,
     placement = 'bottom',
-    disableNext = false
+    disableNext = false,
+    nextLabel = "ENTENDIDO"
 }: InteractiveOverlayProps) => {
     const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
     const observerRef = useRef<ResizeObserver | null>(null);
@@ -139,7 +141,7 @@ export const InteractiveOverlay = ({
                     {!disableNext && (
                         <div className="flex justify-end pt-2">
                             <button onClick={onNext} className="bg-gym-primary text-black font-bold text-xs px-4 py-2 rounded-lg flex items-center gap-1 hover:bg-yellow-400 transition-colors">
-                                <span>ENTENDIDO</span>
+                                <span>{nextLabel}</span>
                                 <ChevronRight size={14} strokeWidth={3} />
                             </button>
                         </div>
