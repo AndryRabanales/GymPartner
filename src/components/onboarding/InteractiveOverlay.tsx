@@ -12,6 +12,7 @@ interface InteractiveOverlayProps {
     onClose: () => void;
     placement?: 'top' | 'bottom' | 'left' | 'right';
     disableNext?: boolean;
+    onCenterClick?: () => void;
 }
 
 export const InteractiveOverlay = ({
@@ -23,45 +24,21 @@ export const InteractiveOverlay = ({
     onNext,
     onClose,
     placement = 'bottom',
-    disableNext = false
+    disableNext = false,
+    onCenterClick
 }: InteractiveOverlayProps) => {
     const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
     const observerRef = useRef<ResizeObserver | null>(null);
 
     // Find and track target element
     useEffect(() => {
-        let currentElement: HTMLElement | null = null;
-        let originalZIndex = '';
-        let originalPosition = '';
-
         const updateRect = () => {
             const element = document.getElementById(targetId);
             if (element) {
                 const rect = element.getBoundingClientRect();
                 setTargetRect(rect);
-
-                // ELEVATION STRATEGY: Verify/Apply styles continuously (in case of re-renders resetting styles)
-                // We keep it robust
-                if (element.style.zIndex !== '100001') {
-                    element.style.zIndex = '100001'; // Above overlay
-                    element.style.position = 'relative'; // Create stacking context
-                    // Optional: element.style.transition = 'none'; // Prevent weird transitions during elevation?
-                }
-                currentElement = element;
             }
         };
-
-        // Initial check + Setup
-        const element = document.getElementById(targetId);
-        if (element) {
-            originalZIndex = element.style.zIndex;
-            originalPosition = element.style.position;
-            // originalTransition = element.style.transition;
-
-            element.style.zIndex = '100001';
-            element.style.position = 'relative';
-            currentElement = element;
-        }
 
         updateRect();
 
@@ -80,12 +57,6 @@ export const InteractiveOverlay = ({
             window.removeEventListener('scroll', updateRect, true);
             window.removeEventListener('resize', updateRect);
             if (observerRef.current) observerRef.current.disconnect();
-
-            // CLEANUP STYLES
-            if (currentElement) {
-                currentElement.style.zIndex = originalZIndex;
-                currentElement.style.position = originalPosition;
-            }
         };
     }, [targetId]);
 
@@ -150,12 +121,16 @@ export const InteractiveOverlay = ({
 
             {/* PROXY CLICK LAYER - Guarantees clickability */}
             <div
-                className="absolute z-[115] cursor-pointer"
+                className="absolute z-[115] cursor-pointer pointer-events-auto"
                 style={{ top: top, left: left, width: width, height: height, borderRadius: 12 }}
                 onClick={(e) => {
                     e.stopPropagation();
-                    const el = document.getElementById(targetId);
-                    if (el) el.click();
+                    if (onCenterClick) {
+                        onCenterClick();
+                    } else {
+                        const el = document.getElementById(targetId);
+                        if (el) el.click();
+                    }
                 }}
             />
 
