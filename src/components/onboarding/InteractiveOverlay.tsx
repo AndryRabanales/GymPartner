@@ -99,6 +99,8 @@ export const InteractiveOverlay = ({
         // but user compliant was about Left edge overflow which implies Top/Bottom placement usually.
     }
 
+    const { top, left, width, height, bottom, right } = targetRect;
+
     return createPortal(
         <div className="fixed inset-0 z-[100] overflow-hidden pointer-events-none">
             {/* 4 BLOCKING DIVS */}
