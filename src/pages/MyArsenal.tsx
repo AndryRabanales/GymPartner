@@ -166,12 +166,12 @@ export const MyArsenal = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
 
-    // TUTORIAL STATE - Disabled for now to fix interactions
-    // const [tutorialStep, setTutorialStep] = useState(0);
-    // useEffect(() => {
-    //     const step = localStorage.getItem('tutorial_step');
-    //     if (step) setTutorialStep(parseInt(step));
-    // }, []);
+    // TUTORIAL STATE
+    const [tutorialStep, setTutorialStep] = useState(0);
+    useEffect(() => {
+        const step = localStorage.getItem('tutorial_step');
+        if (step) setTutorialStep(parseInt(step));
+    }, []);
 
     // Custom Exercise State
     const [customMode, setCustomMode] = useState(false);
