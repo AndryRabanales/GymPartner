@@ -1012,7 +1012,7 @@ export const MyArsenal = () => {
                             // GLOBAL: Create New Master
                             <button
                                 id="tut-new-routine-btn"
-                                onClick={() => setAddingMode(true)}
+                                onClick={handleCreateNew}
                                 className="bg-neutral-900 border border-neutral-800 hover:border-gym-primary/50 hover:bg-neutral-800 p-6 rounded-2xl flex flex-col items-center justify-center gap-4 group transition-all h-[200px]"
                             >
                                 <div className="w-16 h-16 rounded-full bg-gym-primary/10 flex items-center justify-center group-hover:bg-gym-primary group-hover:text-black transition-colors text-gym-primary">
@@ -1025,7 +1025,7 @@ export const MyArsenal = () => {
                             <div className="flex gap-2 h-[200px]">
                                 <button
                                     id="tut-new-routine-btn"
-                                    onClick={() => setAddingMode(true)}
+                                    onClick={handleCreateNew}
                                     className="flex-1 bg-neutral-900 border border-neutral-800 hover:border-gym-primary/50 hover:bg-neutral-800 p-4 rounded-2xl flex flex-col items-center justify-center gap-2 group transition-all"
                                 >
                                     <div className="w-12 h-12 rounded-full bg-gym-primary/10 flex items-center justify-center group-hover:bg-gym-primary group-hover:text-black transition-colors text-gym-primary">
