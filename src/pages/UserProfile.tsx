@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Trophy, MapPin, Edit2, LogIn, Loader, Swords, Dumbbell, Plus, LineChart, History, Star, Search, ArrowLeft, UserPlus, Grid, Crown } from 'lucide-react';
+import { Trophy, MapPin, Edit2, LogIn, Loader, Swords, Dumbbell, LineChart, History, Star, Search, ArrowLeft, UserPlus, Grid, Crown } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 // import { getXPProgress, getRankFromXP } from '../types/user';
 import type { UserRank } from '../types/user';
@@ -732,7 +732,7 @@ export const UserProfile = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {userGyms.map(gym => {
-                        const hasArsenal = (gym.equipment_count || 0) > 0;
+
 
                         return (
                             <div key={gym.gym_id} className={`bg-neutral-900 border ${gym.is_home_base ? 'border-yellow-500/50 shadow-[0_0_20px_rgba(234,179,8,0.1)]' : 'border-neutral-800'} p-3 md:p-6 rounded-xl md:rounded-2xl flex items-center justify-between group hover:border-gym-primary/30 transition-colors shadow-sm relative overflow-hidden`}>
@@ -754,52 +754,35 @@ export const UserProfile = () => {
 
                                 {/* ACTION BUTTONS */}
                                 <div className="flex items-center gap-3 shrink-0">
-                                    {hasArsenal ? (
-                                        <>
-                                            {/* 1. START WORKOUT (Location Locked) */}
-                                            <div className="flex flex-col items-center gap-1">
-                                                <button
-                                                    onClick={() => handleStartWorkout(gym)}
-                                                    disabled={verifyingLocation === gym.gym_id}
-                                                    className={`bg-gym-primary text-black w-10 h-10 md:w-auto md:h-auto md:px-4 md:py-2 rounded-lg md:rounded-xl transition-all hover:scale-105 font-bold flex items-center justify-center gap-2 shadow-[0_0_10px_rgba(250,204,21,0.2)] ${verifyingLocation === gym.gym_id ? 'opacity-80 cursor-wait' : ''}`}
-                                                >
-                                                    {verifyingLocation === gym.gym_id ? (
-                                                        <Loader size={18} className="animate-spin" />
-                                                    ) : (
-                                                        <Swords size={18} strokeWidth={2.5} />
-                                                    )}
-                                                    <span className="hidden md:inline text-xs">
-                                                        {verifyingLocation === gym.gym_id ? 'VERIFICANDO...' : 'INICIAR'}
-                                                    </span>
-                                                </button>
-                                                <span className="text-[9px] font-bold text-gym-primary uppercase tracking-tight text-center max-w-[60px] leading-tight md:hidden">Iniciar entrenamiento</span>
-                                            </div>
+                                    {/* ALWAYS SHOW ACTIONS (Requested by User) */}
+                                    <div className="flex flex-col items-center gap-1">
+                                        <button
+                                            onClick={() => handleStartWorkout(gym)}
+                                            disabled={verifyingLocation === gym.gym_id}
+                                            className={`bg-gym-primary text-black w-10 h-10 md:w-auto md:h-auto md:px-4 md:py-2 rounded-lg md:rounded-xl transition-all hover:scale-105 font-bold flex items-center justify-center gap-2 shadow-[0_0_10px_rgba(250,204,21,0.2)] ${verifyingLocation === gym.gym_id ? 'opacity-80 cursor-wait' : ''}`}
+                                        >
+                                            {verifyingLocation === gym.gym_id ? (
+                                                <Loader size={18} className="animate-spin" />
+                                            ) : (
+                                                <Swords size={18} strokeWidth={2.5} />
+                                            )}
+                                            <span className="hidden md:inline text-xs">
+                                                {verifyingLocation === gym.gym_id ? 'VERIFICANDO...' : 'INICIAR'}
+                                            </span>
+                                        </button>
+                                        <span className="text-[9px] font-bold text-gym-primary uppercase tracking-tight text-center max-w-[60px] leading-tight md:hidden">Iniciar entrenamiento</span>
+                                    </div>
 
-                                            {/* 2. CONFIGURE ARSENAL */}
-                                            <div className="flex flex-col items-center gap-1">
-                                                <Link
-                                                    to={`/territory/${gym.gym_id}/arsenal`}
-                                                    className="bg-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-700 w-10 h-10 md:w-auto md:h-auto md:px-4 md:py-2 rounded-lg md:rounded-xl transition-all font-bold flex items-center justify-center gap-2 border border-neutral-700 hover:border-white/20"
-                                                >
-                                                    <Dumbbell size={18} />
-                                                    <span className="hidden md:inline text-xs">CONFIG</span>
-                                                </Link>
-                                                <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-tight text-center max-w-[60px] leading-tight md:hidden">Configurar gym</span>
-                                            </div>
-                                        </>
-                                    ) : (
-                                        /* NO ARSENAL - SINGLE CONFIG BUTTON */
-                                        <div className="flex flex-col items-center gap-1">
-                                            <Link
-                                                to={`/territory/${gym.gym_id}/arsenal`}
-                                                className="bg-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-700 w-10 h-10 md:w-auto md:h-auto md:px-4 md:py-2 rounded-lg md:rounded-xl transition-all font-bold flex items-center justify-center gap-2 border border-neutral-700 hover:border-white/20"
-                                            >
-                                                <Plus size={18} />
-                                                <span className="hidden md:inline text-xs">CONFIGURAR</span>
-                                            </Link>
-                                            <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-tight text-center max-w-[60px] leading-tight md:hidden">Configurar gym</span>
-                                        </div>
-                                    )}
+                                    <div className="flex flex-col items-center gap-1">
+                                        <Link
+                                            to={`/territory/${gym.gym_id}/arsenal`}
+                                            className="bg-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-700 w-10 h-10 md:w-auto md:h-auto md:px-4 md:py-2 rounded-lg md:rounded-xl transition-all font-bold flex items-center justify-center gap-2 border border-neutral-700 hover:border-white/20"
+                                        >
+                                            <Dumbbell size={18} />
+                                            <span className="hidden md:inline text-xs">CONFIG</span>
+                                        </Link>
+                                        <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-tight text-center max-w-[60px] leading-tight md:hidden">Configurar gym</span>
+                                    </div>
                                 </div>
                             </div>
                         );
