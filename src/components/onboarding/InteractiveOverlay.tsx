@@ -12,7 +12,6 @@ interface InteractiveOverlayProps {
     onClose: () => void;
     placement?: 'top' | 'bottom' | 'left' | 'right';
     disableNext?: boolean;
-    onCenterClick?: () => void;
 }
 
 export const InteractiveOverlay = ({
@@ -24,8 +23,7 @@ export const InteractiveOverlay = ({
     onNext,
     onClose,
     placement = 'bottom',
-    disableNext = false,
-    onCenterClick
+    disableNext = false
 }: InteractiveOverlayProps) => {
     const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
     const observerRef = useRef<ResizeObserver | null>(null);
