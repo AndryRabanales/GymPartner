@@ -1225,10 +1225,17 @@ export const MyArsenal = () => {
                         {/* Routine Name Input */}
                         <div className="w-full md:w-1/3">
                             <input
+                                id="tut-routine-name-input"
                                 type="text"
                                 placeholder="Nombre de la Rutina (Obligatorio)..."
                                 value={routineName}
-                                onChange={(e) => setRoutineName(e.target.value)}
+                                onChange={(e) => {
+                                    setRoutineName(e.target.value);
+                                    if (tutorialStep === 3 && e.target.value.length > 0) {
+                                        setTutorialStep(4);
+                                        localStorage.setItem('tutorial_step', '4');
+                                    }
+                                }}
                                 required
                                 className={`w-full bg-white/5 border rounded-xl px-4 py-3 text-base text-white placeholder-white/30 focus:outline-none focus:bg-white/10 transition-all font-medium ${!routineName.trim() ? 'border-red-500/50 focus:border-red-500' : 'border-white/10 focus:border-gym-primary/50'}`}
                             />
@@ -1252,7 +1259,40 @@ export const MyArsenal = () => {
             </div>
 
             {/* MAIN CONTENT AREA */}
-            <div className="max-w-7xl mx-auto px-4 md:px-6 pb-32 w-full">
+            <div className="max-w-7xl mx-auto px-4 md:px-6 pb-32 w-full relative">
+
+                {/* TUTORIAL STEP 3: NAME STRATEGY */}
+                {tutorialStep === 3 && (
+                    <InteractiveOverlay
+                        targetId="tut-routine-name-input"
+                        title="PASO 3: BAUTIZA TU ESTRATEGIA"
+                        message="Toda gran batalla comienza con un nombre. Escribe cómo llamarás a este plan de entrenamiento."
+                        step={3}
+                        totalSteps={4}
+                        placement="bottom"
+                        onClose={() => setTutorialStep(0)}
+                        disableNext={true}
+                    />
+                )}
+
+                {/* TUTORIAL STEP 4: SELECT WEAPONS */}
+                {tutorialStep === 4 && (
+                    <InteractiveOverlay
+                        targetId="tut-arsenal-grid"
+                        title="PASO 4: ELIGE TUS ARMAS"
+                        message="Selecciona las máquinas y ejercicios que formarán parte de esta rutina. Solo haz clic en ellas."
+                        step={4}
+                        totalSteps={4}
+                        placement="top"
+                        onNext={() => {
+                            setTutorialStep(0);
+                            localStorage.setItem('tutorial_step', '0');
+                        }}
+                        nextLabel="¡Entendido!"
+                        onClose={() => setTutorialStep(0)}
+                    />
+                )}
+
 
                 {/* Visual Stats Bar */}
                 <div className="flex items-center gap-2 mb-4 px-1">
@@ -1264,7 +1304,7 @@ export const MyArsenal = () => {
                     </div>
                 </div>
 
-                <div className="space-y-6">
+                <div className="space-y-6" id="tut-arsenal-grid">
                     {/* Render Groups */}
                     {SECTION_ORDER.map(section => {
                         const items = groupedInventory[section] || [];
