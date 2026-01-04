@@ -84,8 +84,6 @@ export const InteractiveOverlay = ({
     // Calculate dimensions for the 4 blocking divs
     // We cover the entire screen EXCEPT the target rect
     const { top, left, width, height, bottom, right } = targetRect;
-    const windowWidth = window.innerWidth;
-    const windowHeight = window.innerHeight;
 
     return createPortal(
         <div className="fixed inset-0 z-[100] overflow-hidden">
