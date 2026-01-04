@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Plus, Search, ChevronRight, Check, Swords, Loader, Trash2, X, Dumbbell } from 'lucide-react';
 import { userService } from '../services/UserService';
-// import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
+import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
 import type { Equipment } from '../services/GymEquipmentService';
 import { equipmentService, COMMON_EQUIPMENT_SEEDS, EQUIPMENT_CATEGORIES } from '../services/GymEquipmentService';
 import type { CustomCategory, CustomMetric, CustomSettings } from '../services/GymEquipmentService';
@@ -1046,7 +1046,6 @@ export const MyArsenal = () => {
                         )}
 
                         {/* TUTORIAL OVERLAY STEP 2 */}
-                        {/* TUTORIAL OVERLAY STEP 2 - DISABLED TEMPORARILY
                         {tutorialStep === 2 && !addingMode && (
                             <InteractiveOverlay
                                 targetId="tut-new-routine-btn"
@@ -1054,13 +1053,12 @@ export const MyArsenal = () => {
                                 message="Aquí es donde nace tu estrategia. Haz clic para crear una nueva rutina desde cero."
                                 step={2}
                                 totalSteps={4}
-                                onNext={() => setAddingMode(true)}
+                                onNext={handleCreateNew}
                                 onClose={() => setTutorialStep(0)}
                                 placement="right"
                                 disableNext={true}
                             />
                         )}
-                        */}
 
                         {/* Existing Routines */}
                         {
