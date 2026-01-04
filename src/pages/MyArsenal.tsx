@@ -1046,6 +1046,7 @@ export const MyArsenal = () => {
                         )}
 
                         {/* TUTORIAL OVERLAY STEP 2 */}
+                        {/* TUTORIAL OVERLAY STEP 2 - DISABLED TEMPORARILY
                         {tutorialStep === 2 && !addingMode && (
                             <InteractiveOverlay
                                 targetId="tut-new-routine-btn"
@@ -1059,6 +1060,7 @@ export const MyArsenal = () => {
                                 disableNext={true}
                             />
                         )}
+                        */}
 
                         {/* Existing Routines */}
                         {
