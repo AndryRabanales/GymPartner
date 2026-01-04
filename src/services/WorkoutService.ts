@@ -126,7 +126,7 @@ class WorkoutService {
             .is('end_time', null)
             .order('started_at', { ascending: false })
             .limit(1)
-            .single();
+            .maybeSingle();
 
         return data;
     }
