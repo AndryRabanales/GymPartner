@@ -896,9 +896,15 @@ export const UserProfile = () => {
             <div className="flex flex-col items-center gap-4 mt-12 pb-12 opacity-50 hover:opacity-100 transition-opacity">
                 <button
                     onClick={() => {
-                        setTutorialStep(1);
-                        localStorage.setItem('tutorial_step', '1');
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                        // 1. Force Scroll Top Instantly
+                        window.scrollTo(0, 0);
+
+                        // 2. Clear then Set Step (Small delay to let rendering catch up)
+                        setTutorialStep(0);
+                        setTimeout(() => {
+                            localStorage.setItem('tutorial_step', '1');
+                            setTutorialStep(1);
+                        }, 100);
                     }}
                     className="flex items-center gap-2 px-6 py-2 rounded-full border border-neutral-800 bg-neutral-900/50 text-neutral-500 text-xs font-medium hover:bg-neutral-800 hover:text-white hover:border-neutral-700 transition-all"
                 >

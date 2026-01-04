@@ -81,59 +81,56 @@ export const InteractiveOverlay = ({
         };
     }
 
-    // Portal to root to ensure z-index dominance
+    // Calculate dimensions for the 4 blocking divs
+    // We cover the entire screen EXCEPT the target rect
+    const { top, left, width, height, bottom, right } = targetRect;
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+
     return createPortal(
         <div className="fixed inset-0 z-[100] overflow-hidden">
-            {/* SVG MASK to create the "hole" effect */}
-            <svg className="absolute inset-0 w-full h-full pointer-events-none">
-                <defs>
-                    <mask id="hole-mask">
-                        <rect width="100%" height="100%" fill="white" />
-                        <rect
-                            x={targetRect.left - 4} // Padding
-                            y={targetRect.top - 4}
-                            width={targetRect.width + 8}
-                            height={targetRect.height + 8}
-                            rx="8" // Rounded corners
-                            fill="black"
-                        />
-                    </mask>
-                </defs>
-                <rect
-                    width="100%"
-                    height="100%"
-                    fill="rgba(0, 0, 0, 0.75)"
-                    mask="url(#hole-mask)"
-                />
+            {/* 4 BLOCKING DIVS - These block clicks outside the target */}
+            {/* TOP */}
+            <div
+                className="absolute bg-black/80 backdrop-blur-[1px] transition-all duration-300"
+                style={{ top: 0, left: 0, right: 0, height: top - 4 }}
+            />
+            {/* BOTTOM */}
+            <div
+                className="absolute bg-black/80 backdrop-blur-[1px] transition-all duration-300"
+                style={{ top: bottom + 4, left: 0, right: 0, bottom: 0 }}
+            />
+            {/* LEFT */}
+            <div
+                className="absolute bg-black/80 backdrop-blur-[1px] transition-all duration-300"
+                style={{ top: top - 4, left: 0, width: left - 4, height: height + 8 }}
+            />
+            {/* RIGHT */}
+            <div
+                className="absolute bg-black/80 backdrop-blur-[1px] transition-all duration-300"
+                style={{ top: top - 4, left: right + 4, right: 0, height: height + 8 }}
+            />
 
-                {/* Glowing Border around Target */}
-                <rect
-                    x={targetRect.left - 4}
-                    y={targetRect.top - 4}
-                    width={targetRect.width + 8}
-                    height={targetRect.height + 8}
-                    rx="8"
-                    fill="transparent"
-                    stroke="#EAB308" // yellow-500
-                    strokeWidth="2"
-                    className="animate-pulse"
-                />
-            </svg>
-
-            {/* CLICK BLOCKER (Except on target) */}
-            {/* We can't actually click "through" easily without pointer-events: none on the overlay.
-                BUT we want to BLOCK clicks elsewhere.
-                Strategy: The SVG mask handles visuals.
-                We place distinct divs to block clicks outside the target area?
-                OR we accept that clicks go through if we set pointer-events: none on the root?
-                
-                BETTER UX: Let the user click the BUTTON itself to proceed if that's the natural action.
-                For this tutorial, "Next" might be implicit by clicking the target.
-            */}
+            {/* HIGHLIGHT BORDER + ANIMATION */}
+            <div
+                className="absolute pointer-events-none z-[110]"
+                style={{
+                    top: top - 4,
+                    left: left - 4,
+                    width: width + 8,
+                    height: height + 8,
+                    borderRadius: 12
+                }}
+            >
+                {/* Ping Animation Ring */}
+                <div className="absolute inset-0 border-2 border-yellow-500 rounded-xl animate-ping opacity-75" />
+                {/* Solid Border */}
+                <div className="absolute inset-0 border-2 border-yellow-500 rounded-xl shadow-[0_0_20px_rgba(234,179,8,0.5)]" />
+            </div>
 
             {/* Tooltip Card */}
             <div
-                className="absolute w-[90vw] max-w-sm bg-neutral-900 border border-yellow-500/50 rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-300"
+                className="absolute w-[90vw] max-w-sm bg-neutral-900 border border-yellow-500/50 rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-300 z-[120]"
                 style={tooltipStyle}
             >
                 {/* Close X */}
