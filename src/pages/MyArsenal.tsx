@@ -654,6 +654,12 @@ export const MyArsenal = () => {
         setRoutineConfigs(new Map());
         setViewMode('MACHINES');
         setSearchTerm('');
+
+        // TUTORIAL ADVANCE: Step 2 -> 3
+        if (tutorialStep === 2) {
+            setTutorialStep(3);
+            localStorage.setItem('tutorial_step', '3');
+        }
     };
 
     const handleDeleteRoutine = async (routineId: string, routineName: string) => {
