@@ -105,10 +105,10 @@ export const InteractiveOverlay = ({
     return createPortal(
         <div className="fixed inset-0 z-[100] overflow-hidden pointer-events-none">
             {/* 4 BLOCKING DIVS */}
-            <div className="absolute bg-black/80 backdrop-blur-[1px] transition-all duration-300 pointer-events-auto" style={{ top: 0, left: 0, right: 0, height: top - 4 }} />
-            <div className="absolute bg-black/80 backdrop-blur-[1px] transition-all duration-300 pointer-events-auto" style={{ top: bottom + 4, left: 0, right: 0, bottom: 0 }} />
-            <div className="absolute bg-black/80 backdrop-blur-[1px] transition-all duration-300 pointer-events-auto" style={{ top: top - 4, left: 0, width: left - 4, height: height + 8 }} />
-            <div className="absolute bg-black/80 backdrop-blur-[1px] transition-all duration-300 pointer-events-auto" style={{ top: top - 4, left: right + 4, right: 0, height: height + 8 }} />
+            <div className="absolute bg-black/80 backdrop-blur-[1px] transition-all duration-300 pointer-events-auto" style={{ top: 0, left: 0, right: 0, height: top - 8 }} />
+            <div className="absolute bg-black/80 backdrop-blur-[1px] transition-all duration-300 pointer-events-auto" style={{ top: bottom + 8, left: 0, right: 0, bottom: 0 }} />
+            <div className="absolute bg-black/80 backdrop-blur-[1px] transition-all duration-300 pointer-events-auto" style={{ top: top - 8, left: 0, width: left - 8, height: height + 16 }} />
+            <div className="absolute bg-black/80 backdrop-blur-[1px] transition-all duration-300 pointer-events-auto" style={{ top: top - 8, left: right + 8, right: 0, height: height + 16 }} />
 
             {/* HIGHLIGHT */}
             <div
@@ -118,21 +118,6 @@ export const InteractiveOverlay = ({
                 <div className="absolute inset-0 border-2 border-yellow-500 rounded-xl animate-ping opacity-75" />
                 <div className="absolute inset-0 border-2 border-yellow-500 rounded-xl shadow-[0_0_20px_rgba(234,179,8,0.5)]" />
             </div>
-
-            {/* PROXY CLICK LAYER - Guarantees clickability */}
-            <div
-                className="absolute z-[1000] cursor-pointer pointer-events-auto"
-                style={{ top: top - 4, left: left - 4, width: width + 8, height: height + 8, borderRadius: 12 }}
-                onClick={(e) => {
-                    e.stopPropagation();
-                    // Strategy 1: React Callback
-                    if (onCenterClick) onCenterClick();
-
-                    // Strategy 2: Native Click Fallback (Belt and Suspenders)
-                    const el = document.getElementById(targetId);
-                    if (el) el.click();
-                }}
-            />
 
             {/* Tooltip Card */}
             <div
