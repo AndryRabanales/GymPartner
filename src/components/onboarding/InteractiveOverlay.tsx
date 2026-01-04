@@ -86,26 +86,26 @@ export const InteractiveOverlay = ({
     const { top, left, width, height, bottom, right } = targetRect;
 
     return createPortal(
-        <div className="fixed inset-0 z-[100] overflow-hidden">
+        <div className="fixed inset-0 z-[100] overflow-hidden pointer-events-none">
             {/* 4 BLOCKING DIVS - These block clicks outside the target */}
             {/* TOP */}
             <div
-                className="absolute bg-black/80 backdrop-blur-[1px] transition-all duration-300"
+                className="absolute bg-black/80 backdrop-blur-[1px] transition-all duration-300 pointer-events-auto"
                 style={{ top: 0, left: 0, right: 0, height: top - 4 }}
             />
             {/* BOTTOM */}
             <div
-                className="absolute bg-black/80 backdrop-blur-[1px] transition-all duration-300"
+                className="absolute bg-black/80 backdrop-blur-[1px] transition-all duration-300 pointer-events-auto"
                 style={{ top: bottom + 4, left: 0, right: 0, bottom: 0 }}
             />
             {/* LEFT */}
             <div
-                className="absolute bg-black/80 backdrop-blur-[1px] transition-all duration-300"
+                className="absolute bg-black/80 backdrop-blur-[1px] transition-all duration-300 pointer-events-auto"
                 style={{ top: top - 4, left: 0, width: left - 4, height: height + 8 }}
             />
             {/* RIGHT */}
             <div
-                className="absolute bg-black/80 backdrop-blur-[1px] transition-all duration-300"
+                className="absolute bg-black/80 backdrop-blur-[1px] transition-all duration-300 pointer-events-auto"
                 style={{ top: top - 4, left: right + 4, right: 0, height: height + 8 }}
             />
 
@@ -128,16 +128,18 @@ export const InteractiveOverlay = ({
 
             {/* Tooltip Card */}
             <div
-                className="absolute w-[90vw] max-w-sm bg-neutral-900 border border-yellow-500/50 rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-300 z-[120]"
+                className="absolute w-[90vw] max-w-sm bg-neutral-900 border border-yellow-500/50 rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-300 z-[120] pointer-events-auto"
                 style={tooltipStyle}
             >
-                {/* Close X */}
-                <button
-                    onClick={onClose}
-                    className="absolute top-2 right-2 text-neutral-500 hover:text-white p-1"
-                >
-                    <X size={16} />
-                </button>
+                {/* Close X - Hidden if enforced */}
+                {!disableNext && (
+                    <button
+                        onClick={onClose}
+                        className="absolute top-2 right-2 text-neutral-500 hover:text-white p-1"
+                    >
+                        <X size={16} />
+                    </button>
+                )}
 
                 <div className="space-y-3">
                     <div className="flex items-center gap-2">
