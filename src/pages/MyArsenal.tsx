@@ -1183,8 +1183,8 @@ export const MyArsenal = () => {
     // RENDER MACHINE INVENTORY (Level 2 - Builder Logic)
     return (
         <div className="min-h-screen bg-black text-white font-sans selection:bg-gym-primary selection:text-black">
-            {/* STICKY GLASS HEADER - RESPONSIVE & COMPACT */}
-            <div className="sticky top-0 z-50 bg-black/95 backdrop-blur-xl border-b border-white/10 shadow-2xl">
+            {/* STATIC HEADER - SCROLLS AWAY */}
+            <div className="bg-black/95 backdrop-blur-xl border-b border-white/10 shadow-2xl">
                 <div className="max-w-7xl mx-auto p-2 md:p-6 flex flex-col gap-2 md:gap-4">
 
                     {/* Compact Top Row: Nav + Title + Mobile Save */}
