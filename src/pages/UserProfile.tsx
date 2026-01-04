@@ -669,20 +669,11 @@ export const UserProfile = () => {
 
             {/* Quick Actions / Passport Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-4">
-                <button
-                    onClick={() => setShowSocialProfile(true)}
-                    className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-yellow-500/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md cursor-pointer"
-                >
-                    <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-yellow-500/5 flex items-center justify-center group-hover:scale-110 transition-transform border border-yellow-500/10">
-                        <Grid className="text-yellow-500 w-4 h-4 md:w-6 md:h-6" />
-                    </div>
-                    <span className="font-bold text-neutral-200 group-hover:text-white text-xs md:text-base">Mis Posts</span>
-                </button>
                 <Link to="/arsenal" className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-blue-500/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md">
                     <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-blue-500/5 flex items-center justify-center group-hover:scale-110 transition-transform border border-blue-500/10">
                         <Dumbbell className="text-blue-500 w-4 h-4 md:w-6 md:h-6" />
                     </div>
-                    <span className="font-bold text-neutral-200 group-hover:text-white text-xs md:text-base">Mi Arsenal</span>
+                    <span className="font-bold text-neutral-200 group-hover:text-white text-xs md:text-base">Crear mis Rutinas</span>
                 </Link>
 
                 <Link to="/stats" className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-green-500/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md">
@@ -698,6 +689,16 @@ export const UserProfile = () => {
                     </div>
                     <span className="font-bold text-neutral-200 group-hover:text-white text-xs md:text-base">Historial</span>
                 </Link>
+
+                <button
+                    onClick={() => setShowSocialProfile(true)}
+                    className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-yellow-500/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md cursor-pointer"
+                >
+                    <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-yellow-500/5 flex items-center justify-center group-hover:scale-110 transition-transform border border-yellow-500/10">
+                        <Grid className="text-yellow-500 w-4 h-4 md:w-6 md:h-6" />
+                    </div>
+                    <span className="font-bold text-neutral-200 group-hover:text-white text-xs md:text-base">Mis Posts</span>
+                </button>
 
                 {/* INVITE FRIENDS - MOVED HERE */}
                 <button
