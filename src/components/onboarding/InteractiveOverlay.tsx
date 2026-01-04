@@ -30,15 +30,40 @@ export const InteractiveOverlay = ({
 
     // Find and track target element
     useEffect(() => {
+        let currentElement: HTMLElement | null = null;
+        let originalZIndex = '';
+        let originalPosition = '';
+        let originalTransition = '';
+
         const updateRect = () => {
             const element = document.getElementById(targetId);
             if (element) {
                 const rect = element.getBoundingClientRect();
                 setTargetRect(rect);
+
+                // ELEVATION STRATEGY: Verify/Apply styles continuously (in case of re-renders resetting styles)
+                // We keep it robust
+                if (element.style.zIndex !== '100001') {
+                    element.style.zIndex = '100001'; // Above overlay
+                    element.style.position = 'relative'; // Create stacking context
+                    // Optional: element.style.transition = 'none'; // Prevent weird transitions during elevation?
+                }
+                currentElement = element;
             }
         };
 
-        // Initial check
+        // Initial check + Setup
+        const element = document.getElementById(targetId);
+        if (element) {
+            originalZIndex = element.style.zIndex;
+            originalPosition = element.style.position;
+            // originalTransition = element.style.transition;
+
+            element.style.zIndex = '100001';
+            element.style.position = 'relative';
+            currentElement = element;
+        }
+
         updateRect();
 
         // Poll for element in case it's rendering
@@ -56,6 +81,12 @@ export const InteractiveOverlay = ({
             window.removeEventListener('scroll', updateRect, true);
             window.removeEventListener('resize', updateRect);
             if (observerRef.current) observerRef.current.disconnect();
+
+            // CLEANUP STYLES
+            if (currentElement) {
+                currentElement.style.zIndex = originalZIndex;
+                currentElement.style.position = originalPosition;
+            }
         };
     }, [targetId]);
 
