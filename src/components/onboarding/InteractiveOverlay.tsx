@@ -121,16 +121,16 @@ export const InteractiveOverlay = ({
 
             {/* PROXY CLICK LAYER - Guarantees clickability */}
             <div
-                className="absolute z-[115] cursor-pointer pointer-events-auto"
+                className="absolute z-[1000] cursor-pointer pointer-events-auto"
                 style={{ top: top - 4, left: left - 4, width: width + 8, height: height + 8, borderRadius: 12 }}
                 onClick={(e) => {
                     e.stopPropagation();
-                    if (onCenterClick) {
-                        onCenterClick();
-                    } else {
-                        const el = document.getElementById(targetId);
-                        if (el) el.click();
-                    }
+                    // Strategy 1: React Callback
+                    if (onCenterClick) onCenterClick();
+
+                    // Strategy 2: Native Click Fallback (Belt and Suspenders)
+                    const el = document.getElementById(targetId);
+                    if (el) el.click();
                 }}
             />
 
