@@ -870,13 +870,10 @@ export const UserProfile = () => {
                     message="Soldado, antes de la batalla necesitas un plan. Haz clic aquí para diseñar tu primera rutina de entrenamiento."
                     step={1}
                     totalSteps={4}
-                    onNext={() => {
-                        // User should click the button to navigate, but if they click "Entendido" we can force nav or just wait
-                        // Better to let them click the actual button?
-                        // For now, let's just point them to it.
-                    }}
+                    onNext={() => { }}
                     onClose={() => setTutorialStep(0)}
-                    placement="top"
+                    placement="bottom"
+                    disableNext={true}
                 />
             )}
 
@@ -890,6 +887,7 @@ export const UserProfile = () => {
                     onNext={() => { }}
                     onClose={() => setTutorialStep(0)}
                     placement="bottom"
+                    disableNext={true}
                 />
             )}
 
