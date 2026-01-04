@@ -11,6 +11,28 @@
   clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
 }
 
+@keyframes blink-critical {
+  0%, 100% { opacity: 1; color: white; }
+  50% { opacity: 0.5; color: #ef4444; } /* Red tint on blink */
+}
+
+.animate-blink-critical {
+  animation: blink-critical 0.8s infinite;
+}
+
+@keyframes vibrate-critical {
+  0% { transform: translate(0); }
+  20% { transform: translate(-2px, 2px); }
+  40% { transform: translate(-2px, -2px); }
+  60% { transform: translate(2px, 2px); }
+  80% { transform: translate(2px, -2px); }
+  100% { transform: translate(0); }
+}
+
+.animate-vibrate-critical {
+  animation: vibrate-critical 0.3s infinite;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

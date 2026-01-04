@@ -20,9 +20,10 @@ interface ArsenalCardProps {
     userSettings: CustomSettings; // Changed from customCategories to full settings for metrics access
     onEdit?: (item: Equipment) => void;
     configOverride?: any; // Routine specific configuration
+    isCritical?: boolean;
 }
 
-const ArsenalCard = ({ item, isSelected, userSettings, onEdit, configOverride }: ArsenalCardProps) => {
+const ArsenalCard = ({ item, isSelected, userSettings, onEdit, configOverride, isCritical }: ArsenalCardProps) => {
     // Determine active metrics based on item data or fallback
     // If configOverride is present (Routine Context), use it to determine active flags.
     let activeMetricIds: string[] = [];
@@ -74,6 +75,7 @@ const ArsenalCard = ({ item, isSelected, userSettings, onEdit, configOverride }:
                 ? 'bg-gym-primary text-black ring-4 ring-gym-primary/30 shadow-[0_0_40px_rgba(255,255,255,0.3)]'
                 : 'bg-neutral-900 border border-white/5 hover:bg-neutral-800 hover:border-white/20'
             }
+            ${isCritical ? 'animate-vibrate-critical ring-2 ring-red-500 shadow-[0_0_20px_rgba(239,68,68,0.4)]' : ''}
             rounded-2xl overflow-hidden flex flex-col
         `}>
             {/* Selection Indicator */}
@@ -102,7 +104,7 @@ const ArsenalCard = ({ item, isSelected, userSettings, onEdit, configOverride }:
 
                 {/* Title - Anchored to bottom, with horizontal padding */}
                 <div className="text-center w-full px-1.5 leading-none z-20 pb-1.5 min-h-0 flex-shrink-0">
-                    <h4 className={`text-[9px] font-black italic uppercase tracking-wider line-clamp-3 text-wrap leading-tight ${isSelected ? 'text-black' : 'text-neutral-200'} drop-shadow-sm`}>
+                    <h4 className={`text-[9px] font-black italic uppercase tracking-wider line-clamp-3 text-wrap leading-tight ${isSelected ? 'text-black' : 'text-neutral-200'} drop-shadow-sm ${isCritical ? 'animate-blink-critical text-red-500' : ''}`}>
                         {item.name}
                     </h4>
                 </div>
@@ -1287,6 +1289,7 @@ export const MyArsenal = () => {
                                                     userSettings={userSettings}
                                                     onEdit={handleEditEquipment}  // Always allow edit (Edit or Clone)
                                                     configOverride={routineConfigs.get(item.id)}
+                                                    isCritical={!routineName.trim()}
                                                 />
                                             </div>
                                         );
