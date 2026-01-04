@@ -20,6 +20,7 @@ import { StreakFlame } from '../components/gamification/StreakFlame';
 import { alphaService } from '../services/AlphaService';
 import { useBottomNav } from '../context/BottomNavContext';
 import { TierService } from '../services/TierService';
+import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
 
 
 interface ProfileData {
@@ -69,6 +70,27 @@ export const UserProfile = () => {
     // Alpha/Ranking Status State
     const [userRanking, setUserRanking] = useState<number | null>(null); // 1-10 or null
     const [alphaHistory, setAlphaHistory] = useState<any[]>([]);
+
+    // TUTORIAL STATE
+    const [tutorialStep, setTutorialStep] = useState(0);
+
+    useEffect(() => {
+        // Resume tutorial if active
+        const savedStep = localStorage.getItem('tutorial_step');
+        if (savedStep) {
+            setTutorialStep(parseInt(savedStep));
+        } else {
+            // START TUTORIAL AUTOMATICALLY IF NEW USER (First time)
+            const hasSeen = localStorage.getItem('hasSeenGlobalTutorial');
+            if (!hasSeen) {
+                setTimeout(() => {
+                    setTutorialStep(1);
+                    localStorage.setItem('tutorial_step', '1');
+                    localStorage.setItem('hasSeenGlobalTutorial', 'true');
+                }, 1000);
+            }
+        }
+    }, []);
 
     useEffect(() => {
         if (user) {
@@ -669,7 +691,7 @@ export const UserProfile = () => {
 
             {/* Quick Actions / Passport Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-4">
-                <Link to="/arsenal" className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-blue-500/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md">
+                <Link id="tut-create-routine-btn" to="/arsenal" onClick={() => localStorage.setItem('tutorial_step', '2')} className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-blue-500/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md">
                     <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-blue-500/5 flex items-center justify-center group-hover:scale-110 transition-transform border border-blue-500/10">
                         <Dumbbell className="text-blue-500 w-4 h-4 md:w-6 md:h-6" />
                     </div>
@@ -732,11 +754,11 @@ export const UserProfile = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {userGyms.map(gym => {
+                    {userGyms.map((gym, index) => {
 
 
                         return (
-                            <div key={gym.gym_id} className={`bg-neutral-900 border ${gym.is_home_base ? 'border-yellow-500/50 shadow-[0_0_20px_rgba(234,179,8,0.1)]' : 'border-neutral-800'} p-3 md:p-6 rounded-xl md:rounded-2xl flex items-center justify-between group hover:border-gym-primary/30 transition-colors shadow-sm relative overflow-hidden`}>
+                            <div id={`tut-gym-card-${index}`} key={gym.gym_id} onClick={() => { if (localStorage.getItem('tutorial_step') === '3') localStorage.setItem('tutorial_step', '4') }} className={`bg-neutral-900 border ${gym.is_home_base ? 'border-yellow-500/50 shadow-[0_0_20px_rgba(234,179,8,0.1)]' : 'border-neutral-800'} p-3 md:p-6 rounded-xl md:rounded-2xl flex items-center justify-between group hover:border-gym-primary/30 transition-colors shadow-sm relative overflow-hidden`}>
                                 <Link to={`/territory/${gym.gym_id}`} className="flex-1 min-w-0 mr-3 no-underline">
                                     <h3 className={`font-bold text-sm md:text-lg mb-0.5 md:mb-1 transition-colors truncate max-w-[200px] md:max-w-none flex items-center gap-2 ${gym.is_home_base ? 'text-yellow-400' : 'text-white group-hover:text-gym-primary'}`}>
                                         {gym.gym_name}
@@ -840,19 +862,48 @@ export const UserProfile = () => {
             )}
 
 
+            {/* NEW INTERACTIVE TUTORIAL */}
+            {tutorialStep === 1 && (
+                <InteractiveOverlay
+                    targetId="tut-create-routine-btn"
+                    title="PASO 1: CREA TU RUTINA"
+                    message="Soldado, antes de la batalla necesitas un plan. Haz clic aquí para diseñar tu primera rutina de entrenamiento."
+                    step={1}
+                    totalSteps={4}
+                    onNext={() => {
+                        // User should click the button to navigate, but if they click "Entendido" we can force nav or just wait
+                        // Better to let them click the actual button?
+                        // For now, let's just point them to it.
+                    }}
+                    onClose={() => setTutorialStep(0)}
+                    placement="top"
+                />
+            )}
+
+            {tutorialStep === 3 && (
+                <InteractiveOverlay
+                    targetId="tut-gym-card-0"
+                    title="PASO 3: DESPLIEGUE"
+                    message="¡Excelente! Ahora que tienes tu rutina, debes asignarla a tu base operativa. Selecciona tu gimnasio para proceder."
+                    step={3}
+                    totalSteps={4}
+                    onNext={() => { }}
+                    onClose={() => setTutorialStep(0)}
+                    placement="bottom"
+                />
+            )}
+
             <div className="flex flex-col items-center gap-4 mt-12 pb-12 opacity-50 hover:opacity-100 transition-opacity">
-                {/* 1. TUTORIAL RESET */}
                 <button
                     onClick={() => {
-                        setForceMission(true);
-                        setShowTutorial(true);
+                        setTutorialStep(1);
+                        localStorage.setItem('tutorial_step', '1');
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
                     }}
                     className="flex items-center gap-2 px-6 py-2 rounded-full border border-neutral-800 bg-neutral-900/50 text-neutral-500 text-xs font-medium hover:bg-neutral-800 hover:text-white hover:border-neutral-700 transition-all"
                 >
-                    <span>Ver Tutorial de Inicio</span>
+                    <span>Reiniciar Tutorial Interactivo</span>
                 </button>
-
-
             </div>
 
 

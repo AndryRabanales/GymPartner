@@ -5,6 +5,7 @@ import { MapPin, Dumbbell, Swords, ArrowLeft, Loader, Lock } from 'lucide-react'
 import { useGeolocation } from '../hooks/useGeolocation';
 import { getDistance } from '../utils/distance';
 import { AlphaBadge } from '../components/gamification/AlphaBadge';
+import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
 
 interface GymDetails {
     id: string;
@@ -19,6 +20,13 @@ export const GymProfile = () => {
     const { gymId } = useParams<{ gymId: string }>();
     const [gym, setGym] = useState<GymDetails | null>(null);
     const [loading, setLoading] = useState(true);
+
+    // TUTORIAL STATE
+    const [tutorialStep, setTutorialStep] = useState(0);
+    useEffect(() => {
+        const step = localStorage.getItem('tutorial_step');
+        if (step) setTutorialStep(parseInt(step));
+    }, []);
 
     // Location Logic
     const { location: userLocation, loading: locationLoading } = useGeolocation();
@@ -105,6 +113,7 @@ export const GymProfile = () => {
                 )}
 
                 <Link
+                    id="tut-gym-arsenal-btn"
                     to={`/territory/${gymId}/arsenal`}
                     className="bg-neutral-900 border border-neutral-800 p-6 rounded-2xl flex items-center gap-4 hover:border-blue-500/50 transition-all group"
                 >
@@ -130,6 +139,27 @@ export const GymProfile = () => {
                     </div>
                 </Link>
             </div>
+
+            {/* TUTORIAL STEP 4 */}
+            {tutorialStep === 4 && (
+                <InteractiveOverlay
+                    targetId="tut-gym-arsenal-btn"
+                    title="PASO 4: IMPORTAR ESTRATEGIA"
+                    message="Aquí puedes configurar el equipo de este gimnasio. ¡Importa la rutina maestra que creaste para tenerla disponible aquí!"
+                    step={4}
+                    totalSteps={4}
+                    onNext={() => {
+                        setTutorialStep(0);
+                        localStorage.removeItem('tutorial_step');
+                        // Optionally navigate or just let them click
+                    }}
+                    onClose={() => {
+                        setTutorialStep(0);
+                        localStorage.removeItem('tutorial_step');
+                    }}
+                    placement="top"
+                />
+            )}
 
             {/* Distance Indicator (Always Visible) */}
             {distance !== null && (

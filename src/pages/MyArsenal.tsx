@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Plus, Search, ChevronRight, Check, Download, Swords, Loader, Trash2, X, Dumbbell } from 'lucide-react';
+import { ArrowLeft, Plus, Search, ChevronRight, Check, Swords, Loader, Trash2, X, Dumbbell } from 'lucide-react';
 import { userService } from '../services/UserService';
+import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
 import type { Equipment } from '../services/GymEquipmentService';
 import { equipmentService, COMMON_EQUIPMENT_SEEDS, EQUIPMENT_CATEGORIES } from '../services/GymEquipmentService';
 import type { CustomCategory, CustomMetric, CustomSettings } from '../services/GymEquipmentService';
@@ -164,6 +165,13 @@ export const MyArsenal = () => {
     const [editingRoutineId, setEditingRoutineId] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+
+    // TUTORIAL STATE
+    const [tutorialStep, setTutorialStep] = useState(0);
+    useEffect(() => {
+        const step = localStorage.getItem('tutorial_step');
+        if (step) setTutorialStep(parseInt(step));
+    }, []);
 
     // Custom Exercise State
     const [customMode, setCustomMode] = useState(false);
@@ -948,6 +956,11 @@ export const MyArsenal = () => {
                     if (updateError) throw updateError;
                 }
                 alert("¡Nueva estrategia forjada!");
+
+                // TUTORIAL ADVANCE
+                if (localStorage.getItem('tutorial_step') === '2') {
+                    localStorage.setItem('tutorial_step', '3');
+                }
             }
 
             // Reset
@@ -998,39 +1011,53 @@ export const MyArsenal = () => {
                         {!routeGymId ? (
                             // GLOBAL: Create New Master
                             <button
-                                onClick={handleCreateNew}
-                                className="relative group overflow-hidden bg-neutral-900/50 border border-dashed border-neutral-800 hover:border-gym-primary/50 rounded-2xl p-4 md:p-8 flex flex-col items-center justify-center gap-3 md:gap-6 transition-all min-h-[140px] md:min-h-[280px]"
+                                id="tut-new-routine-btn"
+                                onClick={() => setAddingMode(true)}
+                                className="bg-neutral-900 border border-neutral-800 hover:border-gym-primary/50 hover:bg-neutral-800 p-6 rounded-2xl flex flex-col items-center justify-center gap-4 group transition-all h-[200px]"
                             >
-                                <div className="bg-neutral-800 group-hover:bg-gym-primary group-hover:text-black p-3 md:p-6 rounded-full transition-all duration-300 shadow-lg group-hover:scale-110">
-                                    <Plus size={20} className="md:w-10 md:h-10" strokeWidth={2.5} />
+                                <div className="w-16 h-16 rounded-full bg-gym-primary/10 flex items-center justify-center group-hover:bg-gym-primary group-hover:text-black transition-colors text-gym-primary">
+                                    <Plus size={32} />
                                 </div>
-                                <span className="font-extrabold text-neutral-500 group-hover:text-white uppercase tracking-widest text-xs md:text-lg transition-colors text-center">Nueva Maestra</span>
+                                <span className="font-black italic uppercase tracking-wider text-neutral-400 group-hover:text-white">Nueva Rutina Maestra</span>
                             </button>
                         ) : (
-                            // LOCAL: Import + Create
-                            <>
+                            // GYM: Create OR Import
+                            <div className="flex gap-2 h-[200px]">
+                                <button
+                                    id="tut-new-routine-btn"
+                                    onClick={() => setAddingMode(true)}
+                                    className="flex-1 bg-neutral-900 border border-neutral-800 hover:border-gym-primary/50 hover:bg-neutral-800 p-4 rounded-2xl flex flex-col items-center justify-center gap-2 group transition-all"
+                                >
+                                    <div className="w-12 h-12 rounded-full bg-gym-primary/10 flex items-center justify-center group-hover:bg-gym-primary group-hover:text-black transition-colors text-gym-primary">
+                                        <Plus size={24} />
+                                    </div>
+                                    <span className="font-bold text-xs uppercase text-neutral-400 group-hover:text-white">Crear</span>
+                                </button>
                                 <button
                                     onClick={() => setImportingMode(true)}
-                                    className="relative group overflow-hidden bg-gym-primary/10 border border-dashed border-gym-primary/30 hover:bg-gym-primary/20 hover:border-gym-primary rounded-2xl p-4 md:p-8 flex flex-col items-center justify-center gap-3 md:gap-6 transition-all min-h-[140px] md:min-h-[280px]"
+                                    className="flex-1 bg-neutral-900 border border-neutral-800 hover:border-blue-500/50 hover:bg-neutral-800 p-4 rounded-2xl flex flex-col items-center justify-center gap-2 group transition-all"
                                 >
-                                    <div className="bg-gym-primary text-black p-3 md:p-6 rounded-full transition-all duration-300 shadow-[0_0_20px_rgba(250,204,21,0.3)] group-hover:scale-110">
-                                        <Download size={20} className="md:w-10 md:h-10" strokeWidth={2.5} />
+                                    <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center group-hover:bg-blue-500 group-hover:text-black transition-colors text-blue-500">
+                                        <Dumbbell size={24} />
                                     </div>
-                                    <span className="font-extrabold text-gym-primary group-hover:text-white uppercase tracking-widest text-xs md:text-lg transition-colors text-center">Importar del Perfil</span>
+                                    <span className="font-bold text-xs uppercase text-neutral-400 group-hover:text-white">Importar</span>
                                 </button>
+                            </div>
+                        )}
 
-                                <button
-                                    onClick={handleCreateNew}
-                                    className="relative group overflow-hidden bg-neutral-900/50 border border-dashed border-neutral-800 hover:border-white/50 rounded-2xl p-4 md:p-8 flex flex-col items-center justify-center gap-3 md:gap-6 transition-all min-h-[140px] md:min-h-[280px]"
-                                >
-                                    <div className="bg-neutral-800 group-hover:bg-white group-hover:text-black p-3 md:p-6 rounded-full transition-all duration-300 shadow-lg group-hover:scale-110">
-                                        <Plus size={20} className="md:w-10 md:h-10" strokeWidth={2.5} />
-                                    </div>
-                                    <span className="font-extrabold text-neutral-500 group-hover:text-white uppercase tracking-widest text-xs md:text-lg transition-colors text-center">Crear Nueva Local</span>
-                                </button>
-                            </>
-                        )
-                        }
+                        {/* TUTORIAL OVERLAY STEP 2 */}
+                        {tutorialStep === 2 && !addingMode && (
+                            <InteractiveOverlay
+                                targetId="tut-new-routine-btn"
+                                title="PASO 2: FORJA TU ARMA"
+                                message="Aquí es donde nace tu estrategia. Haz clic para crear una nueva rutina desde cero."
+                                step={2}
+                                totalSteps={4}
+                                onNext={() => setAddingMode(true)}
+                                onClose={() => setTutorialStep(0)}
+                                placement="right"
+                            />
+                        )}
 
                         {/* Existing Routines */}
                         {
