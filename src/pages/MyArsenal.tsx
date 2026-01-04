@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Plus, Search, ChevronRight, Check, Swords, Loader, Trash2, X, Dumbbell } from 'lucide-react';
 import { userService } from '../services/UserService';
-import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
+// import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
 import type { Equipment } from '../services/GymEquipmentService';
 import { equipmentService, COMMON_EQUIPMENT_SEEDS, EQUIPMENT_CATEGORIES } from '../services/GymEquipmentService';
 import type { CustomCategory, CustomMetric, CustomSettings } from '../services/GymEquipmentService';
@@ -166,12 +166,12 @@ export const MyArsenal = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
 
-    // TUTORIAL STATE
-    const [tutorialStep, setTutorialStep] = useState(0);
-    useEffect(() => {
-        const step = localStorage.getItem('tutorial_step');
-        if (step) setTutorialStep(parseInt(step));
-    }, []);
+    // TUTORIAL STATE - Disabled for now to fix interactions
+    // const [tutorialStep, setTutorialStep] = useState(0);
+    // useEffect(() => {
+    //     const step = localStorage.getItem('tutorial_step');
+    //     if (step) setTutorialStep(parseInt(step));
+    // }, []);
 
     // Custom Exercise State
     const [customMode, setCustomMode] = useState(false);
