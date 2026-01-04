@@ -148,6 +148,17 @@ export const InteractiveOverlay = ({
                 <div className="absolute inset-0 border-2 border-yellow-500 rounded-xl shadow-[0_0_20px_rgba(234,179,8,0.5)]" />
             </div>
 
+            {/* PROXY CLICK LAYER - Guarantees clickability */}
+            <div
+                className="absolute z-[115] cursor-pointer"
+                style={{ top: top, left: left, width: width, height: height, borderRadius: 12 }}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    const el = document.getElementById(targetId);
+                    if (el) el.click();
+                }}
+            />
+
             {/* Tooltip Card */}
             <div
                 className="absolute bg-neutral-900 border border-yellow-500/50 rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-300 z-[120] pointer-events-auto"
