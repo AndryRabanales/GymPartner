@@ -1183,8 +1183,8 @@ export const MyArsenal = () => {
     // RENDER MACHINE INVENTORY (Level 2 - Builder Logic)
     return (
         <div className="min-h-screen bg-black text-white font-sans selection:bg-gym-primary selection:text-black">
-            {/* FIXED GLASS HEADER - RESPONSIVE & COMPACT */}
-            <div className="fixed top-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-xl border-b border-white/10 shadow-2xl">
+            {/* STICKY GLASS HEADER - RESPONSIVE & COMPACT */}
+            <div className="sticky top-0 z-50 bg-black/95 backdrop-blur-xl border-b border-white/10 shadow-2xl">
                 <div className="max-w-7xl mx-auto p-2 md:p-6 flex flex-col gap-2 md:gap-4">
 
                     {/* Compact Top Row: Nav + Title + Mobile Save */}
@@ -1249,8 +1249,8 @@ export const MyArsenal = () => {
                 </div>
             </div>
 
-            {/* MAIN CONTENT AREA - Padding Top added to account for Fixed Header */}
-            <div className="max-w-7xl mx-auto px-4 md:px-6 pb-32 w-full pt-[130px] md:pt-[170px]">
+            {/* MAIN CONTENT AREA */}
+            <div className="max-w-7xl mx-auto px-4 md:px-6 pb-32 w-full">
 
                 {/* Visual Stats Bar */}
                 <div className="flex items-center gap-2 mb-4 px-1">
