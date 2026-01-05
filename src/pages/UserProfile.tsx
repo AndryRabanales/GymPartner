@@ -834,6 +834,12 @@ export const UserProfile = () => {
                                         <Link
                                             id={`tut-config-gym-btn-${index}`}
                                             to={`/territory/${gym.gym_id}/arsenal`}
+                                            onClick={(e) => {
+                                                // Ensure tutorial advances if blindly following flow
+                                                if (localStorage.getItem('tutorial_step') === '5') {
+                                                    localStorage.setItem('tutorial_step', '6');
+                                                }
+                                            }}
                                             className="bg-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-700 w-10 h-10 md:w-auto md:h-auto md:px-4 md:py-2 rounded-lg md:rounded-xl transition-all font-bold flex items-center justify-center gap-2 border border-neutral-700 hover:border-white/20"
                                         >
                                             <Dumbbell size={18} />
