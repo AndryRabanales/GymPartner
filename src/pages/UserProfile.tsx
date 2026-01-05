@@ -898,14 +898,32 @@ export const UserProfile = () => {
 
 
 
-            {/* TUTORIAL STEP: GPS Warning (Final) */}
+            {/* TUTORIAL STEP 1 (Visual): Config access */}
+            {tutorialStep === 5 && (
+                <InteractiveOverlay
+                    targetId="tut-config-gym-btn-0"
+                    title="PASO 1: ACCESO AL CUARTEL"
+                    message="Haz click en el botón 'CONFIGURAR GYM' para ingresar a tu base y gestionar tu equipo."
+                    step={1}
+                    totalSteps={3}
+                    onNext={() => { }}
+                    onClose={() => {
+                        setTutorialStep(0);
+                        localStorage.setItem('hasSeenImportTutorial', 'true');
+                    }}
+                    placement="left"
+                    disableNext={true}
+                />
+            )}
+
+            {/* TUTORIAL STEP 3 (Final): Start Operation */}
             {tutorialStep === 7 && (
                 <InteractiveOverlay
                     targetId="tut-start-workout-btn-0"
                     title="PASO FINAL: DESPLIEGUE OPERATIVO"
                     message="¡Atención Soldado! Solo podrás iniciar el entrenamiento si el sistema verifica mediante GPS que estás DENTRO del perímetro del gimnasio."
-                    step={1}
-                    totalSteps={1}
+                    step={3}
+                    totalSteps={3}
                     onNext={() => { }}
                     onClose={() => {
                         setTutorialStep(0);
@@ -941,9 +959,6 @@ export const UserProfile = () => {
                             localStorage.setItem('tutorial_step', '5');
                             setTutorialStep(5);
                             window.scrollTo(0, 0);
-
-                            // Provide feedback since overlays are hidden until the end
-                            alert("¡Plan Reiniciado!\n\nInstrucción: Ve a 'CONFIG' en tu gimnasio -> Importar Estrategia Maestra para activar la validación final.");
                         }
                     }}
                     className="flex items-center gap-2 px-6 py-2 rounded-full border border-red-900/30 bg-red-900/10 text-red-500 text-xs font-medium hover:bg-red-900/20 hover:text-red-400 hover:border-red-900/50 transition-all"

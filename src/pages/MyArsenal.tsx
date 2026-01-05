@@ -1070,20 +1070,24 @@ export const MyArsenal = () => {
 
 
 
-                        {/* TUTORIAL OVERLAY STEP 2 */}
-                        {tutorialStep === 2 && !addingMode && (
+                        {/* TUTORIAL OVERLAY STEP 2 (Import Strategy) */}
+                        {tutorialStep === 6 && !addingMode && !importingMode && (
                             <InteractiveOverlay
-                                targetId="tut-new-routine-btn"
-                                title="PASO 2: FORJA TU ARMA"
-                                message="Aquí es donde nace tu estrategia. Haz clic para crear una nueva rutina desde cero."
+                                targetId="tut-import-routine-btn"
+                                title="PASO 2: IMPORTAR ESTRATEGIA"
+                                message="Haz clic en 'IMPORTAR' para traer una rutina maestra a este gimnasio."
                                 step={2}
-                                totalSteps={4}
-                                onNext={handleCreateNew}
-                                onClose={() => setTutorialStep(0)}
-                                placement="bottom"
+                                totalSteps={3}
+                                onNext={() => { }}
+                                onClose={() => {
+                                    setTutorialStep(0);
+                                    localStorage.setItem('hasSeenImportTutorial', 'true');
+                                }}
+                                placement="bottom" // Can use left/right/top if needed, original was bottom or unspecified
                                 disableNext={true}
                             />
                         )}
+
 
                         {/* Existing Routines */}
                         {
