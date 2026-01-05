@@ -813,6 +813,7 @@ export const UserProfile = () => {
                                     {/* ALWAYS SHOW ACTIONS (Requested by User) */}
                                     <div className="flex flex-col items-center gap-1">
                                         <button
+                                            id={`tut-start-workout-btn-${index}`}
                                             onClick={() => handleStartWorkout(gym)}
                                             disabled={verifyingLocation === gym.gym_id}
                                             className={`bg-gym-primary text-black w-10 h-10 md:w-auto md:h-auto md:px-4 md:py-2 rounded-lg md:rounded-xl transition-all hover:scale-105 font-bold flex items-center justify-center gap-2 shadow-[0_0_10px_rgba(250,204,21,0.2)] ${verifyingLocation === gym.gym_id ? 'opacity-80 cursor-wait' : ''}`}
@@ -923,6 +924,24 @@ export const UserProfile = () => {
                     message="Haz click en el botón 'CONFIGURAR GYM' para ingresar a tu base y gestionar tu equipo."
                     step={1}
                     totalSteps={2}
+                    onNext={() => { }}
+                    onClose={() => {
+                        setTutorialStep(0);
+                        localStorage.setItem('hasSeenImportTutorial', 'true');
+                    }}
+                    placement="left"
+                    disableNext={true}
+                />
+            )}
+
+            {/* TUTORIAL STEP 7: Start Operation (After Import Return) */}
+            {tutorialStep === 7 && (
+                <InteractiveOverlay
+                    targetId="tut-start-workout-btn-0"
+                    title="PASO FINAL: DESPLIEGUE OPERATIVO"
+                    message="¡Atención Soldado! Solo podrás iniciar el entrenamiento si el sistema verifica mediante GPS que estás DENTRO del perímetro del gimnasio."
+                    step={3}
+                    totalSteps={3}
                     onNext={() => { }}
                     onClose={() => {
                         setTutorialStep(0);
