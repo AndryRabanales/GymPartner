@@ -489,7 +489,15 @@ export const MyArsenal = () => {
             await workoutService.importRoutine(user.id, sourceRoutine.id, routeGymId);
             await initialize(); // Refresh
             setImportingMode(false);
-            alert("¡Estrategia Importada con éxito!");
+
+            // TUTORIAL ADVANCE: Step 2 -> 3 (Final Phase)
+            if (localStorage.getItem('tutorial_step') === '6') {
+                localStorage.setItem('tutorial_step', '7');
+                setTutorialStep(7);
+                alert("¡Estrategia Importada! Misión Cumplida. \n\nAhora regresa al Cuartel General e inicia la operación.");
+            } else {
+                alert("¡Estrategia Importada con éxito!");
+            }
         } catch (error) {
             console.error(error);
             alert("Error al importar estrategia.");
@@ -1046,6 +1054,7 @@ export const MyArsenal = () => {
                                     <span className="font-bold text-xs uppercase text-neutral-400 group-hover:text-white">Crear</span>
                                 </button>
                                 <button
+                                    id="tut-import-routine-btn"
                                     onClick={() => setImportingMode(true)}
                                     className="flex-1 bg-neutral-900 border border-neutral-800 hover:border-blue-500/50 hover:bg-neutral-800 p-4 rounded-2xl flex flex-col items-center justify-center gap-2 group transition-all"
                                 >
@@ -1055,6 +1064,24 @@ export const MyArsenal = () => {
                                     <span className="font-bold text-xs uppercase text-neutral-400 group-hover:text-white">Importar</span>
                                 </button>
                             </div>
+                        )}
+
+                        {/* TUTORIAL OVERLAY STEP 2 (Import Strategy) */}
+                        {tutorialStep === 6 && !addingMode && !importingMode && (
+                            <InteractiveOverlay
+                                targetId="tut-import-routine-btn"
+                                title="PASO 2: IMPORTAR ESTRATEGIA"
+                                message="Haz clic en 'IMPORTAR' para traer una rutina maestra a este gimnasio."
+                                step={2}
+                                totalSteps={3}
+                                onNext={() => { }}
+                                onClose={() => {
+                                    setTutorialStep(0);
+                                    localStorage.setItem('hasSeenImportTutorial', 'true');
+                                }}
+                                placement="bottom"
+                                disableNext={true}
+                            />
                         )}
 
                         {/* TUTORIAL OVERLAY STEP 2 */}
