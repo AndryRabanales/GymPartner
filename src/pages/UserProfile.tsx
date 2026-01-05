@@ -798,7 +798,6 @@ export const UserProfile = () => {
 
 
                         return (
-                        return (
                             <div id={`tut-gym-card-${index}`} key={gym.gym_id} onClick={() => {
                                 if (localStorage.getItem('tutorial_step') === '3') localStorage.setItem('tutorial_step', '4');
                                 if (localStorage.getItem('tutorial_step') === '5') localStorage.setItem('tutorial_step', '6');

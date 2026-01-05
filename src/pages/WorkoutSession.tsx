@@ -747,7 +747,7 @@ export const WorkoutSession = () => {
                             </div>
                         ) : (
                             <div className="flex-1 px-4 space-y-4 pb-32">
-                                {routines.map(routine => (
+                                {routines.map((routine, index) => (
                                     <button
                                         key={routine.id}
                                         id={index === 0 ? 'tut-routine-first' : undefined}
