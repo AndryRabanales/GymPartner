@@ -918,7 +918,7 @@ export const UserProfile = () => {
                         setTutorialStep(0);
                         localStorage.setItem('hasSeenImportTutorial', 'true');
                     }}
-                    placement="left"
+                    placement="top"
                     disableNext={true}
                 />
             )}
