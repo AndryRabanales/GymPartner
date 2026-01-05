@@ -1130,8 +1130,8 @@ export const WorkoutSession = () => {
                         {tutorialStep === 7 && (
                             <InteractiveOverlay
                                 targetId="tut-start-btn"
-                                title="PASO 3: INICIAR OPERACIÓN"
-                                message="Confirma que estás en posición. El sistema verificará tu ubicación GPS para validar la sesión."
+                                title="PASO FINAL: DESPLIEGUE OPERATIVO"
+                                message="¡Atención Soldado! Solo podrás iniciar el entrenamiento si el sistema verifica mediante GPS que estás DENTRO del perímetro del gimnasio."
                                 step={3} // Visual Step 3
                                 totalSteps={3}
                                 onNext={() => { }}
