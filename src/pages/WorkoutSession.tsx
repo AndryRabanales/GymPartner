@@ -17,7 +17,7 @@ interface NumpadTarget {
     suggestion?: number;
 }
 // BattleTimer removed
-import { Plus, Save, Swords, Trash2, Flame, Loader, Check, ArrowLeft, MoreVertical, X, RotateCcw } from 'lucide-react';
+import { Plus, Swords, Trash2, Flame, Loader, Check, ArrowLeft, MoreVertical, X, RotateCcw } from 'lucide-react';
 import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
@@ -64,6 +64,8 @@ export const WorkoutSession = () => {
     const [showAddModal, setShowAddModal] = useState(false);
     const [resolvedGymId, setResolvedGymId] = useState<string | null>(null);
     const [showExitMenu, setShowExitMenu] = useState(false);
+
+    const [currentGym, setCurrentGym] = useState<any>(null);
 
     // Tutorial State
     const [tutorialStep, setTutorialStep] = useState(0);
@@ -152,10 +154,22 @@ export const WorkoutSession = () => {
         try {
             // 1. Resolve Gym
             let targetGymId = routeGymId;
+
             if (!targetGymId) {
                 const gyms = await userService.getUserGyms(userId);
                 const gym = gyms.find(g => g.is_home_base) || gyms[0];
-                targetGymId = gym?.gym_id;
+                if (gym) {
+                    targetGymId = gym.gym_id;
+                    // Fetch full gym data for coordinates (getUserGyms returns minimal info usually)
+                    // But we can try to fetch the gym details specifically if needed, OR relies on what we have.
+                    // Let's safe fetch the gym details to be sure we have Lat/Lng
+                }
+            }
+
+            // Fetch actual Gym Details for GPS check (Lat/Lng)
+            if (targetGymId) {
+                const { data: gymDetails } = await supabase.from('gyms').select('*').eq('id', targetGymId).single();
+                setCurrentGym(gymDetails);
             }
 
             // Fallback: If no physical gym, use Personal Virtual Gym (Fix for Global Users)
@@ -163,6 +177,7 @@ export const WorkoutSession = () => {
                 try {
                     targetGymId = await userService.ensurePersonalGym(userId);
                     console.log("Using Personal Gym for Battle:", targetGymId);
+                    // Personal gym might not have GPS, we can handle that in handleStartTraining
                 } catch (e) {
                     console.warn("Could not resolve personal gym");
                 }
@@ -212,24 +227,7 @@ export const WorkoutSession = () => {
     const loadRoutine = async (routine: any) => {
         if (!routine.equipment_ids || routine.equipment_ids.length === 0) return;
 
-        setLoading(true); // Show loading while starting session
-
-        // 1. STAR SESSION IF NOT ACTIVE
-        if (!sessionId && user) {
-            console.log("🚀 Starting new session for routine:", routine.name);
-            const { data: newSession, error } = await workoutService.startSession(user.id, resolvedGymId || undefined);
-
-            if (newSession) {
-                setSessionId(newSession.id);
-                setStartTime(new Date()); // Start timer NOW from client time (00:00)
-                setIsFinished(false); // Ensure timer is running
-            } else {
-                console.error("Failed to start session:", error);
-                alert("Error iniciando sesión de entrenamiento. Revisa tu conexión.");
-                setLoading(false);
-                return;
-            }
-        }
+        setLoading(true); // Show loading while preparing routine
 
         // Map Routine IDs to Actual Inventory Items
         const exercisesToAdd: WorkoutExercise[] = [];
@@ -591,6 +589,71 @@ export const WorkoutSession = () => {
         } catch (err) {
             console.error("Exception resolving exercise ID:", err);
             return null;
+        }
+    };
+
+    const handleStartTraining = async () => {
+        if (!user) return;
+
+        // 1. Bypass if no GPS data available (Personal Gyms or Data Error)
+        if (!currentGym || !currentGym.lat || !currentGym.lng) {
+            console.log("⚠️ No GPS data for gym. Byassing check.");
+            await startSessionInternal();
+            return;
+        }
+
+        setLoading(true);
+
+        // 2. GPS Verification
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                const userLat = position.coords.latitude;
+                const userLng = position.coords.longitude;
+                const gymLat = parseFloat(currentGym.lat);
+                const gymLng = parseFloat(currentGym.lng);
+
+                const distance = getDistanceFromLatLonInKm(userLat, userLng, gymLat, gymLng) * 1000; // Meters
+
+                console.log(`📍 GPS Check: User(${userLat},${userLng}) vs Gym(${gymLat},${gymLng}) = ${Math.round(distance)}m`);
+
+                if (distance > 200) { // 200 Meters Tolerance
+                    setLoading(false);
+                    alert(`⛔ ACCESSO DENEGADO\n\nEstás a ${Math.round(distance)} metros de la base.\nDebes estar dentro del gimnasio para iniciar la operación.`);
+                    return;
+                }
+
+                // GPS Verified
+                await startSessionInternal();
+            },
+            (error) => {
+                console.error("GPS Error:", error);
+                setLoading(false);
+                alert("⚠️ Error de GPS. Asegúrate de tener la ubicación activada para verificar tu presencia en el gimnasio.");
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    };
+
+    const startSessionInternal = async () => {
+        if (!user) return;
+        setLoading(true);
+        console.log("🚀 Starting verified session...");
+
+        try {
+            const { data: newSession, error } = await workoutService.startSession(user.id, resolvedGymId || undefined);
+
+            if (newSession) {
+                setSessionId(newSession.id);
+                setStartTime(new Date());
+                setIsFinished(false);
+            } else {
+                throw error;
+            }
+        } catch (e: any) {
+            console.error("Failed to start session:", e);
+            alert("Error al iniciar sesión. Intenta de nuevo.");
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -1034,27 +1097,52 @@ export const WorkoutSession = () => {
                     Let's keep the global one HIDDEN if we have the carousel, to enforce focus, BUT standard UX says users might want to bail out early.
                     Actually, let's keep it simple: "Finish" is on the last card. 
                 */}
-                {activeExercises.length > 0 && (
-                    <div className="hidden">
-                        {/* Hiding legacy finish button */}
-                        <button
-                            onClick={handleFinish}
-                            disabled={loading || isFinished}
-                            className={`w-full font-black uppercase tracking-wider py-4 rounded-xl shadow-[0_0_20px_rgba(234,179,8,0.4)] flex items-center justify-center gap-3 transform active:scale-95 transition-all text-xl ${isFinished ? 'bg-green-500 text-black' : 'bg-yellow-500 hover:bg-yellow-400 text-black'
-                                }`}
-                        >
-                            {loading || isFinished ? (
-                                <>
-                                    <Loader className="animate-spin" size={24} />
-                                    {isFinished ? 'FINALIZADO!' : 'GUARDANDO...'}
-                                </>
-                            ) : (
-                                <>
-                                    <Save size={24} strokeWidth={2.5} />
-                                    TERMINAR ENTRENAMIENTO
-                                </>
-                            )}
-                        </button>
+                {activeExercises.length > 0 && !sessionId && (
+                    <div className="fixed inset-0 z-40 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-300">
+                        <div className="w-full max-w-md space-y-6 text-center">
+                            <div className="w-24 h-24 bg-gym-primary/10 rounded-full flex items-center justify-center mx-auto ring-4 ring-gym-primary/20 animate-pulse">
+                                <Swords size={48} className="text-gym-primary" />
+                            </div>
+
+                            <div>
+                                <h2 className="text-3xl font-black italic uppercase text-white mb-2">Orden de Batalla Lista</h2>
+                                <p className="text-neutral-400">Todo el equipo está cargado. Confirma que estás en la base para iniciar el cronómetro.</p>
+                            </div>
+
+                            {/* START BUTTON */}
+                            <button
+                                id="tut-start-btn"
+                                onClick={handleStartTraining}
+                                disabled={loading}
+                                className="w-full bg-gym-primary hover:bg-yellow-400 text-black font-black uppercase tracking-widest py-5 rounded-2xl shadow-[0_0_40px_rgba(250,204,21,0.4)] hover:shadow-[0_0_60px_rgba(250,204,21,0.6)] text-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3"
+                            >
+                                {loading ? <Loader className="animate-spin" /> : <Flame size={24} strokeWidth={3} />}
+                                INICIAR ENTRENAMIENTO
+                            </button>
+
+                            <div className="flex items-center justify-center gap-2 text-xs font-bold text-neutral-500 uppercase tracking-widest">
+                                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                                GPS Requerido
+                            </div>
+                        </div>
+
+                        {/* TUTORIAL STEP 7 (Visual Step 3) */}
+                        {tutorialStep === 7 && (
+                            <InteractiveOverlay
+                                targetId="tut-start-btn"
+                                title="PASO 3: INICIAR OPERACIÓN"
+                                message="Confirma que estás en posición. El sistema verificará tu ubicación GPS para validar la sesión."
+                                step={3} // Visual Step 3
+                                totalSteps={3}
+                                onNext={() => { }}
+                                onClose={() => {
+                                    setTutorialStep(0);
+                                    localStorage.setItem('hasSeenImportTutorial', 'true');
+                                }}
+                                placement="top"
+                                disableNext={true}
+                            />
+                        )}
                     </div>
                 )}
             </div>
@@ -1182,4 +1270,25 @@ export const WorkoutSession = () => {
 
         </div >
     )
+
+}
+
+// --- HELPER FUNCTIONS ---
+
+function getDistanceFromLatLonInKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+    const R = 6371; // Radius of the earth in km
+    const dLat = deg2rad(lat2 - lat1);
+    const dLon = deg2rad(lon2 - lon1);
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2)
+        ;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const d = R * c; // Distance in km
+    return d;
+}
+
+function deg2rad(deg: number) {
+    return deg * (Math.PI / 180)
 }
