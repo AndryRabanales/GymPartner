@@ -831,6 +831,7 @@ export const UserProfile = () => {
 
                                     <div className="flex flex-col items-center gap-1">
                                         <Link
+                                            id={`tut-config-gym-btn-${index}`}
                                             to={`/territory/${gym.gym_id}/arsenal`}
                                             className="bg-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-700 w-10 h-10 md:w-auto md:h-auto md:px-4 md:py-2 rounded-lg md:rounded-xl transition-all font-bold flex items-center justify-center gap-2 border border-neutral-700 hover:border-white/20"
                                         >
@@ -917,9 +918,9 @@ export const UserProfile = () => {
 
             {tutorialStep === 5 && (
                 <InteractiveOverlay
-                    targetId="tut-gym-card-0"
+                    targetId="tut-config-gym-btn-0"
                     title="PASO 1: ACCESO AL CUARTEL"
-                    message="Ingresa a tu gimnasio para configurar tu equipo y sesión de entrenamiento."
+                    message="Haz click en el botón 'CONFIGURAR GYM' para ingresar a tu base y gestionar tu equipo."
                     step={1}
                     totalSteps={2}
                     onNext={() => { }}
@@ -927,7 +928,7 @@ export const UserProfile = () => {
                         setTutorialStep(0);
                         localStorage.setItem('hasSeenImportTutorial', 'true');
                     }}
-                    placement="bottom"
+                    placement="left"
                     disableNext={true}
                 />
             )}
