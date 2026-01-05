@@ -36,11 +36,32 @@ export const InteractiveOverlay = ({
             const element = document.getElementById(targetId);
             if (element) {
                 const rect = element.getBoundingClientRect();
-                setTargetRect(rect);
+
+                // VALIDATION: Only show if actually visible (non-zero dimensions)
+                if (rect.width > 0 && rect.height > 0) {
+                    setTargetRect(rect);
+                }
             }
         };
 
-        updateRect();
+        // Initial scroll and update
+        const element = document.getElementById(targetId);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            updateRect();
+        } else {
+            // If not found immediately, wait a bit then try scrolling once it appears
+            const attemptScroll = setInterval(() => {
+                const el = document.getElementById(targetId);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    clearInterval(attemptScroll);
+                }
+            }, 500);
+
+            // Clear interval after 5 seconds to stop trying
+            setTimeout(() => clearInterval(attemptScroll), 5000);
+        }
 
         // Poll for element in case it's rendering
         const interval = setInterval(updateRect, 500);
