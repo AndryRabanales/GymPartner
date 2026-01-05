@@ -924,7 +924,7 @@ export const UserProfile = () => {
             )}
 
             {/* TUTORIAL STEP 3 (Final): Start Operation */}
-            {tutorialStep === 7 && (
+            {tutorialStep === 7 && !locationError.isOpen && (
                 <InteractiveOverlay
                     targetId="tut-start-workout-btn-0"
                     title="PASO FINAL: DESPLIEGUE OPERATIVO"
