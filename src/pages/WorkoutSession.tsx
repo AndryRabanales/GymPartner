@@ -72,8 +72,8 @@ export const WorkoutSession = () => {
 
     useEffect(() => {
         const step = parseInt(localStorage.getItem('tutorial_step') || '0');
-        if (step === 6) {
-            setTutorialStep(6);
+        if (step === 6 || step === 7) {
+            setTutorialStep(step);
         }
     }, []);
 
