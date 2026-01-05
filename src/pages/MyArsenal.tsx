@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Search, ChevronRight, Check, Swords, Loader, Trash2, X, Dumbbell } from 'lucide-react';
 import { userService } from '../services/UserService';
 import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
@@ -134,6 +134,7 @@ const ArsenalCard = ({ item, isSelected, userSettings, onEdit, configOverride }:
 export const MyArsenal = () => {
     const { user } = useAuth();
     const { gymId: routeGymId } = useParams<{ gymId: string }>();
+    const navigate = useNavigate();
 
     if (!user) {
         return (
@@ -494,7 +495,8 @@ export const MyArsenal = () => {
             if (localStorage.getItem('tutorial_step') === '6') {
                 localStorage.setItem('tutorial_step', '7');
                 setTutorialStep(7);
-                alert("¡Estrategia Importada! Misión Cumplida. \n\nAhora regresa al Cuartel General e inicia la operación.");
+                alert("¡Estrategia Importada! Misión Cumplida. \n\nRegresando a la base para iniciar operación...");
+                navigate(-1); // Go back immediately to WorkoutSession
             } else {
                 alert("¡Estrategia Importada con éxito!");
             }
