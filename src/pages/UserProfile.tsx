@@ -109,7 +109,7 @@ export const UserProfile = () => {
                 // console.log('Triggering background seed...');
                 hasSeededRef.current = true;
                 // seedExercisesCatalog().catch(console.error);
-                console.log("UserProfile Loaded - Ready for Reset");
+                // console.log("UserProfile Loaded - Ready for Reset");
             }
         } else {
             setLoading(false);
@@ -254,6 +254,7 @@ export const UserProfile = () => {
 
         } catch (error) {
             console.error('Error loading user data:', error);
+            // DO NOT reset profile to null here. Keep potentially stale data or just show toast.
         } finally {
             setLoading(false);
         }

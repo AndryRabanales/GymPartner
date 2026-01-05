@@ -36,7 +36,7 @@ export const notificationService = {
     async getUnreadCount(): Promise<number> {
         const { count, error } = await supabase
             .from('notifications')
-            .select('id', { count: 'exact', head: true })
+            .select('id', { count: 'exact' })
             .eq('is_read', false);
 
         if (error) {
