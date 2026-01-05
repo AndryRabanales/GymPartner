@@ -104,11 +104,11 @@ export const InteractiveOverlay = ({
 
     return createPortal(
         <div className="fixed inset-0 z-[100] overflow-hidden pointer-events-none">
-            {/* 4 BLOCKING DIVS */}
-            <div className="absolute bg-black/80 backdrop-blur-[1px] transition-all duration-300 pointer-events-auto" style={{ top: 0, left: 0, right: 0, height: top - 8 }} />
-            <div className="absolute bg-black/80 backdrop-blur-[1px] transition-all duration-300 pointer-events-auto" style={{ top: bottom + 8, left: 0, right: 0, bottom: 0 }} />
-            <div className="absolute bg-black/80 backdrop-blur-[1px] transition-all duration-300 pointer-events-auto" style={{ top: top - 8, left: 0, width: left - 8, height: height + 16 }} />
-            <div className="absolute bg-black/80 backdrop-blur-[1px] transition-all duration-300 pointer-events-auto" style={{ top: top - 8, left: right + 8, right: 0, height: height + 16 }} />
+            {/* 4 BLOCKING DIVS - Click to Dismiss */}
+            <div onClick={onClose} className="absolute bg-black/80 backdrop-blur-[1px] transition-all duration-300 pointer-events-auto cursor-pointer" style={{ top: 0, left: 0, right: 0, height: top - 8 }} />
+            <div onClick={onClose} className="absolute bg-black/80 backdrop-blur-[1px] transition-all duration-300 pointer-events-auto cursor-pointer" style={{ top: bottom + 8, left: 0, right: 0, bottom: 0 }} />
+            <div onClick={onClose} className="absolute bg-black/80 backdrop-blur-[1px] transition-all duration-300 pointer-events-auto cursor-pointer" style={{ top: top - 8, left: 0, width: left - 8, height: height + 16 }} />
+            <div onClick={onClose} className="absolute bg-black/80 backdrop-blur-[1px] transition-all duration-300 pointer-events-auto cursor-pointer" style={{ top: top - 8, left: right + 8, right: 0, height: height + 16 }} />
 
             {/* HIGHLIGHT */}
             <div
