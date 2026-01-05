@@ -1067,7 +1067,7 @@ export const MyArsenal = () => {
                                 totalSteps={4}
                                 onNext={handleCreateNew}
                                 onClose={() => setTutorialStep(0)}
-                                placement="right"
+                                placement="bottom"
                                 disableNext={true}
                             />
                         )}
