@@ -918,8 +918,8 @@ export const UserProfile = () => {
             {tutorialStep === 5 && (
                 <InteractiveOverlay
                     targetId="tut-gym-card-0"
-                    title="MISIÓN: INICIAR OPERACIÓN"
-                    message="Tienes una estrategia lista. Accede a tu base para desplegarla en combate."
+                    title="PASO 1: ACCESO AL CUARTEL"
+                    message="Ingresa a tu gimnasio para configurar tu equipo y sesión de entrenamiento."
                     step={1}
                     totalSteps={2}
                     onNext={() => { }}

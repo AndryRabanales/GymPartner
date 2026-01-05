@@ -787,8 +787,8 @@ export const WorkoutSession = () => {
                         {tutorialStep === 6 && (
                             <InteractiveOverlay
                                 targetId="tut-routine-first"
-                                title="FINALIZAR: CARGAR ESTRATEGIA"
-                                message="Aquí está tu rutina. Selecciónala para cargar las ejercicios en tu sesión de batalla."
+                                title="PASO 2: IMPORTAR ESTRATEGIA"
+                                message="Aquí está tu rutina creada. Selecciónala para cargar tu plan de entrenamiento en este gimnasio."
                                 step={2}
                                 totalSteps={2}
                                 onNext={() => { }}
