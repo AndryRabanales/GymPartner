@@ -98,6 +98,18 @@ export const UserProfile = () => {
             // Fetch Social Stats
             socialService.getProfileStats(user.id).then(setSocialStats);
 
+            // Check Routine Count for Tutorial Trigger
+            userService.getUserRoutines(user.id).then(routines => {
+                const hasSeenImport = localStorage.getItem('hasSeenImportTutorial');
+                const currentStep = parseInt(localStorage.getItem('tutorial_step') || '0');
+
+                // If user has routines but hasn't seen import tutorial, and main tutorial is done (step 0)
+                if (routines.length > 0 && !hasSeenImport && currentStep === 0) {
+                    setTutorialStep(5);
+                    localStorage.setItem('tutorial_step', '5');
+                }
+            });
+
             // Check for tutorial
             const hasSeen = localStorage.getItem('hasSeenTutorial');
             if (!hasSeen) {
@@ -786,7 +798,11 @@ export const UserProfile = () => {
 
 
                         return (
-                            <div id={`tut-gym-card-${index}`} key={gym.gym_id} onClick={() => { if (localStorage.getItem('tutorial_step') === '3') localStorage.setItem('tutorial_step', '4') }} className={`bg-neutral-900 border ${gym.is_home_base ? 'border-yellow-500/50 shadow-[0_0_20px_rgba(234,179,8,0.1)]' : 'border-neutral-800'} p-3 md:p-6 rounded-xl md:rounded-2xl flex items-center justify-between group hover:border-gym-primary/30 transition-colors shadow-sm relative overflow-hidden`}>
+                        return (
+                            <div id={`tut-gym-card-${index}`} key={gym.gym_id} onClick={() => {
+                                if (localStorage.getItem('tutorial_step') === '3') localStorage.setItem('tutorial_step', '4');
+                                if (localStorage.getItem('tutorial_step') === '5') localStorage.setItem('tutorial_step', '6');
+                            }} className={`bg-neutral-900 border ${gym.is_home_base ? 'border-yellow-500/50 shadow-[0_0_20px_rgba(234,179,8,0.1)]' : 'border-neutral-800'} p-3 md:p-6 rounded-xl md:rounded-2xl flex items-center justify-between group hover:border-gym-primary/30 transition-colors shadow-sm relative overflow-hidden`}>
                                 <Link to={`/territory/${gym.gym_id}`} className="flex-1 min-w-0 mr-3 no-underline">
                                     <h3 className={`font-bold text-sm md:text-lg mb-0.5 md:mb-1 transition-colors truncate max-w-[200px] md:max-w-none flex items-center gap-2 ${gym.is_home_base ? 'text-yellow-400' : 'text-white group-hover:text-gym-primary'}`}>
                                         {gym.gym_name}
@@ -919,6 +935,23 @@ export const UserProfile = () => {
                 />
             )}
 
+            {tutorialStep === 5 && (
+                <InteractiveOverlay
+                    targetId="tut-gym-card-0"
+                    title="MISIÓN: INICIAR OPERACIÓN"
+                    message="Tienes una estrategia lista. Accede a tu base para desplegarla en combate."
+                    step={1}
+                    totalSteps={2}
+                    onNext={() => { }}
+                    onClose={() => {
+                        setTutorialStep(0);
+                        localStorage.setItem('hasSeenImportTutorial', 'true');
+                    }}
+                    placement="bottom"
+                    disableNext={true}
+                />
+            )}
+
             <div className="flex flex-col items-center gap-4 mt-12 pb-12 opacity-50 hover:opacity-100 transition-opacity">
                 <button
                     onClick={() => {
@@ -935,6 +968,20 @@ export const UserProfile = () => {
                     className="flex items-center gap-2 px-6 py-2 rounded-full border border-neutral-800 bg-neutral-900/50 text-neutral-500 text-xs font-medium hover:bg-neutral-800 hover:text-white hover:border-neutral-700 transition-all"
                 >
                     <span>Reiniciar Tutorial Interactivo</span>
+                </button>
+                <button
+                    onClick={() => {
+                        if (window.confirm("¿Seguro que deseas reiniciar tu plan? Esto reseteará las guías de inicio.")) {
+                            localStorage.removeItem('hasSeenTutorial');
+                            localStorage.removeItem('hasSeenGlobalTutorial');
+                            localStorage.removeItem('hasSeenImportTutorial');
+                            localStorage.setItem('tutorial_step', '1');
+                            window.location.reload();
+                        }
+                    }}
+                    className="flex items-center gap-2 px-6 py-2 rounded-full border border-red-900/30 bg-red-900/10 text-red-500 text-xs font-medium hover:bg-red-900/20 hover:text-red-400 hover:border-red-900/50 transition-all"
+                >
+                    <span>Reiniciar Plan de Entrenamiento</span>
                 </button>
             </div>
 

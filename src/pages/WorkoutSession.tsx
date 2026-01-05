@@ -18,6 +18,7 @@ interface NumpadTarget {
 }
 // BattleTimer removed
 import { Plus, Save, Swords, Trash2, Flame, Loader, Check, ArrowLeft, MoreVertical, X, RotateCcw } from 'lucide-react';
+import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 interface WorkoutSet {
@@ -63,6 +64,16 @@ export const WorkoutSession = () => {
     const [showAddModal, setShowAddModal] = useState(false);
     const [resolvedGymId, setResolvedGymId] = useState<string | null>(null);
     const [showExitMenu, setShowExitMenu] = useState(false);
+
+    // Tutorial State
+    const [tutorialStep, setTutorialStep] = useState(0);
+
+    useEffect(() => {
+        const step = parseInt(localStorage.getItem('tutorial_step') || '0');
+        if (step === 6) {
+            setTutorialStep(6);
+        }
+    }, []);
 
     // Numpad State
     const [showNumpad, setShowNumpad] = useState(false);
@@ -739,7 +750,15 @@ export const WorkoutSession = () => {
                                 {routines.map(routine => (
                                     <button
                                         key={routine.id}
-                                        onClick={() => loadRoutine(routine)}
+                                        id={index === 0 ? 'tut-routine-first' : undefined}
+                                        onClick={() => {
+                                            if (tutorialStep === 6) {
+                                                setTutorialStep(0);
+                                                localStorage.setItem('tutorial_step', '0');
+                                                localStorage.setItem('hasSeenImportTutorial', 'true');
+                                            }
+                                            loadRoutine(routine);
+                                        }}
                                         className="w-full bg-neutral-900 border border-neutral-800 hover:border-gym-primary p-6 rounded-2xl flex items-center justify-between group transition-all"
                                     >
                                         <div className="text-left">
@@ -763,6 +782,23 @@ export const WorkoutSession = () => {
                                     {/* Freestyle Removed */}
                                 </div>
                             </div>
+                        )}
+
+                        {tutorialStep === 6 && (
+                            <InteractiveOverlay
+                                targetId="tut-routine-first"
+                                title="FINALIZAR: CARGAR ESTRATEGIA"
+                                message="Aquí está tu rutina. Selecciónala para cargar las ejercicios en tu sesión de batalla."
+                                step={2}
+                                totalSteps={2}
+                                onNext={() => { }}
+                                onClose={() => {
+                                    setTutorialStep(0);
+                                    localStorage.setItem('hasSeenImportTutorial', 'true');
+                                }}
+                                placement="top"
+                                disableNext={true}
+                            />
                         )}
                     </div>
                 )}
@@ -1090,57 +1126,59 @@ export const WorkoutSession = () => {
                 )
             }
 
-            {showNumpad && numpadTarget && (
-                <SmartNumpad
-                    isOpen={showNumpad}
-                    onClose={() => { setShowNumpad(false); setNumpadTarget(null); }}
-                    onSubmit={() => { setShowNumpad(false); setNumpadTarget(null); }}
-                    onInput={(key) => {
-                        const { exerciseIndex, setIndex, field, value: currentStr } = numpadTarget;
-                        const isCustom = !['weight', 'reps', 'time', 'distance', 'rpe'].includes(field);
+            {
+                showNumpad && numpadTarget && (
+                    <SmartNumpad
+                        isOpen={showNumpad}
+                        onClose={() => { setShowNumpad(false); setNumpadTarget(null); }}
+                        onSubmit={() => { setShowNumpad(false); setNumpadTarget(null); }}
+                        onInput={(key) => {
+                            const { exerciseIndex, setIndex, field, value: currentStr } = numpadTarget;
+                            const isCustom = !['weight', 'reps', 'time', 'distance', 'rpe'].includes(field);
 
-                        let newValStr = String(currentStr);
+                            let newValStr = String(currentStr);
 
-                        if (key === '+2.5') {
-                            newValStr = (parseFloat(newValStr || '0') + 2.5).toString();
-                        } else if (key === '+1.25') {
-                            newValStr = (parseFloat(newValStr || '0') + 1.25).toString();
-                        } else if (typeof key === 'number') {
-                            newValStr = (newValStr === '0' && key !== 0) ? String(key) : newValStr + key;
-                            if (newValStr === '00') newValStr = '0'; // Prevent leading zeros
-                        } else if (key === '.') {
-                            if (!newValStr.includes('.')) {
-                                newValStr = (newValStr || '0') + '.';
+                            if (key === '+2.5') {
+                                newValStr = (parseFloat(newValStr || '0') + 2.5).toString();
+                            } else if (key === '+1.25') {
+                                newValStr = (parseFloat(newValStr || '0') + 1.25).toString();
+                            } else if (typeof key === 'number') {
+                                newValStr = (newValStr === '0' && key !== 0) ? String(key) : newValStr + key;
+                                if (newValStr === '00') newValStr = '0'; // Prevent leading zeros
+                            } else if (key === '.') {
+                                if (!newValStr.includes('.')) {
+                                    newValStr = (newValStr || '0') + '.';
+                                }
+                            } else {
+                                // Fallback for direct replacement if any
+                                newValStr = String(key);
                             }
-                        } else {
-                            // Fallback for direct replacement if any
-                            newValStr = String(key);
-                        }
 
-                        // 1. Update Buffer (Display)
-                        setNumpadTarget(prev => prev ? ({ ...prev, value: newValStr }) : null);
+                            // 1. Update Buffer (Display)
+                            setNumpadTarget(prev => prev ? ({ ...prev, value: newValStr }) : null);
 
-                        // 2. Update Persisted State (Approximate)
-                        updateSet(exerciseIndex, setIndex, field, newValStr, isCustom);
-                    }}
-                    onDelete={() => {
-                        const { exerciseIndex, setIndex, field, value: currentStr } = numpadTarget;
-                        const isCustom = !['weight', 'reps', 'time', 'distance', 'rpe'].includes(field);
+                            // 2. Update Persisted State (Approximate)
+                            updateSet(exerciseIndex, setIndex, field, newValStr, isCustom);
+                        }}
+                        onDelete={() => {
+                            const { exerciseIndex, setIndex, field, value: currentStr } = numpadTarget;
+                            const isCustom = !['weight', 'reps', 'time', 'distance', 'rpe'].includes(field);
 
-                        let newValStr = String(currentStr).slice(0, -1);
-                        if (newValStr === '') newValStr = '0';
+                            let newValStr = String(currentStr).slice(0, -1);
+                            if (newValStr === '') newValStr = '0';
 
-                        // 1. Update Buffer
-                        setNumpadTarget(prev => prev ? ({ ...prev, value: newValStr }) : null);
+                            // 1. Update Buffer
+                            setNumpadTarget(prev => prev ? ({ ...prev, value: newValStr }) : null);
 
-                        // 2. Update Persisted State
-                        updateSet(exerciseIndex, setIndex, field, newValStr, isCustom);
-                    }}
-                    value={numpadTarget.value}
-                    label={numpadTarget.label}
-                    suggestion={numpadTarget.suggestion}
-                />
-            )}
+                            // 2. Update Persisted State
+                            updateSet(exerciseIndex, setIndex, field, newValStr, isCustom);
+                        }}
+                        value={numpadTarget.value}
+                        label={numpadTarget.label}
+                        suggestion={numpadTarget.suggestion}
+                    />
+                )
+            }
 
         </div >
     )
