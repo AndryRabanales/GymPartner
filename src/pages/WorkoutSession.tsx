@@ -1268,23 +1268,7 @@ export const WorkoutSession = () => {
                 )
             }
 
-            {/* TUTORIAL STEP 7: Start Operation (When exercises loaded) */}
-            {tutorialStep === 7 && activeExercises.length > 0 && !sessionId && (
-                <InteractiveOverlay
-                    targetId="tut-start-btn"
-                    title="PASO FINAL: DESPLIEGUE OPERATIVO"
-                    message="¡Atención Soldado! Solo podrás iniciar el entrenamiento si el sistema verifica mediante GPS que estás DENTRO del perímetro del gimnasio."
-                    step={3}
-                    totalSteps={3}
-                    onNext={() => { }}
-                    onClose={() => {
-                        setTutorialStep(0);
-                        localStorage.setItem('hasSeenImportTutorial', 'true');
-                    }}
-                    placement="top"
-                    disableNext={true}
-                />
-            )}
+
 
         </div >
     )

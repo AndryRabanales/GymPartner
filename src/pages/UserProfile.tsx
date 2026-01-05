@@ -207,6 +207,13 @@ export const UserProfile = () => {
                             console.error("Error checking first visit:", err);
                         }
 
+                        // COMPLETE TUTORIAL if active (Step 7 -> Done)
+                        if (localStorage.getItem('tutorial_step') === '7') {
+                            localStorage.setItem('tutorial_step', '0');
+                            localStorage.setItem('hasSeenImportTutorial', 'true');
+                            setTutorialStep(0);
+                        }
+
                         // Proceed to workout
                         navigate(`/territory/${gym.gym_id}/workout`);
                     };
