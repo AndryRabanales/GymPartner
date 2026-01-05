@@ -834,7 +834,7 @@ export const UserProfile = () => {
                                         <Link
                                             id={`tut-config-gym-btn-${index}`}
                                             to={`/territory/${gym.gym_id}/arsenal`}
-                                            onClick={(e) => {
+                                            onClick={() => {
                                                 // Ensure tutorial advances if blindly following flow
                                                 if (localStorage.getItem('tutorial_step') === '5') {
                                                     localStorage.setItem('tutorial_step', '6');
