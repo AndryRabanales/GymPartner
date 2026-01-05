@@ -888,34 +888,9 @@ export const UserProfile = () => {
 
 
 
-            {/* NEW INTERACTIVE TUTORIAL */}
-            {tutorialStep === 1 && (
-                <InteractiveOverlay
-                    targetId="tut-create-routine-btn"
-                    title="PASO 1: CREA TU RUTINA"
-                    message="Soldado, antes de la batalla necesitas un plan. Haz clic aquí para diseñar tu primera rutina de entrenamiento."
-                    step={1}
-                    totalSteps={4}
-                    onNext={() => { }}
-                    onClose={() => setTutorialStep(0)}
-                    placement="bottom"
-                    disableNext={true}
-                />
-            )}
 
-            {tutorialStep === 3 && (
-                <InteractiveOverlay
-                    targetId="tut-gym-card-0"
-                    title="PASO 3: DESPLIEGUE"
-                    message="¡Excelente! Ahora que tienes tu rutina, debes asignarla a tu base operativa. Selecciona tu gimnasio para proceder."
-                    step={3}
-                    totalSteps={4}
-                    onNext={() => { }}
-                    onClose={() => setTutorialStep(0)}
-                    placement="bottom"
-                    disableNext={true}
-                />
-            )}
+
+
 
             {tutorialStep === 5 && (
                 <InteractiveOverlay
