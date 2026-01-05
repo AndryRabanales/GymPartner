@@ -125,11 +125,10 @@ export const InteractiveOverlay = ({
                 style={tooltipStyle}
             >
                 {/* Close X - Hidden if enforced */}
-                {!disableNext && (
-                    <button onClick={onClose} className="absolute top-2 right-2 text-neutral-500 hover:text-white p-1">
-                        <X size={16} />
-                    </button>
-                )}
+                {/* Close X - Always Allow Escape */}
+                <button onClick={onClose} className="absolute top-2 right-2 text-neutral-500 hover:text-white p-1 z-50">
+                    <X size={16} />
+                </button>
 
                 <div className="space-y-3">
                     <div className="flex items-center gap-2">
