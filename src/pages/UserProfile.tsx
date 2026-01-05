@@ -7,7 +7,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import type { UserRank } from '../types/user';
 // 1. Add import
 import { EditProfileModal } from '../components/profile/EditProfileModal';
-import { TacticalTutorialModal } from '../components/onboarding/TacticalTutorialModal';
 import { LocationAccessModal } from '../components/common/LocationAccessModal';
 import { ReferralModal } from '../components/common/ReferralModal';
 import { PlayerProfileModal } from '../components/profile/PlayerProfileModal';
@@ -44,11 +43,10 @@ export const UserProfile = () => {
     const [profile, setProfile] = useState<ProfileData | null>(null);
     const [loading, setLoading] = useState(true);
     const [userGyms, setUserGyms] = useState<UserPrimaryGym[]>([]);
-    const [forceMission, setForceMission] = useState(false);
+
 
     const [showEditProfile, setShowEditProfile] = useState(false);
     const [showSocialProfile, setShowSocialProfile] = useState(false);
-    const [showTutorial, setShowTutorial] = useState(false);
     const [skipOnboarding, setSkipOnboarding] = useState(true); // Default to TRUE: Profile is the main page
     const hasSeededRef = useRef(false); // Track if we've run the seeder
 
@@ -110,12 +108,7 @@ export const UserProfile = () => {
                 }
             });
 
-            // Check for tutorial
-            const hasSeen = localStorage.getItem('hasSeenTutorial');
-            if (!hasSeen) {
-                // Short delay for better UX
-                setTimeout(() => setShowTutorial(true), 1000);
-            }
+            // Short delay for better UX
             // Seed DB with new defaults (Background) - Run Only Once
             if (!hasSeededRef.current) {
                 // console.log('Triggering background seed...');
@@ -135,10 +128,7 @@ export const UserProfile = () => {
         }
     }, [user, userGyms]);
 
-    const handleCloseTutorial = () => {
-        setShowTutorial(false);
-        localStorage.setItem('hasSeenTutorial', 'true');
-    };
+
 
     /**
      * GEOLOCATION SECURITY CHECK
@@ -893,16 +883,7 @@ export const UserProfile = () => {
                 />
             )}
 
-            {/* TUTORIAL MODAL */}
-            {showTutorial && (
-                <TacticalTutorialModal
-                    onClose={() => {
-                        handleCloseTutorial();
-                        setForceMission(false);
-                    }}
-                    showMapMission={userGyms.length === 0 || forceMission}
-                />
-            )}
+
 
 
             {/* NEW INTERACTIVE TUTORIAL */}
@@ -969,13 +950,28 @@ export const UserProfile = () => {
                     <span>Reiniciar Tutorial Interactivo</span>
                 </button>
                 <button
-                    onClick={() => {
+                    onClick={async () => {
                         if (window.confirm("¿Seguro que deseas reiniciar tu plan? Esto reseteará las guías de inicio.")) {
-                            localStorage.removeItem('hasSeenTutorial');
-                            localStorage.removeItem('hasSeenGlobalTutorial');
-                            localStorage.removeItem('hasSeenImportTutorial');
-                            localStorage.setItem('tutorial_step', '1');
-                            window.location.reload();
+                            try {
+                                const routines = await userService.getUserRoutines(user.id);
+                                if (routines.length > 0) {
+                                    // RESTART IMPORT TUTORIAL
+                                    localStorage.removeItem('hasSeenImportTutorial');
+                                    localStorage.setItem('tutorial_step', '5');
+                                    setTutorialStep(5);
+                                    window.scrollTo(0, 0);
+                                } else {
+                                    // RESTART FROM ZERO
+                                    localStorage.removeItem('hasSeenTutorial');
+                                    localStorage.removeItem('hasSeenGlobalTutorial');
+                                    localStorage.removeItem('hasSeenImportTutorial');
+                                    localStorage.setItem('tutorial_step', '1');
+                                    window.location.reload();
+                                }
+                            } catch (e) {
+                                console.error("Error checking routines:", e);
+                                alert("Error al verificar rutinas. Intenta de nuevo.");
+                            }
                         }
                     }}
                     className="flex items-center gap-2 px-6 py-2 rounded-full border border-red-900/30 bg-red-900/10 text-red-500 text-xs font-medium hover:bg-red-900/20 hover:text-red-400 hover:border-red-900/50 transition-all"
