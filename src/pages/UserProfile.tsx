@@ -179,8 +179,8 @@ export const UserProfile = () => {
 
                 console.log(`[Location Check] Gym: ${gym.gym_name}, Dist: ${distanceMeters.toFixed(2)}m`);
 
-                // Threshold: 100km (DEV MODE: User requested 100km radius)
-                const ALLOWED_RADIUS_METERS = 100000; // Was 200
+                // Threshold: 100m (Strict Gym Perimiter)
+                const ALLOWED_RADIUS_METERS = 100; // 0.1km
 
                 if (distanceMeters <= ALLOWED_RADIUS_METERS) {
                     // SUCCESS - VERIFIED LOCATION
