@@ -116,28 +116,9 @@ class UserService {
                     .eq('id', userId);
             }
 
-            // 4. AWARD XP (Gamification)
-            // Default 500 XP for unlocking a new territory
-            const xpReward = 500;
-            const { error: xpError } = await supabase.rpc('increment_xp', {
-                u_id: userId,
-                amount: xpReward
-            });
-
-            // Fallback if RPC doesn't exist (Manual Update)
-            if (xpError) {
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('xp')
-                    .eq('id', userId)
-                    .single();
-
-                const currentXp = profile?.xp || 0;
-                await supabase
-                    .from('profiles')
-                    .update({ xp: currentXp + xpReward })
-                    .eq('id', userId);
-            }
+            // 4. AWARD XP (MOVED TO FIRST PHYSICAL CHECK-IN)
+            // We no longer award XP just for adding the gym to the map.
+            const xpReward = 0;
 
             // 5. REFERRAL CHECK (One-time check when joining first gym/profile setup)
             if (isFirstGym) {

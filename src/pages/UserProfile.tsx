@@ -181,8 +181,35 @@ export const UserProfile = () => {
                 const ALLOWED_RADIUS_METERS = 100000; // Was 200
 
                 if (distanceMeters <= ALLOWED_RADIUS_METERS) {
-                    // SUCCESS
-                    navigate(`/territory/${gym.gym_id}/workout`);
+                    // SUCCESS - VERIFIED LOCATION
+
+                    // CHECK: First Verification Reward?
+                    const checkFirstVisit = async () => {
+                        try {
+                            // Check if any sessions exist for this user at this gym
+                            const { count } = await supabase
+                                .from('workout_sessions')
+                                .select('*', { count: 'exact', head: true })
+                                .eq('user_id', user!.id)
+                                .eq('gym_id', gym.gym_id);
+
+                            if (count === 0) {
+                                // FIRST DEPLOYMENT!
+                                console.log("🎉 FIRST DEPLOYMENT DETECTED! Awarding XP...");
+                                const xpResult = await userService.addXP(user!.id, 500);
+                                if (xpResult.success) {
+                                    alert(`🎖️ DESPLIEGUE CONFIRMADO: +500 XP\n\nBienvenido a ${gym.gym_name}. Tu primera incursión ha sido recompensada.`);
+                                }
+                            }
+                        } catch (err) {
+                            console.error("Error checking first visit:", err);
+                        }
+
+                        // Proceed to workout
+                        navigate(`/territory/${gym.gym_id}/workout`);
+                    };
+
+                    checkFirstVisit();
                 } else {
                     // FAIL
                     setLocationError({

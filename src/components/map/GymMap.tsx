@@ -148,17 +148,8 @@ export const GymMap = () => {
     const handleUnlock = async () => {
         if (!selectedGym || !user) return;
 
-        // Distance Check
-        if (userLocation) {
-            const dist = getDistance(userLocation.lat, userLocation.lng, selectedGym.lat, selectedGym.lng);
-            if (dist > 0.1) {
-                alert(`Estás demasiado lejos (${dist.toFixed(2)}km). Debes estar a menos de 0.1km (100m) para conquistar este territorio.`);
-                return;
-            }
-        } else {
-            alert("Necesitamos tu ubicación para verificar que estás en el gimnasio.");
-            return;
-        }
+        // Distance Check REMOVED - Remote Conquest Allowed
+        // Users can now add gyms from anywhere, but must verify location to TRAIN.
 
         const result = await userService.addGymToPassport(user.id, {
             place_id: selectedGym.place_id,
@@ -503,13 +494,10 @@ export const GymMap = () => {
                                 ) : (
                                     <button
                                         onClick={handleUnlock}
-                                        disabled={!userLocation || !selectedGym.lat || getDistance(userLocation.lat, userLocation.lng, selectedGym.lat, selectedGym.lng) > 0.1}
-                                        className="w-full bg-gym-primary text-black font-black text-lg italic py-4 rounded-2xl hover:bg-yellow-400 transition-all hover:scale-[1.02] flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(250,204,21,0.3)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:shadow-none bg-neutral-800 disabled:bg-neutral-800 disabled:text-neutral-500"
+                                        className="w-full bg-gym-primary text-black font-black text-lg italic py-4 rounded-2xl hover:bg-yellow-400 transition-all hover:scale-[1.02] flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(250,204,21,0.3)] bg-neutral-800"
                                     >
                                         <Lock size={20} strokeWidth={2.5} />
-                                        {(!userLocation || !selectedGym.lat || getDistance(userLocation.lat, userLocation.lng, selectedGym.lat, selectedGym.lng) > 0.1)
-                                            ? 'ESTÁS MUY LEJOS'
-                                            : 'CONQUISTAR AHORA'}
+                                        AÑADIR A MI MAPA
                                     </button>
                                 )}
                                 {selectedGym.lat && userLocation && getDistance(userLocation.lat, userLocation.lng, selectedGym.lat, selectedGym.lng) > 0.1 && !selectedGym.is_unlocked && (
