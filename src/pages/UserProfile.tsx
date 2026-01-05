@@ -934,28 +934,16 @@ export const UserProfile = () => {
                     <span>Reiniciar Tutorial Interactivo</span>
                 </button>
                 <button
-                    onClick={async () => {
+                    onClick={() => {
                         if (window.confirm("¿Seguro que deseas reiniciar tu plan? Esto reseteará las guías de inicio.")) {
-                            try {
-                                const routines = await userService.getUserRoutines(user.id);
-                                if (routines.length > 0) {
-                                    // RESTART IMPORT TUTORIAL
-                                    localStorage.removeItem('hasSeenImportTutorial');
-                                    localStorage.setItem('tutorial_step', '5');
-                                    setTutorialStep(5);
-                                    window.scrollTo(0, 0);
-                                } else {
-                                    // RESTART FROM ZERO
-                                    localStorage.removeItem('hasSeenTutorial');
-                                    localStorage.removeItem('hasSeenGlobalTutorial');
-                                    localStorage.removeItem('hasSeenImportTutorial');
-                                    localStorage.setItem('tutorial_step', '1');
-                                    window.location.reload();
-                                }
-                            } catch (e) {
-                                console.error("Error checking routines:", e);
-                                alert("Error al verificar rutinas. Intenta de nuevo.");
-                            }
+                            // UNIFIED RESET FLOW -> TARGET STEP 5 (Import/Config)
+                            localStorage.removeItem('hasSeenImportTutorial');
+                            localStorage.setItem('tutorial_step', '5');
+                            setTutorialStep(5);
+                            window.scrollTo(0, 0);
+
+                            // Provide feedback since overlays are hidden until the end
+                            alert("¡Plan Reiniciado!\n\nInstrucción: Ve a 'CONFIG' en tu gimnasio -> Importar Estrategia Maestra para activar la validación final.");
                         }
                     }}
                     className="flex items-center gap-2 px-6 py-2 rounded-full border border-red-900/30 bg-red-900/10 text-red-500 text-xs font-medium hover:bg-red-900/20 hover:text-red-400 hover:border-red-900/50 transition-all"
