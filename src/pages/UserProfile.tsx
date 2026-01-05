@@ -892,31 +892,14 @@ export const UserProfile = () => {
 
 
 
-            {tutorialStep === 5 && (
-                <InteractiveOverlay
-                    targetId="tut-config-gym-btn-0"
-                    title="PASO 1: ACCESO AL CUARTEL"
-                    message="Haz click en el botón 'CONFIGURAR GYM' para ingresar a tu base y gestionar tu equipo."
-                    step={1}
-                    totalSteps={2}
-                    onNext={() => { }}
-                    onClose={() => {
-                        setTutorialStep(0);
-                        localStorage.setItem('hasSeenImportTutorial', 'true');
-                    }}
-                    placement="left"
-                    disableNext={true}
-                />
-            )}
-
-            {/* TUTORIAL STEP 7: Start Operation (After Import Return) */}
+            {/* TUTORIAL STEP: GPS Warning (Final) */}
             {tutorialStep === 7 && (
                 <InteractiveOverlay
                     targetId="tut-start-workout-btn-0"
                     title="PASO FINAL: DESPLIEGUE OPERATIVO"
                     message="¡Atención Soldado! Solo podrás iniciar el entrenamiento si el sistema verifica mediante GPS que estás DENTRO del perímetro del gimnasio."
-                    step={3}
-                    totalSteps={3}
+                    step={1}
+                    totalSteps={1}
                     onNext={() => { }}
                     onClose={() => {
                         setTutorialStep(0);
