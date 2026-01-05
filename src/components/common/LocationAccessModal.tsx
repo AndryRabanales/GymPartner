@@ -51,9 +51,9 @@ export const LocationAccessModal: React.FC<LocationAccessModalProps> = ({
                         {errorType === 'DISTANCE' && distanceMeters !== null && (
                             <>
                                 <p className="text-neutral-400 text-sm">
-                                    Soldado, estás demasiado lejos de la base.
+                                    Soldado, el sistema GPS confirma que <strong>NO estás en el gimnasio.</strong>
                                     <br />
-                                    Tu ubicación actual no coincide con:
+                                    Debes estar dentro del perímetro para iniciar.
                                 </p>
                                 <div className="bg-neutral-950/50 p-3 rounded-xl border border-white/5 flex flex-col gap-1">
                                     <span className="text-white font-bold text-sm flex items-center justify-center gap-2">
