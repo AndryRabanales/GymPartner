@@ -980,18 +980,23 @@ export const MyArsenal = () => {
                 alert("¡Nueva estrategia forjada!");
 
                 // TUTORIAL LOGIC:
-                // Flow 1 End (Creation) -> Go to Flow 2 Start (Config/Import)
-                // Flow 2 Import (Step 6) -> Go to Flow 2 Start (Config)
+                // Step 4 (Creation Save) -> Step 5 (Profile Select Gym)
+                // Step 6 (Import Save) -> Step 7 (Profile Start)
                 const currentStep = localStorage.getItem('tutorial_step');
-                if (currentStep === '4' || currentStep === '6') {
+                if (currentStep === '4') {
                     localStorage.setItem('tutorial_step', '5');
                     setTutorialStep(5);
-                    alert(currentStep === '4'
-                        ? "¡Rutina creada con éxito!\n\nRegresa al gimnasio para comenzar la Parte 2: Configuración e Inicio."
-                        : "¡Rutina creada/importada!\n\nRegresa al panel para asignarla."
-                    );
+                    alert("¡Rutina creada con éxito!\n\nRegresa al INICIO, ve al MAPA/LISTA y SELECCIONA TU GYM para configurarlo.");
                     navigate(-1); // Go back to UserProfile
-                    return; // Stop execution
+                    return;
+                }
+                // Note: Import logic handles Step 6 elsewhere usually, or if Save handles imports too:
+                if (currentStep === '6' && routeGymId) {
+                    localStorage.setItem('tutorial_step', '7');
+                    setTutorialStep(7);
+                    alert("¡Rutina importada con éxito!\n\nRegresa al INICIO para comenzar el entrenamiento.");
+                    navigate(-1); // Go back to UserProfile
+                    return;
                 }
             }
 
@@ -1082,10 +1087,10 @@ export const MyArsenal = () => {
                         {tutorialStep === 2 && !addingMode && !importingMode && (
                             <InteractiveOverlay
                                 targetId="tut-new-routine-btn"
-                                title="PASO 2: CREAR RUTINA"
+                                title="PASO 2: NUEVA RUTINA"
                                 message="Haz clic aquí para crear una nueva rutina personalizada desde cero."
                                 step={2}
-                                totalSteps={4}
+                                totalSteps={7}
                                 onNext={() => { }}
                                 onClose={() => {
                                     setTutorialStep(0);
@@ -1096,14 +1101,14 @@ export const MyArsenal = () => {
                             />
                         )}
 
-                        {/* TUTORIAL OVERLAY STEP 2 of PART 2 (Import Strategy) */}
+                        {/* TUTORIAL OVERLAY STEP 6 (Import Strategy) */}
                         {tutorialStep === 6 && !addingMode && !importingMode && (
                             <InteractiveOverlay
                                 targetId="tut-import-routine-btn"
-                                title="PASO 2: IMPORTAR RUTINA"
-                                message="Haz clic en 'IMPORTAR' para traer una rutina a este gimnasio."
-                                step={2}
-                                totalSteps={3}
+                                title="PASO 6: IMPORTAR DESDE EL PERFIL"
+                                message="Haz clic en 'IMPORTAR' para traer la rutina que creaste a este gimnasio."
+                                step={6}
+                                totalSteps={7}
                                 onNext={() => { }}
                                 onClose={() => {
                                     setTutorialStep(0);
@@ -1805,10 +1810,10 @@ export const MyArsenal = () => {
             {tutorialStep === 3 && (
                 <InteractiveOverlay
                     targetId="tut-routine-name-input"
-                    title="PASO 3: NOMBRA LA ESTRATEGIA"
+                    title="PASO 3: PONER NOMBRE OBLIGATORIO"
                     message="Escribe un nombre épico para tu nueva rutina (ej: 'Pecho Legendario')."
                     step={3}
-                    totalSteps={4}
+                    totalSteps={7}
                     onNext={() => { }}
                     onClose={() => {
                         setTutorialStep(0);
@@ -1823,10 +1828,10 @@ export const MyArsenal = () => {
             {tutorialStep === 4 && (
                 <InteractiveOverlay
                     targetId="tut-save-routine-btn"
-                    title="PASO 4: CREAR Y ASIGNAR"
-                    message="Guarda tu nueva rutina. Esto te llevará de regreso al gimnasio para comenzarla en la Parte 2."
+                    title="PASO 4: SELECCIONAR Y GUARDAR"
+                    message="Guarda tu nueva rutina. Esto te mandará al inicio para que vayas al mapa."
                     step={4}
-                    totalSteps={4}
+                    totalSteps={7}
                     onNext={() => { }}
                     onClose={() => {
                         setTutorialStep(0);
@@ -1839,3 +1844,4 @@ export const MyArsenal = () => {
         </div>
     );
 };
+

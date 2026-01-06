@@ -749,6 +749,17 @@ export const UserProfile = () => {
                     <span className="font-bold text-neutral-200 group-hover:text-white text-xs md:text-base">Historial</span>
                 </Link>
 
+                <Link
+                    id="tut-global-arsenal-btn"
+                    to="/arsenal"
+                    className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-gym-primary/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md cursor-pointer"
+                >
+                    <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-gym-primary/5 flex items-center justify-center group-hover:scale-110 transition-transform border border-gym-primary/10">
+                        <Dumbbell className="text-gym-primary w-4 h-4 md:w-6 md:h-6" />
+                    </div>
+                    <span className="font-bold text-neutral-200 group-hover:text-white text-xs md:text-base">Mis Rutinas</span>
+                </Link>
+
                 <button
                     onClick={() => setShowSocialProfile(true)}
                     className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-yellow-500/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md cursor-pointer"
@@ -905,14 +916,14 @@ export const UserProfile = () => {
 
 
 
-            {/* TUTORIAL STEP 1 (Creation Flow): Access Arsenal via Gym */}
+            {/* TUTORIAL STEP 1: Global Arsenal (Create Routine) */}
             {tutorialStep === 1 && (
                 <InteractiveOverlay
-                    targetId="tut-config-gym-btn-0"
-                    title="PASO 1: ACCESO AL ARSENAL"
-                    message="Para crear tu primera rutina personalizada, ingresa a tu gimnasio."
+                    targetId="tut-global-arsenal-btn"
+                    title="PASO 1: CREAR MIS RUTINAS"
+                    message="Entra al Arsenal Global para crear tu primera rutina personalizada."
                     step={1}
-                    totalSteps={4}
+                    totalSteps={7}
                     onNext={() => { }}
                     onClose={() => {
                         setTutorialStep(0);
@@ -923,14 +934,14 @@ export const UserProfile = () => {
                 />
             )}
 
-            {/* TUTORIAL STEP 5 (Config Flow): Config access */}
+            {/* TUTORIAL STEP 5: Select Gym (Config) */}
             {tutorialStep === 5 && (
                 <InteractiveOverlay
                     targetId="tut-config-gym-btn-0"
-                    title="PASO 1: CONFIGURAR GIMNASIO"
-                    message="Haz click en el botón 'CONFIGURAR GYM' para ingresar y gestionar tu equipo."
-                    step={1}
-                    totalSteps={3}
+                    title="PASO 5: CONFIGURAR GYM"
+                    message="Selecciona tu gimnasio y configúralo para importar la rutina que acabas de crear."
+                    step={5}
+                    totalSteps={7}
                     onNext={() => { }}
                     onClose={() => {
                         setTutorialStep(0);
@@ -941,14 +952,14 @@ export const UserProfile = () => {
                 />
             )}
 
-            {/* TUTORIAL STEP 3 (Final): Start Operation */}
+            {/* TUTORIAL STEP 7: Start Workout (Final) */}
             {tutorialStep === 7 && !locationError.isOpen && (
                 <InteractiveOverlay
                     targetId="tut-start-workout-btn-0"
                     title="PASO FINAL: INICIAR ENTRENAMIENTO"
-                    message="Solo podrás iniciar el entrenamiento si el sistema verifica mediante GPS que estás DENTRO del gimnasio."
-                    step={3}
-                    totalSteps={3}
+                    message="¡Todo listo! Inicia tu entrenamiento (Verificación GPS requerida)."
+                    step={7}
+                    totalSteps={7}
                     onNext={() => { }}
                     onClose={() => {
                         setTutorialStep(0);
@@ -965,7 +976,7 @@ export const UserProfile = () => {
                         // 1. Force Scroll Top Instantly
                         window.scrollTo(0, 0);
 
-                        // 2. Clear flags and Set Correct Step (1 = Creation Flow)
+                        // 2. Restart Unified Flow (Step 1)
                         localStorage.removeItem('hasSeenImportTutorial');
                         localStorage.setItem('tutorial_step', '1');
                         setTutorialStep(0); // Force re-render
