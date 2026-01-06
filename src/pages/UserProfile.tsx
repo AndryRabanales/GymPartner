@@ -905,7 +905,25 @@ export const UserProfile = () => {
 
 
 
-            {/* TUTORIAL STEP 1 (Visual): Config access */}
+            {/* TUTORIAL STEP 1 (Creation Flow): Access Arsenal via Gym */}
+            {tutorialStep === 1 && (
+                <InteractiveOverlay
+                    targetId="tut-config-gym-btn-0"
+                    title="PASO 1: ACCESO AL ARSENAL"
+                    message="Para crear tu primera rutina personalizada, ingresa a tu gimnasio."
+                    step={1}
+                    totalSteps={4}
+                    onNext={() => { }}
+                    onClose={() => {
+                        setTutorialStep(0);
+                        localStorage.setItem('hasSeenImportTutorial', 'true');
+                    }}
+                    placement="top"
+                    disableNext={true}
+                />
+            )}
+
+            {/* TUTORIAL STEP 5 (Config Flow): Config access */}
             {tutorialStep === 5 && (
                 <InteractiveOverlay
                     targetId="tut-config-gym-btn-0"
@@ -947,12 +965,12 @@ export const UserProfile = () => {
                         // 1. Force Scroll Top Instantly
                         window.scrollTo(0, 0);
 
-                        // 2. Clear flags and Set Correct Step (5 = Config)
+                        // 2. Clear flags and Set Correct Step (1 = Creation Flow)
                         localStorage.removeItem('hasSeenImportTutorial');
-                        localStorage.setItem('tutorial_step', '5');
+                        localStorage.setItem('tutorial_step', '1');
                         setTutorialStep(0); // Force re-render
                         setTimeout(() => {
-                            setTutorialStep(5);
+                            setTutorialStep(1);
                         }, 50);
                     }}
                     className="flex items-center gap-2 px-6 py-2 rounded-full border border-neutral-800 bg-neutral-900/50 text-neutral-500 text-xs font-medium hover:bg-neutral-800 hover:text-white hover:border-neutral-700 transition-all"

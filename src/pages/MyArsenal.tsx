@@ -980,15 +980,18 @@ export const MyArsenal = () => {
                 alert("¡Nueva estrategia forjada!");
 
                 // TUTORIAL LOGIC:
-                // If user created a routine during the "Import" phase (Step 6),
-                // Send them back to "Config" (Step 5) to explicitly start the Import flow (Part 2).
+                // Flow 1 End (Creation) -> Go to Flow 2 Start (Config/Import)
+                // Flow 2 Import (Step 6) -> Go to Flow 2 Start (Config)
                 const currentStep = localStorage.getItem('tutorial_step');
-                if (currentStep === '6') {
+                if (currentStep === '4' || currentStep === '6') {
                     localStorage.setItem('tutorial_step', '5');
                     setTutorialStep(5);
-                    alert("¡Rutina creada con éxito!\n\nAhora regresa al panel y selecciona 'CONFIGURAR GYM' para importarla y comenzar.");
+                    alert(currentStep === '4'
+                        ? "¡Rutina creada con éxito!\n\nRegresa al gimnasio para comenzar la Parte 2: Configuración e Inicio."
+                        : "¡Rutina creada/importada!\n\nRegresa al panel para asignarla."
+                    );
                     navigate(-1); // Go back to UserProfile
-                    return; // Stop execution here
+                    return; // Stop execution
                 }
             }
 
@@ -1075,9 +1078,25 @@ export const MyArsenal = () => {
                             </div>
                         )}
 
+                        {/* TUTORIAL OVERLAY STEP 2 (Create Routine) */}
+                        {tutorialStep === 2 && !addingMode && !importingMode && (
+                            <InteractiveOverlay
+                                targetId="tut-new-routine-btn"
+                                title="PASO 2: CREAR RUTINA"
+                                message="Haz clic aquí para crear una nueva rutina personalizada desde cero."
+                                step={2}
+                                totalSteps={4}
+                                onNext={() => { }}
+                                onClose={() => {
+                                    setTutorialStep(0);
+                                    localStorage.setItem('hasSeenImportTutorial', 'true');
+                                }}
+                                placement="bottom"
+                                disableNext={true}
+                            />
+                        )}
 
-
-                        {/* TUTORIAL OVERLAY STEP 2 (Import Strategy) */}
+                        {/* TUTORIAL OVERLAY STEP 2 of PART 2 (Import Strategy) */}
                         {tutorialStep === 6 && !addingMode && !importingMode && (
                             <InteractiveOverlay
                                 targetId="tut-import-routine-btn"
@@ -1090,11 +1109,10 @@ export const MyArsenal = () => {
                                     setTutorialStep(0);
                                     localStorage.setItem('hasSeenImportTutorial', 'true');
                                 }}
-                                placement="bottom" // Can use left/right/top if needed, original was bottom or unspecified
+                                placement="bottom"
                                 disableNext={true}
                             />
                         )}
-
 
                         {/* Existing Routines */}
                         {
@@ -1726,6 +1744,97 @@ export const MyArsenal = () => {
                         )}
                     </div>
                 </div>
+            )}
+
+            {/* ROUTINE NAME & SAVE BAR (Floating at bottom for Creation Mode) */}
+            {addingMode && !customMode && (
+                <div className="fixed bottom-0 left-0 right-0 p-4 bg-neutral-950/90 backdrop-blur-xl border-t border-white/10 z-[60] animate-in slide-in-from-bottom-5">
+                    <div className="max-w-7xl mx-auto flex items-center gap-4">
+                        <div className="flex-1 max-w-xl relative group">
+                            <div className="absolute inset-0 bg-gradient-to-r from-gym-primary/20 to-transparent blur-xl opacity-0 group-hover:opacity-100 transition-opacity rounded-full pointer-events-none"></div>
+                            <input
+                                id="tut-routine-name-input"
+                                type="text"
+                                placeholder="Nombre de la Nueva Rutina..."
+                                className="w-full bg-black/50 border-2 border-white/10 rounded-2xl px-6 py-4 text-xl font-bold text-white placeholder-neutral-600 focus:border-gym-primary focus:outline-none focus:ring-4 focus:ring-gym-primary/10 transition-all shadow-inner"
+                                value={routineName}
+                                onChange={(e) => {
+                                    setRoutineName(e.target.value);
+                                    // TUTORIAL ADVANCE: Step 3 -> 4
+                                    if (tutorialStep === 3 && e.target.value.length > 2) {
+                                        setTutorialStep(4);
+                                        localStorage.setItem('tutorial_step', '4');
+                                    }
+                                }}
+                            />
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-600 pointer-events-none">
+                                <Edit2 size={18} />
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={handleCreateNew} // Cancel/Clear
+                                className="p-4 rounded-xl bg-neutral-900 border border-neutral-800 text-neutral-500 hover:text-white hover:bg-neutral-800 transition-all"
+                            >
+                                <X size={20} />
+                            </button>
+
+                            <button
+                                id="tut-save-routine-btn"
+                                onClick={handleSaveRoutine}
+                                disabled={!routineName || isSaving || selectedItems.size === 0}
+                                className="bg-gym-primary text-black px-8 py-4 rounded-xl font-black tracking-wide hover:shadow-[0_0_20px_rgba(250,204,21,0.4)] hover:scale-105 transition-all text-sm sm:text-base flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group relative overflow-hidden"
+                            >
+                                {/* Shimmer Effect */}
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:animate-shimmer" />
+
+                                {isSaving ? (
+                                    <Loader size={20} className="animate-spin" />
+                                ) : (
+                                    <Save size={20} strokeWidth={2.5} />
+                                )}
+                                <span>{editingRoutineId ? 'ACTUALIZAR' : 'CREAR RUTINA'}</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* TUTORIAL STEP 3 (Routine Name) */}
+            {tutorialStep === 3 && (
+                <InteractiveOverlay
+                    targetId="tut-routine-name-input"
+                    title="PASO 3: NOMBRA LA ESTRATEGIA"
+                    message="Escribe un nombre épico para tu nueva rutina (ej: 'Pecho Legendario')."
+                    step={3}
+                    totalSteps={4}
+                    onNext={() => { }}
+                    onClose={() => {
+                        setTutorialStep(0);
+                        localStorage.setItem('hasSeenImportTutorial', 'true');
+                    }}
+                    placement="top"
+                    disableNext={true}
+                />
+            )}
+
+            {/* TUTORIAL STEP 4 (Final Creation) */}
+            {tutorialStep === 4 && (
+                <InteractiveOverlay
+                    targetId="tut-save-routine-btn"
+                    title="PASO 4: CREAR Y ASIGNAR"
+                    message="Guarda tu nueva rutina. Esto te llevará de regreso al gimnasio para comenzarla en la Parte 2."
+                    step={4}
+                    totalSteps={4}
+                    onNext={() => { }}
+                    onClose={() => {
+                        setTutorialStep(0);
+                        localStorage.setItem('hasSeenImportTutorial', 'true');
+                    }}
+                    placement="top"
+                    disableNext={true}
+                />
             )}
         </div>
     );
