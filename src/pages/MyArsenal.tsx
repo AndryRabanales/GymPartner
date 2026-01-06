@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Search, ChevronRight, Check, Swords, Loader, Trash2, X, Dumbbell } from 'lucide-react';
+import { ArrowLeft, Plus, Search, ChevronRight, Check, Swords, Loader, Trash2, X, Dumbbell, Edit2, Save } from 'lucide-react';
 import { userService } from '../services/UserService';
 import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
 import type { Equipment } from '../services/GymEquipmentService';
