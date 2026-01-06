@@ -728,7 +728,7 @@ export const UserProfile = () => {
 
             {/* Quick Actions / Passport Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-4">
-                <Link id="tut-create-routine-btn" to="/arsenal" onClick={() => { if (tutorialStep === 1) localStorage.setItem('tutorial_step', '2'); }} className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-blue-500/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md">
+                <Link id="tut-global-arsenal-btn" to="/arsenal" onClick={() => { if (tutorialStep === 1) localStorage.setItem('tutorial_step', '2'); }} className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-blue-500/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md">
                     <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-blue-500/5 flex items-center justify-center group-hover:scale-110 transition-transform border border-blue-500/10">
                         <Dumbbell className="text-blue-500 w-4 h-4 md:w-6 md:h-6" />
                     </div>
@@ -747,17 +747,6 @@ export const UserProfile = () => {
                         <History className="text-orange-500 w-4 h-4 md:w-6 md:h-6" />
                     </div>
                     <span className="font-bold text-neutral-200 group-hover:text-white text-xs md:text-base">Historial</span>
-                </Link>
-
-                <Link
-                    id="tut-global-arsenal-btn"
-                    to="/arsenal"
-                    className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-gym-primary/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md cursor-pointer"
-                >
-                    <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-gym-primary/5 flex items-center justify-center group-hover:scale-110 transition-transform border border-gym-primary/10">
-                        <Dumbbell className="text-gym-primary w-4 h-4 md:w-6 md:h-6" />
-                    </div>
-                    <span className="font-bold text-neutral-200 group-hover:text-white text-xs md:text-base">Mis Rutinas</span>
                 </Link>
 
                 <button
@@ -921,7 +910,7 @@ export const UserProfile = () => {
                 <InteractiveOverlay
                     targetId="tut-global-arsenal-btn"
                     title="PASO 1: CREAR MIS RUTINAS"
-                    message="Entra al Arsenal Global para crear tu primera rutina personalizada."
+                    message="Haz clic en 'Crear mis Rutinas' para forjar tu primera estrategia de combate."
                     step={1}
                     totalSteps={7}
                     onNext={() => { }}
