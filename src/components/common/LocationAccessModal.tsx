@@ -43,7 +43,7 @@ export const LocationAccessModal: React.FC<LocationAccessModalProps> = ({
                     </div>
 
                     <h2 className="text-2xl font-black text-white italic uppercase tracking-tighter leading-none">
-                        ACCESO <span className="text-red-500">DENEGADO</span>
+                        UBICACIÓN <span className="text-red-500">INCORRECTA</span>
                     </h2>
 
                     {/* Error Content */}
@@ -51,9 +51,9 @@ export const LocationAccessModal: React.FC<LocationAccessModalProps> = ({
                         {errorType === 'DISTANCE' && distanceMeters !== null && (
                             <>
                                 <p className="text-neutral-400 text-sm">
-                                    Soldado, el sistema GPS confirma que <strong>NO estás en el gimnasio.</strong>
+                                    El sistema GPS confirma que <strong>NO estás en el gimnasio.</strong>
                                     <br />
-                                    Debes estar dentro del perímetro para iniciar.
+                                    Debes estar dentro del rango para iniciar.
                                 </p>
                                 <div className="bg-neutral-950/50 p-3 rounded-xl border border-white/5 flex flex-col gap-1">
                                     <span className="text-white font-bold text-sm flex items-center justify-center gap-2">
@@ -74,10 +74,10 @@ export const LocationAccessModal: React.FC<LocationAccessModalProps> = ({
 
                         {errorType === 'NO_COORDS' && (
                             <p className="text-neutral-400 text-sm">
-                                ⚠️ <strong>Error de Inteligencia:</strong><br />
-                                Este gimnasio ("{gymName}") no tiene coordenadas GPS registradas en el sistema.
+                                ⚠️ <strong>Error de Configuración:</strong><br />
+                                Este gimnasio ("{gymName}") no tiene coordenadas GPS registradas.
                                 <br /><br />
-                                Iniciar misión es imposible sin verificación de perímetro.
+                                No es posible validar tu ubicación.
                             </p>
                         )}
 

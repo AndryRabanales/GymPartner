@@ -495,10 +495,10 @@ export const MyArsenal = () => {
             if (localStorage.getItem('tutorial_step') === '6') {
                 localStorage.setItem('tutorial_step', '7');
                 setTutorialStep(7);
-                alert("¡Estrategia Importada! Misión Cumplida. \n\nRegresando a la base para iniciar operación...");
+                alert("¡Rutina Importada!\n\nRegresando al perfil para iniciar...");
                 navigate(-1); // Go back immediately to WorkoutSession
             } else {
-                alert("¡Estrategia Importada con éxito!");
+                alert("¡Rutina Importada con éxito!");
             }
         } catch (error) {
             console.error(error);
@@ -1074,8 +1074,8 @@ export const MyArsenal = () => {
                         {tutorialStep === 6 && !addingMode && !importingMode && (
                             <InteractiveOverlay
                                 targetId="tut-import-routine-btn"
-                                title="PASO 2: IMPORTAR ESTRATEGIA"
-                                message="Haz clic en 'IMPORTAR' para traer una rutina maestra a este gimnasio."
+                                title="PASO 2: IMPORTAR RUTINA"
+                                message="Haz clic en 'IMPORTAR' para traer una rutina a este gimnasio."
                                 step={2}
                                 totalSteps={3}
                                 onNext={() => { }}

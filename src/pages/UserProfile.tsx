@@ -909,8 +909,8 @@ export const UserProfile = () => {
             {tutorialStep === 5 && (
                 <InteractiveOverlay
                     targetId="tut-config-gym-btn-0"
-                    title="PASO 1: ACCESO AL CUARTEL"
-                    message="Haz click en el botón 'CONFIGURAR GYM' para ingresar a tu base y gestionar tu equipo."
+                    title="PASO 1: CONFIGURAR GIMNASIO"
+                    message="Haz click en el botón 'CONFIGURAR GYM' para ingresar y gestionar tu equipo."
                     step={1}
                     totalSteps={3}
                     onNext={() => { }}
@@ -927,8 +927,8 @@ export const UserProfile = () => {
             {tutorialStep === 7 && !locationError.isOpen && (
                 <InteractiveOverlay
                     targetId="tut-start-workout-btn-0"
-                    title="PASO FINAL: DESPLIEGUE OPERATIVO"
-                    message="¡Atención Soldado! Solo podrás iniciar el entrenamiento si el sistema verifica mediante GPS que estás DENTRO del perímetro del gimnasio."
+                    title="PASO FINAL: INICIAR ENTRENAMIENTO"
+                    message="Solo podrás iniciar el entrenamiento si el sistema verifica mediante GPS que estás DENTRO del gimnasio."
                     step={3}
                     totalSteps={3}
                     onNext={() => { }}
