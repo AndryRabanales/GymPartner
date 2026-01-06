@@ -979,9 +979,16 @@ export const MyArsenal = () => {
                 }
                 alert("¡Nueva estrategia forjada!");
 
-                // TUTORIAL ADVANCE
-                if (localStorage.getItem('tutorial_step') === '2') {
-                    localStorage.setItem('tutorial_step', '3');
+                // TUTORIAL LOGIC:
+                // If user created a routine during the "Import" phase (Step 6),
+                // Send them back to "Config" (Step 5) to explicitly start the Import flow (Part 2).
+                const currentStep = localStorage.getItem('tutorial_step');
+                if (currentStep === '6') {
+                    localStorage.setItem('tutorial_step', '5');
+                    setTutorialStep(5);
+                    alert("¡Rutina creada con éxito!\n\nAhora regresa al panel y selecciona 'CONFIGURAR GYM' para importarla y comenzar.");
+                    navigate(-1); // Go back to UserProfile
+                    return; // Stop execution here
                 }
             }
 
