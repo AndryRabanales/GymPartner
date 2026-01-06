@@ -973,23 +973,9 @@ export const UserProfile = () => {
                             setTutorialStep(1);
                         }, 50);
                     }}
-                    className="flex items-center gap-2 px-6 py-2 rounded-full border border-neutral-800 bg-neutral-900/50 text-neutral-500 text-xs font-medium hover:bg-neutral-800 hover:text-white hover:border-neutral-700 transition-all"
+                    className="flex items-center gap-2 px-8 py-3 rounded-full border border-neutral-800 bg-neutral-900/50 text-neutral-400 text-xs font-bold hover:bg-gym-primary/10 hover:text-white hover:border-gym-primary/50 transition-all uppercase tracking-widest"
                 >
-                    <span>Reiniciar Tutorial Interactivo</span>
-                </button>
-                <button
-                    onClick={() => {
-                        if (window.confirm("¿Seguro que deseas reiniciar tu plan? Esto reseteará las guías de inicio.")) {
-                            // UNIFIED RESET FLOW -> TARGET STEP 5 (Import/Config)
-                            localStorage.removeItem('hasSeenImportTutorial');
-                            localStorage.setItem('tutorial_step', '5');
-                            setTutorialStep(5);
-                            window.scrollTo(0, 0);
-                        }
-                    }}
-                    className="flex items-center gap-2 px-6 py-2 rounded-full border border-red-900/30 bg-red-900/10 text-red-500 text-xs font-medium hover:bg-red-900/20 hover:text-red-400 hover:border-red-900/50 transition-all"
-                >
-                    <span>Reiniciar Plan de Entrenamiento</span>
+                    <span>INICIAR TUTORIAL</span>
                 </button>
             </div>
 
