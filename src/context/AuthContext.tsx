@@ -86,6 +86,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             redirectUrl = 'http://localhost:5173';
         }
 
+        // PERSIST REFERRAL ID IN REDIRECT URL (Crucial for Google Auth)
+        const storedRef = sessionStorage.getItem('gym_referral_id');
+        if (storedRef) {
+            redirectUrl = `${redirectUrl}?ref=${storedRef}`;
+            console.log("🔗 Persisting Referral in OAuth Redirect:", redirectUrl);
+        }
+
         console.log("🔐 Initiating Google Auth with redirect:", redirectUrl);
 
         const { error } = await supabase.auth.signInWithOAuth({
