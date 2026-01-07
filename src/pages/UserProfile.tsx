@@ -96,17 +96,8 @@ export const UserProfile = () => {
             // Fetch Social Stats
             socialService.getProfileStats(user.id).then(setSocialStats);
 
-            // Check Routine Count for Tutorial Trigger
-            userService.getUserRoutines(user.id).then(routines => {
-                const hasSeenImport = localStorage.getItem('hasSeenImportTutorial');
-                const currentStep = parseInt(localStorage.getItem('tutorial_step') || '0');
+            // Check Routine Count REMOVED - Strict User Request: Only start if New User or Explicit Click.
 
-                // If user has routines but hasn't seen import tutorial, and main tutorial is done (step 0)
-                if (routines.length > 0 && !hasSeenImport && currentStep === 0) {
-                    setTutorialStep(5);
-                    localStorage.setItem('tutorial_step', '5');
-                }
-            });
 
             // Short delay for better UX
             // Seed DB with new defaults (Background) - Run Only Once
