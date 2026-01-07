@@ -951,10 +951,12 @@ export const UserProfile = () => {
                     totalSteps={7}
                     onNext={() => {
                         setTutorialStep(0);
+                        localStorage.setItem('tutorial_step', '0'); // Fixes persistence loop
                         localStorage.setItem('hasSeenImportTutorial', 'true');
                     }}
                     onClose={() => {
                         setTutorialStep(0);
+                        localStorage.setItem('tutorial_step', '0'); // Fixes persistence loop
                         localStorage.setItem('hasSeenImportTutorial', 'true');
                     }}
                     placement="top"
