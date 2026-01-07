@@ -949,13 +949,17 @@ export const UserProfile = () => {
                     message="¡Todo listo! Inicia tu entrenamiento (Verificación GPS requerida)."
                     step={7}
                     totalSteps={7}
-                    onNext={() => { }}
+                    onNext={() => {
+                        setTutorialStep(0);
+                        localStorage.setItem('hasSeenImportTutorial', 'true');
+                    }}
                     onClose={() => {
                         setTutorialStep(0);
                         localStorage.setItem('hasSeenImportTutorial', 'true');
                     }}
                     placement="top"
-                    disableNext={true}
+                    disableNext={false}
+                    nextLabel="ENTENDIDO"
                 />
             )}
 
