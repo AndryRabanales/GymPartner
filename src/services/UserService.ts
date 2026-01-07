@@ -120,28 +120,49 @@ class UserService {
             // We no longer award XP just for adding the gym to the map.
             const xpReward = 0;
 
-            // 5. REFERRAL CHECK (One-time check when joining first gym/profile setup)
-            if (isFirstGym) {
-                const refId = sessionStorage.getItem('gym_referral_id');
-                if (refId && refId !== userId) {
-                    console.log("🎁 Processing Referral Reward for:", refId);
-
-                    // Reward Referrer (500 XP)
-                    await supabase.rpc('increment_xp', {
-                        u_id: refId,
-                        amount: 500
-                    });
-
-                    // Consume Referral
-                    sessionStorage.removeItem('gym_referral_id');
-                }
-            }
+            // 5. REFERRAL CHECK REMOVED (Moved to AuthContext for Registration/Login trigger)
+            // Logic moved to processReferral()
 
             return { success: true, gym_id: gymId, xp_gained: xpReward };
 
         } catch (error: any) {
             console.error('Error adding gym to passport:', error);
             return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Process a referral reward (+250 XP)
+     * Called when a new user registers with a ?ref=CODE
+     */
+    async processReferral(newUserId: string, referrerId: string): Promise<boolean> {
+        try {
+            if (newUserId === referrerId) return false; // Self-referral prevention
+
+            console.log(`🎁 Processing Referral: ${referrerId} -> ${newUserId}`);
+
+            // 1. Award XP to Referrer (250 XP)
+            const { error: xpError } = await supabase.rpc('increment_xp', {
+                u_id: referrerId,
+                amount: 250
+            });
+
+            if (xpError) throw xpError;
+
+            // 2. Mark New User as Referred (Prevents duplicates)
+            const { error: updateError } = await supabase.auth.updateUser({
+                data: {
+                    referred_by: referrerId,
+                    referral_date: new Date().toISOString()
+                }
+            });
+
+            if (updateError) throw updateError;
+
+            return true;
+        } catch (error) {
+            console.error("Error processing referral:", error);
+            return false;
         }
     }
 

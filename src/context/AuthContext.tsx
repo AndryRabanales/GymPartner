@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
+import { userService } from '../services/UserService';
 
 interface AuthContextType {
     user: User | null;
@@ -50,9 +51,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
 
         // Listen for changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
             setSession(session);
-            setUser(session?.user ?? null);
+            const currentUser = session?.user ?? null;
+            setUser(currentUser);
+
+            // REFERRAL PROCESSING (On Login/Register)
+            if (currentUser) {
+                const refId = sessionStorage.getItem('gym_referral_id');
+                const alreadyReferred = currentUser.user_metadata?.referred_by;
+
+                if (refId && !alreadyReferred && refId !== currentUser.id) {
+                    console.log("🎁 Automatic Referral Processing...");
+                    const success = await userService.processReferral(currentUser.id, refId);
+                    if (success) {
+                        sessionStorage.removeItem('gym_referral_id');
+                        console.log("✅ Referral Processed. +250 XP to Referrer.");
+                    }
+                }
+            }
         });
 
         return () => subscription.unsubscribe();
