@@ -907,6 +907,8 @@ export const UserProfile = () => {
                     onNext={() => { }}
                     onClose={() => {
                         setTutorialStep(0);
+                        localStorage.setItem('tutorial_step', '0');
+                        localStorage.setItem('hasSeenGlobalTutorial', 'true'); // Pivot point: Mark GLOBAL as seen
                         localStorage.setItem('hasSeenImportTutorial', 'true');
                     }}
                     placement="top"
@@ -925,6 +927,8 @@ export const UserProfile = () => {
                     onNext={() => { }}
                     onClose={() => {
                         setTutorialStep(0);
+                        localStorage.setItem('tutorial_step', '0');
+                        localStorage.setItem('hasSeenGlobalTutorial', 'true');
                         localStorage.setItem('hasSeenImportTutorial', 'true');
                     }}
                     placement="top"
