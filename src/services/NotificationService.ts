@@ -96,7 +96,7 @@ export const notificationService = {
                 user_id: targetUserId,
                 type: 'invitation',
                 title: '🔥 DESAFÍO DE ENTRENAMIENTO',
-                message: `${senderName} te está invitando a entrenar. ¿Aceptas el reto?`,
+                message: `${senderName} te está invitando a entrenar. ¿Aceptas?`,
                 data: {
                     sender_id: user.id,
                     sender_name: senderName

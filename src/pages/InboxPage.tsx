@@ -114,6 +114,9 @@ export const InboxPage = () => {
         const senderId = notification.data?.sender_id;
         if (!senderId) return;
 
+        // Optimistic UI Update: Remove immediately
+        setInvitations(prev => prev.filter(n => n.id !== notification.id));
+
         try {
             await notificationService.markAsRead(notification.id);
             const chatId = await notificationService.acceptInvitation(senderId);
@@ -122,6 +125,7 @@ export const InboxPage = () => {
             }
         } catch (error) {
             console.error("Error accepting invite:", error);
+            // Optional: Revert state if error, but low risk here
         }
     };
 
