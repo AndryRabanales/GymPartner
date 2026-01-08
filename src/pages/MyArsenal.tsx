@@ -370,119 +370,101 @@ export const MyArsenal = () => {
         };
         console.log('Attempting to create custom equipment:', payload);
 
-        console.log('Updating equipment with payload:', { id: editingItem.id, customName, customCategory, resolvedIcon });
+    } else {
+        newItem = await equipmentService.addEquipment(payload, user.id);
+    console.log('✅ Exercise created successfully:', newItem);
 
-        // Log payload about to be sent
-        const updatePayload = {
-            name: customName,
-            category: customCategory,
-            metrics: customMetrics,
-            icon: resolvedIcon // [FIX] Added icon to update payload
-        };
-        console.log('[DEBUG] Update Payload:', JSON.stringify(updatePayload));
+    // Add to BOTH inventory states so it appears immediately
+    // This ensures it shows up in the merged effectiveInventory
+    setInventory(prev => [...prev, newItem]);
+    setGlobalInventory(prev => {
+        // Avoid duplicates
+        if (prev.some(item => item.id === newItem.id)) return prev;
+        return [...prev, newItem];
+    });
+}
 
-        if (editingItem) {
-            await equipmentService.updateEquipment(editingItem.id, updatePayload);
-            newItem = { ...editingItem, name: customName, category: customCategory, metrics: customMetrics, icon: resolvedIcon };
+// [FIX] Update Routine Configs immediately so the logic persists!
+// Map the boolean metrics to the table columns format
+const customKeys = Object.keys(customMetrics).filter(k => !['weight', 'reps', 'time', 'distance', 'rpe', 'track_pr'].includes(k) && (customMetrics as any)[k]);
+const foundCustomMetric = customKeys.length > 0 ? customKeys[0] : null;
 
-            // Optimistic Update for Edit - Update in both inventories
-            setInventory(prev => prev.map(i => i.id === newItem.id ? newItem : i));
-            setGlobalInventory(prev => prev.map(i => i.id === newItem.id ? newItem : i));
-        } else {
-            newItem = await equipmentService.addEquipment(payload, user.id);
-            console.log('✅ Exercise created successfully:', newItem);
+setRoutineConfigs(prev => {
+    const next = new Map(prev);
+    next.set(newItem.id, {
+        track_weight: customMetrics.weight ?? true,
+        track_reps: customMetrics.reps ?? true,
+        track_time: customMetrics.time ?? false,
+        track_distance: customMetrics.distance ?? false,
+        track_rpe: customMetrics.rpe ?? false,
+        track_pr: (customMetrics as any).track_pr ?? false,
+        custom_metric: foundCustomMetric
+    });
+    return next;
+});
 
-            // Add to BOTH inventory states so it appears immediately
-            // This ensures it shows up in the merged effectiveInventory
-            setInventory(prev => [...prev, newItem]);
-            setGlobalInventory(prev => {
-                // Avoid duplicates
-                if (prev.some(item => item.id === newItem.id)) return prev;
-                return [...prev, newItem];
-            });
-        }
+// If creating new, auto-select it?
+// User usually expects "Create" to "Use".
+if (!editingItem) {
+    toggleSelection(newItem.id);
+}
 
-        // [FIX] Update Routine Configs immediately so the logic persists!
-        // Map the boolean metrics to the table columns format
-        const customKeys = Object.keys(customMetrics).filter(k => !['weight', 'reps', 'time', 'distance', 'rpe', 'track_pr'].includes(k) && (customMetrics as any)[k]);
-        const foundCustomMetric = customKeys.length > 0 ? customKeys[0] : null;
+// Success - Close modal and reset form
+setAddingMode(false);
+setCustomMode(false);
+setCustomName('');
+setEditingItem(null);
+setCustomMetrics({
+    weight: true,
+    reps: true,
+    time: false,
+    distance: false,
+    rpe: false
+});
 
-        setRoutineConfigs(prev => {
-            const next = new Map(prev);
-            next.set(newItem.id, {
-                track_weight: customMetrics.weight ?? true,
-                track_reps: customMetrics.reps ?? true,
-                track_time: customMetrics.time ?? false,
-                track_distance: customMetrics.distance ?? false,
-                track_rpe: customMetrics.rpe ?? false,
-                track_pr: (customMetrics as any).track_pr ?? false,
-                custom_metric: foundCustomMetric
-            });
-            return next;
-        });
-
-        // If creating new, auto-select it?
-        // User usually expects "Create" to "Use".
-        if (!editingItem) {
-            toggleSelection(newItem.id);
-        }
-
-        // Success - Close modal and reset form
-        setAddingMode(false);
-        setCustomMode(false);
-        setCustomName('');
-        setEditingItem(null);
-        setCustomMetrics({
-            weight: true,
-            reps: true,
-            time: false,
-            distance: false,
-            rpe: false
-        });
-
-        alert(`¡Ejercicio "${newItem.name}" creado y añadido a tu arsenal!`);
+alert(`¡Ejercicio "${newItem.name}" creado y añadido a tu arsenal!`);
 
         // NO LONGER NEEDED: Removed delayed initialize() that was overwriting optimistic updates
         // The item is already in the state and will appear immediately
 
     } catch (error: any) {
-        console.error('Detailed Error saving custom equipment:', error);
+    console.error('Detailed Error saving custom equipment:', error);
 
-        // Auto-Fallback for Enum Issues
-        if (error.message && (error.message.includes('enum') || error.message.includes('invalid input value'))) {
-            try {
-                console.log('Falling back to STRENGTH_MACHINE due to Enum error...');
-                const fallbackPayload = { ...payload, category: 'STRENGTH_MACHINE' };
-                let fallbackItem: Equipment;
+    // Auto-Fallback for Enum Issues
+    if (error.message && (error.message.includes('enum') || error.message.includes('invalid input value'))) {
+        try {
+            console.log('Falling back to STRENGTH_MACHINE due to Enum error...');
+            const fallbackPayload = { ...payload, category: 'STRENGTH_MACHINE' };
+            let fallbackItem: Equipment;
 
-                if (editingItem) {
-                    await equipmentService.updateEquipment(editingItem.id, { ...fallbackPayload, id: undefined } as any);
-                    fallbackItem = { ...editingItem, ...fallbackPayload };
-                } else {
-                    fallbackItem = await equipmentService.addEquipment(fallbackPayload, user.id);
-                    // Add to both inventories
-                    setInventory(prev => [...prev, fallbackItem]);
-                    setGlobalInventory(prev => {
-                        if (prev.some(item => item.id === fallbackItem.id)) return prev;
-                        return [...prev, fallbackItem];
-                    });
-                }
-
-                setAddingMode(false);
-                setCustomMode(false);
-                setCustomName('');
-                setEditingItem(null);
-                alert('¡Ejercicio guardado! (Nota: Se guardó como "Máquina" por restricciones del sistema, pero funcionará correctamente).');
-                return;
-            } catch (retryError: any) {
-                console.error('Fallback failed:', retryError);
-                alert(`Error Crítico al guardar: ${retryError.message}`);
-                return;
+            if (editingItem) {
+                await equipmentService.updateEquipment(editingItem.id, { ...fallbackPayload, id: undefined } as any);
+                fallbackItem = { ...editingItem, ...fallbackPayload };
+            } else {
+                fallbackItem = await equipmentService.addEquipment(fallbackPayload, user.id);
+                // Add to both inventories
+                setInventory(prev => [...prev, fallbackItem]);
+                setGlobalInventory(prev => {
+                    if (prev.some(item => item.id === fallbackItem.id)) return prev;
+                    return [...prev, fallbackItem];
+                });
             }
-        }
 
-        alert(`Error al guardar: ${error.message || JSON.stringify(error)}`);
+            setAddingMode(false);
+            setCustomMode(false);
+            setCustomName('');
+            setEditingItem(null);
+            alert('¡Ejercicio guardado! (Nota: Se guardó como "Máquina" por restricciones del sistema, pero funcionará correctamente).');
+            return;
+        } catch (retryError: any) {
+            console.error('Fallback failed:', retryError);
+            alert(`Error Crítico al guardar: ${retryError.message}`);
+            return;
+        }
     }
+
+    alert(`Error al guardar: ${error.message || JSON.stringify(error)}`);
+}
 };
 
 const handleImportRoutine = async (sourceRoutine: any) => {
