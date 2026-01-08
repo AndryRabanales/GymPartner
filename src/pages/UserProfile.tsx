@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Trophy, MapPin, Edit2, LogIn, Loader, Swords, Dumbbell, LineChart, History, Star, Search, ArrowLeft, UserPlus, Crown } from 'lucide-react';
+import { Trophy, MapPin, Edit2, LogIn, Loader, Swords, Dumbbell, LineChart, History, Star, Search, ArrowLeft, Crown } from 'lucide-react';
+// import { UserPlus, Grid } from 'lucide-react'; // UNUSED: Hidden Community Features
 // import { Grid } from 'lucide-react'; // UNUSED: Hidden Community Features
 import { Link, useNavigate } from 'react-router-dom';
 // import { getXPProgress, getRankFromXP } from '../types/user';
@@ -755,6 +756,7 @@ export const UserProfile = () => {
 
                 {/* INVITE FRIENDS - MOVED HERE */}
                 {/* INVITE FRIENDS - MOVED HERE */}
+                {/* BUTTON HIDDEN: INVITE FRIENDS (Requested by User)
                 <button
                     onClick={() => setShowReferralModal(true)}
                     className="col-span-2 sm:col-span-1 group bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/20 hover:border-yellow-500/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md"
@@ -767,6 +769,7 @@ export const UserProfile = () => {
                         <span className="text-[10px] font-bold text-yellow-500/70">+250 XP</span>
                     </div>
                 </button>
+                */}
             </div>
 
             {/* TERRITORIES SECTION (PASSPORT) */}
