@@ -101,7 +101,8 @@ export const InboxPage = () => {
     const loadInvitations = async () => {
         setLoading(true);
         const all = await notificationService.getNotifications(50);
-        const invites = all.filter(n => n.type === 'invitation' && !n.is_read);
+        // We now want ALL invitations, including read ones if they have a status
+        const invites = all.filter(n => n.type === 'invitation');
         setInvitations(invites);
         setLoading(false);
     };
@@ -114,25 +115,34 @@ export const InboxPage = () => {
         const senderId = notification.data?.sender_id;
         if (!senderId) return;
 
-        // Optimistic UI Update: Remove immediately
-        setInvitations(prev => prev.filter(n => n.id !== notification.id));
+        // Optimistic UI Update: Mark as accepted immediately in local state
+        setInvitations(prev => prev.map(n =>
+            n.id === notification.id
+                ? { ...n, data: { ...n.data, status: 'accepted' }, is_read: true }
+                : n
+        ));
 
         try {
-            await notificationService.markAsRead(notification.id);
+            await notificationService.updateInvitationStatus(notification, 'accepted');
             const chatId = await notificationService.acceptInvitation(senderId);
             if (chatId) {
                 navigate(`/chat/${chatId}`);
             }
         } catch (error) {
             console.error("Error accepting invite:", error);
-            // Optional: Revert state if error, but low risk here
         }
     };
 
     const handleReject = async (notification: Notification) => {
+        // Optimistic: Mark rejected
+        setInvitations(prev => prev.map(n =>
+            n.id === notification.id
+                ? { ...n, data: { ...n.data, status: 'rejected' }, is_read: true }
+                : n
+        ));
+
         try {
-            await notificationService.markAsRead(notification.id);
-            setInvitations(prev => prev.filter(n => n.id !== notification.id));
+            await notificationService.updateInvitationStatus(notification, 'rejected');
         } catch (error) {
             console.error("Error rejecting invite:", error);
         }
@@ -155,8 +165,10 @@ export const InboxPage = () => {
                     className={`flex-1 py-4 text-sm font-bold transition-all relative ${activeTab === 'matches' ? 'text-white' : 'text-neutral-500 hover:text-neutral-300'}`}
                 >
                     Matches
-                    {invitations.length > 0 && (
-                        <span className="ml-2 text-[10px] bg-gym-primary text-black px-1.5 py-0.5 rounded-full">{invitations.length}</span>
+                    {invitations.filter(i => !i.is_read || !i.data?.status).length > 0 && (
+                        <span className="ml-2 text-[10px] bg-gym-primary text-black px-1.5 py-0.5 rounded-full">
+                            {invitations.filter(i => !i.is_read || !i.data?.status).length}
+                        </span>
                     )}
                     {activeTab === 'matches' && (
                         <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gym-primary shadow-[0_0_15px_rgba(250,204,21,0.5)]"></div>
@@ -195,42 +207,59 @@ export const InboxPage = () => {
                                 </button>
                             </div>
                         ) : (
-                            invitations.map(invite => (
-                                <div key={invite.id} className="relative overflow-hidden bg-neutral-900/50 border border-neutral-800 rounded-2xl p-4 transition-all duration-200 hover:border-neutral-700">
-                                    <div className="flex items-start gap-4">
-                                        <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-purple-500 to-blue-500 p-[2px] shrink-0">
-                                            <div className="w-full h-full rounded-full bg-black flex items-center justify-center overflow-hidden">
-                                                <span className="font-bold text-white text-xl">{invite.data.sender_name?.[0] || '?'}</span>
-                                            </div>
-                                        </div>
+                            invitations.map(invite => {
+                                const status = invite.data?.status; // 'accepted' | 'rejected' | undefined
 
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-baseline justify-between mb-1">
-                                                <h4 className="text-base font-bold text-white truncate">{invite.title.replace('🔥 ', '')}</h4>
-                                                <span className="text-xs text-neutral-500">{new Date(invite.created_at).toLocaleDateString()}</span>
+                                return (
+                                    <div key={invite.id} className={`relative overflow-hidden border rounded-2xl p-4 transition-all duration-200 ${status ? 'bg-black border-neutral-800 opacity-60' : 'bg-neutral-900/50 border-neutral-800 hover:border-neutral-700'}`}>
+                                        <div className="flex items-start gap-4">
+                                            <div className={`w-14 h-14 rounded-full p-[2px] shrink-0 ${status ? 'bg-neutral-800' : 'bg-gradient-to-tr from-purple-500 to-blue-500'}`}>
+                                                <div className="w-full h-full rounded-full bg-black flex items-center justify-center overflow-hidden">
+                                                    <span className="font-bold text-white text-xl">{invite.data.sender_name?.[0] || '?'}</span>
+                                                </div>
                                             </div>
-                                            <p className="text-sm text-neutral-400 leading-relaxed">
-                                                {invite.message}
-                                            </p>
 
-                                            <div className="flex gap-3 mt-4">
-                                                <button
-                                                    onClick={() => handleReject(invite)}
-                                                    className="flex-1 py-2 rounded-xl bg-neutral-800 text-neutral-400 font-bold text-xs hover:bg-red-500/10 hover:text-red-400 transition-colors flex items-center justify-center gap-2"
-                                                >
-                                                    <X size={16} /> RECHAZAR
-                                                </button>
-                                                <button
-                                                    onClick={() => handleAccept(invite)}
-                                                    className="flex-[2] py-2 rounded-xl bg-white text-black font-black text-xs hover:bg-gym-primary transition-colors flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(255,255,255,0.1)] hover:shadow-[0_0_20px_rgba(250,204,21,0.4)]"
-                                                >
-                                                    <Check size={16} /> ACEPTAR RETO
-                                                </button>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-baseline justify-between mb-1">
+                                                    <h4 className={`text-base font-bold truncate ${status ? 'text-neutral-500' : 'text-white'}`}>{invite.title.replace('🔥 ', '')}</h4>
+                                                    <span className="text-xs text-neutral-600">{new Date(invite.created_at).toLocaleDateString()}</span>
+                                                </div>
+                                                <p className={`text-sm leading-relaxed ${status ? 'text-neutral-600' : 'text-neutral-400'}`}>
+                                                    {invite.message}
+                                                </p>
+
+                                                {/* Action Area / History Badge */}
+                                                <div className="mt-4">
+                                                    {status === 'accepted' ? (
+                                                        <div className="flex items-center gap-2 text-gym-primary font-bold text-xs bg-gym-primary/10 py-2 px-4 rounded-lg w-fit">
+                                                            <Check size={14} /> ACEPTADO
+                                                        </div>
+                                                    ) : status === 'rejected' ? (
+                                                        <div className="flex items-center gap-2 text-red-500 font-bold text-xs bg-red-500/10 py-2 px-4 rounded-lg w-fit">
+                                                            <X size={14} /> RECHAZADO
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex gap-3">
+                                                            <button
+                                                                onClick={() => handleReject(invite)}
+                                                                className="flex-1 py-2 rounded-xl bg-neutral-800 text-neutral-400 font-bold text-xs hover:bg-red-500/10 hover:text-red-400 transition-colors flex items-center justify-center gap-2"
+                                                            >
+                                                                <X size={16} /> RECHAZAR
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleAccept(invite)}
+                                                                className="flex-[2] py-2 rounded-xl bg-white text-black font-black text-xs hover:bg-gym-primary transition-colors flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(255,255,255,0.1)] hover:shadow-[0_0_20px_rgba(250,204,21,0.4)]"
+                                                            >
+                                                                <Check size={16} /> ACEPTAR RETO
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))
+                                );
+                            })
                         )}
                     </div>
                 ) : (

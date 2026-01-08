@@ -64,6 +64,29 @@ export const notificationService = {
     },
 
     /**
+     * Actualizar estado de la invitación (Aceptada/Rechazada)
+     */
+    async updateInvitationStatus(notification: Notification, status: 'accepted' | 'rejected') {
+        const newData = {
+            ...notification.data,
+            status: status
+        };
+
+        const { error } = await supabase
+            .from('notifications')
+            .update({
+                is_read: true,
+                data: newData
+            })
+            .eq('id', notification.id);
+
+        if (error) {
+            console.error('Error updating invitation status:', error);
+            throw error;
+        }
+    },
+
+    /**
      * Marcar todas como leídas
      */
     async markAllAsRead() {
