@@ -25,6 +25,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ onUploadClick }) => {
                 </Link>
 
                 {/* 2. REELS */}
+                {/* 2. REELS (HIDDEN)
                 <Link to="/reels" className="flex flex-col items-center justify-center gap-0.5 w-14 h-full">
                     <Film
                         size={22}
@@ -33,8 +34,10 @@ export const BottomNav: React.FC<BottomNavProps> = ({ onUploadClick }) => {
                     />
                     <span className={`text-[10px] font-bold ${isActive('/reels') ? 'text-white' : 'text-neutral-500'}`}>Reels</span>
                 </Link>
+                */}
 
                 {/* 3. CREAR POST (Center) */}
+                {/* 3. CREAR POST (Center) (HIDDEN)
                 <button
                     onClick={onUploadClick}
                     className="flex flex-col items-center justify-center w-14 sm:w-16 h-full group active:scale-95 transition-transform"
@@ -43,8 +46,10 @@ export const BottomNav: React.FC<BottomNavProps> = ({ onUploadClick }) => {
                         <PlusSquare size={22} strokeWidth={2.5} />
                     </div>
                 </button>
+                */}
 
                 {/* 4. COMUNIDAD */}
+                {/* 4. COMUNIDAD (HIDDEN)
                 <Link to="/community" className="flex flex-col items-center justify-center gap-0.5 w-14 h-full">
                     <Users
                         size={22}
@@ -53,6 +58,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ onUploadClick }) => {
                     />
                     <span className={`text-[10px] font-bold ${isActive('/community') ? 'text-white' : 'text-neutral-500'}`}>Comunidad</span>
                 </Link>
+                */}
 
                 {/* 5. RADAR (GymRats) */}
                 <Link to="/radar" className="flex flex-col items-center justify-center gap-0.5 w-14 h-full">

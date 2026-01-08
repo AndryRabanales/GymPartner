@@ -61,10 +61,10 @@ export const AppLayout = () => {
                             <nav className="hidden md:flex items-center bg-white/5 rounded-full p-1 border border-white/5 backdrop-blur-md">
                                 {[
                                     { to: "/", label: "Inicio" },
-                                    { to: "/reels", label: "Reels" },
+                                    // { to: "/reels", label: "Reels" }, // HIDDEN: Community Features
                                     { to: "/map", label: "Mapa" },
                                     { to: "/ranking", label: "Rankings" },
-                                    { to: "/community", label: "Comunidad" }
+                                    // { to: "/community", label: "Comunidad" } // HIDDEN: Community Features
                                 ].map((link) => (
                                     <Link
                                         key={link.to}
