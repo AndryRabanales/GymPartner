@@ -1003,6 +1003,7 @@ export const MyArsenal = () => {
             // Reset
             handleCreateNew();
             initialize(); // Refresh lists
+            setViewMode('ROUTINES'); // Go back to list
 
         } catch (error: any) {
             console.error(error);
