@@ -32,16 +32,17 @@ export const RankingPage = () => {
                 // Determine Gym ID (from user profile or primary gym)
                 // For now, we assume user has a home_gym linked in profiles.
                 // We first get the user's gym_id.
-                const { data: userData } = await supabase
+                const { data: userData, error: userError } = await supabase
                     .from('profiles')
-                    .select('gym_id, gyms(name)')
+                    .select('gym_id')
                     .eq('id', user.id)
                     .single();
 
+                if (userError) console.warn("Error fetching user gym:", userError);
+
                 const gymId = userData?.gym_id;
-                // Fix: Handle gym name access safety (it might be returned as an array or object depending on relation type inference)
-                const gymData = userData?.gyms as any;
-                const gymName = Array.isArray(gymData) ? gymData[0]?.name : gymData?.name || 'Global';
+                // Gym name will be retrieved from the leaderboard data itself
+                let gymName = 'Gym';
 
                 if (!gymId) {
                     // Fallback if no gym: Show global or empty?
@@ -76,7 +77,7 @@ export const RankingPage = () => {
                         // Let's update interface `xp` to be generic `score` or `followers`?
                         // I'll keep `xp` in interface but treat it as score.
                         rank: index + 1,
-                        gym_name: gymName,
+                        gym_name: p.gym_name || gymName,
                         is_current_user: p.id === user.id,
                         banner_url: null, // RPC didn't return proper banner, need to add to RPC or ignore
                         featured_routine_id: null
@@ -159,7 +160,7 @@ export const RankingPage = () => {
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
                     <h1 className="text-2xl font-black text-white italic uppercase tracking-tighter flex items-center gap-2">
                         <Trophy className="text-yellow-500" />
-                        Ranking {leaderboard[0]?.gym_name || 'Gym'}
+                        Ranking {leaderboard.length > 0 ? leaderboard[0].gym_name : 'Local'}
                     </h1>
                     <div className="flex items-center gap-2 bg-neutral-900 border border-neutral-800 px-3 py-1 rounded-full">
                         <Shield size={14} className="text-blue-400" />
