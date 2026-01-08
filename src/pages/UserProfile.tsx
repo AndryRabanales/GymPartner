@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Trophy, MapPin, Edit2, LogIn, Loader, Swords, Dumbbell, LineChart, History, Star, Search, ArrowLeft, UserPlus, Grid, Crown } from 'lucide-react';
+import { Trophy, MapPin, Edit2, LogIn, Loader, Swords, Dumbbell, LineChart, History, Star, Search, ArrowLeft, UserPlus, Crown } from 'lucide-react';
+// import { Grid } from 'lucide-react'; // UNUSED: Hidden Community Features
 import { Link, useNavigate } from 'react-router-dom';
 // import { getXPProgress, getRankFromXP } from '../types/user';
 import type { UserRank } from '../types/user';
@@ -740,6 +741,7 @@ export const UserProfile = () => {
                     <span className="font-bold text-neutral-200 group-hover:text-white text-xs md:text-base">Historial</span>
                 </Link>
 
+                {/* BUTTON HIDDEN: Mis Posts
                 <button
                     onClick={() => setShowSocialProfile(true)}
                     className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-yellow-500/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md cursor-pointer"
@@ -749,7 +751,9 @@ export const UserProfile = () => {
                     </div>
                     <span className="font-bold text-neutral-200 group-hover:text-white text-xs md:text-base">Mis Posts</span>
                 </button>
+                */}
 
+                {/* INVITE FRIENDS - MOVED HERE */}
                 {/* INVITE FRIENDS - MOVED HERE */}
                 <button
                     onClick={() => setShowReferralModal(true)}

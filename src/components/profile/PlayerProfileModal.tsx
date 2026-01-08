@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { X, Swords, Grid, Film, MapPin, Heart, UserPlus, UserCheck } from 'lucide-react';
+import { X, Swords, MapPin, UserPlus, UserCheck } from 'lucide-react';
+// import { Grid, Film, Heart } from 'lucide-react'; // UNUSED: Hidden Community Features
 import { FeedViewerOverlay } from '../social/FeedViewerOverlay';
 import { useAuth } from '../../context/AuthContext';
 import { userService } from '../../services/UserService';
@@ -29,7 +30,8 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
     const [stats, setStats] = useState({ followersCount: 0, followingCount: 0, totalLikes: 0 });
     const [viewedPostId, setViewedPostId] = useState<string | null>(null);
     const [isFollowing, setIsFollowing] = useState(false);
-    const [activeTab, setActiveTab] = useState<'grid' | 'reels' | 'routines'>('grid');
+    // HIDDEN: Community Features - defaulting to routines
+    const [activeTab, setActiveTab] = useState<'grid' | 'reels' | 'routines'>('routines');
 
     // Content State
     const [posts, setPosts] = useState<Post[]>([]);
@@ -209,6 +211,7 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
 
                         {/* TABS SWITCHER */}
                         <div className="flex w-full border-b border-neutral-800 mb-4 sticky top-0 bg-neutral-900/95 backdrop-blur z-20 pt-2">
+                            {/* HIDDEN: Posts Tab
                             <button
                                 onClick={() => setActiveTab('grid')}
                                 className={`flex-1 pb-3 text-xs font-bold uppercase tracking-widest transition-colors relative ${activeTab === 'grid' ? 'text-white' : 'text-neutral-500 hover:text-neutral-300'}`}
@@ -217,6 +220,8 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
                                 Posts
                                 {activeTab === 'grid' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-yellow-500 shadow-[0_0_10px_#eab308]" />}
                             </button>
+                            */}
+                            {/* HIDDEN: Reels Tab
                             <button
                                 onClick={() => setActiveTab('reels')}
                                 className={`flex-1 pb-3 text-xs font-bold uppercase tracking-widest transition-colors relative ${activeTab === 'reels' ? 'text-white' : 'text-neutral-500 hover:text-neutral-300'}`}
@@ -225,6 +230,7 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
                                 Reels
                                 {activeTab === 'reels' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-yellow-500 shadow-[0_0_10px_#eab308]" />}
                             </button>
+                            */}
                             <button
                                 onClick={() => setActiveTab('routines')}
                                 className={`flex-1 pb-3 text-xs font-bold uppercase tracking-widest transition-colors relative ${activeTab === 'routines' ? 'text-white' : 'text-neutral-500 hover:text-neutral-300'}`}
@@ -236,7 +242,7 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
                         </div>
 
                         {/* TAB CONTENT (Full Width) */}
-                        {/* 1. GRID TAB (Images) */}
+                        {/* 1. GRID TAB (Images) (HIDDEN)
                         {activeTab === 'grid' && (
                             <div className="grid grid-cols-3 gap-1 animate-in slide-in-from-bottom-2 fade-in duration-300">
                                 {posts.map(post => (
@@ -257,7 +263,7 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
                                             <img src={post.media_url} alt="Post" className="w-full h-full object-cover" />
                                         )}
 
-                                        {/* Type Indicator */}
+                                        {/* Type Indicator 
                                         {post.type === 'video' && (
                                             <div className="absolute top-2 right-2">
                                                 <Film size={16} className="text-white drop-shadow-md" />
@@ -279,7 +285,8 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
                                 )}
                             </div>
                         )}
-                        {/* 2. REELS TAB (Videos) */}
+                        */}
+                        {/* 2. REELS TAB (Videos) (HIDDEN)
                         {activeTab === 'reels' && (
                             <div className="grid grid-cols-2 gap-2 animate-in slide-in-from-bottom-2 fade-in duration-300">
                                 {posts.map(post => (
@@ -311,6 +318,7 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
                                 )}
                             </div>
                         )}
+                        */}
 
                         {/* 3. ROUTINES TAB (Mazos) */}
                         {activeTab === 'routines' && (
