@@ -790,8 +790,8 @@ export const UserProfile = () => {
                                 if (localStorage.getItem('tutorial_step') === '3') localStorage.setItem('tutorial_step', '4');
                                 if (localStorage.getItem('tutorial_step') === '5') localStorage.setItem('tutorial_step', '6');
                             }} className={`bg-neutral-900 border ${gym.is_home_base ? 'border-yellow-500/50 shadow-[0_0_20px_rgba(234,179,8,0.1)]' : 'border-neutral-800'} p-3 md:p-6 rounded-xl md:rounded-2xl flex items-center justify-between group hover:border-gym-primary/30 transition-colors shadow-sm relative overflow-hidden`}>
-                                <Link to={`/territory/${gym.gym_id}`} className="flex-1 min-w-0 mr-3 no-underline">
-                                    <h3 className={`font-bold text-sm md:text-lg mb-0.5 md:mb-1 transition-colors truncate max-w-[200px] md:max-w-none flex items-center gap-2 ${gym.is_home_base ? 'text-yellow-400' : 'text-white group-hover:text-gym-primary'}`}>
+                                <div className="flex-1 min-w-0 mr-3">
+                                    <h3 className={`font-bold text-sm md:text-lg mb-0.5 md:mb-1 transition-colors truncate max-w-[200px] md:max-w-none flex items-center gap-2 ${gym.is_home_base ? 'text-yellow-400' : 'text-white'}`}>
                                         {gym.gym_name}
                                         {gym.is_home_base && <Star size={14} fill="currentColor" className="text-yellow-500" />}
                                     </h3>
@@ -804,7 +804,7 @@ export const UserProfile = () => {
                                         )}
                                         <span>Items: {gym.equipment_count || 0}</span>
                                     </div>
-                                </Link>
+                                </div>
 
                                 {/* ACTION BUTTONS */}
                                 <div className="flex items-center gap-3 shrink-0">
