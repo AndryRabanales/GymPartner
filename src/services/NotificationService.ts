@@ -84,9 +84,11 @@ export const notificationService = {
     /**
      * Enviar una invitación de entrenamiento
      */
-    async sendInvitation(targetUserId: string, senderName: string): Promise<boolean> {
+    async sendInvitation(targetUserId: string, passedName?: string): Promise<boolean> {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return false;
+
+        const senderName = user.user_metadata?.full_name || user.user_metadata?.username || passedName || "Un GymRat";
 
         const { error } = await supabase
             .from('notifications')
@@ -141,12 +143,14 @@ export const notificationService = {
 
         if (chat) {
             // 2. Insert System Message (Auto-generated)
+            const acceptorName = user.user_metadata?.full_name || user.user_metadata?.username || 'Alguien';
+
             await supabase
                 .from('chat_messages')
                 .insert({
                     chat_id: chat.id,
-                    sender_id: user.id, // Or could be system user, but cleaner if it appears as "User A accepted"
-                    content: `¡${user.user_metadata.full_name || 'Alguien'} ha aceptado tu invitación! Pónganse de acuerdo.`
+                    sender_id: user.id,
+                    content: `${acceptorName} ha aceptado tu invitacion a entrenar!!!`
                 });
 
             // Update last_message_at
