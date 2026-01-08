@@ -29,11 +29,11 @@ BEGIN
     FROM 
         profiles p
     LEFT JOIN 
-        gyms g ON p.gym_id = g.id
+        gyms g ON p.home_gym_id = g.id
     LEFT JOIN 
         user_followers uf ON p.id = uf.user_id
     WHERE 
-        p.gym_id = gym_id_param
+        p.home_gym_id = gym_id_param
     ORDER BY 
         followers_count DESC
     LIMIT 100;

@@ -34,13 +34,13 @@ export const RankingPage = () => {
                 // We first get the user's gym_id.
                 const { data: userData, error: userError } = await supabase
                     .from('profiles')
-                    .select('gym_id')
+                    .select('home_gym_id')
                     .eq('id', user.id)
                     .single();
 
                 if (userError) console.warn("Error fetching user gym:", userError);
 
-                const gymId = userData?.gym_id;
+                const gymId = userData?.home_gym_id;
                 // Gym name will be retrieved from the leaderboard data itself
                 let gymName = 'Gym';
 
