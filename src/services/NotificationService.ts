@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { socialService } from './SocialService';
 
 export interface Notification {
     id: string;
@@ -84,12 +85,40 @@ export const notificationService = {
     /**
      * Enviar una invitación de entrenamiento
      */
+    /**
+     * Enviar una invitación de entrenamiento
+     */
     async sendInvitation(targetUserId: string, passedName?: string): Promise<boolean> {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return false;
 
         const senderName = user.user_metadata?.full_name || user.user_metadata?.username || passedName || "Un GymRat";
 
+        // 1. AUTO-FOLLOW Logic
+        try {
+            const isFollowing = await socialService.getFollowStatus(user.id, targetUserId);
+            if (!isFollowing) {
+                // Auto-follow
+                await socialService.followUser(user.id, targetUserId);
+
+                // Notify Target about New Follower
+                await supabase
+                    .from('notifications')
+                    .insert({
+                        user_id: targetUserId,
+                        type: 'system', // or create 'new_follower' type if strict, using system for now as it's general
+                        title: 'NUEVO SEGUIDOR',
+                        message: `${senderName} ha comenzado a seguirte.`,
+                        data: {
+                            sender_id: user.id
+                        }
+                    });
+            }
+        } catch (followError) {
+            console.error("Auto-follow error (non-blocking):", followError);
+        }
+
+        // 2. SEND INVITATION
         const { error } = await supabase
             .from('notifications')
             .insert({
