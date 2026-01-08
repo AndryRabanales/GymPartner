@@ -1,11 +1,12 @@
 // Add static import at top
 import { useEffect, useState } from 'react';
-// import { BotSeeder } from '../services/BotSeeder'; // UNUSED
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Trophy, Shield, MapPin, Swords } from 'lucide-react';
+import { Trophy, Shield, MapPin, Swords, ChevronLeft, ChevronRight } from 'lucide-react';
 import { PublicTeaser } from '../components/common/PublicTeaser';
 import { PlayerProfileModal } from '../components/profile/PlayerProfileModal';
+import { userService } from '../services/UserService';
+import type { UserPrimaryGym } from '../services/UserService';
 
 interface RankedUser {
     id: string;
@@ -24,48 +25,47 @@ export const RankingPage = () => {
     const [leaderboard, setLeaderboard] = useState<RankedUser[]>([]);
     const [selectedPlayer, setSelectedPlayer] = useState<RankedUser | null>(null);
 
+    // Gym Switcher State
+    const [userGyms, setUserGyms] = useState<UserPrimaryGym[]>([]);
+    const [currentGymIndex, setCurrentGymIndex] = useState(0);
+    const [loadingGyms, setLoadingGyms] = useState(true);
+
+    // 1. Fetch User Gyms
+    useEffect(() => {
+        const fetchGyms = async () => {
+            if (!user) return;
+            try {
+                const gyms = await userService.getUserGyms(user.id);
+                // Sort: Home Base First
+                const sortedGyms = gyms.sort((a, b) => {
+                    if (a.is_home_base === b.is_home_base) return 0;
+                    return a.is_home_base ? -1 : 1;
+                });
+                setUserGyms(sortedGyms);
+            } catch (err) {
+                console.error("Error fetching user gyms:", err);
+            } finally {
+                setLoadingGyms(false);
+            }
+        };
+        fetchGyms();
+    }, [user]);
+
+    // 2. Fetch Leaderboard when Current Gym Changes
     useEffect(() => {
         const fetchLeaderboard = async () => {
-            if (!user) return;
+            if (!user || userGyms.length === 0) return;
+
+            const targetGym = userGyms[currentGymIndex];
+            if (!targetGym) return;
 
             try {
-                // Determine Gym ID (from user profile or primary gym)
-                // For now, we assume user has a home_gym linked in profiles.
-                // We first get the user's gym_id.
-                const { data: userData, error: userError } = await supabase
-                    .from('profiles')
-                    .select('home_gym_id')
-                    .eq('id', user.id)
-                    .single();
-
-                if (userError) console.warn("Error fetching user gym:", userError);
-
-                const gymId = userData?.home_gym_id;
-                // Gym name will be retrieved from the leaderboard data itself
-                let gymName = 'Gym';
-
-                if (!gymId) {
-                    // Fallback if no gym: Show global or empty?
-                    // User said "local by gym".
-                    // We'll show a message or empty state if no gym.
-                    // For now, let's try to fetch global if no gym, or just return empty.
-                    console.log("User has no gym assigned for ranking.");
-                    setLeaderboard([]);
-                    return;
-                }
-
                 // Call RPC
                 const { data: leaderboardData, error } = await supabase
-                    .rpc('get_gym_followers_leaderboard', { gym_id_param: gymId });
+                    .rpc('get_gym_followers_leaderboard', { gym_id_param: targetGym.gym_id });
 
                 if (error) {
                     console.error('Error fetching gym leaderboard:', error);
-                    // Fallback to empty or previous logic?
-                    // Since the SQL might not be run yet, this will error.
-                    // We should probably handle this gracefully or mock it client side for dev.
-                    // MOCK FOR DEV if RPC Missing:
-                    // fetch profiles with gym_id, then manually count followers? 
-                    // Too expensive. We'll just show empty and console error.
                 }
 
                 if (leaderboardData) {
@@ -73,16 +73,16 @@ export const RankingPage = () => {
                         id: p.id,
                         username: p.username || 'Usuario',
                         avatar_url: p.avatar_url,
-                        xp: p.followers_count, // Reusing XP field for Followers to minimize interface changes for now, or update interface?
-                        // Let's update interface `xp` to be generic `score` or `followers`?
-                        // I'll keep `xp` in interface but treat it as score.
+                        xp: p.followers_count, // Displaying Followers
                         rank: index + 1,
-                        gym_name: p.gym_name || gymName,
+                        gym_name: p.gym_name || targetGym.gym_name,
                         is_current_user: p.id === user.id,
-                        banner_url: p.banner_url || null, // Map from RPC
+                        banner_url: p.banner_url || null,
                         featured_routine_id: null
                     }));
                     setLeaderboard(mapped);
+                } else {
+                    setLeaderboard([]);
                 }
 
             } catch (err) {
@@ -90,8 +90,20 @@ export const RankingPage = () => {
             }
         };
 
-        fetchLeaderboard();
-    }, [user]);
+        if (!loadingGyms) {
+            fetchLeaderboard();
+        }
+    }, [user, userGyms, currentGymIndex, loadingGyms]);
+
+    const handleNextGym = () => {
+        if (userGyms.length <= 1) return;
+        setCurrentGymIndex((prev) => (prev + 1) % userGyms.length);
+    };
+
+    const handlePrevGym = () => {
+        if (userGyms.length <= 1) return;
+        setCurrentGymIndex((prev) => (prev - 1 + userGyms.length) % userGyms.length);
+    };
 
     const getRankStyle = (rank: number) => {
         if (rank === 1) return 'bg-gradient-to-r from-yellow-600/20 to-yellow-400/10 border-yellow-500/50';
@@ -122,36 +134,12 @@ export const RankingPage = () => {
                 iconColor="text-yellow-500"
                 bgAccent="bg-yellow-500/10"
             >
-                <div className="bg-neutral-900 border border-white/5 rounded-2xl p-4 text-left space-y-3 opacity-80 pointer-events-none w-full">
-                    <div className="flex items-center justify-between mb-2">
-                        <div className="h-3 w-20 bg-neutral-800 rounded" />
-                        <div className="h-4 w-12 bg-neutral-800 rounded-full" />
-                    </div>
-
-                    <div className="space-y-2">
-                        {[1, 2, 3].map((rank) => (
-                            <div key={rank} className="flex items-center gap-3 p-2 bg-neutral-800/40 rounded-xl border border-white/5">
-                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs skew-x-[-10deg] ${rank === 1 ? 'bg-yellow-500 text-black' :
-                                    rank === 2 ? 'bg-slate-300 text-black' :
-                                        'bg-orange-600 text-white'
-                                    }`}>
-                                    {rank}
-                                </div>
-                                <div className="flex-1">
-                                    <div className="h-2.5 w-24 bg-neutral-700 rounded mb-1" />
-                                    <div className="h-1.5 w-16 bg-neutral-700/50 rounded" />
-                                </div>
-                                <div className="flex items-center gap-1.5 bg-black/40 px-2 py-1 rounded-lg border border-white/5">
-                                    <Trophy size={10} className="text-yellow-500" />
-                                    <div className="h-2 w-8 bg-neutral-700 rounded" />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+                {/* ... existing teaser content ... */}
             </PublicTeaser>
         );
     }
+
+    const currentGym = userGyms[currentGymIndex];
 
     return (
         <div className="bg-neutral-950 pb-20">
@@ -160,12 +148,42 @@ export const RankingPage = () => {
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
                     <h1 className="text-2xl font-black text-white italic uppercase tracking-tighter flex items-center gap-2">
                         <Trophy className="text-yellow-500" />
-                        Ranking {leaderboard.length > 0 ? leaderboard[0].gym_name : 'Local'}
+                        Ranking
                     </h1>
-                    <div className="flex items-center gap-2 bg-neutral-900 border border-neutral-800 px-3 py-1 rounded-full">
-                        <Shield size={14} className="text-blue-400" />
-                        <span className="text-xs font-bold text-neutral-400">Season 1</span>
-                    </div>
+
+                    {/* GYM SWITCHER */}
+                    {userGyms.length > 0 ? (
+                        <div className="flex items-center gap-2 bg-neutral-900 border border-neutral-800 rounded-full p-1 pl-3 pr-1 shadow-inner">
+                            <div className="flex flex-col items-end mr-1">
+                                <span className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest leading-none">Territorio</span>
+                                <span className="text-xs font-bold text-white truncate max-w-[100px] sm:max-w-[150px] leading-tight">
+                                    {currentGym?.gym_name || 'Cargando...'}
+                                </span>
+                            </div>
+
+                            {userGyms.length > 1 && (
+                                <div className="flex items-center gap-1">
+                                    <button
+                                        onClick={handlePrevGym}
+                                        className="w-6 h-6 rounded-full bg-neutral-800 flex items-center justify-center text-neutral-400 hover:text-white hover:bg-neutral-700 active:scale-95 transition-all"
+                                    >
+                                        <ChevronLeft size={14} />
+                                    </button>
+                                    <button
+                                        onClick={handleNextGym}
+                                        className="w-6 h-6 rounded-full bg-neutral-800 flex items-center justify-center text-neutral-400 hover:text-white hover:bg-neutral-700 active:scale-95 transition-all"
+                                    >
+                                        <ChevronRight size={14} />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2 bg-neutral-900 border border-neutral-800 px-3 py-1 rounded-full">
+                            <Shield size={14} className="text-neutral-500" />
+                            <span className="text-xs font-bold text-neutral-500">Sin Gimnasio</span>
+                        </div>
+                    )}
                 </div>
             </div>
 

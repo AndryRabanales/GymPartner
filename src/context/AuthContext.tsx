@@ -39,11 +39,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
 
         // Check active session
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setSession(session);
-            setUser(session?.user ?? null);
+        const initAuth = async () => {
+            // Detect potential auth callback to avoid premature empty state
+            const isAuthCallback = window.location.hash.includes('access_token') || window.location.search.includes('code=');
+            if (isAuthCallback) console.log("⏳ Auth Callback Detected - Initializing Session...");
+
+            const { data: { session }, error } = await supabase.auth.getSession();
+
+            if (error) console.error("Session Init Error:", error);
+            if (session) {
+                console.log("✅ Session Restored:", session.user.email);
+                setSession(session);
+                setUser(session.user);
+            } else if (isAuthCallback) {
+                console.warn("⚠️ Params present but no session returned from getSession. Waiting for onAuthStateChange...");
+                // We don't set loading false yet, we let the listener handle it or a timeout
+                // detailed safety: set timeout to force loading false if it hangs
+                setTimeout(() => setLoading(false), 5000);
+                return;
+            }
+
             setLoading(false);
-        });
+        };
+
+        initAuth();
 
         // REFERRAL LOGIC: Capture ?ref= from URL
         const params = new URLSearchParams(window.location.search);
