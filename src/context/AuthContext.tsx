@@ -28,6 +28,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [session, setSession] = useState<Session | null>(null);
     const [loading, setLoading] = useState(true);
 
+    // Ref to prevent double-processing
+    const isProcessingReferral = React.useRef(false);
+
     useEffect(() => {
         if (!isSupabaseConfigured() || !supabase) {
             console.warn("Supabase not configured. Auth is disabled.");
@@ -57,16 +60,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setUser(currentUser);
 
             // REFERRAL PROCESSING (On Login/Register)
-            if (currentUser) {
-                const refId = sessionStorage.getItem('gym_referral_id');
+            if (currentUser && !isProcessingReferral.current) {
+                const storedRefId = sessionStorage.getItem('gym_referral_id');
                 const alreadyReferred = currentUser.user_metadata?.referred_by;
 
-                if (refId && !alreadyReferred && refId !== currentUser.id) {
+                if (storedRefId && !alreadyReferred && storedRefId !== currentUser.id) {
+                    isProcessingReferral.current = true;
                     console.log("🎁 Automatic Referral Processing...");
-                    const success = await userService.processReferral(currentUser.id, refId);
-                    if (success) {
+
+                    try {
+                        // Immediately remove to prevent loop/race condition
                         sessionStorage.removeItem('gym_referral_id');
-                        console.log("✅ Referral Processed. +250 XP to Referrer.");
+
+                        const success = await userService.processReferral(currentUser.id, storedRefId);
+                        if (success) {
+                            console.log("✅ Referral Processed. +250 XP to Referrer.");
+                        } else {
+                            // Only restore if it was a genuine failure that should be retried (optional, but risky)
+                            // For now, failure means we consumed the attempt. User can try link again manually if needed.
+                            console.warn("❌ Referral Processing Failed.");
+                        }
+                    } catch (err) {
+                        console.error("Referral Error", err);
+                    } finally {
+                        isProcessingReferral.current = false;
                     }
                 }
             }
