@@ -29,62 +29,61 @@ export const RankingPage = () => {
             if (!user) return;
 
             try {
-                // 1. Fetch ALL real profiles
-                const { data: profiles, error } = await supabase
+                // Determine Gym ID (from user profile or primary gym)
+                // For now, we assume user has a home_gym linked in profiles.
+                // We first get the user's gym_id.
+                const { data: userData } = await supabase
                     .from('profiles')
-                    .select('id, username, avatar_url, xp, custom_settings, featured_routine_id, home_gym:gyms(name)')
-                    .order('xp', { ascending: false })
-                    .limit(50);
+                    .select('gym_id, gyms(name)')
+                    .eq('id', user.id)
+                    .single();
 
-                if (error) console.error("Error fetching real profiles:", error);
+                const gymId = userData?.gym_id;
+                const gymName = userData?.gyms?.name || 'Global';
 
-                // 2. Prepare Real Users
-                const realUsers = (profiles || []).map((p: any) => ({
-                    id: p.id,
-                    username: p.username || 'Usuario GymPartner',
-                    avatar_url: p.avatar_url || `https://ui-avatars.com/api/?name=${p.username || 'User'}&background=random`,
-                    xp: p.xp || 0,
-                    gym_name: p.home_gym?.name || 'Nómada',
-                    is_current_user: p.id === user.id,
-                    banner_url: p.custom_settings?.banner_url,
-                    featured_routine_id: p.featured_routine_id,
-                }));
-
-                console.log("Ranking Real Users Mapped:", realUsers.map((u: any) => ({
-                    user: u.username,
-                    fid: u.featured_routine_id
-                }))); // DEBUG
-
-                // 3. HYBRID STRATEGY: Fill gaps with Bots
-                let allPlayers = [...realUsers];
-                if (allPlayers.length < 50) {
-                    const missing = 50 - allPlayers.length;
-                    // Static Call - Guaranteed to work if file exists
-                    const bots = BotSeeder.generateMockProfiles(missing);
-
-                    const mappedBots = bots.map((b, idx) => ({
-                        id: `bot-${idx}`, // Mock ID
-                        username: b.username,
-                        avatar_url: b.avatar_url,
-                        xp: b.xp,
-                        gym_name: b.home_gym.name,
-                        is_current_user: false,
-                        banner_url: b.custom_settings.banner_url,
-                        featured_routine_id: null
-                    }));
-
-                    allPlayers = [...allPlayers, ...mappedBots];
+                if (!gymId) {
+                    // Fallback if no gym: Show global or empty?
+                    // User said "local by gym".
+                    // We'll show a message or empty state if no gym.
+                    // For now, let's try to fetch global if no gym, or just return empty.
+                    console.log("User has no gym assigned for ranking.");
+                    setLeaderboard([]);
+                    return;
                 }
 
-                // 4. Sort Final List by XP
-                const successLeaderboard = allPlayers
-                    .sort((a, b) => b.xp - a.xp)
-                    .map((p, index) => ({ ...p, rank: index + 1 }));
+                // Call RPC
+                const { data: leaderboardData, error } = await supabase
+                    .rpc('get_gym_followers_leaderboard', { gym_id_param: gymId });
 
-                setLeaderboard(successLeaderboard);
+                if (error) {
+                    console.error('Error fetching gym leaderboard:', error);
+                    // Fallback to empty or previous logic?
+                    // Since the SQL might not be run yet, this will error.
+                    // We should probably handle this gracefully or mock it client side for dev.
+                    // MOCK FOR DEV if RPC Missing:
+                    // fetch profiles with gym_id, then manually count followers? 
+                    // Too expensive. We'll just show empty and console error.
+                }
+
+                if (leaderboardData) {
+                    const mapped = leaderboardData.map((p: any, index: number) => ({
+                        id: p.id,
+                        username: p.username || 'Usuario',
+                        avatar_url: p.avatar_url,
+                        xp: p.followers_count, // Reusing XP field for Followers to minimize interface changes for now, or update interface?
+                        // Let's update interface `xp` to be generic `score` or `followers`?
+                        // I'll keep `xp` in interface but treat it as score.
+                        rank: index + 1,
+                        gym_name: gymName,
+                        is_current_user: p.id === user.id,
+                        banner_url: null, // RPC didn't return proper banner, need to add to RPC or ignore
+                        featured_routine_id: null
+                    }));
+                    setLeaderboard(mapped);
+                }
 
             } catch (err) {
-                console.error('Error fetching leaderboard:', err);
+                console.error('Error in ranking fetch:', err);
             }
         };
 
@@ -158,7 +157,7 @@ export const RankingPage = () => {
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
                     <h1 className="text-2xl font-black text-white italic uppercase tracking-tighter flex items-center gap-2">
                         <Trophy className="text-yellow-500" />
-                        Global Ranking
+                        Ranking {leaderboard[0]?.gym_name || 'Gym'}
                     </h1>
                     <div className="flex items-center gap-2 bg-neutral-900 border border-neutral-800 px-3 py-1 rounded-full">
                         <Shield size={14} className="text-blue-400" />
@@ -225,10 +224,10 @@ export const RankingPage = () => {
                             </div>
                         </div>
 
-                        {/* Trophies/XP */}
-                        <div className="shrink-0 flex items-center gap-2 bg-black/40 px-3 py-1.5 rounded-lg border border-white/5 relative z-10">
-                            <Trophy size={14} className="text-yellow-500" />
+                        {/* Followers Count */}
+                        <div className="shrink-0 flex items-center gap-2 bg-black/40 px-3 py-1.5 rounded-lg border border-white/5 relative z-10 w-24 justify-end">
                             <span className="font-black text-white text-sm tabular-nums">{player.xp}</span>
+                            <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">Seguidores</span>
                         </div>
                     </button>
                 ))}
