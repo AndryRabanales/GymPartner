@@ -1,6 +1,6 @@
 // Add static import at top
 import { useEffect, useState } from 'react';
-import { BotSeeder } from '../services/BotSeeder';
+// import { BotSeeder } from '../services/BotSeeder'; // UNUSED
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Trophy, Shield, MapPin, Swords } from 'lucide-react';
@@ -39,7 +39,9 @@ export const RankingPage = () => {
                     .single();
 
                 const gymId = userData?.gym_id;
-                const gymName = userData?.gyms?.name || 'Global';
+                // Fix: Handle gym name access safety (it might be returned as an array or object depending on relation type inference)
+                const gymData = userData?.gyms as any;
+                const gymName = Array.isArray(gymData) ? gymData[0]?.name : gymData?.name || 'Global';
 
                 if (!gymId) {
                     // Fallback if no gym: Show global or empty?
