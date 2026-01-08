@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { radarService, type RadarUser } from '../services/RadarService';
+import { notificationService } from '../services/NotificationService';
 import { MapPin, Radar as RadarIcon, Dumbbell, X, UserPlus } from 'lucide-react';
 
 export const Radar = () => {
@@ -73,11 +74,22 @@ export const Radar = () => {
         setCurrentIndex((prev) => (prev + 1) % nearbyUsers.length);
     };
 
-    const handleAction = (action: 'skip' | 'train') => {
+    const handleAction = async (action: 'skip' | 'train') => {
         // Here we could add logic to save the "Like/Pass"
         if (action === 'train') {
             console.log(`Reclutando a ${nearbyUsers[currentIndex].username}`);
-            // Future: Call API to send request
+
+            // Send Invitation
+            // Note: In a real app we might want to show a success toast here
+            if (nearbyUsers[currentIndex].user_id) {
+                // Get current user name for the notification (Mock or Context)
+                // Ideally this comes from AuthContext, but let's assume "Un Aliado" if generic
+                // NotificationService handles sender ID internally via Auth.
+                const success = await notificationService.sendInvitation(nearbyUsers[currentIndex].user_id, "Un Aliado");
+                if (success) {
+                    alert("¡Invitación enviada!");
+                }
+            }
         }
         handleNext();
     };

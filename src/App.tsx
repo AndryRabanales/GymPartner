@@ -16,6 +16,7 @@ import { CommunityPage } from './pages/CommunityPage';
 import { ReelsPage } from './pages/ReelsPage';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { Radar } from './pages/Radar';
+import { ChatPage } from './pages/ChatPage';
 import { BottomNavProvider } from './context/BottomNavContext';
 
 
@@ -42,6 +43,7 @@ function App() {
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="stats" element={<StatsPage />} />
               <Route path="radar" element={<Radar />} />
+              <Route path="chat/:chatId" element={<ChatPage />} />
               <Route path="history" element={<HistoryPage />} />
               <Route path="history/:sessionId" element={<WorkoutDetailPage />} />
               <Route path="territory/:gymId/arsenal" element={<MyArsenal />} />

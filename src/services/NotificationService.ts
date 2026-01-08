@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 export interface Notification {
     id: string;
     user_id: string;
-    type: 'ranking_change' | 'system' | 'reward';
+    type: 'ranking_change' | 'system' | 'reward' | 'invitation';
     title: string;
     message: string;
     data?: any;
@@ -79,5 +79,66 @@ export const notificationService = {
         if (error) {
             console.error('Error marking all as read:', error);
         }
+    },
+
+    /**
+     * Enviar una invitación de entrenamiento
+     */
+    async sendInvitation(targetUserId: string, senderName: string): Promise<boolean> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return false;
+
+        const { error } = await supabase
+            .from('notifications')
+            .insert({
+                user_id: targetUserId,
+                type: 'invitation',
+                title: '🔥 DESAFÍO DE ENTRENAMIENTO',
+                message: `${senderName} te está invitando a entrenar. ¿Aceptas el reto?`,
+                data: {
+                    sender_id: user.id,
+                    sender_name: senderName
+                }
+            });
+
+        if (error) {
+            console.error('Error sending invitation:', error);
+            return false;
+        }
+        return true;
+    },
+
+    /**
+     * Aceptar invitación (Crear Chat)
+     */
+    async acceptInvitation(senderId: string): Promise<string | null> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return null;
+
+        // 1. Create Chat (or get existing due to UNIQUE index)
+        const { data: chat, error } = await supabase
+            .from('chats')
+            .insert({
+                user_a: user.id,
+                user_b: senderId
+            })
+            .select('id')
+            .single();
+
+        if (error) {
+            // If error is duplicate key, fetch existing
+            if (error.code === '23505') {
+                const { data: existing } = await supabase
+                    .from('chats')
+                    .select('id')
+                    .or(`and(user_a.eq.${user.id},user_b.eq.${senderId}),and(user_a.eq.${senderId},user_b.eq.${user.id})`)
+                    .single();
+                return existing?.id || null;
+            }
+            console.error('Error creating chat:', error);
+            return null;
+        }
+
+        return chat.id;
     }
 };
