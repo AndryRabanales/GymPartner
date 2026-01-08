@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { MessageCircle, X, Check, Search, ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 import { chatService } from '../services/ChatService';
 import type { ChatPreview } from '../services/ChatService';
 import { notificationService } from '../services/NotificationService';
@@ -23,6 +24,72 @@ export const InboxPage = () => {
             loadInvitations();
         }
     }, [activeTab]);
+
+    // REAL-TIME SUBSCRIPTIONS
+    useEffect(() => {
+        // We need user ID for filters. Since we don't have useAuth here yet, let's get it or use the service.
+        // Ideally we refactor to use useAuth() hook if available in this file scope.
+        // Let's assume we can get it from supabase.auth within effect for now, or just listen generally to the table 
+        // and filter in callback (less efficient but works for low volume).
+        // BETTER: Retrieve user once.
+
+        let subs: any[] = [];
+
+        const setupSubs = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            // 1. Listen for new INVITATIONS (Matches)
+            const notifySub = supabase
+                .channel('inbox-notifications')
+                .on(
+                    'postgres_changes',
+                    { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+                    (payload) => {
+                        const newNote = payload.new as Notification;
+                        if (newNote.type === 'invitation') {
+                            // Add to list if we are in matches tab, or just invalidate
+                            // If it's an invite, prepend it
+                            setInvitations(prev => [newNote, ...prev]);
+                        }
+                    }
+                )
+                .subscribe();
+            subs.push(notifySub);
+
+            // 2. Listen for CHAT updates (New messages move chat to top, or new chat accepted)
+            // We listen to 'chats' table updates (last_message_at changes)
+            // We need to listen where we are user_a OR user_b. Realtime syntax for OR is tricky.
+            // We will create two channels or just one channel with two listeners if possible? 
+            // Postgres changes filter is simple. We'll make two channels for simplicity.
+
+            const chatSubA = supabase
+                .channel('inbox-chats-a')
+                .on(
+                    'postgres_changes',
+                    { event: '*', schema: 'public', table: 'chats', filter: `user_a=eq.${user.id}` },
+                    () => loadChats() // Simply reload the list to get fresh order/content
+                )
+                .subscribe();
+            subs.push(chatSubA);
+
+            const chatSubB = supabase
+                .channel('inbox-chats-b')
+                .on(
+                    'postgres_changes',
+                    { event: '*', schema: 'public', table: 'chats', filter: `user_b=eq.${user.id}` },
+                    () => loadChats()
+                )
+                .subscribe();
+            subs.push(chatSubB);
+        };
+
+        setupSubs();
+
+        return () => {
+            subs.forEach(s => supabase.removeChannel(s));
+        };
+    }, []);
 
     const loadChats = async () => {
         setLoading(true);
