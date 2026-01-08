@@ -5,6 +5,7 @@ RETURNS TABLE (
     username TEXT,
     avatar_url TEXT,
     gym_name TEXT,
+    banner_url TEXT,
     followers_count BIGINT,
     rank BIGINT
 ) AS $$
@@ -24,16 +25,17 @@ BEGIN
         p.username,
         p.avatar_url,
         g.name AS gym_name,
+        p.custom_settings->>'banner_url' AS banner_url,
         COALESCE(uf.count, 0) AS followers_count,
         RANK() OVER (ORDER BY COALESCE(uf.count, 0) DESC) AS rank
     FROM 
         profiles p
     LEFT JOIN 
-        gyms g ON p.home_gym_id = g.id
+        gyms g ON p.home_gym_id::uuid = g.id
     LEFT JOIN 
         user_followers uf ON p.id = uf.user_id
     WHERE 
-        p.home_gym_id = gym_id_param
+        p.home_gym_id::uuid = gym_id_param
     ORDER BY 
         followers_count DESC
     LIMIT 100;

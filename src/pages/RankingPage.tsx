@@ -79,7 +79,7 @@ export const RankingPage = () => {
                         rank: index + 1,
                         gym_name: p.gym_name || gymName,
                         is_current_user: p.id === user.id,
-                        banner_url: null, // RPC didn't return proper banner, need to add to RPC or ignore
+                        banner_url: p.banner_url || null, // Map from RPC
                         featured_routine_id: null
                     }));
                     setLeaderboard(mapped);
