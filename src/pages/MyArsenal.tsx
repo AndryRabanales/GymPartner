@@ -548,10 +548,14 @@ export const MyArsenal = () => {
         });
 
         // TUTORIAL RELEASE: If in Step 4 and selecting an item, finish tutorial
+        // [FIX] REMOVED: This was killing the tutorial before saving! 
+        // We want to keep it at 4 until they click SAVE.
+        /*
         if (tutorialStep === 4) {
             setTutorialStep(0);
             localStorage.setItem('tutorial_step', '0');
         }
+        */
     };
 
     const handleEditRoutine = async (routine: any) => {
@@ -994,9 +998,6 @@ export const MyArsenal = () => {
                 // Step 4 (Creation Save) -> Step 5 (Profile Select Gym)
                 // Step 6 (Import Save) -> Step 7 (Profile Start)
                 const currentStep = localStorage.getItem('tutorial_step');
-
-                // DEBUG: Alert strict state
-                alert(`DEBUG TUTORIAL: Current Step is [${currentStep}]`);
 
                 // Allow 2 (just arrived), 3 (clicked create), 4 (typed name), 5 (saved?)
                 if (currentStep && ['2', '3', '4', '5'].includes(currentStep)) {
