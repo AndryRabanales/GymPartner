@@ -1,74 +1,80 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Radar } from 'lucide-react';
-// import { Film, PlusSquare, Users } from 'lucide-react'; // UNUSED: Hidden Community Features
-
+import { Home, Radar, Trophy, MessageCircle } from 'lucide-react';
+import { notificationService } from '../../services/NotificationService';
 
 interface BottomNavProps {
-    onUploadClick: () => void; // Keeping prop interface to avoid breaking parent usage, but will ignore lint
+    onUploadClick: () => void;
 }
 
-export const BottomNav: React.FC<BottomNavProps> = ({ onUploadClick: _ }) => { // Rename to _ to silence unused warning
+export const BottomNav: React.FC<BottomNavProps> = ({ onUploadClick: _ }) => {
     const location = useLocation();
     const isActive = (path: string) => location.pathname === path;
+    const [hasUnread, setHasUnread] = useState(false);
+
+    // Check for unread invites
+    useEffect(() => {
+        const check = async () => {
+            try {
+                const count = await notificationService.getUnreadCount();
+                setHasUnread(count > 0);
+            } catch (e) {
+                console.error("Error fetching notification count", e);
+            }
+        };
+        check();
+
+        // Optional: Interval or event listener could be added here for realtime updates
+        const interval = setInterval(check, 30000); // Check every 30s
+        return () => clearInterval(interval);
+    }, []);
 
     return (
         <div className="md:hidden w-full bg-black/95 backdrop-blur-3xl border-t border-white/10 pb-[env(safe-area-inset-bottom)] shrink-0 relative z-50">
             <div className="flex items-center justify-around h-16 px-2">
                 {/* 1. INICIO */}
-                <Link to="/" className="flex flex-col items-center justify-center gap-0.5 w-14 h-full">
+                <Link to="/" className="flex flex-col items-center justify-center gap-0.5 w-14 h-full relative group">
                     <Home
                         size={22}
-                        className={isActive('/') ? "text-white fill-white" : "text-neutral-500"}
+                        className={`transition-colors duration-300 ${isActive('/') ? "text-white fill-white" : "text-neutral-500 group-hover:text-neutral-300"}`}
                         strokeWidth={isActive('/') ? 2.5 : 2}
                     />
-                    <span className={`text-[10px] font-bold ${isActive('/') ? 'text-white' : 'text-neutral-500'}`}>Inicio</span>
+                    <span className={`text-[10px] font-bold transition-colors duration-300 ${isActive('/') ? 'text-white' : 'text-neutral-500 group-hover:text-neutral-300'}`}>Inicio</span>
                 </Link>
 
-                {/* 2. REELS */}
-                {/* 2. REELS (HIDDEN)
-                <Link to="/reels" className="flex flex-col items-center justify-center gap-0.5 w-14 h-full">
-                    <Film
+                {/* 2. RANKING (Moved from Header) */}
+                <Link to="/ranking" className="flex flex-col items-center justify-center gap-0.5 w-14 h-full relative group">
+                    <Trophy
                         size={22}
-                        className={isActive('/reels') ? "text-white fill-white" : "text-neutral-500"}
-                        strokeWidth={isActive('/reels') ? 2.5 : 2}
+                        className={`transition-colors duration-300 ${isActive('/ranking') ? "text-yellow-500 fill-yellow-500/20" : "text-neutral-500 group-hover:text-neutral-300"}`}
+                        strokeWidth={isActive('/ranking') ? 2.5 : 2}
                     />
-                    <span className={`text-[10px] font-bold ${isActive('/reels') ? 'text-white' : 'text-neutral-500'}`}>Reels</span>
+                    <span className={`text-[10px] font-bold transition-colors duration-300 ${isActive('/ranking') ? 'text-yellow-500' : 'text-neutral-500 group-hover:text-neutral-300'}`}>Ranking</span>
                 </Link>
-                */}
 
-                {/* 3. CREAR POST (Center) */}
-                {/* 3. CREAR POST (Center) (HIDDEN)
-                <button
-                    onClick={onUploadClick}
-                    className="flex flex-col items-center justify-center w-14 sm:w-16 h-full group active:scale-95 transition-transform"
-                >
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-gym-primary to-yellow-300 flex items-center justify-center shadow-lg shadow-yellow-500/20 text-black border border-yellow-200 mb-0.5">
-                        <PlusSquare size={22} strokeWidth={2.5} />
-                    </div>
-                </button>
-                */}
-
-                {/* 4. COMUNIDAD */}
-                {/* 4. COMUNIDAD (HIDDEN)
-                <Link to="/community" className="flex flex-col items-center justify-center gap-0.5 w-14 h-full">
-                    <Users
-                        size={22}
-                        className={isActive('/community') ? "text-white fill-white" : "text-neutral-500"}
-                        strokeWidth={isActive('/community') ? 2.5 : 2}
-                    />
-                    <span className={`text-[10px] font-bold ${isActive('/community') ? 'text-white' : 'text-neutral-500'}`}>Comunidad</span>
-                </Link>
-                */}
-
-                {/* 5. RADAR (GymRats) */}
-                <Link to="/radar" className="flex flex-col items-center justify-center gap-0.5 w-14 h-full">
+                {/* 3. RADAR (GymRats) */}
+                <Link to="/radar" className="flex flex-col items-center justify-center gap-0.5 w-14 h-full relative group">
                     <Radar
                         size={22}
-                        className={isActive('/radar') ? "text-gym-primary fill-gym-primary/20" : "text-neutral-500"}
+                        className={`transition-colors duration-300 ${isActive('/radar') ? "text-gym-primary fill-gym-primary/20" : "text-neutral-500 group-hover:text-neutral-300"}`}
                         strokeWidth={isActive('/radar') ? 2.5 : 2}
                     />
-                    <span className={`text-[10px] font-bold ${isActive('/radar') ? 'text-gym-primary' : 'text-neutral-500'}`}>Radar</span>
+                    <span className={`text-[10px] font-bold transition-colors duration-300 ${isActive('/radar') ? 'text-gym-primary' : 'text-neutral-500 group-hover:text-neutral-300'}`}>Radar</span>
+                </Link>
+
+                {/* 4. MENSAJES (Moved from Header) */}
+                <Link to="/inbox" className="flex flex-col items-center justify-center gap-0.5 w-14 h-full relative group">
+                    <div className="relative">
+                        <MessageCircle
+                            size={22}
+                            className={`transition-colors duration-300 ${isActive('/inbox') ? "text-white fill-white/20" : "text-neutral-500 group-hover:text-neutral-300"}`}
+                            strokeWidth={isActive('/inbox') ? 2.5 : 2}
+                        />
+                        {hasUnread && (
+                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-gym-primary rounded-full border-2 border-black animate-pulse"></span>
+                        )}
+                    </div>
+                    <span className={`text-[10px] font-bold transition-colors duration-300 ${isActive('/inbox') ? 'text-white' : 'text-neutral-500 group-hover:text-neutral-300'}`}>Chat</span>
                 </Link>
             </div>
         </div>

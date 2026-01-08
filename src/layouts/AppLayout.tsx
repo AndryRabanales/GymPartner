@@ -1,4 +1,4 @@
-import { MapPin, LogIn, LogOut, Trophy } from 'lucide-react';
+import { MapPin, LogIn, LogOut } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link, Outlet, useLocation } from 'react-router-dom';
@@ -6,7 +6,6 @@ import { UploadModal } from '../components/social/UploadModal';
 import { BottomNav } from '../components/navigation/BottomNav';
 import { useBottomNav } from '../context/BottomNavContext';
 import { NotificationBell } from '../components/ui/NotificationBell';
-import { MessagesButton } from '../components/ui/MessagesButton';
 import { RescueModal } from '../components/gamification/RescueModal';
 
 import { ActiveWorkoutBubble } from '../components/workout/ActiveWorkoutBubble';
@@ -83,11 +82,7 @@ export const AppLayout = () => {
                                     <MapPin size={18} className="group-hover:scale-110 transition-transform" />
                                 </Link>
 
-                                <Link to="/ranking" className="flex flex-col w-11 h-11 rounded-full bg-neutral-900 border border-neutral-800 items-center justify-center text-neutral-400 hover:text-yellow-400 hover:border-yellow-400/50 transition-all hover:shadow-[0_0_15px_rgba(250,204,21,0.15)] group gap-0.5">
-                                    <Trophy size={18} className="group-hover:scale-110 transition-transform" />
-                                </Link>
 
-                                {user && <MessagesButton />}
                                 {user && <NotificationBell />}
 
                                 {user ? (
