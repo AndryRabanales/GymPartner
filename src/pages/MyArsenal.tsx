@@ -810,9 +810,14 @@ export const MyArsenal = () => {
     };
 
     const handleSaveRoutine = async () => {
-        if (!user) return;
+        // [FIX] Allow Saving even if routeGymId is null (Global Routine / Master Arsenal)
+        if (!user) {
+            alert("Error: Usuario no identificado.");
+            return;
+        }
+
         if (!routineName.trim()) {
-            alert("⚠️ ¡Tu estrategia necesita un nombre!");
+            alert("Tu estrategia necesita un nombre legendario.");
             return;
         }
         if (selectedItems.size === 0) {
