@@ -993,7 +993,7 @@ export const MyArsenal = () => {
                     localStorage.setItem('tutorial_step', '5');
                     setTutorialStep(5);
                     alert("¡Rutina creada con éxito!\n\nRegresa al INICIO, ve al MAPA/LISTA y SELECCIONA TU GYM para configurarlo.");
-                    navigate(-1); // Go back to UserProfile
+                    navigate('/'); // Redirect explicitely to Profile (Home)
                     return;
                 }
                 // Note: Import logic handles Step 6 elsewhere usually, or if Save handles imports too:

@@ -780,6 +780,7 @@ export const UserProfile = () => {
                         Mis Territorios
                     </h2>
                     <button
+                        id="tut-find-gyms-btn"
                         onClick={() => navigate('/map')}
                         className="flex items-center gap-2 px-4 py-2 rounded-full bg-gym-primary/10 border border-gym-primary/30 text-gym-primary text-xs font-black uppercase tracking-widest hover:bg-gym-primary hover:text-black transition-all hover:scale-105 hover:shadow-[0_0_15px_rgba(229,255,0,0.3)]"
                     >
@@ -893,6 +894,22 @@ export const UserProfile = () => {
                         banner_url: profile?.custom_settings?.banner_url
                     }}
                     onClose={() => setShowSocialProfile(false)}
+                />
+            )}
+
+            {/* TUTORIAL STEP 5: FIND GYMS (MAP) */}
+            {tutorialStep === 5 && (
+                <InteractiveOverlay
+                    step={5}
+                    totalSteps={7}
+                    targetId="tut-find-gyms-btn"
+                    title="PASO 5: CONQUISTA UN TERITORIO"
+                    message="Tu arsenal está listo. Ahora necesitas un campo de batalla. Busca tu gimnasio en el mapa para empezar a entrenar y subir de rango."
+                    placement="bottom"
+                    onNext={() => {
+                        // User proceeds explicitly by clicking the button
+                    }}
+                    onClose={() => setTutorialStep(0)}
                 />
             )}
 
