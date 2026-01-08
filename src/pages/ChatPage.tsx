@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, Send, MoreVertical, Loader, Check, CheckCheck } from 'lucide-react';
+import { ArrowLeft, Send, MoreVertical, Loader } from 'lucide-react';
 
 interface Message {
     id: string;
