@@ -12,13 +12,21 @@ export const ReferralModal: React.FC<ReferralModalProps> = ({ isOpen, onClose, u
     const [copied, setCopied] = useState(false);
 
     if (!isOpen) return null;
+    if (!user) return null; // Safety Guard
 
     const referralLink = `${window.location.origin}/login?ref=${user.id}`;
 
-    const handleCopy = () => {
-        navigator.clipboard.writeText(referralLink);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+    const handleCopy = async () => {
+        try {
+            await navigator.clipboard.writeText(referralLink);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch (err) {
+            console.error('Failed to copy text: ', err);
+            // Fallback for older browsers or restricted contexts if needed, 
+            // but for now logging error prevents crash.
+            alert('No se pudo copiar el enlace automáticamente. Por favor selecciónalo y cópialo manualmente.');
+        }
     };
 
     const handleShareWhatsapp = () => {
