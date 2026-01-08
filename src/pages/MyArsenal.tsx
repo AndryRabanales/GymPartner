@@ -996,9 +996,10 @@ export const MyArsenal = () => {
                 const currentStep = localStorage.getItem('tutorial_step');
 
                 // DEBUG: Alert strict state
-                // alert(`DEBUG: Current Step is [${currentStep}]`); 
+                alert(`DEBUG TUTORIAL: Current Step is [${currentStep}]`);
 
-                if (currentStep === '4' || currentStep === '3') { // loosen check in case step 4 was skipped
+                // Allow 2 (just arrived), 3 (clicked create), 4 (typed name), 5 (saved?)
+                if (currentStep && ['2', '3', '4', '5'].includes(currentStep)) {
                     localStorage.setItem('tutorial_step', '5');
                     setTutorialStep(5);
                     alert("¡Rutina creada con éxito!\n\nRegresa al INICIO, ve al MAPA/LISTA y SELECCIONA TU GYM para configurarlo.");
