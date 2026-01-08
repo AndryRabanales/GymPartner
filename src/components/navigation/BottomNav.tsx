@@ -1,13 +1,14 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Film, PlusSquare, Users, Radar } from 'lucide-react';
+import { Home, Radar } from 'lucide-react';
+// import { Film, PlusSquare, Users } from 'lucide-react'; // UNUSED: Hidden Community Features
 
 
 interface BottomNavProps {
-    onUploadClick: () => void;
+    onUploadClick: () => void; // Keeping prop interface to avoid breaking parent usage, but will ignore lint
 }
 
-export const BottomNav: React.FC<BottomNavProps> = ({ onUploadClick }) => {
+export const BottomNav: React.FC<BottomNavProps> = ({ onUploadClick: _ }) => { // Rename to _ to silence unused warning
     const location = useLocation();
     const isActive = (path: string) => location.pathname === path;
 
