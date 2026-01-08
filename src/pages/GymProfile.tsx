@@ -162,17 +162,7 @@ export const GymProfile = () => {
                 />
             )}
 
-            {/* Distance Indicator (Always Visible) */}
-            {distance !== null && (
-                <div className={`mt-4 text-center text-sm font-bold uppercase tracking-widest ${isNear ? 'text-green-500' : 'text-red-500'}`}>
-                    {isNear ? '🟢 En rango de operación' : `🔴 A ${(distance).toFixed(2)}km del objetivo`}
-                </div>
-            )}
 
-            {/* Stats / Placeholder */}
-            <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-6 text-center">
-                <p className="text-neutral-500 text-sm">Estadísticas de territorio próximamente...</p>
-            </div>
         </div>
     );
 };
