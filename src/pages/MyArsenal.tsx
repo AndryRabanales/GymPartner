@@ -1031,7 +1031,7 @@ export const MyArsenal = () => {
                     {/* Header - Compact */}
                     <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6 md:mb-12">
                         <div className="flex items-center gap-3">
-                            <Link to={routeGymId ? `/territory/${routeGymId}` : "/"} className="w-8 h-8 md:w-12 md:h-12 flex items-center justify-center bg-neutral-900 rounded-full hover:bg-neutral-800 hover:text-gym-primary transition-all border border-neutral-800 shrink-0">
+                            <Link to="/" className="w-8 h-8 md:w-12 md:h-12 flex items-center justify-center bg-neutral-900 rounded-full hover:bg-neutral-800 hover:text-gym-primary transition-all border border-neutral-800 shrink-0">
                                 <ArrowLeft size={16} className="md:w-6 md:h-6" />
                             </Link>
                             <div>
