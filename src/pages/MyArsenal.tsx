@@ -1210,677 +1210,672 @@ export const MyArsenal = () => {
                         )}
                     </div>
 
+                    {/* TUTORIAL STEP 5 FALLBACK: Guide user back to Profile if they land here */}
+                    {tutorialStep === 5 && (
+                        <InteractiveOverlay
+                            step={5}
+                            totalSteps={7}
+                            targetId="tut-arsenal-back-btn"
+                            title="¡ESTRATEGIA FORJADA!"
+                            message="Has creado tu primera rutina maestra. Ahora regresa a tu perfil para desplegarla en un gimnasio real."
+                            placement="bottom"
+                            onNext={() => { navigate('/'); }}
+                            nextLabel="VOLVER AL INICIO"
+                            onClose={() => { }}
+                        />
+                    )}
+
                     {/* IMPORT MODAL (Local Mode Only) */}
-                        )}
-                </div>
-
-                {/* TUTORIAL STEP 5 FALLBACK: Guide user back to Profile if they land here */}
-                {tutorialStep === 5 && (
-                    <InteractiveOverlay
-                        step={5}
-                        totalSteps={7}
-                        targetId="tut-arsenal-back-btn"
-                        title="¡ESTRATEGIA FORJADA!"
-                        message="Has creado tu primera rutina maestra. Ahora regresa a tu perfil para desplegarla en un gimnasio real."
-                        placement="bottom"
-                        onNext={() => { navigate('/'); }}
-                        nextLabel="VOLVER AL INICIO"
-                        onClose={() => { }}
-                    />
-                )}
-
-                {importingMode && (
-                    <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
-                        <div className="bg-neutral-900 border border-white/10 w-full max-w-2xl rounded-[2rem] p-8 shadow-2xl relative max-h-[85vh] overflow-y-auto animate-in zoom-in-95 duration-200">
-                            <div className="flex justify-between items-start mb-8">
-                                <div>
-                                    <h2 className="text-3xl font-black italic text-white uppercase mb-1">Tu Arsenal Maestro</h2>
-                                    <p className="text-neutral-400">Selecciona una estrategia para desplegar en este territorio.</p>
-                                </div>
-                                <button onClick={() => setImportingMode(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
-                                    <Plus size={24} className="rotate-45" />
-                                </button>
-                            </div>
-
-                            <div className="grid grid-cols-1 gap-3">
-                                {masterRoutines.length > 0 ? masterRoutines.map(master => (
-                                    <button
-                                        key={master.id}
-                                        onClick={() => handleImportRoutine(master)}
-                                        className="text-left bg-black border border-white/10 hover:border-gym-primary p-4 rounded-xl flex items-center justify-between group transition-all"
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-12 h-12 rounded-lg bg-white/5 flex items-center justify-center text-gym-primary">
-                                                <Swords size={24} />
-                                            </div>
-                                            <div>
-                                                <h4 className="font-bold text-white text-lg group-hover:text-gym-primary transition-colors">{master.name}</h4>
-                                                <span className="text-neutral-500 text-xs">{master.equipment_ids?.length || 0} Items • Creada el {new Date(master.created_at).toLocaleDateString()}</span>
-                                            </div>
-                                        </div>
-                                        <div className="bg-white/5 px-4 py-2 rounded-lg text-sm font-bold text-white group-hover:bg-gym-primary group-hover:text-black transition-colors">
-                                            IMPORTAR
-                                        </div>
+                    {importingMode && (
+                        <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
+                            <div className="bg-neutral-900 border border-white/10 w-full max-w-2xl rounded-[2rem] p-8 shadow-2xl relative max-h-[85vh] overflow-y-auto animate-in zoom-in-95 duration-200">
+                                <div className="flex justify-between items-start mb-8">
+                                    <div>
+                                        <h2 className="text-3xl font-black italic text-white uppercase mb-1">Tu Arsenal Maestro</h2>
+                                        <p className="text-neutral-400">Selecciona una estrategia para desplegar en este territorio.</p>
+                                    </div>
+                                    <button onClick={() => setImportingMode(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                                        <Plus size={24} className="rotate-45" />
                                     </button>
-                                )) : (
-                                    <div className="py-12 text-center">
-                                        <p className="text-neutral-500 mb-4">No tienes estrategias maestras creadas.</p>
-                                        <Link to="/arsenal" className="text-gym-primary underline font-bold">Ir a crear una Maestra</Link>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                )
-                }
-            </div >
-            </div >
-        );
-    }
-
-// RENDER MACHINE INVENTORY (Level 2 - Builder Logic)
-return (
-    <div className="min-h-screen bg-black text-white font-sans selection:bg-gym-primary selection:text-black">
-        {/* STATIC HEADER - SCROLLS AWAY */}
-        <div className="bg-black/95 backdrop-blur-xl border-b border-white/10 shadow-2xl">
-            <div className="max-w-7xl mx-auto p-2 md:p-6 flex flex-col gap-2 md:gap-4">
-
-                {/* Compact Top Row: Nav + Title + Mobile Save */}
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <button onClick={() => setViewMode('ROUTINES')} className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-white transition-colors border border-white/10">
-                            <ArrowLeft size={16} className="md:w-5 md:h-5" />
-                        </button>
-                        <h2 className="text-base md:text-2xl font-black italic uppercase tracking-tight flex items-center gap-2 leading-none">
-                            {editingRoutineId ? 'Edit' : 'Nueva'} <span className="text-gym-primary">Estrategia</span>
-                        </h2>
-                    </div>
-
-                    {/* Mobile Save Button (Icon Only) */}
-                    <button
-                        onClick={handleSaveRoutine}
-                        disabled={isSaving}
-                        className="md:hidden w-12 h-12 flex items-center justify-center bg-green-500 hover:bg-green-400 rounded-xl text-white shadow-[0_0_15px_rgba(34,197,94,0.5)] transition-all active:scale-95"
-                    >
-                        {isSaving ? <Loader size={20} className="animate-spin" /> : <Check size={28} strokeWidth={4} />}
-                    </button>
-
-                    {/* Desktop Save Button (Full) */}
-                    <button
-                        onClick={handleSaveRoutine}
-                        disabled={isSaving}
-                        className="hidden md:flex bg-gym-primary hover:bg-yellow-400 text-black font-black uppercase tracking-wider px-6 py-2.5 rounded-xl transition-all items-center gap-2 text-sm shadow-[0_0_20px_rgba(250,204,21,0.2)]"
-                    >
-                        {isSaving ? <Loader className="animate-spin" size={16} /> : <Check size={16} strokeWidth={3} />}
-                        <span>Guardar Estrategia</span>
-                    </button>
-                </div>
-
-                {/* Compact Inputs Row - FULL WIDTH MOBILE */}
-                <div className="flex flex-col md:flex-row gap-2 w-full">
-                    {/* Routine Name Input */}
-                    <div className="w-full md:w-1/3">
-                        <input
-                            id="tut-routine-name-input"
-                            type="text"
-                            placeholder="Nombre de la Rutina (Obligatorio)..."
-                            value={routineName}
-                            onChange={(e) => {
-                                setRoutineName(e.target.value);
-                                if (tutorialStep === 3 && e.target.value.length > 0) {
-                                    setTutorialStep(4);
-                                    localStorage.setItem('tutorial_step', '4');
-                                }
-                            }}
-                            required
-                            className={`w-full bg-white/5 border rounded-xl px-4 py-3 text-base text-white placeholder-white/30 focus:outline-none focus:bg-white/10 transition-all font-medium ${!routineName.trim() ? 'border-red-500/50 focus:border-red-500' : 'border-white/10 focus:border-gym-primary/50'}`}
-                        />
-                    </div>
-
-                    {/* Responsive Search Bar */}
-                    <div className="relative group w-full md:flex-1">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-white/30 group-focus-within:text-gym-primary transition-colors">
-                            <Search size={20} className="md:w-5 md:h-5" />
-                        </div>
-                        <input
-                            type="text"
-                            placeholder="Buscar ejercicio en tu arsenal..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-base text-white placeholder-white/30 focus:outline-none focus:border-gym-primary/50 focus:bg-white/10 transition-all"
-                        />
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        {/* MAIN CONTENT AREA */}
-        <div className="max-w-7xl mx-auto px-4 md:px-6 pb-32 w-full relative">
-
-            {/* TUTORIAL STEP 3: NAME STRATEGY */}
-            {tutorialStep === 3 && (
-                <InteractiveOverlay
-                    targetId="tut-routine-name-input"
-                    title="PASO 3: BAUTIZA TU ESTRATEGIA"
-                    message="Toda gran batalla comienza con un nombre. Escribe cómo llamarás a este plan de entrenamiento."
-                    step={3}
-                    totalSteps={4}
-                    placement="bottom"
-                    onClose={() => {
-                        setTutorialStep(0);
-                        localStorage.setItem('tutorial_step', '0');
-                    }}
-                    disableNext={true}
-                />
-            )}
-
-            {/* TUTORIAL STEP 4: SELECT WEAPONS */}
-            {tutorialStep === 4 && (
-                <InteractiveOverlay
-                    targetId="tut-arsenal-grid"
-                    title="PASO 4: ELIGE TUS ARMAS"
-                    message="Selecciona las máquinas y ejercicios que formarán parte de esta rutina. Solo haz clic en ellas."
-                    step={4}
-                    totalSteps={4}
-                    placement="top"
-                    onNext={() => {
-                        setTutorialStep(0);
-                        localStorage.setItem('tutorial_step', '0');
-                    }}
-                    nextLabel="¡Entendido!"
-                    onClose={() => {
-                        setTutorialStep(0);
-                        localStorage.setItem('tutorial_step', '0');
-                    }}
-                />
-            )}
-
-
-            {/* Visual Stats Bar */}
-            <div className="flex items-center gap-2 mb-4 px-1">
-                <div className="px-3 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-[10px] font-bold text-neutral-400 whitespace-nowrap">
-                    {inventory.length} Total
-                </div>
-                <div className="px-3 py-1 rounded-full bg-gym-primary/10 border border-gym-primary/20 text-[10px] font-bold text-gym-primary whitespace-nowrap">
-                    {selectedItems.size} Selected
-                </div>
-            </div>
-
-            <div className="space-y-6" id="tut-arsenal-grid">
-                {/* Render Groups */}
-                {SECTION_ORDER.map(section => {
-                    const items = groupedInventory[section] || [];
-                    const isCore = ['Pecho', 'Espalda', 'Pierna', 'Bíceps', 'Tríceps', 'Hombros'].includes(section);
-
-                    // Pass empty sections only if no search is active (so they can add), but if searching, hide empty.
-                    if (items.length === 0 && !isCore && searchTerm) return null;
-
-                    return (
-                        <div key={section} className="animate-in fade-in slide-in-from-bottom-8 duration-700 fill-mode-both">
-                            <h3 className="text-xs font-black text-neutral-500 uppercase tracking-widest mb-2 pl-1 sticky top-36 z-30 bg-black/80 backdrop-blur w-fit px-2 rounded-r-full">{section}</h3>
-
-                            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
-                                {items.map(item => {
-                                    const isSelected = selectedItems.has(item.id);
-                                    return (
-                                        <div key={item.id} className="cursor-pointer" onClick={() => toggleSelection(item.id)}>
-                                            <ArsenalCard
-                                                item={item}
-                                                muscleGroup={section}
-                                                isSelected={isSelected}
-                                                userSettings={userSettings}
-                                                onEdit={handleEditEquipment}  // Always allow edit (Edit or Clone)
-                                                configOverride={routineConfigs.get(item.id)}
-                                            />
-                                        </div>
-                                    );
-                                })}
-
-                                {/* Premium Add Button */}
-                                <button
-                                    onClick={() => openCatalog(section)}
-                                    className="h-full min-h-[70px] rounded-lg border border-dashed border-neutral-800 hover:border-gym-primary/50 bg-neutral-900/30 hover:bg-neutral-900/80 flex flex-col items-center justify-center gap-1 transition-all group p-2"
-                                >
-                                    <div className="w-16 h-16 rounded-full bg-neutral-800 group-hover:bg-gym-primary flex items-center justify-center text-neutral-500 group-hover:text-black transition-all shadow-lg group-hover:scale-110 duration-300">
-                                        <Plus size={32} strokeWidth={3} />
-                                    </div>
-                                    <span className="font-bold text-sm text-neutral-500 group-hover:text-white uppercase tracking-widest transition-colors">Agregar a {section}</span>
-                                </button>
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
-        </div>
-
-        {/* Quick Add Modal (Refined) */}
-        {addingMode && (
-            <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
-                <div className="bg-neutral-900 border border-white/10 w-full max-w-2xl rounded-[2rem] p-8 shadow-2xl relative max-h-[85vh] overflow-y-auto animate-in zoom-in-95 duration-200">
-
-                    {/* Header & Close */}
-                    <div className="flex justify-between items-start mb-6">
-                        <div>
-                            <h2 className="text-3xl font-black italic text-white uppercase mb-1">
-                                {customMode ? (editingItem ? 'Editar Ejercicio' : 'Crear Ejercicio') : `Catálogo ${activeSection}`}
-                            </h2>
-                            <p className="text-neutral-400">
-                                {customMode ? 'Diseña tu propia máquina o ejercicio.' : 'Añade artillería pesada a tu colección.'}
-                            </p>
-                        </div>
-                        <button onClick={() => { setAddingMode(false); setCustomMode(false); }} className="p-2 hover:bg-white/10 rounded-full transition-colors">
-                            <Plus size={24} className="rotate-45" />
-                        </button>
-                    </div>
-
-                    {!customMode ? (
-                        // MODE A: CATALOG SELECTION
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                {catalogItems.length > 0 ? catalogItems.map(seed => (
-                                    <button
-                                        key={seed.name}
-                                        onClick={() => handleQuickAdd(seed)}
-                                        className="text-left bg-black border border-white/10 hover:border-gym-primary p-4 rounded-xl flex items-center justify-between group transition-all"
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <span className="text-2xl bg-white/5 p-2 rounded-lg">
-                                                {/* @ts-ignore */}
-                                                {EQUIPMENT_CATEGORIES[seed.category]?.icon}
-                                            </span>
-                                            <span className="font-bold text-neutral-300 group-hover:text-white transition-colors">{seed.name}</span>
-                                        </div>
-                                        <div className="text-gym-primary opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all">
-                                            <Plus size={20} strokeWidth={3} />
-                                        </div>
-                                    </button>
-                                )) : (
-                                    <div className="col-span-full py-8 text-center text-neutral-500 border border-dashed border-white/10 rounded-2xl">
-                                        <p>No hay más sugerencias comunes.</p>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="border-t border-white/10 pt-4 mt-4 text-center">
-                                <button
-                                    onClick={() => setCustomMode(true)}
-                                    className="inline-flex items-center gap-2 text-gym-primary font-bold hover:text-white transition-colors px-6 py-3 rounded-full hover:bg-white/5"
-                                >
-                                    <Plus size={18} />
-                                    CREAR EJERCICIO PERSONALIZADO
-                                </button>
-                            </div>
-                        </div>
-                    ) : (
-                        // MODE B: CUSTOM CREATION FORM
-                        <div className="space-y-6">
-                            {/* Name Input */}
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Nombre del Ejercicio</label>
-                                <input
-                                    type="text"
-                                    autoFocus
-                                    placeholder="Ej: Press Militar en Máquina Vikinga"
-                                    className="w-full bg-black border border-white/10 rounded-xl p-4 text-white placeholder-neutral-600 focus:border-gym-primary focus:outline-none text-lg font-bold"
-                                    value={customName}
-                                    onChange={(e) => setCustomName(e.target.value)}
-                                />
-                            </div>
-
-                            {/* Category Selection */}
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Categoría</label>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                    {/* Default Categories */}
-                                    {Object.entries(EQUIPMENT_CATEGORIES).map(([key, info]: [string, any]) => (
-                                        <button
-                                            key={key}
-                                            onClick={() => setCustomCategory(key as any)}
-                                            className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${customCategory === key
-                                                ? 'bg-gym-primary/20 border-gym-primary text-white'
-                                                : 'bg-black border-white/10 text-neutral-400 hover:border-white/30'
-                                                }`}
-                                        >
-                                            <span className="text-2xl">{info.icon}</span>
-                                            <span className="text-xs font-bold uppercase">{info.label}</span>
-                                        </button>
-                                    ))}
-
-                                    {/* Custom Categories */}
-                                    {userSettings.categories.map((cat) => (
-                                        <button
-                                            key={cat.id}
-                                            onClick={() => setCustomCategory(cat.id)}
-                                            className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${customCategory === cat.id
-                                                ? 'bg-gym-primary/20 border-gym-primary text-white'
-                                                : 'bg-black border-white/10 text-neutral-400 hover:border-white/30'
-                                                }`}
-                                        >
-                                            <span className="text-2xl">{cat.icon}</span>
-                                            <span className="text-xs font-bold uppercase">{cat.label}</span>
-                                        </button>
-                                    ))}
-
-                                    {/* Inline Category Creation Form */}
-                                    {isCreatingCategory && (
-                                        <div className="col-span-2 sm:col-span-3 bg-neutral-900 rounded-xl p-4 border border-white/10 flex flex-col gap-4 z-10 relative mt-2">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-sm font-bold text-white uppercase">Nueva Categoría</span>
-                                                <button onClick={() => setIsCreatingCategory(false)} className="text-neutral-500 hover:text-white"><X size={18} /></button>
-                                            </div>
-                                            <div className="space-y-3">
-                                                <div className="space-y-1">
-                                                    <label className="text-xs text-neutral-400 font-bold uppercase">Nombre</label>
-                                                    <input
-                                                        type="text"
-                                                        placeholder="ej: Yoga"
-                                                        value={newCategoryName}
-                                                        onChange={e => setNewCategoryName(e.target.value)}
-                                                        className="w-full bg-black border border-white/10 rounded-lg p-3 text-white focus:border-gym-primary focus:outline-none font-bold"
-                                                        autoFocus
-                                                    />
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <label className="text-xs text-neutral-400 font-bold uppercase">Icono (Emoji)</label>
-                                                    <div className="flex gap-2">
-                                                        <input
-                                                            type="text"
-                                                            value={newCategoryIcon}
-                                                            onChange={e => setNewCategoryIcon(e.target.value)}
-                                                            className="w-16 bg-black border border-white/10 rounded-lg p-3 text-2xl text-center focus:border-gym-primary focus:outline-none bg-transparent"
-                                                        />
-                                                        <div className="flex-1 flex gap-2 overflow-x-auto pb-2 items-center">
-                                                            {['🧘', '🤸', '🧗', '🥊', '🏊', '🚴', '🏃', '🥋', '🎸', '💃'].map(emoji => (
-                                                                <button
-                                                                    key={emoji}
-                                                                    onClick={() => setNewCategoryIcon(emoji)}
-                                                                    className="p-2 hover:bg-white/10 rounded-lg text-xl transition-colors"
-                                                                >
-                                                                    {emoji}
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    onClick={async () => {
-                                                        if (!user) return;
-                                                        if (!newCategoryName.trim()) return;
-
-                                                        try {
-                                                            const newCategory: CustomCategory = {
-                                                                id: newCategoryName.toUpperCase().replace(/\s+/g, '_'),
-                                                                label: newCategoryName,
-                                                                icon: newCategoryIcon || '✨'
-                                                            };
-
-                                                            const newSettings = {
-                                                                ...userSettings,
-                                                                categories: [...userSettings.categories, newCategory]
-                                                            };
-
-                                                            setUserSettings(newSettings);
-                                                            setCustomCategory(newCategory.id);
-                                                            await equipmentService.updateUserSettings(user.id, newSettings);
-                                                            setIsCreatingCategory(false);
-                                                            setNewCategoryName('');
-                                                            setNewCategoryIcon('✨');
-                                                        } catch (error: any) {
-                                                            console.error('Error creating category:', error);
-                                                            alert(`Error al crear categoría: ${error.message}`);
-                                                        }
-                                                    }}
-                                                    className="w-full py-3 bg-gym-primary text-black font-bold rounded-lg hover:brightness-110 transition-all mt-2"
-                                                >
-                                                    CREAR CATEGORÍA
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Action Button for Category (Normal Mode) */}
-                                    {!isCreatingCategory && (
-                                        <button
-                                            onClick={() => setIsCreatingCategory(true)}
-                                            className="p-3 rounded-xl border border-dashed border-white/20 flex flex-col items-center gap-2 text-neutral-500 hover:text-white hover:bg-white/5 transition-all group min-h-[88px] justify-center"
-                                        >
-                                            <span className="p-1 rounded-full bg-white/5 group-hover:bg-gym-primary text-gym-primary group-hover:text-black transition-colors">
-                                                <Plus size={16} />
-                                            </span>
-                                            <span className="text-[10px] font-bold uppercase">Nueva</span>
-                                        </button>
-                                    )}
-
                                 </div>
-                            </div>
 
-                            {/* Metrics Configuration */}
-                            <div className="space-y-3">
-                                <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider">¿Qué deseas registrar?</label>
-                                <div className="bg-black/50 rounded-xl p-4 border border-white/5 space-y-3 max-h-[300px] overflow-y-auto">
-                                    {[
-                                        { id: 'weight', label: 'Peso (Lbs/Kgs)', icon: '⚖️' },
-                                        { id: 'reps', label: 'Repeticiones', icon: '🔄' },
-                                        { id: 'time', label: 'Tiempo / Duración', icon: '⏱️' },
-                                        { id: 'distance', label: 'Distancia', icon: '📏' },
-                                        { id: 'rpe', label: 'RPE (Esfuerzo)', icon: '🔥' },
-                                        ...userSettings.metrics
-                                    ].map(metric => (
-                                        <div key={metric.id} className="flex items-center justify-between group">
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-lg opacity-50 group-hover:opacity-100 transition-opacity">{metric.icon}</span>
-                                                <span className="text-sm font-medium text-neutral-300">{metric.label}</span>
-                                            </div>
-                                            <button
-                                                onClick={() => setCustomMetrics(prev => {
-                                                    const isSelected = prev[metric.id as keyof typeof prev];
-                                                    return { ...prev, [metric.id]: !isSelected };
-                                                })}
-                                                className={`w-12 h-7 rounded-full transition-colors relative ${customMetrics[metric.id as keyof typeof customMetrics] ? 'bg-gym-primary' : 'bg-neutral-800'
-                                                    }`}
-                                            >
-                                                <div className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-transform ${customMetrics[metric.id as keyof typeof customMetrics] ? 'left-6' : 'left-1'
-                                                    }`} />
-                                            </button>
-                                        </div>
-                                    ))}
-
-                                    {/* Add Metric Button */}
-                                    {/* Add Metric Button */}
-                                    {!isCreatingMetric ? (
+                                <div className="grid grid-cols-1 gap-3">
+                                    {masterRoutines.length > 0 ? masterRoutines.map(master => (
                                         <button
-                                            onClick={() => setIsCreatingMetric(true)}
-                                            className="w-full py-2 border border-dashed border-white/20 rounded-lg text-neutral-500 hover:text-white hover:bg-white/5 text-xs font-bold uppercase transition-all flex items-center justify-center gap-2"
+                                            key={master.id}
+                                            onClick={() => handleImportRoutine(master)}
+                                            className="text-left bg-black border border-white/10 hover:border-gym-primary p-4 rounded-xl flex items-center justify-between group transition-all"
                                         >
-                                            <Plus size={14} />
-                                            Crear Métrica
-                                        </button>
-                                    ) : (
-                                        <div className="bg-neutral-900 rounded-lg p-3 border border-white/10 space-y-3">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-xs font-bold text-white uppercase">Nueva Métrica</span>
-                                                <button onClick={() => setIsCreatingMetric(false)} className="text-neutral-500 hover:text-white"><X size={14} /></button>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <input
-                                                    type="text"
-                                                    placeholder="Nombre (ej: Calorías)"
-                                                    value={newMetricName}
-                                                    onChange={e => setNewMetricName(e.target.value)}
-                                                    className="w-full bg-black border border-white/10 rounded p-2 text-sm text-white focus:border-gym-primary focus:outline-none"
-                                                    autoFocus
-                                                />
-                                                <div className="flex gap-2">
-                                                    <input
-                                                        type="text"
-                                                        value={newMetricIcon}
-                                                        onChange={e => setNewMetricIcon(e.target.value)}
-                                                        className="w-10 bg-black border border-white/10 rounded p-2 text-center text-lg focus:border-gym-primary focus:outline-none"
-                                                    />
-                                                    <div className="flex-1 flex gap-1 overflow-x-auto items-center pb-1">
-                                                        {['🔥', '💓', '🌡️', '📏', '⏱️', '📈', '💧', '⚡'].map(emoji => (
-                                                            <button
-                                                                key={emoji}
-                                                                onClick={() => setNewMetricIcon(emoji)}
-                                                                className="p-1 hover:bg-white/10 rounded text-lg transition-colors"
-                                                            >
-                                                                {emoji}
-                                                            </button>
-                                                        ))}
-                                                    </div>
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded-lg bg-white/5 flex items-center justify-center text-gym-primary">
+                                                    <Swords size={24} />
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-bold text-white text-lg group-hover:text-gym-primary transition-colors">{master.name}</h4>
+                                                    <span className="text-neutral-500 text-xs">{master.equipment_ids?.length || 0} Items • Creada el {new Date(master.created_at).toLocaleDateString()}</span>
                                                 </div>
                                             </div>
-                                            <button
-                                                onClick={async () => {
-                                                    if (!user) return;
-                                                    if (!newMetricName.trim()) return;
-
-                                                    try {
-                                                        const newMetric: CustomMetric = {
-                                                            id: newMetricName.toLowerCase().replace(/\s+/g, '_'),
-                                                            label: newMetricName,
-                                                            icon: newMetricIcon || '📊',
-                                                            default_active: true
-                                                        };
-
-                                                        const newSettings = {
-                                                            ...userSettings,
-                                                            metrics: [...userSettings.metrics, newMetric]
-                                                        };
-
-                                                        setUserSettings(newSettings);
-                                                        setCustomMetrics(prev => ({ ...prev, [newMetric.id]: true }));
-                                                        await equipmentService.updateUserSettings(user.id, newSettings);
-                                                        setIsCreatingMetric(false);
-                                                        setNewMetricName('');
-                                                        setNewMetricIcon('📊');
-                                                    } catch (error: any) {
-                                                        console.error('Error creating metric:', error);
-                                                        alert(`Error al crear métrica: ${error.message}`);
-                                                    }
-                                                }}
-                                                className="w-full py-2 bg-gym-primary text-black font-bold rounded text-xs hover:brightness-110 transition-all"
-                                            >
-                                                GUARDAR MÉTRICA
-                                            </button>
+                                            <div className="bg-white/5 px-4 py-2 rounded-lg text-sm font-bold text-white group-hover:bg-gym-primary group-hover:text-black transition-colors">
+                                                IMPORTAR
+                                            </div>
+                                        </button>
+                                    )) : (
+                                        <div className="py-12 text-center">
+                                            <p className="text-neutral-500 mb-4">No tienes estrategias maestras creadas.</p>
+                                            <Link to="/arsenal" className="text-gym-primary underline font-bold">Ir a crear una Maestra</Link>
                                         </div>
                                     )}
                                 </div>
-                            </div>
-
-                            {/* Actions */}
-                            <div className="flex gap-3 pt-4 border-t border-white/10">
-                                <button
-                                    onClick={() => setCustomMode(false)}
-                                    className="flex-1 py-4 rounded-xl font-bold bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white transition-colors"
-                                >
-                                    VOLVER
-                                </button>
-                                <button
-                                    onClick={handleCreateCustom}
-                                    disabled={!customName.trim()}
-                                    className="flex-1 py-4 rounded-xl font-bold bg-gym-primary text-black hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {editingItem ? 'GUARDAR CAMBIOS' : 'CREAR EJERCICIO'}
-                                </button>
                             </div>
                         </div>
                     )}
                 </div>
-            </div>
-        )}
+                );
+    }
 
-        {/* ROUTINE NAME & SAVE BAR (Floating at bottom for Creation Mode) */}
-        {addingMode && !customMode && (
-            <div className="fixed bottom-0 left-0 right-0 p-4 bg-neutral-950/90 backdrop-blur-xl border-t border-white/10 z-[60] animate-in slide-in-from-bottom-5">
-                <div className="max-w-7xl mx-auto flex items-center gap-4">
-                    <div className="flex-1 max-w-xl relative group">
-                        <div className="absolute inset-0 bg-gradient-to-r from-gym-primary/20 to-transparent blur-xl opacity-0 group-hover:opacity-100 transition-opacity rounded-full pointer-events-none"></div>
-                        <input
-                            id="tut-routine-name-input"
-                            type="text"
-                            placeholder="Nombre de la Nueva Rutina..."
-                            className="w-full bg-black/50 border-2 border-white/10 rounded-2xl px-6 py-4 text-xl font-bold text-white placeholder-neutral-600 focus:border-gym-primary focus:outline-none focus:ring-4 focus:ring-gym-primary/10 transition-all shadow-inner"
-                            value={routineName}
-                            onChange={(e) => {
-                                setRoutineName(e.target.value);
-                                // TUTORIAL ADVANCE: Step 3 -> 4
-                                if (tutorialStep === 3 && e.target.value.length > 2) {
-                                    setTutorialStep(4);
-                                    localStorage.setItem('tutorial_step', '4');
-                                }
-                            }}
-                        />
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-600 pointer-events-none">
-                            <Edit2 size={18} />
+                // RENDER MACHINE INVENTORY (Level 2 - Builder Logic)
+                return (
+                <div className="min-h-screen bg-black text-white font-sans selection:bg-gym-primary selection:text-black">
+                    {/* STATIC HEADER - SCROLLS AWAY */}
+                    <div className="bg-black/95 backdrop-blur-xl border-b border-white/10 shadow-2xl">
+                        <div className="max-w-7xl mx-auto p-2 md:p-6 flex flex-col gap-2 md:gap-4">
+
+                            {/* Compact Top Row: Nav + Title + Mobile Save */}
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <button onClick={() => setViewMode('ROUTINES')} className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-white transition-colors border border-white/10">
+                                        <ArrowLeft size={16} className="md:w-5 md:h-5" />
+                                    </button>
+                                    <h2 className="text-base md:text-2xl font-black italic uppercase tracking-tight flex items-center gap-2 leading-none">
+                                        {editingRoutineId ? 'Edit' : 'Nueva'} <span className="text-gym-primary">Estrategia</span>
+                                    </h2>
+                                </div>
+
+                                {/* Mobile Save Button (Icon Only) */}
+                                <button
+                                    onClick={handleSaveRoutine}
+                                    disabled={isSaving}
+                                    className="md:hidden w-12 h-12 flex items-center justify-center bg-green-500 hover:bg-green-400 rounded-xl text-white shadow-[0_0_15px_rgba(34,197,94,0.5)] transition-all active:scale-95"
+                                >
+                                    {isSaving ? <Loader size={20} className="animate-spin" /> : <Check size={28} strokeWidth={4} />}
+                                </button>
+
+                                {/* Desktop Save Button (Full) */}
+                                <button
+                                    onClick={handleSaveRoutine}
+                                    disabled={isSaving}
+                                    className="hidden md:flex bg-gym-primary hover:bg-yellow-400 text-black font-black uppercase tracking-wider px-6 py-2.5 rounded-xl transition-all items-center gap-2 text-sm shadow-[0_0_20px_rgba(250,204,21,0.2)]"
+                                >
+                                    {isSaving ? <Loader className="animate-spin" size={16} /> : <Check size={16} strokeWidth={3} />}
+                                    <span>Guardar Estrategia</span>
+                                </button>
+                            </div>
+
+                            {/* Compact Inputs Row - FULL WIDTH MOBILE */}
+                            <div className="flex flex-col md:flex-row gap-2 w-full">
+                                {/* Routine Name Input */}
+                                <div className="w-full md:w-1/3">
+                                    <input
+                                        id="tut-routine-name-input"
+                                        type="text"
+                                        placeholder="Nombre de la Rutina (Obligatorio)..."
+                                        value={routineName}
+                                        onChange={(e) => {
+                                            setRoutineName(e.target.value);
+                                            if (tutorialStep === 3 && e.target.value.length > 0) {
+                                                setTutorialStep(4);
+                                                localStorage.setItem('tutorial_step', '4');
+                                            }
+                                        }}
+                                        required
+                                        className={`w-full bg-white/5 border rounded-xl px-4 py-3 text-base text-white placeholder-white/30 focus:outline-none focus:bg-white/10 transition-all font-medium ${!routineName.trim() ? 'border-red-500/50 focus:border-red-500' : 'border-white/10 focus:border-gym-primary/50'}`}
+                                    />
+                                </div>
+
+                                {/* Responsive Search Bar */}
+                                <div className="relative group w-full md:flex-1">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-white/30 group-focus-within:text-gym-primary transition-colors">
+                                        <Search size={20} className="md:w-5 md:h-5" />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        placeholder="Buscar ejercicio en tu arsenal..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-base text-white placeholder-white/30 focus:outline-none focus:border-gym-primary/50 focus:bg-white/10 transition-all"
+                                    />
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={handleCreateNew} // Cancel/Clear
-                            className="p-4 rounded-xl bg-neutral-900 border border-neutral-800 text-neutral-500 hover:text-white hover:bg-neutral-800 transition-all"
-                        >
-                            <X size={20} />
-                        </button>
+                    {/* MAIN CONTENT AREA */}
+                    <div className="max-w-7xl mx-auto px-4 md:px-6 pb-32 w-full relative">
 
-                        <button
-                            id="tut-save-routine-btn"
-                            onClick={handleSaveRoutine}
-                            disabled={!routineName || isSaving || selectedItems.size === 0}
-                            className="bg-gym-primary text-black px-8 py-4 rounded-xl font-black tracking-wide hover:shadow-[0_0_20px_rgba(250,204,21,0.4)] hover:scale-105 transition-all text-sm sm:text-base flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group relative overflow-hidden"
-                        >
-                            {/* Shimmer Effect */}
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:animate-shimmer" />
+                        {/* TUTORIAL STEP 3: NAME STRATEGY */}
+                        {tutorialStep === 3 && (
+                            <InteractiveOverlay
+                                targetId="tut-routine-name-input"
+                                title="PASO 3: BAUTIZA TU ESTRATEGIA"
+                                message="Toda gran batalla comienza con un nombre. Escribe cómo llamarás a este plan de entrenamiento."
+                                step={3}
+                                totalSteps={4}
+                                placement="bottom"
+                                onClose={() => {
+                                    setTutorialStep(0);
+                                    localStorage.setItem('tutorial_step', '0');
+                                }}
+                                disableNext={true}
+                            />
+                        )}
 
-                            {isSaving ? (
-                                <Loader size={20} className="animate-spin" />
-                            ) : (
-                                <Save size={20} strokeWidth={2.5} />
-                            )}
-                            <span>{editingRoutineId ? 'ACTUALIZAR' : 'CREAR RUTINA'}</span>
-                        </button>
+                        {/* TUTORIAL STEP 4: SELECT WEAPONS */}
+                        {tutorialStep === 4 && (
+                            <InteractiveOverlay
+                                targetId="tut-arsenal-grid"
+                                title="PASO 4: ELIGE TUS ARMAS"
+                                message="Selecciona las máquinas y ejercicios que formarán parte de esta rutina. Solo haz clic en ellas."
+                                step={4}
+                                totalSteps={4}
+                                placement="top"
+                                onNext={() => {
+                                    setTutorialStep(0);
+                                    localStorage.setItem('tutorial_step', '0');
+                                }}
+                                nextLabel="¡Entendido!"
+                                onClose={() => {
+                                    setTutorialStep(0);
+                                    localStorage.setItem('tutorial_step', '0');
+                                }}
+                            />
+                        )}
+
+
+                        {/* Visual Stats Bar */}
+                        <div className="flex items-center gap-2 mb-4 px-1">
+                            <div className="px-3 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-[10px] font-bold text-neutral-400 whitespace-nowrap">
+                                {inventory.length} Total
+                            </div>
+                            <div className="px-3 py-1 rounded-full bg-gym-primary/10 border border-gym-primary/20 text-[10px] font-bold text-gym-primary whitespace-nowrap">
+                                {selectedItems.size} Selected
+                            </div>
+                        </div>
+
+                        <div className="space-y-6" id="tut-arsenal-grid">
+                            {/* Render Groups */}
+                            {SECTION_ORDER.map(section => {
+                                const items = groupedInventory[section] || [];
+                                const isCore = ['Pecho', 'Espalda', 'Pierna', 'Bíceps', 'Tríceps', 'Hombros'].includes(section);
+
+                                // Pass empty sections only if no search is active (so they can add), but if searching, hide empty.
+                                if (items.length === 0 && !isCore && searchTerm) return null;
+
+                                return (
+                                    <div key={section} className="animate-in fade-in slide-in-from-bottom-8 duration-700 fill-mode-both">
+                                        <h3 className="text-xs font-black text-neutral-500 uppercase tracking-widest mb-2 pl-1 sticky top-36 z-30 bg-black/80 backdrop-blur w-fit px-2 rounded-r-full">{section}</h3>
+
+                                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
+                                            {items.map(item => {
+                                                const isSelected = selectedItems.has(item.id);
+                                                return (
+                                                    <div key={item.id} className="cursor-pointer" onClick={() => toggleSelection(item.id)}>
+                                                        <ArsenalCard
+                                                            item={item}
+                                                            muscleGroup={section}
+                                                            isSelected={isSelected}
+                                                            userSettings={userSettings}
+                                                            onEdit={handleEditEquipment}  // Always allow edit (Edit or Clone)
+                                                            configOverride={routineConfigs.get(item.id)}
+                                                        />
+                                                    </div>
+                                                );
+                                            })}
+
+                                            {/* Premium Add Button */}
+                                            <button
+                                                onClick={() => openCatalog(section)}
+                                                className="h-full min-h-[70px] rounded-lg border border-dashed border-neutral-800 hover:border-gym-primary/50 bg-neutral-900/30 hover:bg-neutral-900/80 flex flex-col items-center justify-center gap-1 transition-all group p-2"
+                                            >
+                                                <div className="w-16 h-16 rounded-full bg-neutral-800 group-hover:bg-gym-primary flex items-center justify-center text-neutral-500 group-hover:text-black transition-all shadow-lg group-hover:scale-110 duration-300">
+                                                    <Plus size={32} strokeWidth={3} />
+                                                </div>
+                                                <span className="font-bold text-sm text-neutral-500 group-hover:text-white uppercase tracking-widest transition-colors">Agregar a {section}</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
+
+                    {/* Quick Add Modal (Refined) */}
+                    {addingMode && (
+                        <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
+                            <div className="bg-neutral-900 border border-white/10 w-full max-w-2xl rounded-[2rem] p-8 shadow-2xl relative max-h-[85vh] overflow-y-auto animate-in zoom-in-95 duration-200">
+
+                                {/* Header & Close */}
+                                <div className="flex justify-between items-start mb-6">
+                                    <div>
+                                        <h2 className="text-3xl font-black italic text-white uppercase mb-1">
+                                            {customMode ? (editingItem ? 'Editar Ejercicio' : 'Crear Ejercicio') : `Catálogo ${activeSection}`}
+                                        </h2>
+                                        <p className="text-neutral-400">
+                                            {customMode ? 'Diseña tu propia máquina o ejercicio.' : 'Añade artillería pesada a tu colección.'}
+                                        </p>
+                                    </div>
+                                    <button onClick={() => { setAddingMode(false); setCustomMode(false); }} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                                        <Plus size={24} className="rotate-45" />
+                                    </button>
+                                </div>
+
+                                {!customMode ? (
+                                    // MODE A: CATALOG SELECTION
+                                    <div className="space-y-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            {catalogItems.length > 0 ? catalogItems.map(seed => (
+                                                <button
+                                                    key={seed.name}
+                                                    onClick={() => handleQuickAdd(seed)}
+                                                    className="text-left bg-black border border-white/10 hover:border-gym-primary p-4 rounded-xl flex items-center justify-between group transition-all"
+                                                >
+                                                    <div className="flex items-center gap-4">
+                                                        <span className="text-2xl bg-white/5 p-2 rounded-lg">
+                                                            {/* @ts-ignore */}
+                                                            {EQUIPMENT_CATEGORIES[seed.category]?.icon}
+                                                        </span>
+                                                        <span className="font-bold text-neutral-300 group-hover:text-white transition-colors">{seed.name}</span>
+                                                    </div>
+                                                    <div className="text-gym-primary opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all">
+                                                        <Plus size={20} strokeWidth={3} />
+                                                    </div>
+                                                </button>
+                                            )) : (
+                                                <div className="col-span-full py-8 text-center text-neutral-500 border border-dashed border-white/10 rounded-2xl">
+                                                    <p>No hay más sugerencias comunes.</p>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="border-t border-white/10 pt-4 mt-4 text-center">
+                                            <button
+                                                onClick={() => setCustomMode(true)}
+                                                className="inline-flex items-center gap-2 text-gym-primary font-bold hover:text-white transition-colors px-6 py-3 rounded-full hover:bg-white/5"
+                                            >
+                                                <Plus size={18} />
+                                                CREAR EJERCICIO PERSONALIZADO
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    // MODE B: CUSTOM CREATION FORM
+                                    <div className="space-y-6">
+                                        {/* Name Input */}
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Nombre del Ejercicio</label>
+                                            <input
+                                                type="text"
+                                                autoFocus
+                                                placeholder="Ej: Press Militar en Máquina Vikinga"
+                                                className="w-full bg-black border border-white/10 rounded-xl p-4 text-white placeholder-neutral-600 focus:border-gym-primary focus:outline-none text-lg font-bold"
+                                                value={customName}
+                                                onChange={(e) => setCustomName(e.target.value)}
+                                            />
+                                        </div>
+
+                                        {/* Category Selection */}
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Categoría</label>
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                                {/* Default Categories */}
+                                                {Object.entries(EQUIPMENT_CATEGORIES).map(([key, info]: [string, any]) => (
+                                                    <button
+                                                        key={key}
+                                                        onClick={() => setCustomCategory(key as any)}
+                                                        className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${customCategory === key
+                                                            ? 'bg-gym-primary/20 border-gym-primary text-white'
+                                                            : 'bg-black border-white/10 text-neutral-400 hover:border-white/30'
+                                                            }`}
+                                                    >
+                                                        <span className="text-2xl">{info.icon}</span>
+                                                        <span className="text-xs font-bold uppercase">{info.label}</span>
+                                                    </button>
+                                                ))}
+
+                                                {/* Custom Categories */}
+                                                {userSettings.categories.map((cat) => (
+                                                    <button
+                                                        key={cat.id}
+                                                        onClick={() => setCustomCategory(cat.id)}
+                                                        className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${customCategory === cat.id
+                                                            ? 'bg-gym-primary/20 border-gym-primary text-white'
+                                                            : 'bg-black border-white/10 text-neutral-400 hover:border-white/30'
+                                                            }`}
+                                                    >
+                                                        <span className="text-2xl">{cat.icon}</span>
+                                                        <span className="text-xs font-bold uppercase">{cat.label}</span>
+                                                    </button>
+                                                ))}
+
+                                                {/* Inline Category Creation Form */}
+                                                {isCreatingCategory && (
+                                                    <div className="col-span-2 sm:col-span-3 bg-neutral-900 rounded-xl p-4 border border-white/10 flex flex-col gap-4 z-10 relative mt-2">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-sm font-bold text-white uppercase">Nueva Categoría</span>
+                                                            <button onClick={() => setIsCreatingCategory(false)} className="text-neutral-500 hover:text-white"><X size={18} /></button>
+                                                        </div>
+                                                        <div className="space-y-3">
+                                                            <div className="space-y-1">
+                                                                <label className="text-xs text-neutral-400 font-bold uppercase">Nombre</label>
+                                                                <input
+                                                                    type="text"
+                                                                    placeholder="ej: Yoga"
+                                                                    value={newCategoryName}
+                                                                    onChange={e => setNewCategoryName(e.target.value)}
+                                                                    className="w-full bg-black border border-white/10 rounded-lg p-3 text-white focus:border-gym-primary focus:outline-none font-bold"
+                                                                    autoFocus
+                                                                />
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                <label className="text-xs text-neutral-400 font-bold uppercase">Icono (Emoji)</label>
+                                                                <div className="flex gap-2">
+                                                                    <input
+                                                                        type="text"
+                                                                        value={newCategoryIcon}
+                                                                        onChange={e => setNewCategoryIcon(e.target.value)}
+                                                                        className="w-16 bg-black border border-white/10 rounded-lg p-3 text-2xl text-center focus:border-gym-primary focus:outline-none bg-transparent"
+                                                                    />
+                                                                    <div className="flex-1 flex gap-2 overflow-x-auto pb-2 items-center">
+                                                                        {['🧘', '🤸', '🧗', '🥊', '🏊', '🚴', '🏃', '🥋', '🎸', '💃'].map(emoji => (
+                                                                            <button
+                                                                                key={emoji}
+                                                                                onClick={() => setNewCategoryIcon(emoji)}
+                                                                                className="p-2 hover:bg-white/10 rounded-lg text-xl transition-colors"
+                                                                            >
+                                                                                {emoji}
+                                                                            </button>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <button
+                                                                onClick={async () => {
+                                                                    if (!user) return;
+                                                                    if (!newCategoryName.trim()) return;
+
+                                                                    try {
+                                                                        const newCategory: CustomCategory = {
+                                                                            id: newCategoryName.toUpperCase().replace(/\s+/g, '_'),
+                                                                            label: newCategoryName,
+                                                                            icon: newCategoryIcon || '✨'
+                                                                        };
+
+                                                                        const newSettings = {
+                                                                            ...userSettings,
+                                                                            categories: [...userSettings.categories, newCategory]
+                                                                        };
+
+                                                                        setUserSettings(newSettings);
+                                                                        setCustomCategory(newCategory.id);
+                                                                        await equipmentService.updateUserSettings(user.id, newSettings);
+                                                                        setIsCreatingCategory(false);
+                                                                        setNewCategoryName('');
+                                                                        setNewCategoryIcon('✨');
+                                                                    } catch (error: any) {
+                                                                        console.error('Error creating category:', error);
+                                                                        alert(`Error al crear categoría: ${error.message}`);
+                                                                    }
+                                                                }}
+                                                                className="w-full py-3 bg-gym-primary text-black font-bold rounded-lg hover:brightness-110 transition-all mt-2"
+                                                            >
+                                                                CREAR CATEGORÍA
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Action Button for Category (Normal Mode) */}
+                                                {!isCreatingCategory && (
+                                                    <button
+                                                        onClick={() => setIsCreatingCategory(true)}
+                                                        className="p-3 rounded-xl border border-dashed border-white/20 flex flex-col items-center gap-2 text-neutral-500 hover:text-white hover:bg-white/5 transition-all group min-h-[88px] justify-center"
+                                                    >
+                                                        <span className="p-1 rounded-full bg-white/5 group-hover:bg-gym-primary text-gym-primary group-hover:text-black transition-colors">
+                                                            <Plus size={16} />
+                                                        </span>
+                                                        <span className="text-[10px] font-bold uppercase">Nueva</span>
+                                                    </button>
+                                                )}
+
+                                            </div>
+                                        </div>
+
+                                        {/* Metrics Configuration */}
+                                        <div className="space-y-3">
+                                            <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider">¿Qué deseas registrar?</label>
+                                            <div className="bg-black/50 rounded-xl p-4 border border-white/5 space-y-3 max-h-[300px] overflow-y-auto">
+                                                {[
+                                                    { id: 'weight', label: 'Peso (Lbs/Kgs)', icon: '⚖️' },
+                                                    { id: 'reps', label: 'Repeticiones', icon: '🔄' },
+                                                    { id: 'time', label: 'Tiempo / Duración', icon: '⏱️' },
+                                                    { id: 'distance', label: 'Distancia', icon: '📏' },
+                                                    { id: 'rpe', label: 'RPE (Esfuerzo)', icon: '🔥' },
+                                                    ...userSettings.metrics
+                                                ].map(metric => (
+                                                    <div key={metric.id} className="flex items-center justify-between group">
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="text-lg opacity-50 group-hover:opacity-100 transition-opacity">{metric.icon}</span>
+                                                            <span className="text-sm font-medium text-neutral-300">{metric.label}</span>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => setCustomMetrics(prev => {
+                                                                const isSelected = prev[metric.id as keyof typeof prev];
+                                                                return { ...prev, [metric.id]: !isSelected };
+                                                            })}
+                                                            className={`w-12 h-7 rounded-full transition-colors relative ${customMetrics[metric.id as keyof typeof customMetrics] ? 'bg-gym-primary' : 'bg-neutral-800'
+                                                                }`}
+                                                        >
+                                                            <div className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-transform ${customMetrics[metric.id as keyof typeof customMetrics] ? 'left-6' : 'left-1'
+                                                                }`} />
+                                                        </button>
+                                                    </div>
+                                                ))}
+
+                                                {/* Add Metric Button */}
+                                                {/* Add Metric Button */}
+                                                {!isCreatingMetric ? (
+                                                    <button
+                                                        onClick={() => setIsCreatingMetric(true)}
+                                                        className="w-full py-2 border border-dashed border-white/20 rounded-lg text-neutral-500 hover:text-white hover:bg-white/5 text-xs font-bold uppercase transition-all flex items-center justify-center gap-2"
+                                                    >
+                                                        <Plus size={14} />
+                                                        Crear Métrica
+                                                    </button>
+                                                ) : (
+                                                    <div className="bg-neutral-900 rounded-lg p-3 border border-white/10 space-y-3">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-xs font-bold text-white uppercase">Nueva Métrica</span>
+                                                            <button onClick={() => setIsCreatingMetric(false)} className="text-neutral-500 hover:text-white"><X size={14} /></button>
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <input
+                                                                type="text"
+                                                                placeholder="Nombre (ej: Calorías)"
+                                                                value={newMetricName}
+                                                                onChange={e => setNewMetricName(e.target.value)}
+                                                                className="w-full bg-black border border-white/10 rounded p-2 text-sm text-white focus:border-gym-primary focus:outline-none"
+                                                                autoFocus
+                                                            />
+                                                            <div className="flex gap-2">
+                                                                <input
+                                                                    type="text"
+                                                                    value={newMetricIcon}
+                                                                    onChange={e => setNewMetricIcon(e.target.value)}
+                                                                    className="w-10 bg-black border border-white/10 rounded p-2 text-center text-lg focus:border-gym-primary focus:outline-none"
+                                                                />
+                                                                <div className="flex-1 flex gap-1 overflow-x-auto items-center pb-1">
+                                                                    {['🔥', '💓', '🌡️', '📏', '⏱️', '📈', '💧', '⚡'].map(emoji => (
+                                                                        <button
+                                                                            key={emoji}
+                                                                            onClick={() => setNewMetricIcon(emoji)}
+                                                                            className="p-1 hover:bg-white/10 rounded text-lg transition-colors"
+                                                                        >
+                                                                            {emoji}
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            onClick={async () => {
+                                                                if (!user) return;
+                                                                if (!newMetricName.trim()) return;
+
+                                                                try {
+                                                                    const newMetric: CustomMetric = {
+                                                                        id: newMetricName.toLowerCase().replace(/\s+/g, '_'),
+                                                                        label: newMetricName,
+                                                                        icon: newMetricIcon || '📊',
+                                                                        default_active: true
+                                                                    };
+
+                                                                    const newSettings = {
+                                                                        ...userSettings,
+                                                                        metrics: [...userSettings.metrics, newMetric]
+                                                                    };
+
+                                                                    setUserSettings(newSettings);
+                                                                    setCustomMetrics(prev => ({ ...prev, [newMetric.id]: true }));
+                                                                    await equipmentService.updateUserSettings(user.id, newSettings);
+                                                                    setIsCreatingMetric(false);
+                                                                    setNewMetricName('');
+                                                                    setNewMetricIcon('📊');
+                                                                } catch (error: any) {
+                                                                    console.error('Error creating metric:', error);
+                                                                    alert(`Error al crear métrica: ${error.message}`);
+                                                                }
+                                                            }}
+                                                            className="w-full py-2 bg-gym-primary text-black font-bold rounded text-xs hover:brightness-110 transition-all"
+                                                        >
+                                                            GUARDAR MÉTRICA
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Actions */}
+                                        <div className="flex gap-3 pt-4 border-t border-white/10">
+                                            <button
+                                                onClick={() => setCustomMode(false)}
+                                                className="flex-1 py-4 rounded-xl font-bold bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white transition-colors"
+                                            >
+                                                VOLVER
+                                            </button>
+                                            <button
+                                                onClick={handleCreateCustom}
+                                                disabled={!customName.trim()}
+                                                className="flex-1 py-4 rounded-xl font-bold bg-gym-primary text-black hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                {editingItem ? 'GUARDAR CAMBIOS' : 'CREAR EJERCICIO'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ROUTINE NAME & SAVE BAR (Floating at bottom for Creation Mode) */}
+                    {addingMode && !customMode && (
+                        <div className="fixed bottom-0 left-0 right-0 p-4 bg-neutral-950/90 backdrop-blur-xl border-t border-white/10 z-[60] animate-in slide-in-from-bottom-5">
+                            <div className="max-w-7xl mx-auto flex items-center gap-4">
+                                <div className="flex-1 max-w-xl relative group">
+                                    <div className="absolute inset-0 bg-gradient-to-r from-gym-primary/20 to-transparent blur-xl opacity-0 group-hover:opacity-100 transition-opacity rounded-full pointer-events-none"></div>
+                                    <input
+                                        id="tut-routine-name-input"
+                                        type="text"
+                                        placeholder="Nombre de la Nueva Rutina..."
+                                        className="w-full bg-black/50 border-2 border-white/10 rounded-2xl px-6 py-4 text-xl font-bold text-white placeholder-neutral-600 focus:border-gym-primary focus:outline-none focus:ring-4 focus:ring-gym-primary/10 transition-all shadow-inner"
+                                        value={routineName}
+                                        onChange={(e) => {
+                                            setRoutineName(e.target.value);
+                                            // TUTORIAL ADVANCE: Step 3 -> 4
+                                            if (tutorialStep === 3 && e.target.value.length > 2) {
+                                                setTutorialStep(4);
+                                                localStorage.setItem('tutorial_step', '4');
+                                            }
+                                        }}
+                                    />
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-600 pointer-events-none">
+                                        <Edit2 size={18} />
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={handleCreateNew} // Cancel/Clear
+                                        className="p-4 rounded-xl bg-neutral-900 border border-neutral-800 text-neutral-500 hover:text-white hover:bg-neutral-800 transition-all"
+                                    >
+                                        <X size={20} />
+                                    </button>
+
+                                    <button
+                                        id="tut-save-routine-btn"
+                                        onClick={handleSaveRoutine}
+                                        disabled={!routineName || isSaving || selectedItems.size === 0}
+                                        className="bg-gym-primary text-black px-8 py-4 rounded-xl font-black tracking-wide hover:shadow-[0_0_20px_rgba(250,204,21,0.4)] hover:scale-105 transition-all text-sm sm:text-base flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group relative overflow-hidden"
+                                    >
+                                        {/* Shimmer Effect */}
+                                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:animate-shimmer" />
+
+                                        {isSaving ? (
+                                            <Loader size={20} className="animate-spin" />
+                                        ) : (
+                                            <Save size={20} strokeWidth={2.5} />
+                                        )}
+                                        <span>{editingRoutineId ? 'ACTUALIZAR' : 'CREAR RUTINA'}</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* TUTORIAL STEP 3 (Routine Name) */}
+                    {tutorialStep === 3 && (
+                        <InteractiveOverlay
+                            targetId="tut-routine-name-input"
+                            title="PASO 3: PONER NOMBRE OBLIGATORIO"
+                            message="Escribe un nombre épico para tu nueva rutina (ej: 'Pecho Legendario')."
+                            step={3}
+                            totalSteps={7}
+                            onNext={() => { }}
+                            onClose={() => {
+                                setTutorialStep(0);
+                                localStorage.setItem('hasSeenImportTutorial', 'true');
+                            }}
+                            placement="top"
+                            disableNext={true}
+                        />
+                    )}
+
+                    {/* TUTORIAL STEP 4 (Final Creation) */}
+                    {tutorialStep === 4 && (
+                        <InteractiveOverlay
+                            targetId="tut-save-routine-btn"
+                            title="PASO 4: SELECCIONAR Y GUARDAR"
+                            message="Guarda tu nueva rutina. Esto te mandará al inicio para que vayas al mapa."
+                            step={4}
+                            totalSteps={7}
+                            onNext={() => { }}
+                            onClose={() => {
+                                setTutorialStep(0);
+                                localStorage.setItem('hasSeenImportTutorial', 'true');
+                            }}
+                            placement="top"
+                            disableNext={true}
+                        />
+                    )}
                 </div>
-            </div>
-        )}
-
-        {/* TUTORIAL STEP 3 (Routine Name) */}
-        {tutorialStep === 3 && (
-            <InteractiveOverlay
-                targetId="tut-routine-name-input"
-                title="PASO 3: PONER NOMBRE OBLIGATORIO"
-                message="Escribe un nombre épico para tu nueva rutina (ej: 'Pecho Legendario')."
-                step={3}
-                totalSteps={7}
-                onNext={() => { }}
-                onClose={() => {
-                    setTutorialStep(0);
-                    localStorage.setItem('hasSeenImportTutorial', 'true');
-                }}
-                placement="top"
-                disableNext={true}
-            />
-        )}
-
-        {/* TUTORIAL STEP 4 (Final Creation) */}
-        {tutorialStep === 4 && (
-            <InteractiveOverlay
-                targetId="tut-save-routine-btn"
-                title="PASO 4: SELECCIONAR Y GUARDAR"
-                message="Guarda tu nueva rutina. Esto te mandará al inicio para que vayas al mapa."
-                step={4}
-                totalSteps={7}
-                onNext={() => { }}
-                onClose={() => {
-                    setTutorialStep(0);
-                    localStorage.setItem('hasSeenImportTutorial', 'true');
-                }}
-                placement="top"
-                disableNext={true}
-            />
-        )}
-    </div>
-);
+                );
 };
 
