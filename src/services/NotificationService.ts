@@ -139,6 +139,25 @@ export const notificationService = {
             return null;
         }
 
-        return chat.id;
+        if (chat) {
+            // 2. Insert System Message (Auto-generated)
+            await supabase
+                .from('chat_messages')
+                .insert({
+                    chat_id: chat.id,
+                    sender_id: user.id, // Or could be system user, but cleaner if it appears as "User A accepted"
+                    content: `¡${user.user_metadata.full_name || 'Alguien'} ha aceptado tu invitación! Pónganse de acuerdo.`
+                });
+
+            // Update last_message_at
+            await supabase
+                .from('chats')
+                .update({ last_message_at: new Date().toISOString() })
+                .eq('id', chat.id);
+
+            return chat.id;
+        }
+
+        return null;
     }
 };
