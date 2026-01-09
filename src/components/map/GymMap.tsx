@@ -196,6 +196,7 @@ export const GymMap = () => {
             ));
 
             // TUTORIAL: Advance from step 5 to 6 when gym is added
+            const currentStep = localStorage.getItem('tutorial_step');
             if (currentStep === '5') {
                 console.log('[TUTORIAL] Gym added, transitioning from step 5 to 6');
                 localStorage.setItem('tutorial_step', '6');
