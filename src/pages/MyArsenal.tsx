@@ -1004,9 +1004,9 @@ export const MyArsenal = () => {
                     localStorage.setItem('tutorial_step', '5');
                     setTutorialStep(5);
 
-                    // Auto-redirect to Home/Profile to continue tutorial (Step 5: Select Gym)
-                    navigate('/');
-                    return; // Exit early to ensure redirect completes
+                    // Force full page reload to UserProfile (guaranteed to trigger tutorial)
+                    window.location.href = '/';
+                    return; // Exit early
                 }
                 // Note: Import logic handles Step 6 elsewhere usually, or if Save handles imports too:
                 if (currentStep === '6' && routeGymId) {
