@@ -739,6 +739,7 @@ export const GymMap = () => {
                     onClose={() => { }}
                     disableNext={true}
                     placement="bottom"
+                    nonBlocking={true}
                 />
             )}
 
@@ -752,6 +753,7 @@ export const GymMap = () => {
                     onClose={() => { }}
                     disableNext={true}
                     placement="top"
+                    nonBlocking={true}
                 />
             )}
         </div >

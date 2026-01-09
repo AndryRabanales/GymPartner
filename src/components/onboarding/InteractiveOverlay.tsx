@@ -13,6 +13,7 @@ interface InteractiveOverlayProps {
     placement?: 'top' | 'bottom' | 'left' | 'right';
     disableNext?: boolean;
     nextLabel?: string;
+    nonBlocking?: boolean;
 }
 
 export const InteractiveOverlay = ({
@@ -25,7 +26,8 @@ export const InteractiveOverlay = ({
     onClose,
     placement = 'bottom',
     disableNext = false,
-    nextLabel = "ENTENDIDO"
+    nextLabel = "ENTENDIDO",
+    nonBlocking = false
 }: InteractiveOverlayProps) => {
     const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
     const observerRef = useRef<ResizeObserver | null>(null);
@@ -126,10 +128,14 @@ export const InteractiveOverlay = ({
     return createPortal(
         <div className="fixed inset-0 z-[100] overflow-hidden pointer-events-none">
             {/* 4 BLOCKING DIVS - Click to Dismiss */}
-            <div onClick={onClose} className="absolute bg-black/80 backdrop-blur-[1px] transition-all duration-300 pointer-events-auto cursor-pointer" style={{ top: 0, left: 0, right: 0, height: top - 8 }} />
-            <div onClick={onClose} className="absolute bg-black/80 backdrop-blur-[1px] transition-all duration-300 pointer-events-auto cursor-pointer" style={{ top: bottom + 8, left: 0, right: 0, bottom: 0 }} />
-            <div onClick={onClose} className="absolute bg-black/80 backdrop-blur-[1px] transition-all duration-300 pointer-events-auto cursor-pointer" style={{ top: top - 8, left: 0, width: left - 8, height: height + 16 }} />
-            <div onClick={onClose} className="absolute bg-black/80 backdrop-blur-[1px] transition-all duration-300 pointer-events-auto cursor-pointer" style={{ top: top - 8, left: right + 8, right: 0, height: height + 16 }} />
+            {!nonBlocking && (
+                <>
+                    <div onClick={onClose} className="absolute bg-black/80 backdrop-blur-[1px] transition-all duration-300 pointer-events-auto cursor-pointer" style={{ top: 0, left: 0, right: 0, height: top - 8 }} />
+                    <div onClick={onClose} className="absolute bg-black/80 backdrop-blur-[1px] transition-all duration-300 pointer-events-auto cursor-pointer" style={{ top: bottom + 8, left: 0, right: 0, bottom: 0 }} />
+                    <div onClick={onClose} className="absolute bg-black/80 backdrop-blur-[1px] transition-all duration-300 pointer-events-auto cursor-pointer" style={{ top: top - 8, left: 0, width: left - 8, height: height + 16 }} />
+                    <div onClick={onClose} className="absolute bg-black/80 backdrop-blur-[1px] transition-all duration-300 pointer-events-auto cursor-pointer" style={{ top: top - 8, left: right + 8, right: 0, height: height + 16 }} />
+                </>
+            )}
 
             {/* HIGHLIGHT */}
             <div
