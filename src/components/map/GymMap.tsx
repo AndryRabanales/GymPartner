@@ -252,24 +252,42 @@ export const GymMap = () => {
 
         console.log('[AUTOCOMPLETE] Searching near:', searchLocationObj.lat(), searchLocationObj.lng());
 
-        const request: google.maps.places.AutocompletionRequest = {
-            input: query,
-            location: searchLocationObj,
-            radius: 10000 // 10km radius
-        };
+        // Get country code from user location using Geocoder
+        const geocoder = new google.maps.Geocoder();
+        geocoder.geocode({ location: searchLocationObj }, (results, status) => {
+            let countryCode = '';
 
-        autocompleteService.getPlacePredictions(request, (predictions, status) => {
-            console.log('[AUTOCOMPLETE] Status:', status);
-            console.log('[AUTOCOMPLETE] Predictions:', predictions?.length || 0);
-
-            if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
-                // Limit to 3 suggestions
-                setSuggestions(predictions.slice(0, 3));
-                setShowSuggestions(true);
-            } else {
-                setSuggestions([]);
-                setShowSuggestions(false);
+            if (status === 'OK' && results && results[0]) {
+                const addressComponents = results[0].address_components;
+                const countryComponent = addressComponents.find(component =>
+                    component.types.includes('country')
+                );
+                if (countryComponent) {
+                    countryCode = countryComponent.short_name;
+                    console.log('[AUTOCOMPLETE] Country detected:', countryCode);
+                }
             }
+
+            const request: google.maps.places.AutocompletionRequest = {
+                input: query,
+                location: searchLocationObj,
+                radius: 300000, // 300km radius
+                componentRestrictions: countryCode ? { country: countryCode } : undefined
+            };
+
+            autocompleteService.getPlacePredictions(request, (predictions, status) => {
+                console.log('[AUTOCOMPLETE] Status:', status);
+                console.log('[AUTOCOMPLETE] Predictions:', predictions?.length || 0);
+
+                if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
+                    // Limit to 3 suggestions
+                    setSuggestions(predictions.slice(0, 3));
+                    setShowSuggestions(true);
+                } else {
+                    setSuggestions([]);
+                    setShowSuggestions(false);
+                }
+            });
         });
     };
 
@@ -295,7 +313,7 @@ export const GymMap = () => {
         const request: google.maps.places.TextSearchRequest = {
             query: `${searchTerm} gym`,
             location: searchLocationObj,
-            radius: 10000, // 10km radius to keep results local
+            radius: 300000, // 300km radius to keep results within same state
             type: 'gym'
         };
 
