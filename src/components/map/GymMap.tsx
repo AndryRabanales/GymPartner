@@ -228,9 +228,16 @@ export const GymMap = () => {
 
     // Handle autocomplete suggestions
     const handleAutocomplete = (query: string) => {
-        if (!query.trim() || !autocompleteService) {
+        console.log('[AUTOCOMPLETE] Query:', query);
+
+        if (!query.trim()) {
             setSuggestions([]);
             setShowSuggestions(false);
+            return;
+        }
+
+        if (!autocompleteService) {
+            console.error('[AUTOCOMPLETE] Service not initialized');
             return;
         }
 
@@ -238,16 +245,23 @@ export const GymMap = () => {
             ? new google.maps.LatLng(userLocation.lat, userLocation.lng)
             : map?.getCenter();
 
-        if (!searchLocationObj) return;
+        if (!searchLocationObj) {
+            console.error('[AUTOCOMPLETE] No location available');
+            return;
+        }
+
+        console.log('[AUTOCOMPLETE] Searching near:', searchLocationObj.lat(), searchLocationObj.lng());
 
         const request: google.maps.places.AutocompletionRequest = {
             input: query,
             location: searchLocationObj,
-            radius: 10000, // 10km radius
-            types: ['gym', 'establishment']
+            radius: 10000 // 10km radius
         };
 
         autocompleteService.getPlacePredictions(request, (predictions, status) => {
+            console.log('[AUTOCOMPLETE] Status:', status);
+            console.log('[AUTOCOMPLETE] Predictions:', predictions?.length || 0);
+
             if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
                 // Limit to 3 suggestions
                 setSuggestions(predictions.slice(0, 3));
