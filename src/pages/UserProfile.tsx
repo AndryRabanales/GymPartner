@@ -897,21 +897,7 @@ export const UserProfile = () => {
                 />
             )}
 
-            {/* TUTORIAL STEP 5: FIND GYMS (MAP) */}
-            {tutorialStep === 5 && (
-                <InteractiveOverlay
-                    step={5}
-                    totalSteps={7}
-                    targetId="tut-find-gyms-btn"
-                    title="PASO 5: CONQUISTA UN TERITORIO"
-                    message="Tu arsenal está listo. Ahora necesitas un campo de batalla. Busca tu gimnasio en el mapa para empezar a entrenar y subir de rango."
-                    placement="bottom"
-                    onNext={() => {
-                        // User proceeds explicitly by clicking the button
-                    }}
-                    onClose={() => setTutorialStep(0)}
-                />
-            )}
+
 
 
 
@@ -940,20 +926,18 @@ export const UserProfile = () => {
                 />
             )}
 
-            {/* TUTORIAL STEP 5: Select Gym (Config) */}
+            {/* TUTORIAL STEP 5: Select Gym to Import Routine */}
             {tutorialStep === 5 && (
                 <InteractiveOverlay
-                    targetId="tut-config-gym-btn-0"
-                    title="PASO 5: CONFIGURAR GYM"
-                    message="Selecciona tu gimnasio y configúralo para importar la rutina que acabas de crear."
+                    targetId="tut-gym-card-0"
+                    title="PASO 5: SELECCIONA TU GIMNASIO"
+                    message="Haz clic en tu gimnasio para seleccionarlo y poder importar la rutina que acabas de crear."
                     step={5}
                     totalSteps={7}
                     onNext={() => { }}
                     onClose={() => {
                         setTutorialStep(0);
                         localStorage.setItem('tutorial_step', '0');
-                        localStorage.setItem('hasSeenGlobalTutorial', 'true');
-                        localStorage.setItem('hasSeenImportTutorial', 'true');
                     }}
                     placement="top"
                     disableNext={true}

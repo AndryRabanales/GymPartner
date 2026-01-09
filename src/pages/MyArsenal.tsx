@@ -1004,11 +1004,9 @@ export const MyArsenal = () => {
                     localStorage.setItem('tutorial_step', '5');
                     setTutorialStep(5);
 
-                    // [FIX] Removed auto-navigate to force manual interaction confirmation
-                    // navigate('/'); 
-
-                    // Fallback: If redirect fails or takes time, we set viewMode to ROUTINES below
-                    // and show an overlay pointing to the Back button.
+                    // Auto-redirect to Home/Profile to continue tutorial (Step 5: Select Gym)
+                    navigate('/');
+                    return; // Exit early to ensure redirect completes
                 }
                 // Note: Import logic handles Step 6 elsewhere usually, or if Save handles imports too:
                 if (currentStep === '6' && routeGymId) {
