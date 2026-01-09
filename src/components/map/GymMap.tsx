@@ -3,6 +3,7 @@ import { Map, AdvancedMarker, Pin, useMap, useMapsLibrary } from '@vis.gl/react-
 import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useGeolocation } from '../../hooks/useGeolocation';
+import { InteractiveOverlay } from '../onboarding/InteractiveOverlay';
 import { userService } from '../../services/UserService';
 import { getDistance } from '../../utils/distance';
 import type { UserPrimaryGym } from '../../services/UserService';
@@ -44,6 +45,13 @@ export const GymMap = () => {
     const [isSearching, setIsSearching] = useState(false);
     const [suggestions, setSuggestions] = useState<google.maps.places.AutocompletePrediction[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
+    // TUTORIAL STATE
+    const [tutorialStep, setTutorialStep] = useState(0);
+
+    useEffect(() => {
+        const step = parseInt(localStorage.getItem('tutorial_step') || '0');
+        setTutorialStep(step);
+    }, []);
 
     // Default position: Mexico City (fallback)
     const defaultPosition = { lat: 19.4326, lng: -99.1332 };
@@ -188,10 +196,10 @@ export const GymMap = () => {
             ));
 
             // TUTORIAL: Advance from step 5 to 6 when gym is added
-            const currentStep = localStorage.getItem('tutorial_step');
             if (currentStep === '5') {
                 console.log('[TUTORIAL] Gym added, transitioning from step 5 to 6');
                 localStorage.setItem('tutorial_step', '6');
+                setTutorialStep(6);
             }
 
             setSelectedGym(null);
@@ -390,6 +398,7 @@ export const GymMap = () => {
                                     if (suggestions.length > 0) setShowSuggestions(true);
                                 }}
                                 className="w-full bg-black/60 backdrop-blur-md border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder-neutral-400 focus:outline-none focus:border-gym-primary/50 transition-all text-sm relative z-10"
+                                id="tut-map-search-input"
                             />
 
                             {/* Autocomplete Suggestions Dropdown */}
@@ -686,6 +695,7 @@ export const GymMap = () => {
                                     <button
                                         onClick={handleUnlock}
                                         className="w-full bg-gym-primary text-black font-black text-lg italic py-4 rounded-2xl hover:bg-yellow-400 transition-all hover:scale-[1.02] flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(250,204,21,0.3)] bg-neutral-800"
+                                        id="tut-add-gym-btn"
                                     >
                                         <Lock size={20} strokeWidth={2.5} />
                                         AÑADIR A MI MAPA
@@ -719,6 +729,31 @@ export const GymMap = () => {
                     <span className="text-[10px] md:text-xs font-bold text-neutral-500 uppercase tracking-widest group-hover:text-white transition-colors">BLOQUEADOS</span>
                 </div>
             </div>
+            {tutorialStep === 5 && !selectedGym && (
+                <InteractiveOverlay
+                    targetId="tut-map-search-input"
+                    title="PASO 5: BÚSQUEDA TÁCTICA"
+                    message="Usa el radar para localizar tu gimnasio. Escribe el nombre (Ej: Spartanos)."
+                    step={5}
+                    totalSteps={7}
+                    onClose={() => { }}
+                    disableNext={true}
+                    placement="bottom"
+                />
+            )}
+
+            {tutorialStep === 5 && selectedGym && !selectedGym.is_unlocked && (
+                <InteractiveOverlay
+                    targetId="tut-add-gym-btn"
+                    title="CONQUISTA EL TERRITORIO"
+                    message="¡Excelente hallazgo! Añádelo a tu mapa para comenzar tu entrenamiento."
+                    step={5}
+                    totalSteps={7}
+                    onClose={() => { }}
+                    disableNext={true}
+                    placement="top"
+                />
+            )}
         </div >
     );
 };
