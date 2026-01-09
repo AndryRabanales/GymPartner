@@ -363,7 +363,7 @@ export const GymMap = () => {
                             {/* Autocomplete Suggestions Dropdown */}
                             {showSuggestions && suggestions.length > 0 && (
                                 <div className="absolute top-full left-0 right-0 mt-2 bg-black/90 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                                    {suggestions.map((suggestion, index) => (
+                                    {suggestions.map((suggestion) => (
                                         <button
                                             key={suggestion.place_id}
                                             onClick={() => {
