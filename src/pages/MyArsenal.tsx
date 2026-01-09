@@ -998,9 +998,11 @@ export const MyArsenal = () => {
                 // Step 4 (Creation Save) -> Step 5 (Profile Select Gym)
                 // Step 6 (Import Save) -> Step 7 (Profile Start)
                 const currentStep = localStorage.getItem('tutorial_step');
+                console.log('[TUTORIAL] Saving routine, current step:', currentStep);
 
                 // Allow 2, 3, 4, 5
                 if (currentStep && ['2', '3', '4', '5'].includes(currentStep)) {
+                    console.log('[TUTORIAL] Transitioning to step 5 and redirecting to home');
                     localStorage.setItem('tutorial_step', '5');
                     setTutorialStep(5);
 
@@ -1010,6 +1012,7 @@ export const MyArsenal = () => {
                 }
                 // Note: Import logic handles Step 6 elsewhere usually, or if Save handles imports too:
                 if (currentStep === '6' && routeGymId) {
+                    console.log('[TUTORIAL] Import completed, transitioning to step 7');
                     localStorage.setItem('tutorial_step', '7');
                     setTutorialStep(7);
                     alert("¡Rutina importada con éxito!\n\nRegresa al INICIO para comenzar el entrenamiento.");
@@ -1292,6 +1295,7 @@ export const MyArsenal = () => {
 
                         {/* Mobile Save Button (Icon Only) */}
                         <button
+                            id="tut-save-routine-btn-mobile"
                             onClick={handleSaveRoutine}
                             disabled={isSaving}
                             className="md:hidden w-12 h-12 flex items-center justify-center bg-green-500 hover:bg-green-400 rounded-xl text-white shadow-[0_0_15px_rgba(34,197,94,0.5)] transition-all active:scale-95"
@@ -1301,6 +1305,7 @@ export const MyArsenal = () => {
 
                         {/* Desktop Save Button (Full) */}
                         <button
+                            id="tut-save-routine-btn-desktop"
                             onClick={handleSaveRoutine}
                             disabled={isSaving}
                             className="hidden md:flex bg-gym-primary hover:bg-yellow-400 text-black font-black uppercase tracking-wider px-6 py-2.5 rounded-xl transition-all items-center gap-2 text-sm shadow-[0_0_20px_rgba(250,204,21,0.2)]"
@@ -1368,23 +1373,26 @@ export const MyArsenal = () => {
                     />
                 )}
 
-                {/* TUTORIAL STEP 4: SELECT WEAPONS */}
-                {tutorialStep === 4 && selectedItems.size === 0 && (
+                {/* TUTORIAL STEP 4: SELECT WEAPONS AND SAVE */}
+                {tutorialStep === 4 && (
                     <InteractiveOverlay
-                        targetId="tut-arsenal-grid"
-                        title="PASO 4: ELIGE TUS ARMAS"
-                        message="Selecciona las máquinas y ejercicios que formarán parte de esta rutina. Solo haz clic en ellas."
+                        targetId={selectedItems.size > 0 ? "tut-save-routine-btn-mobile" : "tut-arsenal-grid"}
+                        title={selectedItems.size > 0 ? "PASO 4: GUARDA TU ESTRATEGIA" : "PASO 4: ELIGE TUS ARMAS"}
+                        message={selectedItems.size > 0
+                            ? "¡Perfecto! Ahora haz clic en el botón verde ✓ para guardar tu rutina y continuar."
+                            : "Selecciona las máquinas y ejercicios que formarán parte de esta rutina. Solo haz clic en ellas."}
                         step={4}
                         totalSteps={7}
                         placement="top"
                         onNext={() => {
                             // Do nothing - tutorial continues to Step 5 after save
                         }}
-                        nextLabel="¡Entendido!"
+                        nextLabel={selectedItems.size > 0 ? "¡A GUARDAR!" : "¡Entendido!"}
                         onClose={() => {
                             setTutorialStep(0);
                             localStorage.setItem('tutorial_step', '0');
                         }}
+                        disableNext={true}
                     />
                 )}
 

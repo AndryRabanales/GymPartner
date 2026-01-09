@@ -81,6 +81,7 @@ export const UserProfile = () => {
 
         if (urlTutorialStep) {
             const step = parseInt(urlTutorialStep);
+            console.log('[TUTORIAL] Loading from URL param:', step);
             setTutorialStep(step);
             localStorage.setItem('tutorial_step', step.toString());
             // Clean URL
@@ -91,11 +92,14 @@ export const UserProfile = () => {
         // Resume tutorial if active
         const savedStep = localStorage.getItem('tutorial_step');
         if (savedStep) {
-            setTutorialStep(parseInt(savedStep));
+            const step = parseInt(savedStep);
+            console.log('[TUTORIAL] Resuming from localStorage:', step);
+            setTutorialStep(step);
         } else {
             // START TUTORIAL AUTOMATICALLY IF NEW USER (First time)
             const hasSeen = localStorage.getItem('hasSeenGlobalTutorial');
             if (!hasSeen) {
+                console.log('[TUTORIAL] New user detected, starting tutorial');
                 setTimeout(() => {
                     setTutorialStep(1);
                     localStorage.setItem('tutorial_step', '1');
@@ -103,7 +107,7 @@ export const UserProfile = () => {
                 }, 1000);
             }
         }
-    }, []);
+    }, [navigate]);
 
     useEffect(() => {
         if (user) {
@@ -939,12 +943,12 @@ export const UserProfile = () => {
                 />
             )}
 
-            {/* TUTORIAL STEP 5: Select Gym to Import Routine */}
+            {/* TUTORIAL STEP 5: Find Gym on Map */}
             {tutorialStep === 5 && (
                 <InteractiveOverlay
-                    targetId="tut-gym-card-0"
-                    title="PASO 5: SELECCIONA TU GIMNASIO"
-                    message="Haz clic en tu gimnasio para seleccionarlo y poder importar la rutina que acabas de crear."
+                    targetId="tut-find-gyms-btn"
+                    title="PASO 5: BUSCA TU GIMNASIO"
+                    message="Haz clic en 'Encontrar Gimnasios' para buscar tu gimnasio en el mapa o buscador y agregarlo a tus territorios."
                     step={5}
                     totalSteps={7}
                     onNext={() => { }}
@@ -952,7 +956,7 @@ export const UserProfile = () => {
                         setTutorialStep(0);
                         localStorage.setItem('tutorial_step', '0');
                     }}
-                    placement="top"
+                    placement="bottom"
                     disableNext={true}
                 />
             )}
