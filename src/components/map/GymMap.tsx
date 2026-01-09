@@ -204,7 +204,8 @@ export const GymMap = () => {
             }
 
             setSelectedGym(null);
-            navigate(`/territory/${result.gym_id}`);
+            // navigate(`/territory/${result.gym_id}`);
+            navigate('/');
         } else {
             alert('Error al desbloquear: ' + result.error);
         }
