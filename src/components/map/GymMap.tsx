@@ -8,7 +8,7 @@ import { userService } from '../../services/UserService';
 import { getDistance } from '../../utils/distance';
 import type { UserPrimaryGym } from '../../services/UserService';
 import { useNavigate } from 'react-router-dom';
-import { Lock, Star, User, Search, Loader, MapPin } from 'lucide-react';
+import { Lock, Star, Search, Loader, MapPin } from 'lucide-react';
 import { PlayerProfileModal } from '../profile/PlayerProfileModal';
 
 interface GymMarker {
