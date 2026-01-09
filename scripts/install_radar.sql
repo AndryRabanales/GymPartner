@@ -112,7 +112,14 @@ BEGIN
         p.avatar_url,
         (p.custom_settings->>'banner_url')::text as banner_url, -- Extract from JSON
         p.description,
-        COALESCE(p.checkins_count, 0)::integer as checkins_count, -- Explicit Cast
+        (
+            SELECT COUNT(DISTINCT DATE(start_time))::integer 
+            FROM public.workout_sessions ws 
+            WHERE ws.user_id = p.id
+            -- Opcional: Filtrar últimos 90 días si así lo desea el usuario, pero "Entrenos" suele ser total o mensual.
+            -- El usuario mencionó "TABLA DE CONSISTENCIA", que suele ser visual.
+            -- Si dice "5 dias finalizando entrenamientos", se refiere a días únicos.
+        ) as checkins_count, 
         gu.g_id as gym_id,
         gu.name as gym_name,
         gu.lat as gym_lat,
