@@ -872,6 +872,9 @@ export const UserProfile = () => {
                                                 if (localStorage.getItem('tutorial_step') === '5') {
                                                     localStorage.setItem('tutorial_step', '6');
                                                 }
+                                                if (localStorage.getItem('tutorial_step') === '6') {
+                                                    localStorage.setItem('tutorial_step', '7');
+                                                }
                                             }}
                                             className="bg-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-700 w-10 h-10 md:w-auto md:h-auto md:px-4 md:py-2 rounded-lg md:rounded-xl transition-all font-bold flex items-center justify-center gap-2 border border-neutral-700 hover:border-white/20"
                                         >
@@ -1033,18 +1036,40 @@ export const UserProfile = () => {
 
             />
 
-            {/* TUTORIAL STEP 6 Overlay */}
+            {/* TUTORIAL STEP 6 Overlay (Configuration) */}
             {tutorialStep === 6 && userGyms.length > 0 && (
                 <InteractiveOverlay
                     targetId={`tut-config-gym-btn-${userGyms.length - 1}`}
                     title="PASO 6: PREPARATIVOS"
                     message="¡Base establecida! Ahora entra a configurar el equipo de tu gimnasio."
                     step={6}
-                    totalSteps={7}
+                    totalSteps={8}
                     onClose={() => { }}
                     placement="top"
                     nonBlocking={true}
                     disableNext={true}
+                />
+            )}
+
+            {/* TUTORIAL STEP 8 Overlay (Start Training) */}
+            {tutorialStep === 8 && userGyms.length > 0 && (
+                <InteractiveOverlay
+                    targetId={`tut-start-workout-btn-${userGyms.length - 1}`}
+                    title="PASO 8: ¡A LA BATALLA!"
+                    message="Tu base está lista. Inicia tu entrenamiento y comienza a ganar experiencia."
+                    step={8}
+                    totalSteps={8}
+                    nextLabel="¡EMPEZAR!"
+                    onNext={() => {
+                        setTutorialStep(0);
+                        localStorage.setItem('tutorial_step', '0');
+                    }}
+                    onClose={() => {
+                        setTutorialStep(0);
+                        localStorage.setItem('tutorial_step', '0');
+                    }}
+                    placement="top"
+                    nonBlocking={true}
                 />
             )}
         </div>

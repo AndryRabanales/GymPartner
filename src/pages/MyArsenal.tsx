@@ -495,12 +495,12 @@ export const MyArsenal = () => {
             await initialize(); // Refresh
             setImportingMode(false);
 
-            // TUTORIAL ADVANCE: Step 2 -> 3 (Final Phase)
-            if (localStorage.getItem('tutorial_step') === '6') {
-                localStorage.setItem('tutorial_step', '7');
-                setTutorialStep(7);
-                alert("¡Rutina Importada!\n\nRegresando al perfil para iniciar...");
-                navigate(-1); // Go back immediately to WorkoutSession
+            // TUTORIAL ADVANCE: Step 7 -> 8 (Go to Training)
+            if (localStorage.getItem('tutorial_step') === '7') {
+                localStorage.setItem('tutorial_step', '8');
+                setTutorialStep(8);
+                alert("¡Arsenal Listo!\n\nRegresando a la base para iniciar el entrenamiento.");
+                navigate(-1); // Go back immediately to WorkoutSession/Profile
             } else {
                 alert("¡Rutina Importada con éxito!");
             }
@@ -1123,20 +1123,20 @@ export const MyArsenal = () => {
                             />
                         )}
 
-                        {/* TUTORIAL OVERLAY STEP 6 (Import Strategy) */}
-                        {tutorialStep === 6 && !addingMode && !importingMode && (
+                        {/* TUTORIAL OVERLAY STEP 7 (Import Strategy) */}
+                        {tutorialStep === 7 && !addingMode && !importingMode && (
                             <InteractiveOverlay
                                 targetId="tut-import-routine-btn"
-                                title="PASO 6: IMPORTAR DESDE EL PERFIL"
-                                message="Haz clic en 'IMPORTAR' para traer la rutina que creaste a este gimnasio."
-                                step={6}
-                                totalSteps={7}
+                                title="PASO 7: DESPLIEGUE RÁPIDO"
+                                message="Tu base está vacía. Haz clic en 'IMPORTAR MAESTRA' para equiparla con tu estrategia predefinida."
+                                step={7}
+                                totalSteps={8}
                                 onNext={() => { }}
                                 onClose={() => {
                                     setTutorialStep(0);
                                     localStorage.setItem('hasSeenImportTutorial', 'true');
                                 }}
-                                placement="bottom"
+                                placement="top"
                                 disableNext={true}
                             />
                         )}
@@ -1200,6 +1200,7 @@ export const MyArsenal = () => {
                                     </button>
                                     {routeGymId && (
                                         <button
+                                            id="tut-import-routine-btn"
                                             onClick={() => setImportingMode(true)}
                                             className="bg-neutral-800 text-white font-bold px-8 py-3 rounded-xl hover:bg-neutral-700 transition-all border border-neutral-700"
                                         >
