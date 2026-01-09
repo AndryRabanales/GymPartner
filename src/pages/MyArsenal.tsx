@@ -1358,7 +1358,7 @@ export const MyArsenal = () => {
                         title="PASO 3: BAUTIZA TU ESTRATEGIA"
                         message="Toda gran batalla comienza con un nombre. Escribe cómo llamarás a este plan de entrenamiento."
                         step={3}
-                        totalSteps={4}
+                        totalSteps={7}
                         placement="bottom"
                         onClose={() => {
                             setTutorialStep(0);
@@ -1375,11 +1375,10 @@ export const MyArsenal = () => {
                         title="PASO 4: ELIGE TUS ARMAS"
                         message="Selecciona las máquinas y ejercicios que formarán parte de esta rutina. Solo haz clic en ellas."
                         step={4}
-                        totalSteps={4}
+                        totalSteps={7}
                         placement="top"
                         onNext={() => {
-                            setTutorialStep(0);
-                            localStorage.setItem('tutorial_step', '0');
+                            // Do nothing - tutorial continues to Step 5 after save
                         }}
                         nextLabel="¡Entendido!"
                         onClose={() => {
