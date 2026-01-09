@@ -379,7 +379,7 @@ export const GymMap = () => {
                 {/* SEARCH BAR */}
                 <div className="mt-4 w-full max-w-md mx-auto pointer-events-auto relative">
                     <div className="flex gap-2">
-                        <div className="relative flex-1">
+                        <div className="relative flex-1" id="tut-map-search-input">
                             <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 z-10" />
                             <input
                                 type="text"
@@ -399,7 +399,6 @@ export const GymMap = () => {
                                     if (suggestions.length > 0) setShowSuggestions(true);
                                 }}
                                 className="w-full bg-black/60 backdrop-blur-md border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder-neutral-400 focus:outline-none focus:border-gym-primary/50 transition-all text-sm relative z-10"
-                                id="tut-map-search-input"
                             />
 
                             {/* Autocomplete Suggestions Dropdown */}
