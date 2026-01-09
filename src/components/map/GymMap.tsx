@@ -7,7 +7,7 @@ import { userService } from '../../services/UserService';
 import { getDistance } from '../../utils/distance';
 import type { UserPrimaryGym } from '../../services/UserService';
 import { useNavigate } from 'react-router-dom';
-import { Lock, Star, User } from 'lucide-react';
+import { Lock, Star, User, Search, Loader } from 'lucide-react';
 import { PlayerProfileModal } from '../profile/PlayerProfileModal';
 
 interface GymMarker {
@@ -39,6 +39,8 @@ export const GymMap = () => {
     const [displayGyms, setDisplayGyms] = useState<GymMarker[]>([]);
     const [selectedGym, setSelectedGym] = useState<GymMarker | null>(null);
     const [showProfile, setShowProfile] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isSearching, setIsSearching] = useState(false);
 
     // Default position: Mexico City (fallback)
     const defaultPosition = { lat: 19.4326, lng: -99.1332 };
@@ -220,6 +222,46 @@ export const GymMap = () => {
         }
     };
 
+    // Search gyms by name near user location
+    const handleSearch = () => {
+        if (!searchQuery.trim() || !placesService || !map) return;
+
+        setIsSearching(true);
+
+        // Use user location if available, otherwise use map center
+        const searchLocation = userLocation
+            ? { lat: userLocation.lat, lng: userLocation.lng }
+            : map.getCenter();
+
+        if (!searchLocation) {
+            setIsSearching(false);
+            return;
+        }
+
+        const request: google.maps.places.TextSearchRequest = {
+            query: `${searchQuery} gym`,
+            location: searchLocation,
+            radius: 10000, // 10km radius to keep results local
+            type: 'gym'
+        };
+
+        placesService.textSearch(request, (results, status) => {
+            setIsSearching(false);
+            if (status === google.maps.places.PlacesServiceStatus.OK && results && results.length > 0) {
+                mergeAndDisplayGyms(results);
+                // Center map on first result
+                const firstResult = results[0];
+                if (firstResult.geometry?.location) {
+                    map.panTo(firstResult.geometry.location);
+                    map.setZoom(15);
+                }
+            } else {
+                alert('No se encontraron gimnasios cerca con ese nombre. Intenta con otro término.');
+            }
+        });
+    };
+
+
 
     if (!API_KEY) {
         return (
@@ -251,6 +293,37 @@ export const GymMap = () => {
                         Domina tu zona
                         <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
                     </p>
+                </div>
+
+                {/* SEARCH BAR */}
+                <div className="mt-4 w-full max-w-md mx-auto pointer-events-auto">
+                    <div className="flex gap-2">
+                        <div className="relative flex-1">
+                            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+                            <input
+                                type="text"
+                                placeholder="Busca tu gimnasio..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleSearch();
+                                }}
+                                className="w-full bg-black/60 backdrop-blur-md border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder-neutral-400 focus:outline-none focus:border-gym-primary/50 transition-all text-sm"
+                            />
+                        </div>
+                        <button
+                            onClick={handleSearch}
+                            disabled={isSearching || !searchQuery.trim()}
+                            className="bg-gym-primary hover:bg-yellow-400 disabled:bg-neutral-700 disabled:cursor-not-allowed text-black font-bold px-6 py-3 rounded-xl transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(250,204,21,0.3)] disabled:shadow-none"
+                        >
+                            {isSearching ? (
+                                <Loader size={18} className="animate-spin" />
+                            ) : (
+                                <Search size={18} />
+                            )}
+                            <span className="hidden md:inline">BUSCAR</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 

@@ -948,7 +948,7 @@ export const UserProfile = () => {
                 <InteractiveOverlay
                     targetId="tut-find-gyms-btn"
                     title="PASO 5: BUSCA TU GIMNASIO"
-                    message="Haz clic en 'Encontrar Gimnasios' para buscar tu gimnasio en el mapa o buscador y agregarlo a tus territorios."
+                    message="Haz clic en 'Encontrar Gimnasios' para ir al mapa. Luego, usa el buscador para encontrar tu gimnasio (ej: 'Spartanos') y selecciónalo para agregarlo a tu mapa."
                     step={5}
                     totalSteps={7}
                     onNext={() => { }}
