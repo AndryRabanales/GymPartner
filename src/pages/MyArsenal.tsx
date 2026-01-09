@@ -1004,8 +1004,8 @@ export const MyArsenal = () => {
                     localStorage.setItem('tutorial_step', '5');
                     setTutorialStep(5);
 
-                    // Try direct redirect
-                    navigate('/');
+                    // [FIX] Removed auto-navigate to force manual interaction confirmation
+                    // navigate('/'); 
 
                     // Fallback: If redirect fails or takes time, we set viewMode to ROUTINES below
                     // and show an overlay pointing to the Back button.
