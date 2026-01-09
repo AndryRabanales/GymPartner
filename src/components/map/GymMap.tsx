@@ -360,21 +360,8 @@ export const GymMap = () => {
     return (
         <div className="w-full h-[calc(100vh-100px)] md:h-[calc(100vh-120px)] rounded-none md:rounded-3xl overflow-hidden shadow-2xl border-0 md:border border-neutral-800 relative bg-neutral-900 group">
 
-            {/* CEO Upgrade: Animated HUD Header */}
-            <div className="absolute top-0 left-0 w-full p-4 z-20 pointer-events-none flex flex-col items-center justify-start bg-gradient-to-b from-black/80 via-black/40 to-transparent pb-12">
-                <div className="bg-black/40 backdrop-blur-md border border-white/10 px-6 py-3 rounded-full flex flex-col items-center relative overflow-hidden animate-in slide-in-from-top-10 duration-700 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
-                    {/* Scanner Line Animation */}
-                    <div className="absolute top-0 bottom-0 w-1 bg-green-500/50 shadow-[0_0_15px_#22c55e] animate-[scan_3s_ease-in-out_infinite] opacity-50"></div>
-
-                    <h1 className="text-2xl font-black text-white uppercase italic tracking-tighter" style={{ textShadow: '0 0 20px rgba(255,255,255,0.3)' }}>
-                        Explorar <span className="text-gym-primary">Territorio</span>
-                    </h1>
-                    <p className="text-[10px] text-neutral-300 font-bold tracking-[0.2em] uppercase mt-0.5 flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-                        Domina tu zona
-                        <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-                    </p>
-                </div>
+            {/* CEO Upgrade: Animated HUD Header (CLEANED UP) */}
+            <div className="absolute top-0 left-0 w-full p-4 z-20 pointer-events-none flex flex-col items-center justify-start">
 
                 {/* SEARCH BAR */}
                 <div className="mt-4 w-full max-w-md mx-auto pointer-events-auto relative">
@@ -447,28 +434,7 @@ export const GymMap = () => {
                 </div>
             </div>
 
-            {/* INSTAGRAM-STYLE PROFILE BUTTON (Top Right) */}
-            {user && (
-                <div className="absolute top-4 right-4 z-50 animate-in fade-in slide-in-from-right duration-700 delay-300">
-                    <button
-                        onClick={() => setShowProfile(true)}
-                        className="group relative flex items-center justify-center w-12 h-12 rounded-full bg-neutral-900/80 backdrop-blur-md border border-white/10 shadow-[0_0_20px_rgba(0,0,0,0.5)] hover:border-yellow-500/50 transition-all hover:scale-110 active:scale-95 overflow-hidden"
-                    >
-                        {user.user_metadata.avatar_url ? (
-                            <img src={user.user_metadata.avatar_url} alt="Profile" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
-                        ) : (
-                            <User size={20} className="text-white opactiy-80 group-hover:text-yellow-500" />
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-tr from-yellow-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
-                        {/* Notification Dot (Fake for aesthetics) */}
-                        <div className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-neutral-900 animate-pulse" />
-                    </button>
-                    <p className="absolute top-14 right-0 text-[10px] font-black uppercase tracking-widest text-white/50 group-hover:text-yellow-500 transition-colors text-right pointer-events-none">
-                        Mi Perfil
-                    </p>
-                </div>
-            )}
 
             {/* PROFILE DRAWER */}
             {showProfile && user && (
