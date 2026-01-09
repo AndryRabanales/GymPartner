@@ -619,7 +619,7 @@ export const UserProfile = () => {
 
                             {/* SOCIAL STATS ROW (Unified Design) */}
                             {/* SOCIAL STATS ROW (Grid for Perfect Symmetry) */}
-                            <div className="grid grid-cols-3 divide-x divide-white/10 bg-black/60 backdrop-blur-md rounded-2xl py-3 border border-white/10 shadow-xl mt-4 w-full max-w-xs mx-auto">
+                            <div className="grid grid-cols-2 divide-x divide-white/10 bg-black/60 backdrop-blur-md rounded-2xl py-3 border border-white/10 shadow-xl mt-4 w-full max-w-xs mx-auto">
                                 <div className="flex flex-col items-center justify-center group cursor-pointer hover:bg-white/5 transition-colors py-1" onClick={() => setShowSocialProfile(true)}>
                                     <span className="font-black text-xl text-white leading-none mb-1 drop-shadow-md">{socialStats.followersCount}</span>
                                     <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest text-shadow-sm">Seguidores</span>
@@ -627,10 +627,6 @@ export const UserProfile = () => {
                                 <div className="flex flex-col items-center justify-center group cursor-pointer hover:bg-white/5 transition-colors py-1" onClick={() => setShowSocialProfile(true)}>
                                     <span className="font-black text-xl text-white leading-none mb-1 drop-shadow-md">{socialStats.followingCount}</span>
                                     <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest text-shadow-sm">Seguidos</span>
-                                </div>
-                                <div className="flex flex-col items-center justify-center group cursor-pointer hover:bg-white/5 transition-colors py-1">
-                                    <span className="font-black text-xl text-white leading-none mb-1 text-red-500 drop-shadow-md">{socialStats.totalLikes}</span>
-                                    <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest text-shadow-sm">Likes</span>
                                 </div>
                             </div>
 

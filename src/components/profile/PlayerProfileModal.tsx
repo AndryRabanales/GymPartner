@@ -188,11 +188,6 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
                                 <span className="font-black text-2xl text-white leading-none mb-1 group-hover:text-yellow-500 transition-colors">{stats.followingCount}</span>
                                 <span className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Siguiendo</span>
                             </div>
-                            <div className="w-px h-8 bg-white/10"></div>
-                            <div className="flex flex-col items-center group cursor-pointer hover:scale-105 transition-transform">
-                                <span className="font-black text-2xl text-white leading-none mb-1 group-hover:text-red-500 transition-colors">{stats.totalLikes}</span>
-                                <span className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Likes</span>
-                            </div>
                         </div>
 
                         {/* Follow Button */}
