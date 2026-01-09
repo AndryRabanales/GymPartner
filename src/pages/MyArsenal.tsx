@@ -1006,8 +1006,8 @@ export const MyArsenal = () => {
                     localStorage.setItem('tutorial_step', '5');
                     setTutorialStep(5);
 
-                    // Force full page reload to UserProfile (guaranteed to trigger tutorial)
-                    window.location.href = '/';
+                    // Force full page reload to UserProfile with explicit tutorial param
+                    window.location.href = '/?tutorial=5';
                     return; // Exit early
                 }
                 // Note: Import logic handles Step 6 elsewhere usually, or if Save handles imports too:

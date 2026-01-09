@@ -75,6 +75,16 @@ export const UserProfile = () => {
     const [tutorialStep, setTutorialStep] = useState(0);
 
     useEffect(() => {
+        console.log('[TUTORIAL] Current Step State:', tutorialStep);
+        if (tutorialStep === 5) {
+            setTimeout(() => {
+                const el = document.getElementById('tut-find-gyms-btn');
+                console.log('[TUTORIAL] Step 5 Target found?', !!el);
+            }, 500);
+        }
+    }, [tutorialStep]);
+
+    useEffect(() => {
         // Check URL for tutorial override (from redirect)
         const params = new URLSearchParams(window.location.search);
         const urlTutorialStep = params.get('tutorial');
