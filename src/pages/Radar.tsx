@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { radarService, type RadarUser } from '../services/RadarService';
 import { notificationService } from '../services/NotificationService';
-import { MapPin, Radar as RadarIcon, Dumbbell, X, UserPlus } from 'lucide-react';
+import { Radar as RadarIcon, Dumbbell, X, UserPlus } from 'lucide-react';
 
 export const Radar = () => {
     const [nearbyUsers, setNearbyUsers] = useState<RadarUser[]>([]);
@@ -100,14 +100,7 @@ export const Radar = () => {
     return (
         <div className="h-full flex flex-col relative overflow-hidden bg-black">
 
-            {/* FLOATING STATUS BADGE */}
-            {scanComplete && nearbyUsers.length > 0 && (
-                <div className="absolute top-4 right-4 z-40 pointer-events-none">
-                    <div className="text-[10px] font-black text-white/50 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-white/5">
-                        {currentIndex + 1} / {nearbyUsers.length}
-                    </div>
-                </div>
-            )}
+
 
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col w-full h-full overflow-hidden">
@@ -158,13 +151,7 @@ export const Radar = () => {
                             )}
                             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/20 to-black"></div>
 
-                            {/* Distance Badge */}
-                            <div className="absolute top-4 left-4 flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10 shadow-lg z-10">
-                                <MapPin size={10} className="text-gym-primary" />
-                                <span className="text-[9px] font-black text-white uppercase tracking-wider">
-                                    {currentUser.distance_km < 1 ? '< 1 km' : `${Math.round(currentUser.distance_km)} km`}
-                                </span>
-                            </div>
+                            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/20 to-black"></div>
                         </div>
 
                         {/* --- CONTENT SECTION (Spread to Fill) --- */}
@@ -210,8 +197,8 @@ export const Radar = () => {
                                         <span className="text-[8px] text-neutral-500 uppercase font-bold tracking-widest">Entrenos</span>
                                     </div>
                                     <div className="flex flex-col items-center p-2 rounded-lg bg-neutral-800/50 border border-neutral-700/50">
-                                        <span className="text-xl font-black text-white">{Math.floor(Math.random() * 100) + 1}</span>
-                                        <span className="text-[8px] text-neutral-500 uppercase font-bold tracking-widest">Nivel</span>
+                                        <span className="text-xl font-black text-white">{currentUser.followers_count || 0}</span>
+                                        <span className="text-[8px] text-neutral-500 uppercase font-bold tracking-widest">Seguidores</span>
                                     </div>
                                 </div>
                             </div>

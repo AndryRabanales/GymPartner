@@ -73,7 +73,8 @@ RETURNS TABLE (
     gym_name text,
     gym_lat float,
     gym_lng float,
-    distance_km float
+    distance_km float,
+    followers_count integer -- New Field
 )
 LANGUAGE plpgsql
 SECURITY DEFINER -- Runs as admin to access user data if needed (Policy aware validation below)
@@ -116,7 +117,8 @@ BEGIN
         gu.name as gym_name,
         gu.lat as gym_lat,
         gu.lng as gym_lng,
-        gu.dist as distance_km
+        gu.dist as distance_km,
+        (SELECT COUNT(*)::integer FROM public.follows f WHERE f.following_id = p.id) as followers_count -- Subquery for followers
     FROM gym_users gu
     JOIN public.profiles p ON gu.u_id = p.id
     ORDER BY gu.dist ASC, p.checkins_count DESC -- Show closest, then highest rank

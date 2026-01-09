@@ -15,6 +15,7 @@ export interface RadarUser {
     gym_lat: number;
     gym_lng: number;
     distance_km: number;
+    followers_count: number; // New Field from RPC
     // Computed on frontend
     tier: any;
 }
@@ -57,6 +58,7 @@ export const radarService = {
             gym_lat: user.gym_lat,
             gym_lng: user.gym_lng,
             distance_km: user.distance_km,
+            followers_count: user.followers_count,
             tier: TierService.getTier(user.checkins_count)
         }));
     }
