@@ -75,6 +75,19 @@ export const UserProfile = () => {
     const [tutorialStep, setTutorialStep] = useState(0);
 
     useEffect(() => {
+        // Check URL for tutorial override (from redirect)
+        const params = new URLSearchParams(window.location.search);
+        const urlTutorialStep = params.get('tutorial');
+
+        if (urlTutorialStep) {
+            const step = parseInt(urlTutorialStep);
+            setTutorialStep(step);
+            localStorage.setItem('tutorial_step', step.toString());
+            // Clean URL
+            window.history.replaceState({}, '', '/');
+            return;
+        }
+
         // Resume tutorial if active
         const savedStep = localStorage.getItem('tutorial_step');
         if (savedStep) {
