@@ -604,8 +604,8 @@ export const GymMap = () => {
                             </div>
                         ) : (
                             <div className="relative group">
-                                <div className="bg-neutral-900/90 p-1.5 rounded-full border border-neutral-700 shadow-xl hover:scale-110 transition-transform cursor-pointer">
-                                    <Lock size={16} className="text-neutral-500" />
+                                <div className={`bg-neutral-900/90 p-1.5 rounded-full border border-neutral-700 shadow-xl hover:scale-110 transition-transform cursor-pointer ${tutorialStep === 5 ? 'ring-2 ring-yellow-500 animate-pulse shadow-yellow-500/50' : ''}`}>
+                                    <Lock size={16} className={`text-neutral-500 ${tutorialStep === 5 ? 'text-yellow-500 animate-bounce' : ''}`} />
                                 </div>
                             </div>
                         )}
@@ -738,7 +738,7 @@ export const GymMap = () => {
                     totalSteps={7}
                     onClose={() => { }}
                     disableNext={true}
-                    placement="bottom"
+                    placement="top"
                     nonBlocking={true}
                 />
             )}
