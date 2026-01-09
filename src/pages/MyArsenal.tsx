@@ -1369,7 +1369,7 @@ export const MyArsenal = () => {
                 )}
 
                 {/* TUTORIAL STEP 4: SELECT WEAPONS */}
-                {tutorialStep === 4 && (
+                {tutorialStep === 4 && selectedItems.size === 0 && (
                     <InteractiveOverlay
                         targetId="tut-arsenal-grid"
                         title="PASO 4: ELIGE TUS ARMAS"
