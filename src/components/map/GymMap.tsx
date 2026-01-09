@@ -7,7 +7,7 @@ import { userService } from '../../services/UserService';
 import { getDistance } from '../../utils/distance';
 import type { UserPrimaryGym } from '../../services/UserService';
 import { useNavigate } from 'react-router-dom';
-import { Lock, Star, User, Search, Loader } from 'lucide-react';
+import { Lock, Star, User, Search, Loader, MapPin } from 'lucide-react';
 import { PlayerProfileModal } from '../profile/PlayerProfileModal';
 
 interface GymMarker {
@@ -33,6 +33,7 @@ export const GymMap = () => {
     const map = useMap();
     const placesLib = useMapsLibrary('places');
     const [placesService, setPlacesService] = useState<google.maps.places.PlacesService | null>(null);
+    const [autocompleteService, setAutocompleteService] = useState<google.maps.places.AutocompleteService | null>(null);
 
     const [userGyms, setUserGyms] = useState<UserPrimaryGym[]>([]);
     const [dbGyms, setDbGyms] = useState<any[]>([]); // Gyms already in our DB
@@ -41,6 +42,8 @@ export const GymMap = () => {
     const [showProfile, setShowProfile] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [isSearching, setIsSearching] = useState(false);
+    const [suggestions, setSuggestions] = useState<google.maps.places.AutocompletePrediction[]>([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
 
     // Default position: Mexico City (fallback)
     const defaultPosition = { lat: 19.4326, lng: -99.1332 };
@@ -53,6 +56,7 @@ export const GymMap = () => {
     useEffect(() => {
         if (!placesLib || !map) return;
         setPlacesService(new placesLib.PlacesService(map));
+        setAutocompleteService(new placesLib.AutocompleteService());
     }, [placesLib, map]);
 
     // Geolocation Effect
@@ -222,25 +226,61 @@ export const GymMap = () => {
         }
     };
 
+    // Handle autocomplete suggestions
+    const handleAutocomplete = (query: string) => {
+        if (!query.trim() || !autocompleteService) {
+            setSuggestions([]);
+            setShowSuggestions(false);
+            return;
+        }
+
+        const searchLocationObj = userLocation
+            ? new google.maps.LatLng(userLocation.lat, userLocation.lng)
+            : map?.getCenter();
+
+        if (!searchLocationObj) return;
+
+        const request: google.maps.places.AutocompletionRequest = {
+            input: query,
+            location: searchLocationObj,
+            radius: 10000, // 10km radius
+            types: ['gym', 'establishment']
+        };
+
+        autocompleteService.getPlacePredictions(request, (predictions, status) => {
+            if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
+                // Limit to 3 suggestions
+                setSuggestions(predictions.slice(0, 3));
+                setShowSuggestions(true);
+            } else {
+                setSuggestions([]);
+                setShowSuggestions(false);
+            }
+        });
+    };
+
     // Search gyms by name near user location
-    const handleSearch = () => {
-        if (!searchQuery.trim() || !placesService || !map) return;
+    const handleSearch = (query?: string) => {
+        const searchTerm = query || searchQuery;
+        if (!searchTerm.trim() || !placesService || !map) return;
+
+        setShowSuggestions(false);
 
         setIsSearching(true);
 
         // Use user location if available, otherwise use map center
-        const searchLocation = userLocation
-            ? { lat: userLocation.lat, lng: userLocation.lng }
+        const searchLocationObj = userLocation
+            ? new google.maps.LatLng(userLocation.lat, userLocation.lng)
             : map.getCenter();
 
-        if (!searchLocation) {
+        if (!searchLocationObj) {
             setIsSearching(false);
             return;
         }
 
         const request: google.maps.places.TextSearchRequest = {
-            query: `${searchQuery} gym`,
-            location: searchLocation,
+            query: `${searchTerm} gym`,
+            location: searchLocationObj,
             radius: 10000, // 10km radius to keep results local
             type: 'gym'
         };
@@ -296,23 +336,62 @@ export const GymMap = () => {
                 </div>
 
                 {/* SEARCH BAR */}
-                <div className="mt-4 w-full max-w-md mx-auto pointer-events-auto">
+                <div className="mt-4 w-full max-w-md mx-auto pointer-events-auto relative">
                     <div className="flex gap-2">
                         <div className="relative flex-1">
-                            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+                            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 z-10" />
                             <input
                                 type="text"
                                 placeholder="Busca tu gimnasio..."
                                 value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onChange={(e) => {
+                                    setSearchQuery(e.target.value);
+                                    handleAutocomplete(e.target.value);
+                                }}
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter') handleSearch();
+                                    if (e.key === 'Escape') {
+                                        setShowSuggestions(false);
+                                    }
                                 }}
-                                className="w-full bg-black/60 backdrop-blur-md border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder-neutral-400 focus:outline-none focus:border-gym-primary/50 transition-all text-sm"
+                                onFocus={() => {
+                                    if (suggestions.length > 0) setShowSuggestions(true);
+                                }}
+                                className="w-full bg-black/60 backdrop-blur-md border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder-neutral-400 focus:outline-none focus:border-gym-primary/50 transition-all text-sm relative z-10"
                             />
+
+                            {/* Autocomplete Suggestions Dropdown */}
+                            {showSuggestions && suggestions.length > 0 && (
+                                <div className="absolute top-full left-0 right-0 mt-2 bg-black/90 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                                    {suggestions.map((suggestion, index) => (
+                                        <button
+                                            key={suggestion.place_id}
+                                            onClick={() => {
+                                                setSearchQuery(suggestion.structured_formatting.main_text);
+                                                handleSearch(suggestion.structured_formatting.main_text);
+                                            }}
+                                            className="w-full text-left px-4 py-3 hover:bg-white/10 transition-colors border-b border-white/5 last:border-b-0 group"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-lg bg-gym-primary/10 flex items-center justify-center shrink-0 group-hover:bg-gym-primary/20 transition-colors">
+                                                    <MapPin size={16} className="text-gym-primary" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="text-white font-bold text-sm truncate">
+                                                        {suggestion.structured_formatting.main_text}
+                                                    </div>
+                                                    <div className="text-neutral-400 text-xs truncate">
+                                                        {suggestion.structured_formatting.secondary_text}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                         <button
-                            onClick={handleSearch}
+                            onClick={() => handleSearch()}
                             disabled={isSearching || !searchQuery.trim()}
                             className="bg-gym-primary hover:bg-yellow-400 disabled:bg-neutral-700 disabled:cursor-not-allowed text-black font-bold px-6 py-3 rounded-xl transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(250,204,21,0.3)] disabled:shadow-none"
                         >
