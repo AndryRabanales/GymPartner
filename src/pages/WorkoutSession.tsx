@@ -9,16 +9,9 @@ import { WorkoutCarousel } from '../components/workout/WorkoutCarousel';
 import { ArsenalGrid } from '../components/arsenal/ArsenalGrid';
 import { EquipmentForm } from '../components/arsenal/EquipmentForm';
 import { normalizeText, getMuscleGroup } from '../utils/inventoryUtils';
-import { SmartNumpad } from '../components/ui/SmartNumpad';
+// SmartNumpad removed
 
-interface NumpadTarget {
-    exerciseIndex: number;
-    setIndex: number;
-    field: string; // 'weight' | 'reps' | ...
-    value: string | number;
-    label: string;
-    suggestion?: number;
-}
+// Interface NumpadTarget removed
 // BattleTimer removed
 import { Plus, Swords, Trash2, Check, ArrowLeft, MoreVertical, X, RotateCcw, Search, Loader } from 'lucide-react';
 import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
@@ -79,32 +72,8 @@ export const WorkoutSession = () => {
         }
     }, []);
 
-    // Numpad State
-    const [showNumpad, setShowNumpad] = useState(false);
-    const [numpadTarget, setNumpadTarget] = useState<NumpadTarget | null>(null);
-
-    const handleNumpadOpen = (exIndex: number, sIndex: number, field: string, currentValue: number, label: string) => {
-        // Find last valid value for suggestion (Smart Chip)
-        // For now simple logic: check previous set or 0
-        let suggestion = 0;
-        if (sIndex > 0) {
-            // @ts-ignore
-            suggestion = activeExercises[exIndex].sets[sIndex - 1][field] || 0;
-        } else {
-            // Check history? Not implemented yet efficiently here.
-            suggestion = 0;
-        }
-
-        setNumpadTarget({
-            exerciseIndex: exIndex,
-            setIndex: sIndex,
-            field,
-            value: currentValue || '',
-            label,
-            suggestion
-        });
-        setShowNumpad(true);
-    };
+    // Numpad State Removed
+    // handleNumpadOpen Removed
 
     const [userSettings, setUserSettings] = useState<CustomSettings>({ categories: [], metrics: [] });
     // Arsenal Modal State
@@ -971,12 +940,11 @@ export const WorkoutSession = () => {
                                                                 <div className="min-w-[75px] w-[75px]">
                                                                     <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1">PESO</label>
                                                                     <input
-                                                                        type="text"
-                                                                        readOnly
-                                                                        inputMode="none"
+                                                                        type="number"
+                                                                        inputMode="decimal"
                                                                         value={set.weight === 0 ? '' : set.weight}
-                                                                        onClick={() => handleNumpadOpen(mapIndex, setIndex, 'weight', set.weight, 'PESO (KG)')}
-                                                                        className={`w-full bg-neutral-800 text-center font-black text-xl rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all cursor-pointer select-none caret-transparent ${isCompleted ? 'text-neutral-500' : 'text-white'}`}
+                                                                        onChange={(e) => updateSet(mapIndex, setIndex, 'weight', e.target.value)}
+                                                                        className={`w-full bg-neutral-800 text-center font-black text-xl rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${isCompleted ? 'text-neutral-500' : 'text-white'}`}
                                                                         placeholder="0"
                                                                     />
                                                                 </div>
@@ -985,12 +953,11 @@ export const WorkoutSession = () => {
                                                                 <div className="min-w-[75px] w-[75px]">
                                                                     <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1">REPS</label>
                                                                     <input
-                                                                        type="text"
-                                                                        readOnly
-                                                                        inputMode="none"
+                                                                        type="number"
+                                                                        inputMode="numeric"
                                                                         value={set.reps === 0 ? '' : set.reps}
-                                                                        onClick={() => handleNumpadOpen(mapIndex, setIndex, 'reps', set.reps, 'REPETICIONES')}
-                                                                        className={`w-full bg-neutral-800 text-center font-black text-xl rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all cursor-pointer select-none caret-transparent ${isCompleted ? 'text-neutral-500' : 'text-white'}`}
+                                                                        onChange={(e) => updateSet(mapIndex, setIndex, 'reps', e.target.value)}
+                                                                        className={`w-full bg-neutral-800 text-center font-black text-xl rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${isCompleted ? 'text-neutral-500' : 'text-white'}`}
                                                                         placeholder="0"
                                                                     />
                                                                 </div>
@@ -999,12 +966,11 @@ export const WorkoutSession = () => {
                                                                 <div className="min-w-[75px] w-[75px]">
                                                                     <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1">TIEMPO (s)</label>
                                                                     <input
-                                                                        type="text"
-                                                                        readOnly
-                                                                        inputMode="none"
+                                                                        type="number"
+                                                                        inputMode="numeric"
                                                                         value={set.time || ''}
-                                                                        onClick={() => handleNumpadOpen(mapIndex, setIndex, 'time', set.time || 0, 'TIEMPO (S)')}
-                                                                        className="w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white cursor-pointer select-none caret-transparent placeholder-white/20"
+                                                                        onChange={(e) => updateSet(mapIndex, setIndex, 'time', e.target.value)}
+                                                                        className="w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none"
                                                                         placeholder="0s"
                                                                     />
                                                                 </div>
@@ -1013,12 +979,11 @@ export const WorkoutSession = () => {
                                                                 <div className="min-w-[75px] w-[75px]">
                                                                     <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1">DIST (m)</label>
                                                                     <input
-                                                                        type="text"
-                                                                        readOnly
-                                                                        inputMode="none"
+                                                                        type="number"
+                                                                        inputMode="decimal"
                                                                         value={set.distance === 0 ? '' : set.distance}
-                                                                        onClick={() => handleNumpadOpen(mapIndex, setIndex, 'distance', set.distance || 0, 'DISTANCIA (M)')}
-                                                                        className="w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white cursor-pointer select-none caret-transparent placeholder-white/20"
+                                                                        onChange={(e) => updateSet(mapIndex, setIndex, 'distance', e.target.value)}
+                                                                        className="w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none"
                                                                         placeholder="0m"
                                                                     />
                                                                 </div>
@@ -1027,12 +992,12 @@ export const WorkoutSession = () => {
                                                                 <div className="min-w-[60px] w-[60px]">
                                                                     <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1">RPE</label>
                                                                     <input
-                                                                        type="text"
-                                                                        readOnly
-                                                                        inputMode="none"
+                                                                        type="number"
+                                                                        inputMode="numeric"
+                                                                        max={10}
                                                                         value={set.rpe || ''}
-                                                                        onClick={() => handleNumpadOpen(mapIndex, setIndex, 'rpe', set.rpe || 0, 'RPE (1-10)')}
-                                                                        className="w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white cursor-pointer select-none caret-transparent placeholder-white/20"
+                                                                        onChange={(e) => updateSet(mapIndex, setIndex, 'rpe', e.target.value)}
+                                                                        className="w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none"
                                                                         placeholder="-"
                                                                     />
                                                                 </div>
@@ -1045,12 +1010,11 @@ export const WorkoutSession = () => {
                                                                     <div key={key} className="min-w-[75px] w-[75px]">
                                                                         <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1 uppercase truncate">{key}</label>
                                                                         <input
-                                                                            type="text"
-                                                                            readOnly
-                                                                            inputMode="none"
+                                                                            type="number"
+                                                                            inputMode="decimal"
                                                                             value={set.custom?.[key] || ''}
-                                                                            onClick={() => handleNumpadOpen(mapIndex, setIndex, key, set.custom?.[key] || 0, key.toUpperCase())}
-                                                                            className="w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white cursor-pointer select-none caret-transparent"
+                                                                            onChange={(e) => updateSet(mapIndex, setIndex, key, e.target.value, true)} // isCustom=true
+                                                                            className="w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white focus:ring-2 focus:ring-gym-primary outline-none"
                                                                         />
                                                                     </div>
                                                                 )
@@ -1234,59 +1198,7 @@ export const WorkoutSession = () => {
                 )
             }
 
-            {
-                showNumpad && numpadTarget && (
-                    <SmartNumpad
-                        isOpen={showNumpad}
-                        onClose={() => { setShowNumpad(false); setNumpadTarget(null); }}
-                        onSubmit={() => { setShowNumpad(false); setNumpadTarget(null); }}
-                        onInput={(key) => {
-                            const { exerciseIndex, setIndex, field, value: currentStr } = numpadTarget;
-                            const isCustom = !['weight', 'reps', 'time', 'distance', 'rpe'].includes(field);
-
-                            let newValStr = String(currentStr);
-
-                            if (key === '+2.5') {
-                                newValStr = (parseFloat(newValStr || '0') + 2.5).toString();
-                            } else if (key === '+1.25') {
-                                newValStr = (parseFloat(newValStr || '0') + 1.25).toString();
-                            } else if (typeof key === 'number') {
-                                newValStr = (newValStr === '0' && key !== 0) ? String(key) : newValStr + key;
-                                if (newValStr === '00') newValStr = '0'; // Prevent leading zeros
-                            } else if (key === '.') {
-                                if (!newValStr.includes('.')) {
-                                    newValStr = (newValStr || '0') + '.';
-                                }
-                            } else {
-                                // Fallback for direct replacement if any
-                                newValStr = String(key);
-                            }
-
-                            // 1. Update Buffer (Display)
-                            setNumpadTarget(prev => prev ? ({ ...prev, value: newValStr }) : null);
-
-                            // 2. Update Persisted State (Approximate)
-                            updateSet(exerciseIndex, setIndex, field, newValStr, isCustom);
-                        }}
-                        onDelete={() => {
-                            const { exerciseIndex, setIndex, field, value: currentStr } = numpadTarget;
-                            const isCustom = !['weight', 'reps', 'time', 'distance', 'rpe'].includes(field);
-
-                            let newValStr = String(currentStr).slice(0, -1);
-                            if (newValStr === '') newValStr = '0';
-
-                            // 1. Update Buffer
-                            setNumpadTarget(prev => prev ? ({ ...prev, value: newValStr }) : null);
-
-                            // 2. Update Persisted State
-                            updateSet(exerciseIndex, setIndex, field, newValStr, isCustom);
-                        }}
-                        value={numpadTarget.value}
-                        label={numpadTarget.label}
-                        suggestion={numpadTarget.suggestion}
-                    />
-                )
-            }
+            {/* SmartNumpad Removed */}
 
 
 
