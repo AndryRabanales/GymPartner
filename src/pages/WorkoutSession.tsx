@@ -214,12 +214,24 @@ export const WorkoutSession = () => {
                 setSessionId(active.id);
                 setStartTime(new Date(active.started_at)); // Set Start Time (RESTORED)
             } else {
-                console.log('✨ No hay sesión activa. Preparando nueva batalla.');
-                setSessionId(null);
                 setStartTime(null);
                 setElapsedTime("00:00");
                 setActiveExercises([]);
                 setIsFinished(false);
+
+                // AUTO-START CHECKS (Smart Start)
+                // If user has NO routines (New User or Freestyle mode), start immediately.
+                if (localRoutines.length === 0) {
+                    console.log("🚀 Smart Start: No Routines detected. Starting Freestyle Session...");
+
+                    // Start Session Immediately
+                    const { data: newSession } = await workoutService.startSession(userId, targetGymId);
+                    if (newSession) {
+                        setSessionId(newSession.id);
+                        setStartTime(new Date());
+                        setShowAddModal(true); // Open Catalog immediately
+                    }
+                }
             }
 
         } catch (error) {
@@ -1217,9 +1229,9 @@ export const WorkoutSession = () => {
             </div>
 
 
-            {/* Fab Add Button (Only if exercises exist) */}
+            {/* Fab Add Button (Always visible) */}
             {
-                activeExercises.length > 0 && (
+                (activeExercises.length > 0 || sessionId) && (
                     <div className="fixed bottom-6 left-0 w-full px-4 flex justify-center z-50 pointer-events-none">
                         <button
                             onClick={() => setShowAddModal(true)}
