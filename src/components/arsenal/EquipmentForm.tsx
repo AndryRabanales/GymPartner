@@ -290,12 +290,27 @@ export const EquipmentForm = ({
                                         <button
                                             onClick={async () => {
                                                 if (!newMetricName.trim()) return;
-                                                const newMet: CustomMetric = { id: newMetricName.toLowerCase().replace(/\s+/g, '_'), label: newMetricName, icon: newMetricIcon, default_active: true };
-                                                const newS = { ...userSettings, metrics: [...userSettings.metrics, newMet] };
-                                                await equipmentService.updateUserSettings(user.id, newS);
-                                                onUpdateSettings(newS);
-                                                setCustomMetrics(prev => ({ ...prev, [newMet.id]: true }));
-                                                setIsCreatingMetric(false);
+                                                try {
+                                                    const newMet: CustomMetric = { id: newMetricName.toLowerCase().replace(/\s+/g, '_'), label: newMetricName, icon: newMetricIcon, default_active: true };
+
+                                                    // Check for duplicates
+                                                    if (userSettings.metrics.some(m => m.id === newMet.id)) {
+                                                        alert("Esta métrica ya existe.");
+                                                        return;
+                                                    }
+
+                                                    const newS = { ...userSettings, metrics: [...userSettings.metrics, newMet] };
+
+                                                    await equipmentService.updateUserSettings(user.id, newS);
+                                                    onUpdateSettings(newS); // Update parent state
+
+                                                    // Select it immediately for the current custom exercise
+                                                    setCustomMetrics(prev => ({ ...prev, [newMet.id]: true }));
+                                                    setIsCreatingMetric(false);
+                                                } catch (err) {
+                                                    console.error("Error creating metric:", err);
+                                                    alert("Error al guardar la métrica. Intenta de nuevo.");
+                                                }
                                             }}
                                             className="w-full py-2 bg-gym-primary text-black font-bold rounded text-xs"
                                         >GUARDAR</button>
