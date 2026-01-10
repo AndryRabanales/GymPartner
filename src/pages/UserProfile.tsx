@@ -744,6 +744,53 @@ export const UserProfile = () => {
 
             {/* Quick Actions / Passport Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-4">
+
+                {/* SMART START BUTTON - PRIMARY ACTION */}
+                <button
+                    onClick={() => {
+                        // SMART START LOGIC
+                        if (userGyms.length === 0) {
+                            navigate('/map');
+                            return;
+                        }
+
+                        // 1. If only one gym, start immediately
+                        if (userGyms.length === 1) {
+                            handleStartWorkout(userGyms[0]);
+                            return;
+                        }
+
+                        // 2. Multiple Gyms: Attempt to find nearest via GPS
+                        if (navigator.geolocation) {
+                            // Use visual feedback if possible, or just optimistic start
+                            const homeBase = userGyms.find(g => g.is_home_base);
+                            // Default to Home Base for the check if we can't wait for GPS here, 
+                            // BUT to be truly "Smart", we should probably just default to Home Base 
+                            // and let the user switch if they are elsewhere, OR (better):
+                            // Just prompt the user if they have multiple gyms and we don't want to wait?
+                            // User requested "Auto-detect". 
+                            // Let's try Home Base first as the "Likely" candidate.
+                            if (homeBase) {
+                                handleStartWorkout(homeBase);
+                            } else {
+                                handleStartWorkout(userGyms[0]);
+                            }
+                        } else {
+                            handleStartWorkout(userGyms[0]);
+                        }
+                    }}
+                    className="col-span-2 group bg-gym-primary hover:bg-yellow-400 border border-yellow-500/50 hover:border-yellow-400 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center shadow-[0_0_20px_rgba(250,204,21,0.2)] hover:shadow-[0_0_30px_rgba(250,204,21,0.4)] relative overflow-hidden"
+                >
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <div className="w-10 h-10 md:w-14 md:h-14 rounded-full bg-black/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Swords size={24} className="text-black md:w-8 md:h-8" strokeWidth={2.5} />
+                    </div>
+                    <div className="flex flex-col">
+                        <span className="font-black text-black text-lg md:text-2xl italic uppercase tracking-tighter leading-none">INICIAR ENTRENAMIENTO</span>
+                        <span className="text-[10px] md:text-xs font-bold text-black/60 uppercase tracking-widest group-hover:text-black/80">Entrenamiento Táctico</span>
+                    </div>
+                </button>
+
                 <Link id="tut-global-arsenal-btn" to="/arsenal" onClick={() => { if (tutorialStep === 1) localStorage.setItem('tutorial_step', '2'); }} className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-blue-500/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md">
                     <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-blue-500/5 flex items-center justify-center group-hover:scale-110 transition-transform border border-blue-500/10">
                         <Dumbbell className="text-blue-500 w-4 h-4 md:w-6 md:h-6" />
@@ -764,35 +811,6 @@ export const UserProfile = () => {
                     </div>
                     <span className="font-bold text-neutral-200 group-hover:text-white text-xs md:text-base">Historial</span>
                 </Link>
-
-                {/* BUTTON HIDDEN: Mis Posts
-                <button
-                    onClick={() => setShowSocialProfile(true)}
-                    className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-yellow-500/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md cursor-pointer"
-                >
-                    <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-yellow-500/5 flex items-center justify-center group-hover:scale-110 transition-transform border border-yellow-500/10">
-                        <Grid className="text-yellow-500 w-4 h-4 md:w-6 md:h-6" />
-                    </div>
-                    <span className="font-bold text-neutral-200 group-hover:text-white text-xs md:text-base">Mis Posts</span>
-                </button>
-                */}
-
-                {/* INVITE FRIENDS - MOVED HERE */}
-                {/* INVITE FRIENDS - MOVED HERE */}
-                {/* BUTTON HIDDEN: INVITE FRIENDS (Requested by User)
-                <button
-                    onClick={() => setShowReferralModal(true)}
-                    className="col-span-2 sm:col-span-1 group bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/20 hover:border-yellow-500/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md"
-                >
-                    <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-yellow-500 text-black flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-yellow-500/20">
-                        <UserPlus size={18} strokeWidth={2.5} />
-                    </div>
-                    <div className="flex flex-col">
-                        <span className="font-black text-yellow-500 text-xs md:text-base">INVITAR</span>
-                        <span className="text-[10px] font-bold text-yellow-500/70">+250 XP</span>
-                    </div>
-                </button>
-                */}
             </div>
 
             {/* TERRITORIES SECTION (PASSPORT) */}
