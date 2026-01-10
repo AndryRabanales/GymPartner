@@ -194,7 +194,7 @@ export const WorkoutSession = () => {
             setUserSettings(settings);
 
             // 3. Start or Resume Session
-            const active = await workoutService.getActiveSession(userId);
+            const { data: active, error: activeError } = await workoutService.getActiveSession(userId);
 
             if (active) {
                 console.log('♻️ Sesión activa encontrada:', active.id);
