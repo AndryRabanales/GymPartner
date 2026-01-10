@@ -194,7 +194,28 @@ export const WorkoutSession = () => {
             setUserSettings(settings);
 
             // 3. Start or Resume Session
-            const { data: active, error: activeError } = await workoutService.getActiveSession(userId);
+            let active = null;
+            let activeError = null;
+
+            // 3a. Check if we have an INTENDED session from navigation (Volver button)
+            const intendedSessionId = location.state?.sessionId;
+            if (intendedSessionId) {
+                console.log("📍 Resuming specific session from navigation:", intendedSessionId);
+                const result = await workoutService.getSessionById(intendedSessionId);
+                // Handle split return {data, error}
+                if (result.data && !result.data.end_time) {
+                    active = result.data;
+                } else {
+                    console.warn("Intended session not found or closed. Checking for any active session.");
+                }
+            }
+
+            // 3b. If no specific session found, check general active session
+            if (!active) {
+                const result = await workoutService.getActiveSession(userId);
+                active = result.data;
+                activeError = result.error;
+            }
 
             if (activeError) {
                 console.error("Error fetching active session:", activeError);
