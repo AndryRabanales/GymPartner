@@ -54,77 +54,116 @@ export interface CustomSettings {
 }
 
 export const COMMON_EQUIPMENT_SEEDS = [
-    // --- PECHO (CHEST) ---
-    // --- PECHO (CHEST) ---
-    { name: 'Press Banca Plano (Barra)', category: 'FREE_WEIGHT', targetMuscle: 'Pecho', icon: '🏋️‍♂️' },
-    { name: 'Press Banca Inclinado (Mancuernas)', category: 'FREE_WEIGHT', targetMuscle: 'Pecho', icon: '📐' },
-    { name: 'Press Banca Declinado', category: 'FREE_WEIGHT', targetMuscle: 'Pecho', icon: '📉' },
-    { name: 'Peck Deck (Mariposa)', category: 'STRENGTH_MACHINE', targetMuscle: 'Pecho', icon: '🦋' },
-    { name: 'Cruce de Poleas (Crossover)', category: 'CABLE', targetMuscle: 'Pecho', icon: '⚔️' },
-    { name: 'Press de Pecho en Máquina', category: 'STRENGTH_MACHINE', targetMuscle: 'Pecho', icon: '🤖' },
-    { name: 'Fondos (Dips)', category: 'ACCESSORY', targetMuscle: 'Pecho', icon: '🏗️' },
-    { name: 'Flexiones (Pushups)', category: 'ACCESSORY', targetMuscle: 'Pecho', icon: '🆙' },
+    // --- PECHO (CHEST) - SUPERIOR ---
+    { name: 'Press Inclinado (Máquina)', category: 'STRENGTH_MACHINE', targetMuscle: 'Pecho', icon: '📐' },
+    { name: 'Press Inclinado (Mancuernas)', category: 'FREE_WEIGHT', targetMuscle: 'Pecho', icon: '🏋️' },
+    { name: 'Press Inclinado (Barra)', category: 'FREE_WEIGHT', targetMuscle: 'Pecho', icon: '🏋️‍♂️' },
+    { name: 'Press Inclinado (Polea/Cable)', category: 'CABLE', targetMuscle: 'Pecho', icon: '⛓️' },
+    { name: 'Smith Press Inclinado', category: 'STRENGTH_MACHINE', targetMuscle: 'Pecho', icon: '⚙️' },
 
-    // --- ESPALDA (BACK) ---
-    // --- ESPALDA (BACK) ---
+    // --- PECHO (CHEST) - MEDIO/PLANO ---
+    { name: 'Press Banca Plano (Barra)', category: 'FREE_WEIGHT', targetMuscle: 'Pecho', icon: '🏋️‍♂️' },
+    { name: 'Press Banca Plano (Mancuernas)', category: 'FREE_WEIGHT', targetMuscle: 'Pecho', icon: '🏋️' },
+    { name: 'Press de Pecho (Máquina)', category: 'STRENGTH_MACHINE', targetMuscle: 'Pecho', icon: '🤖' },
+    { name: 'Press Plano (Polea/Cable)', category: 'CABLE', targetMuscle: 'Pecho', icon: '⛓️' },
+    { name: 'Smith Press Plano', category: 'STRENGTH_MACHINE', targetMuscle: 'Pecho', icon: '⚙️' },
+    { name: 'Peck Deck (Mariposa)', category: 'STRENGTH_MACHINE', targetMuscle: 'Pecho', icon: '🦋' },
+    { name: 'Cruce de Poleas (Crossover Alto)', category: 'CABLE', targetMuscle: 'Pecho', icon: '⚔️' },
+
+    // --- PECHO (CHEST) - INFERIOR ---
+    { name: 'Press Declinado (Barra)', category: 'FREE_WEIGHT', targetMuscle: 'Pecho', icon: '📉' },
+    { name: 'Press Declinado (Mancuernas)', category: 'FREE_WEIGHT', targetMuscle: 'Pecho', icon: '📉' },
+    { name: 'Press Declinado (Máquina)', category: 'STRENGTH_MACHINE', targetMuscle: 'Pecho', icon: '🤖' },
+    { name: 'Cruce de Poleas (Crossover Bajo)', category: 'CABLE', targetMuscle: 'Pecho', icon: '⚔️' },
+    { name: 'Fondos (Dips)', category: 'ACCESSORY', targetMuscle: 'Pecho', icon: '🏗️' },
+    { name: 'Fondos Asistidos (Máquina)', category: 'STRENGTH_MACHINE', targetMuscle: 'Pecho', icon: '🤖' },
+
+    // --- ESPALDA (BACK) - LATERAL/AMPLITUD ---
     { name: 'Jalón al Pecho (Polea Alta)', category: 'CABLE', targetMuscle: 'Espalda', icon: '🔻' },
-    { name: 'Remo con Barra', category: 'FREE_WEIGHT', targetMuscle: 'Espalda', icon: '🚣' },
-    { name: 'Remo Gironda (Polea Baja)', category: 'CABLE', targetMuscle: 'Espalda', icon: '🛶' },
+    { name: 'Jalón al Pecho (Agarre Estrecho)', category: 'CABLE', targetMuscle: 'Espalda', icon: '🔻' },
     { name: 'Dominadas (Pullups)', category: 'ACCESSORY', targetMuscle: 'Espalda', icon: '🧗' },
-    { name: 'Remo con Mancuerna (Unilateral)', category: 'FREE_WEIGHT', targetMuscle: 'Espalda', icon: '👜' },
+    { name: 'Dominadas Asistidas (Máquina)', category: 'STRENGTH_MACHINE', targetMuscle: 'Espalda', icon: '🤖' },
     { name: 'Pull-Over en Polea', category: 'CABLE', targetMuscle: 'Espalda', icon: '🎣' },
-    { name: 'Remo en Máquina (Asistido)', category: 'STRENGTH_MACHINE', targetMuscle: 'Espalda', icon: '🚜' },
+
+    // --- ESPALDA (BACK) - DENSIDAD/GROSOR ---
+    { name: 'Remo con Barra (Pendlay/Yates)', category: 'FREE_WEIGHT', targetMuscle: 'Espalda', icon: '🚣' },
+    { name: 'Remo con Mancuerna (Unilateral)', category: 'FREE_WEIGHT', targetMuscle: 'Espalda', icon: '👜' },
+    { name: 'Remo Gironda (Polea Baja)', category: 'CABLE', targetMuscle: 'Espalda', icon: '🛶' },
+    { name: 'Remo en Máquina (Pecho Apoyado)', category: 'STRENGTH_MACHINE', targetMuscle: 'Espalda', icon: '🚜' },
+    { name: 'Remo en T (Barra/Máquina)', category: 'FREE_WEIGHT', targetMuscle: 'Espalda', icon: '⚓' },
     { name: 'Peso Muerto (Deadlift)', category: 'FREE_WEIGHT', targetMuscle: 'Espalda', icon: '🧟' },
 
-    // --- PIERNA (LEGS) ---
-    // --- PIERNA (LEGS) ---
-    { name: 'Sentadilla Libre (Barra)', category: 'FREE_WEIGHT', targetMuscle: 'Pierna', icon: '🍑' },
-    { name: 'Prensa de Piernas (45°)', category: 'STRENGTH_MACHINE', targetMuscle: 'Pierna', icon: '📐' },
-    { name: 'Hack Squat', category: 'STRENGTH_MACHINE', targetMuscle: 'Pierna', icon: '🪑' },
-    { name: 'Extensiones de Cuádriceps', category: 'STRENGTH_MACHINE', targetMuscle: 'Pierna', icon: '🦵' },
-    { name: 'Curl Femoral Tumbado', category: 'STRENGTH_MACHINE', targetMuscle: 'Pierna', icon: '🥓' }, // Hamstring
-    { name: 'Zancadas (Lunges)', category: 'FREE_WEIGHT', targetMuscle: 'Pierna', icon: '🚶' },
-    { name: 'Peso Muerto Rumano', category: 'FREE_WEIGHT', targetMuscle: 'Pierna', icon: '🎋' }, // Bamboo (stiff)
-    { name: 'Elevación de Talones (Pantorrilla)', category: 'STRENGTH_MACHINE', targetMuscle: 'Pantorrillas', icon: '👠' },
-    { name: 'Hip Thrust (Puente de Glúteo)', category: 'FREE_WEIGHT', targetMuscle: 'Glúteos', icon: '🌉' },
-
-    // --- HOMBRO (SHOULDERS) ---
-    // --- HOMBRO (SHOULDERS) ---
+    // --- HOMBRO (SHOULDERS) - ANTERIOR ---
     { name: 'Press Militar (Barra)', category: 'FREE_WEIGHT', targetMuscle: 'Hombro', icon: '💂' },
-    { name: 'Press Militar con Mancuernas', category: 'FREE_WEIGHT', targetMuscle: 'Hombro', icon: '🏋️' },
-    { name: 'Elevaciones Laterales', category: 'FREE_WEIGHT', targetMuscle: 'Hombro', icon: '🐦' }, // Bird/Fly
-    { name: 'Elevaciones Frontales', category: 'FREE_WEIGHT', targetMuscle: 'Hombro', icon: '🧟‍♂️' }, // Zombie walk
-    { name: 'Press Arnold', category: 'FREE_WEIGHT', targetMuscle: 'Hombro', icon: '💪' },
-    { name: 'Pájaros (Posterior)', category: 'FREE_WEIGHT', targetMuscle: 'Hombro', icon: '🦅' },
+    { name: 'Press Militar (Mancuernas)', category: 'FREE_WEIGHT', targetMuscle: 'Hombro', icon: '🏋️' },
+    { name: 'Press de Hombros (Máquina)', category: 'STRENGTH_MACHINE', targetMuscle: 'Hombro', icon: '🤖' },
+    { name: 'Elevaciones Frontales (Mancuernas)', category: 'FREE_WEIGHT', targetMuscle: 'Hombro', icon: '🧟‍♂️' },
+    { name: 'Elevaciones Frontales (Polea)', category: 'CABLE', targetMuscle: 'Hombro', icon: '🧟‍♂️' },
+
+    // --- HOMBRO (SHOULDERS) - LATERAL ---
+    { name: 'Elevaciones Laterales (Mancuernas)', category: 'FREE_WEIGHT', targetMuscle: 'Hombro', icon: '🐦' },
+    { name: 'Elevaciones Laterales (Polea)', category: 'CABLE', targetMuscle: 'Hombro', icon: '🐦' },
+    { name: 'Elevaciones Laterales (Máquina)', category: 'STRENGTH_MACHINE', targetMuscle: 'Hombro', icon: '🤖' },
+
+    // --- HOMBRO (SHOULDERS) - POSTERIOR ---
+    { name: 'Pájaros/Vuelos (Mancuernas)', category: 'FREE_WEIGHT', targetMuscle: 'Hombro', icon: '🦅' },
     { name: 'Face Pull', category: 'CABLE', targetMuscle: 'Hombro', icon: '🤡' },
+    { name: 'Peck Deck Invertido', category: 'STRENGTH_MACHINE', targetMuscle: 'Hombro', icon: '🦋' },
+
+    // --- PIERNA (LEGS) - CUÁDRICEPS ---
+    { name: 'Sentadilla Libre (Barra)', category: 'FREE_WEIGHT', targetMuscle: 'Pierna', icon: '🍑' },
+    { name: 'Sentadilla Frontal', category: 'FREE_WEIGHT', targetMuscle: 'Pierna', icon: '🏋️' },
+    { name: 'Sentadilla Hack (Máquina)', category: 'STRENGTH_MACHINE', targetMuscle: 'Pierna', icon: '🪑' },
+    { name: 'Prensa de Piernas (45°)', category: 'STRENGTH_MACHINE', targetMuscle: 'Pierna', icon: '📐' },
+    { name: 'Extensiones de Cuádriceps', category: 'STRENGTH_MACHINE', targetMuscle: 'Pierna', icon: '🦵' },
+    { name: 'Zancadas/Lunges (Mancuernas/Barra)', category: 'FREE_WEIGHT', targetMuscle: 'Pierna', icon: '🚶' },
+    { name: 'Sentadilla Bulgara', category: 'FREE_WEIGHT', targetMuscle: 'Pierna', icon: '🇧🇬' },
+
+    // --- PIERNA (LEGS) - ISQUIOS/FEMORAL ---
+    { name: 'Peso Muerto Rumano (Barra/Mancuernas)', category: 'FREE_WEIGHT', targetMuscle: 'Pierna', icon: '🎋' },
+    { name: 'Curl Femoral Tumbado (Máquina)', category: 'STRENGTH_MACHINE', targetMuscle: 'Pierna', icon: '🥓' },
+    { name: 'Curl Femoral Sentado (Máquina)', category: 'STRENGTH_MACHINE', targetMuscle: 'Pierna', icon: '🪑' },
+    { name: 'Good Mornings (Buenos Días)', category: 'FREE_WEIGHT', targetMuscle: 'Pierna', icon: '🌞' },
+
+    // --- PIERNA (LEGS) - GLÚTEOS ---
+    { name: 'Hip Thrust (Barra)', category: 'FREE_WEIGHT', targetMuscle: 'Glúteos', icon: '🌉' },
+    { name: 'Hip Thrust (Máquina)', category: 'STRENGTH_MACHINE', targetMuscle: 'Glúteos', icon: '🌉' },
+    { name: 'Patada de Glúteo (Polea)', category: 'CABLE', targetMuscle: 'Glúteos', icon: '🍑' },
+    { name: 'Patada de Glúteo (Máquina)', category: 'STRENGTH_MACHINE', targetMuscle: 'Glúteos', icon: '🍑' },
 
     // --- BÍCEPS (ARMS) ---
-    { name: 'Curl con Barra (Recta/Z)', category: 'FREE_WEIGHT', targetMuscle: 'Bíceps', icon: '🥖' }, // Bar
-    { name: 'Curl con Mancuernas (Alterno)', category: 'FREE_WEIGHT', targetMuscle: 'Bíceps', icon: '🦾' },
-    { name: 'Curl Martillo', category: 'FREE_WEIGHT', targetMuscle: 'Bíceps', icon: '🔨' },
-    { name: 'Curl Predicador (Banco Scott)', category: 'FREE_WEIGHT', targetMuscle: 'Bíceps', icon: '🙏' },
+    { name: 'Curl con Barra (Recta/Z)', category: 'FREE_WEIGHT', targetMuscle: 'Bíceps', icon: '🥖' },
+    { name: 'Curl con Mancuernas (Supino/Alterno)', category: 'FREE_WEIGHT', targetMuscle: 'Bíceps', icon: '🦾' },
+    { name: 'Curl Martillo (Mancuernas)', category: 'FREE_WEIGHT', targetMuscle: 'Bíceps', icon: '🔨' },
+    { name: 'Curl Predicador (Barra/Mancuerna)', category: 'FREE_WEIGHT', targetMuscle: 'Bíceps', icon: '🙏' },
+    { name: 'Curl Predicador (Máquina)', category: 'STRENGTH_MACHINE', targetMuscle: 'Bíceps', icon: '🤖' },
     { name: 'Curl de Bíceps en Polea', category: 'CABLE', targetMuscle: 'Bíceps', icon: '🐍' },
+    { name: 'Curl Araña (Spider Curl)', category: 'FREE_WEIGHT', targetMuscle: 'Bíceps', icon: '🕷️' },
 
     // --- TRÍCEPS (ARMS) ---
-    { name: 'Extensiones de Tríceps en Polea', category: 'CABLE', targetMuscle: 'Tríceps', icon: '🏇' }, // Reins
-    { name: 'Press Francés', category: 'FREE_WEIGHT', targetMuscle: 'Tríceps', icon: '🇫🇷' },
-    { name: 'Fondos en Bancos', category: 'ACCESSORY', targetMuscle: 'Tríceps', icon: '🛋️' },
+    { name: 'Extensiones de Tríceps (Polea/Cuerda)', category: 'CABLE', targetMuscle: 'Tríceps', icon: '🏇' },
+    { name: 'Extensiones de Tríceps (Barra recta)', category: 'CABLE', targetMuscle: 'Tríceps', icon: '🦯' },
+    { name: 'Press Francés (Barra Z/Mancuernas)', category: 'FREE_WEIGHT', targetMuscle: 'Tríceps', icon: '🇫🇷' },
+    { name: 'Copa a una mano (Mancuerna)', category: 'FREE_WEIGHT', targetMuscle: 'Tríceps', icon: '🏆' },
+    { name: 'Fondos en Paralelas/Bancos', category: 'ACCESSORY', targetMuscle: 'Tríceps', icon: '🛋️' },
     { name: 'Patada de Tríceps (Mancuerna)', category: 'FREE_WEIGHT', targetMuscle: 'Tríceps', icon: '🐴' },
-    { name: 'Extensiones sobre la cabeza', category: 'FREE_WEIGHT', targetMuscle: 'Tríceps', icon: '🙆' },
 
     // --- ABDOMINALES (ABS) ---
     { name: 'Crunch Abdominal', category: 'ACCESSORY', targetMuscle: 'Abdominales', icon: '🥨' },
-    { name: 'Elevación de Piernas', category: 'ACCESSORY', targetMuscle: 'Abdominales', icon: '🥒' },
+    { name: 'Elevación de Piernas (Colgado)', category: 'ACCESSORY', targetMuscle: 'Abdominales', icon: '🥒' },
     { name: 'Plancha (Plank)', category: 'ACCESSORY', targetMuscle: 'Abdominales', icon: '🪵' },
     { name: 'Rueda Abdominal', category: 'ACCESSORY', targetMuscle: 'Abdominales', icon: '🛞' },
+    { name: 'Crunch en Máquina', category: 'STRENGTH_MACHINE', targetMuscle: 'Abdominales', icon: '🤖' },
+    { name: 'Crunch en Polea Alta', category: 'CABLE', targetMuscle: 'Abdominales', icon: '🙇' },
     { name: 'Russian Twist', category: 'ACCESSORY', targetMuscle: 'Abdominales', icon: '🇷🇺' },
 
     // --- CARDIO ---
-    { name: 'Cinta de Correr', category: 'CARDIO', targetMuscle: 'Cardio' },
-    { name: 'Elíptica', category: 'CARDIO', targetMuscle: 'Cardio' },
-    { name: 'Bicicleta Estática', category: 'CARDIO', targetMuscle: 'Cardio' },
-    { name: 'Remo (Concept2)', category: 'CARDIO', targetMuscle: 'Cardio' },
-    { name: 'Escaladora (Stairmaster)', category: 'CARDIO', targetMuscle: 'Cardio' },
+    { name: 'Cinta de Correr', category: 'CARDIO', targetMuscle: 'Cardio', icon: '🏃' },
+    { name: 'Elíptica', category: 'CARDIO', targetMuscle: 'Cardio', icon: '⛷️' },
+    { name: 'Bicicleta Estática', category: 'CARDIO', targetMuscle: 'Cardio', icon: '🚴' },
+    { name: 'Remo (Concept2)', category: 'CARDIO', targetMuscle: 'Cardio', icon: '🚣' },
+    { name: 'Escaladora (Stairmaster)', category: 'CARDIO', targetMuscle: 'Cardio', icon: '🧗' },
+    { name: 'Salto de Cuerda', category: 'CARDIO', targetMuscle: 'Cardio', icon: '🪢' },
 ];
 
 // ... (skipping seeds)
