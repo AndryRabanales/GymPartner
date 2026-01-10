@@ -240,14 +240,26 @@ export const WorkoutSession = () => {
                 setSessionId(active.id);
                 setStartTime(new Date(active.started_at)); // Set Start Time (RESTORED)
             } else {
-                console.log('✨ No hay sesión activa. Preparando nueva batalla.');
-                setSessionId(null);
-                setStartTime(null);
-                setElapsedTime("00:00");
-                setActiveExercises([]);
-                setIsFinished(false);
+                console.log('✨ No hay sesión activa. Iniciando nueva batalla AUTOMÁTICAMENTE.');
 
-                // NEW: If no routines exist, auto-open "Add Exercise" modal (All Exercises)
+                // AUTO-START LOGIC (Replaces the need for "Battle Order Ready" Confirmation)
+                try {
+                    const { data: newSession, error: startError } = await workoutService.startSession(userId, resolvedGymId || undefined);
+                    if (startError) throw startError;
+
+                    if (newSession) {
+                        setSessionId(newSession.id);
+                        setStartTime(new Date());
+                        setElapsedTime("00:00");
+                        setIsFinished(false);
+                        console.log('🚀 Sessión auto-iniciada:', newSession.id);
+                    }
+                } catch (err) {
+                    console.error("Error auto-starting session:", err);
+                    alert("Error iniciando la sesión. Intenta recargar.");
+                }
+
+                // If no routines exist, auto-open "Add Exercise" modal (All Exercises)
                 if (localRoutines.length === 0) {
                     console.log('🔰 No routines found - Auto-opening exercise picker');
                     setShowAddModal(true);
@@ -1151,37 +1163,7 @@ export const WorkoutSession = () => {
                     Let's keep the global one HIDDEN if we have the carousel, to enforce focus, BUT standard UX says users might want to bail out early.
                     Actually, let's keep it simple: "Finish" is on the last card. 
                 */}
-                {activeExercises.length > 0 && !sessionId && (
-                    <div className="fixed inset-0 z-40 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-300">
-                        <div className="w-full max-w-md space-y-6 text-center">
-                            <div className="w-24 h-24 bg-gym-primary/10 rounded-full flex items-center justify-center mx-auto ring-4 ring-gym-primary/20 animate-pulse">
-                                <Swords size={48} className="text-gym-primary" />
-                            </div>
-
-                            <div>
-                                <h2 className="text-3xl font-black italic uppercase text-white mb-2">Orden de Batalla Lista</h2>
-                                <p className="text-neutral-400">Todo el equipo está cargado. Confirma que estás en la base para iniciar el cronómetro.</p>
-                            </div>
-
-                            {/* START BUTTON */}
-                            <button
-                                id="tut-start-btn"
-                                onClick={handleStartTraining}
-                                disabled={loading}
-                                className="w-full bg-gym-primary hover:bg-yellow-400 text-black font-black uppercase tracking-widest py-5 rounded-2xl shadow-[0_0_40px_rgba(250,204,21,0.4)] hover:shadow-[0_0_60px_rgba(250,204,21,0.6)] text-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3"
-                            >
-                                {loading ? <Loader className="animate-spin" /> : <Flame size={24} strokeWidth={3} />}
-                                INICIAR ENTRENAMIENTO
-                            </button>
-
-                            <div className="flex items-center justify-center gap-2 text-xs font-bold text-neutral-500 uppercase tracking-widest">
-                                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                                GPS Requerido
-                            </div>
-                        </div>
-
-                    </div>
-                )}
+                {/* REMOVED: Battle Order Ready Overlay - Auto-start logic implemented instead */}
             </div>
 
 
