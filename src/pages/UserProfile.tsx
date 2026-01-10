@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { MapPin, Swords, Medal, Users, Trophy, ChevronRight, Share2, Settings, History, Dumbbell, AlertTriangle, Monitor, Heart, Lock, UserPlus, Play } from 'lucide-react';
+import { MapPin, Swords, Trophy, History, Dumbbell, Play, Loader, LogIn, ArrowLeft, Star, Crown, Edit2, LineChart, Search } from 'lucide-react';
 // import { UserPlus, Grid } from 'lucide-react'; // UNUSED: Hidden Community Features
 // import { Grid } from 'lucide-react'; // UNUSED: Hidden Community Features
 import { Link, useNavigate } from 'react-router-dom';
