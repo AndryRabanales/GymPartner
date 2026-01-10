@@ -757,7 +757,12 @@ export const UserProfile = () => {
                     onClick={() => {
                         // SMART START LOGIC
                         if (!navigator.geolocation) {
-                            alert("GPS no disponible. Por favor selecciona un gimnasio de la lista.");
+                            setLocationError({
+                                isOpen: true,
+                                gymName: 'GPS',
+                                distanceMeters: null,
+                                errorType: 'GPS_ERROR'
+                            });
                             return;
                         }
 
@@ -831,7 +836,12 @@ export const UserProfile = () => {
                             },
                             (err) => {
                                 console.error("GPS Error:", err);
-                                alert("No se pudo obtener tu ubicación. Selecciona un gimnasio manualmente.");
+                                setLocationError({
+                                    isOpen: true,
+                                    gymName: 'Ubicación',
+                                    distanceMeters: null,
+                                    errorType: 'GPS_ERROR'
+                                });
                             },
                             { enableHighAccuracy: true, timeout: 5000 }
                         );
