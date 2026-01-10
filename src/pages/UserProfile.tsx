@@ -749,35 +749,84 @@ export const UserProfile = () => {
                 <button
                     onClick={() => {
                         // SMART START LOGIC
-                        if (userGyms.length === 0) {
-                            navigate('/map');
+                        if (!navigator.geolocation) {
+                            alert("GPS no disponible. Por favor selecciona un gimnasio de la lista.");
                             return;
                         }
 
-                        // 1. If only one gym, start immediately
-                        if (userGyms.length === 1) {
-                            handleStartWorkout(userGyms[0]);
-                            return;
-                        }
+                        // Show some loading state? For now, just instant check (async)
+                        // const btn = document.activeElement as HTMLButtonElement;
+                        // Optional: btn.disabled = true;
 
-                        // 2. Multiple Gyms: Attempt to find nearest via GPS
-                        if (navigator.geolocation) {
-                            // Use visual feedback if possible, or just optimistic start
-                            const homeBase = userGyms.find(g => g.is_home_base);
-                            // Default to Home Base for the check if we can't wait for GPS here, 
-                            // BUT to be truly "Smart", we should probably just default to Home Base 
-                            // and let the user switch if they are elsewhere, OR (better):
-                            // Just prompt the user if they have multiple gyms and we don't want to wait?
-                            // User requested "Auto-detect". 
-                            // Let's try Home Base first as the "Likely" candidate.
-                            if (homeBase) {
-                                handleStartWorkout(homeBase);
-                            } else {
-                                handleStartWorkout(userGyms[0]);
-                            }
-                        } else {
-                            handleStartWorkout(userGyms[0]);
-                        }
+                        navigator.geolocation.getCurrentPosition(
+                            async (position) => {
+                                const userLat = position.coords.latitude;
+                                const userLng = position.coords.longitude;
+
+                                // 1. Check existing gyms (Proximity < 100m)
+                                const ALLOWED_RADIUS = 0.1; // km
+                                const nearbyGym = userGyms.find(gym => {
+                                    if (!gym.lat || !gym.lng) return false;
+                                    const dist = getDistanceFromLatLonInKm(userLat, userLng, gym.lat, gym.lng);
+                                    return dist <= ALLOWED_RADIUS;
+                                });
+
+                                if (nearbyGym) {
+                                    console.log(`📍 Gym Detected: ${nearbyGym.gym_name}`);
+                                    handleStartWorkout(nearbyGym);
+                                } else {
+                                    // 2. No known gym nearby -> Prompt to Create "Strategic Base"
+                                    const confirmCreate = window.confirm(
+                                        "⚠️ No se detecta ningún gimnasio conocido.\n\n" +
+                                        "¿Estás en ubación segura?\n" +
+                                        "Deseas establecer este punto como 'Base Estratégica' (Casa) e iniciar entrenamiento?"
+                                    );
+
+                                    if (confirmCreate) {
+                                        try {
+                                            const timestamp = new Date().getTime();
+                                            const customPlace = {
+                                                place_id: `custom_base_${timestamp}`,
+                                                name: "Base Estratégica",
+                                                address: "Ubicación Secreta",
+                                                location: { lat: userLat, lng: userLng },
+                                                types: ['gym', 'point_of_interest']
+                                            };
+
+                                            // Add to passport (creates gym if needed)
+                                            const result = await userService.addGymToPassport(user!.id, customPlace);
+
+                                            if (result.success && result.gym_id) {
+                                                // Reload specific gym (or full profile? Full profile takes time)
+                                                // Optimistic object for immediate start
+                                                const newGym: UserPrimaryGym = {
+                                                    gym_id: result.gym_id,
+                                                    google_place_id: customPlace.place_id,
+                                                    gym_name: customPlace.name,
+                                                    since: new Date().toISOString(),
+                                                    is_home_base: false, // Or true?
+                                                    lat: userLat,
+                                                    lng: userLng,
+                                                    equipment_count: 0
+                                                };
+
+                                                handleStartWorkout(newGym);
+                                            } else {
+                                                alert("Error al establecer la base: " + (result.error || "Desconocido"));
+                                            }
+                                        } catch (err) {
+                                            console.error("Error creating base:", err);
+                                            alert("Error crítico al crear la base.");
+                                        }
+                                    }
+                                }
+                            },
+                            (err) => {
+                                console.error("GPS Error:", err);
+                                alert("No se pudo obtener tu ubicación. Selecciona un gimnasio manualmente.");
+                            },
+                            { enableHighAccuracy: true, timeout: 5000 }
+                        );
                     }}
                     className="col-span-2 group bg-gym-primary hover:bg-yellow-400 border border-yellow-500/50 hover:border-yellow-400 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center shadow-[0_0_20px_rgba(250,204,21,0.2)] hover:shadow-[0_0_30px_rgba(250,204,21,0.4)] relative overflow-hidden"
                 >
