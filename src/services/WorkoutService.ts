@@ -158,6 +158,39 @@ class WorkoutService {
         return data;
     }
 
+    // Get logs for an active session (The "Replay")
+    async getSessionLogs(sessionId: string) {
+        const { data, error } = await supabase
+            .from('workout_logs')
+            .select(`
+                *,
+                exercise:exercises (
+                    id,
+                    name,
+                    target_muscle_group
+                )
+            `)
+            .eq('session_id', sessionId)
+            .order('created_at', { ascending: true }); // Order by creation time
+
+        if (error) {
+            console.error('Error fetching session logs:', error);
+            return [];
+        }
+        return data;
+    }
+
+    // Get specific session (The "Target")
+    async getSessionById(sessionId: string): Promise<{ data: WorkoutSession | null; error: any }> {
+        const { data, error } = await supabase
+            .from('workout_sessions')
+            .select('*')
+            .eq('id', sessionId)
+            .maybeSingle();
+
+        return { data, error };
+    }
+
     // Get full history (The "Saga")
     async getHistory(userId: string): Promise<WorkoutSession[]> {
         const { data } = await supabase

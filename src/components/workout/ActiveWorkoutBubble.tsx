@@ -103,6 +103,7 @@ export const ActiveWorkoutBubble = () => {
                 {/* Resume Action */}
                 <Link
                     to={`/workout/${gymId || 'personal'}`}
+                    state={{ sessionId: sessionId }} // Pass session ID 
                     className="flex items-center justify-center gap-2 bg-gym-primary text-black font-black text-sm uppercase py-3 rounded-xl hover:bg-yellow-400 transition-colors shadow-lg"
                 >
                     <Play size={16} fill="currentColor" /> Volver
