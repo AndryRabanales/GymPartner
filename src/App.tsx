@@ -36,6 +36,7 @@ function App() {
               <Route path="map" element={<MapPage />} />
               <Route path="arsenal" element={<MyArsenal />} />
               <Route path="workout" element={<WorkoutSession />} />
+              <Route path="workout/:gymId" element={<WorkoutSession />} />
               <Route path="profile" element={<UserProfile />} />
               <Route path="territory/:gymId" element={<GymProfile />} />
               <Route path="builder" element={<RoutineBuilder />} />
