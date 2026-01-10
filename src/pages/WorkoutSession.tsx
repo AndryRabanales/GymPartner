@@ -17,7 +17,7 @@ interface NumpadTarget {
     suggestion?: number;
 }
 // BattleTimer removed
-import { Plus, Swords, Trash2, Flame, Loader, Check, ArrowLeft, MoreVertical, X, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Check, Flame, Loader, MoreVertical, Plus, RotateCcw, Save, Swords, Trash2, X } from 'lucide-react';
 import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
@@ -76,6 +76,11 @@ export const WorkoutSession = () => {
             setTutorialStep(step);
         }
     }, []);
+
+    // Save Routine Flow
+    const [showSavePrompt, setShowSavePrompt] = useState(false);
+    const [routineName, setRoutineName] = useState('');
+    const [isSavingRoutine, setIsSavingRoutine] = useState(false);
 
     // Numpad State
     const [showNumpad, setShowNumpad] = useState(false);
@@ -659,10 +664,29 @@ export const WorkoutSession = () => {
 
     const handleFinish = async () => {
         setIsFinished(true); // STOP TIMER IMMEDIATELY
+
+        // INTERCEPT: Ask to Save Routine first if we have exercises
+        // Only if we are NOT already in a routine session (checked via sessionId logic or routines list... 
+        // actually simplest is just to ask ALWAYS, or ask if it was a freestyle?)
+        // User request: "finalizar(desea guardar su rutina?)" implies asking.
+
+        // Check if we already clicked "No Save" or verified save
+        // Actually, let's just show the modal, and the modal calls the REAL finish.
+        // We need a flag to bypass this if called from the modal itself? 
+        // No, we can just split the logic.
+
+        setShowSavePrompt(true);
+    };
+
+    const confirmFinish = async (shouldSave: boolean) => {
+        setShowSavePrompt(false);
+        await finishSessionInternal(shouldSave);
+    };
+
+    const finishSessionInternal = async (shouldSaveRoutine: boolean) => {
         if (!sessionId) {
             console.error('❌ No sessionId found!');
-            // alert('Error: No hay sesión activa'); // Removed alert
-            setIsFinished(false); // Resume if error
+            setIsFinished(false);
             return;
         }
 
@@ -724,9 +748,37 @@ export const WorkoutSession = () => {
             }
         }
 
-        if (savedCount > 0) {
-            console.log(`📦 Guardando ${savedCount} sets pendientes...`);
-            await Promise.all(savePromises);
+
+
+        // SAVE ROUTINE IF REQUESTED
+        if (shouldSaveRoutine && routineName.trim()) {
+            setIsSavingRoutine(true);
+            try {
+                // Map activeExercises to ID list or Rich Config Payload
+                // We want to save the CONFIG (metrics used), not just IDs if possible.
+                // workoutService.createRoutine supports rich config now?
+                // Looking at createRoutine definition: async createRoutine(userId, name, equipmentIds, gymId)
+                // It takes string[] for equipmentIds.
+                // Wait, updateRoutine supports rich config. createRoutine might need update or we just pass IDs for now.
+                // Let's pass IDs for now to be safe, or check if we can pass more.
+                // The service reads: linkEquipmentToRoutine(routineId, equipmentIds).
+                // So currently it only links IDs.
+                // TODO: Enhance createRoutine to support rich config in one go.
+                // For now, we save basic routine.
+                const equipIds = activeExercises.map(e => e.equipmentId);
+                const { error: routineError } = await workoutService.createRoutine(user!.id, routineName, equipIds, resolvedGymId);
+
+                if (routineError) {
+                    console.error("Error creating routine:", routineError);
+                    alert("Entrenamiento guardado, pero hubo un error creando la rutina.");
+                } else {
+                    alert("¡Rutina creada con éxito!");
+                }
+
+            } catch (e) {
+                console.error("Exception saving routine:", e);
+            }
+            setIsSavingRoutine(false);
         }
 
         console.log('🏁 Terminando sesión en DB:', sessionId);
@@ -736,26 +788,16 @@ export const WorkoutSession = () => {
 
             if (result.success) {
                 console.log('✅ Sesión terminada exitosamente');
-                // Removed blocking alert. 
-                // We'll rely on the UI showing "Guardando..." or similar via loading state, 
-                // or we could add a specific "Finished" state to show a success message briefly.
-                // For now, let's just wait a moment so the user SEES the timer stopped.
-
-                // Optional: Force update the local duration to ensure it matches exactly what we sent? 
-                // Actually the backend sets the time. The difference is negligible.
-
                 setTimeout(() => {
                     navigate('/history');
-                }, 1500); // 1.5s delay to admire the frozen timer and "Saving" state
+                }, 1500);
             } else {
                 console.error('❌ Error terminando sesión:', result.error);
-                // alert('❌ Error guardando entrenamiento: ' + JSON.stringify(result.error));
                 setLoading(false);
                 setIsFinished(false); // Resume timer if failed
             }
         } catch (error) {
             console.error('❌ Exception terminando sesión:', error);
-            // alert('❌ Error inesperado: ' + error);
             setLoading(false);
             setIsFinished(false);
         }
@@ -810,39 +852,66 @@ export const WorkoutSession = () => {
                             </div>
                         ) : (
                             <div className="flex-1 px-4 space-y-4 pb-32">
-                                {routines.map((routine, index) => (
-                                    <button
-                                        key={routine.id}
-                                        id={index === 0 ? 'tut-routine-first' : undefined}
-                                        onClick={() => {
-                                            if (tutorialStep === 6) {
-                                                setTutorialStep(0);
-                                                localStorage.setItem('tutorial_step', '0');
-                                                localStorage.setItem('hasSeenImportTutorial', 'true');
-                                            }
-                                            loadRoutine(routine);
-                                        }}
-                                        className="w-full bg-neutral-900 border border-neutral-800 hover:border-gym-primary p-6 rounded-2xl flex items-center justify-between group transition-all"
-                                    >
-                                        <div className="text-left">
-                                            <h3 className="font-black text-xl text-white group-hover:text-gym-primary uppercase italic">{routine.name}</h3>
-                                            <span className="text-neutral-500 text-xs font-bold">{routine.equipment_ids?.length || 0} Ejercicios</span>
-                                        </div>
-                                        <div className="bg-neutral-800 p-3 rounded-full group-hover:bg-gym-primary group-hover:text-black transition-colors">
-                                            <Check size={20} strokeWidth={3} />
-                                        </div>
-                                    </button>
-                                ))}
+                                {/* LIST EXISTING ROUTINES */}
+                                <div className="space-y-4">
+                                    <h4 className="text-white font-bold uppercase tracking-widest text-xs border-b border-white/10 pb-2 mb-2">
+                                        Mis Estrategias Guardadas
+                                    </h4>
+                                    {routines.map((routine, index) => (
+                                        <button
+                                            key={routine.id}
+                                            id={index === 0 ? 'tut-routine-first' : undefined}
+                                            onClick={() => {
+                                                if (tutorialStep === 6) {
+                                                    setTutorialStep(0);
+                                                    localStorage.setItem('tutorial_step', '0');
+                                                    localStorage.setItem('hasSeenImportTutorial', 'true');
+                                                }
+                                                loadRoutine(routine);
+                                            }}
+                                            className="w-full bg-neutral-900 border border-neutral-800 hover:border-gym-primary p-6 rounded-2xl flex items-center justify-between group transition-all"
+                                        >
+                                            <div className="text-left">
+                                                <h3 className="font-black text-xl text-white group-hover:text-gym-primary uppercase italic">{routine.name}</h3>
+                                                <span className="text-neutral-500 text-xs font-bold">{routine.equipment_ids?.length || 0} Ejercicios</span>
+                                            </div>
+                                            <div className="bg-neutral-800 p-3 rounded-full group-hover:bg-gym-primary group-hover:text-black transition-colors">
+                                                <Check size={20} strokeWidth={3} />
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
 
                                 <div className="pt-8 space-y-4">
+                                    <h4 className="text-white font-bold uppercase tracking-widest text-xs border-b border-white/10 pb-2 mb-2">
+                                        Operaciones de Campo
+                                    </h4>
+
+                                    {/* FREESTYLE START BUTTON */}
+                                    <button
+                                        onClick={() => {
+                                            // Just close the "Empty State" by creating a session?
+                                            // We are ALREADY in a view that expects `activeExercises`.
+                                            // If we want to start empty, we just need to let them use the FAB.
+                                            // But the UI shows this block IF activeExercises.length === 0.
+                                            // So we need to switch "mode" or just trigger "Start Session" with 0 items?
+                                            // But initialize() handles session check.
+                                            // If we are here, we have no active session OR no exercises.
+                                            // Let's just manually trigger showAddModal?
+                                            setShowAddModal(true);
+                                        }}
+                                        className="w-full bg-neutral-800 hover:bg-white/10 text-white font-black uppercase tracking-widest py-5 rounded-2xl border border-white/10 flex items-center justify-center gap-3 transition-all"
+                                    >
+                                        <Swords size={20} className="text-neutral-400" />
+                                        Iniciar Entrenamiento Libre
+                                    </button>
+
                                     <Link
                                         to={`/territory/${resolvedGymId}/arsenal`}
-                                        className="w-full bg-neutral-900 border border-dashed border-neutral-700 hover:border-gym-primary text-neutral-400 hover:text-white font-bold uppercase tracking-widest py-4 rounded-xl flex items-center justify-center gap-2 transition-all"
+                                        className="w-full bg-neutral-900 border border-dashed border-neutral-700 hover:border-gym-primary text-neutral-400 hover:text-white font-bold uppercase tracking-widest py-4 rounded-xl flex items-center justify-center gap-2 transition-all opacity-60 hover:opacity-100"
                                     >
-                                        <Plus size={16} /> Crear Nueva Rutina
+                                        <Plus size={16} /> Construir Nueva Rutina
                                     </Link>
-
-                                    {/* Freestyle Removed */}
                                 </div>
                             </div>
                         )}
@@ -1269,6 +1338,58 @@ export const WorkoutSession = () => {
             }
 
 
+
+
+
+
+            {/* SAVE ROUTINE PROMPT MODAL */}
+            {showSavePrompt && (
+                <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[60] flex items-center justify-center p-6 animate-in fade-in duration-300">
+                    <div className="w-full max-w-md bg-neutral-900 border border-white/10 rounded-3xl p-6 shadow-2xl space-y-6">
+                        <div className="text-center space-y-2">
+                            <div className="w-16 h-16 bg-yellow-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-yellow-500/20">
+                                <Swords size={32} className="text-yellow-500" />
+                            </div>
+                            <h2 className="text-2xl font-black italic uppercase text-white tracking-tighter">
+                                ¡Misión Cumplida!
+                            </h2>
+                            <p className="text-neutral-400 text-sm">
+                                ¿Deseas guardar esta configuración de batalla como una rutina para usarla en el futuro?
+                            </p>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest pl-1 mb-2 block">Nombre de la Rutina</label>
+                                <input
+                                    type="text"
+                                    autoFocus
+                                    placeholder="Ej: Pierna día 1..."
+                                    className="w-full bg-neutral-950 border border-neutral-800 focus:border-yellow-500 rounded-xl p-4 text-white font-bold outline-none transition-colors"
+                                    value={routineName}
+                                    onChange={(e) => setRoutineName(e.target.value)}
+                                />
+                            </div>
+
+                            <button
+                                onClick={() => confirmFinish(true)}
+                                disabled={!routineName.trim() || isSavingRoutine}
+                                className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-black uppercase tracking-widest py-4 rounded-xl shadow-lg shadow-yellow-500/20 transition-all disabled:opacity-50 disabled:grayscale flex items-center justify-center gap-2"
+                            >
+                                {isSavingRoutine ? <Loader className="animate-spin" size={20} /> : <Save size={20} />}
+                                {isSavingRoutine ? "Guardando..." : "Guardar y Finalizar"}
+                            </button>
+
+                            <button
+                                onClick={() => confirmFinish(false)}
+                                className="w-full bg-transparent hover:bg-white/5 text-neutral-400 font-bold uppercase tracking-widest py-4 rounded-xl transition-all"
+                            >
+                                No, solo finalizar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
         </div >
     )

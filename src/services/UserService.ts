@@ -652,6 +652,55 @@ class UserService {
 
         return newGym.id;
     }
+
+    // Find the nearest gym to the given coordinates
+    async findNearestGym(lat: number, lng: number): Promise<UserPrimaryGym | null> {
+        try {
+            const allGyms = await this.getAllGyms();
+            if (allGyms.length === 0) return null;
+
+            let closestGym = null;
+            let minDistance = Infinity;
+
+            for (const gym of allGyms) {
+                // Simple distance calculation (Haversine not strictly needed for short comparisons but better)
+                // Using simple Euclidean approximation for speed if needed, but Haversine is safer.
+                // Let's implement a quick Haversine here or helper.
+                const R = 6371; // km
+                const dLat = (gym.lat - lat) * Math.PI / 180;
+                const dLon = (gym.lng - lng) * Math.PI / 180;
+                const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                    Math.cos(lat * Math.PI / 180) * Math.cos(gym.lat * Math.PI / 180) *
+                    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                const d = R * c;
+
+                if (d < minDistance) {
+                    minDistance = d;
+                    closestGym = gym;
+                }
+            }
+
+            // Return closest gym regardless of distance? 
+            // The prompt implies we confirm "Estás en X?". 
+            // So we return the closest.
+            if (closestGym) {
+                return {
+                    gym_id: closestGym.id,
+                    google_place_id: closestGym.place_id,
+                    gym_name: closestGym.name,
+                    since: new Date().toISOString(), // Dummy
+                    lat: closestGym.lat,
+                    lng: closestGym.lng
+                };
+            }
+            return null;
+
+        } catch (error) {
+            console.error('Error finding nearest gym:', error);
+            return null;
+        }
+    }
 }
 
 export const userService = new UserService();
