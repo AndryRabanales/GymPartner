@@ -152,16 +152,13 @@ export const WorkoutSession = () => {
 
         try {
             // 1. Resolve Gym
-            let targetGymId = routeGymId;
+            let targetGymId = routeGymId === 'personal' ? undefined : routeGymId;
 
             if (!targetGymId) {
                 const gyms = await userService.getUserGyms(userId);
                 const gym = gyms.find(g => g.is_home_base) || gyms[0];
                 if (gym) {
                     targetGymId = gym.gym_id;
-                    // Fetch full gym data for coordinates (getUserGyms returns minimal info usually)
-                    // But we can try to fetch the gym details specifically if needed, OR relies on what we have.
-                    // Let's safe fetch the gym details to be sure we have Lat/Lng
                 }
             }
 
@@ -202,7 +199,63 @@ export const WorkoutSession = () => {
             if (active) {
                 console.log('♻️ Sesión activa encontrada:', active.id);
                 setSessionId(active.id);
-                setStartTime(new Date(active.started_at)); // Set Start Time (RESTORED)
+                setStartTime(new Date(active.started_at));
+
+                // NEW: Restore State (Hydrate activeExercises)
+                setLoading(true);
+                const logs = await workoutService.getSessionLogs(active.id);
+
+                if (logs && logs.length > 0) {
+                    // Group logs by Exercise ID (or Name if unique in session context) to reconstruct cards
+                    const restoredExercises: WorkoutExercise[] = [];
+                    const exerciseMap = new Map<string, WorkoutExercise>(); // Map by Exercise Name or ID
+
+                    logs.forEach((log: any) => {
+                        const exName = log.exercise?.name || 'Unknown Exercise';
+                        const exId = log.exercise_id;
+
+                        // Find matching equipment in local arsenal to get metrics config
+                        // If not found in arsenal, fallback to default metrics
+                        const equipItem = items.find(i => normalizeText(i.name) === normalizeText(exName));
+                        const defaultMetrics = { weight: true, reps: true, time: false, distance: false, rpe: false };
+
+                        let exercise = exerciseMap.get(exId);
+                        if (!exercise) {
+                            exercise = {
+                                id: Math.random().toString(), // UI Key
+                                equipmentId: equipItem?.id || exId,
+                                equipmentName: exName,
+                                metrics: (equipItem?.metrics || defaultMetrics) as any,
+                                sets: [],
+                                category: log.category_snapshot || equipItem?.target_muscle_group || 'Custom'
+                            };
+                            exerciseMap.set(exId, exercise);
+                            restoredExercises.push(exercise);
+                        }
+
+                        // Add Set
+                        exercise.sets.push({
+                            id: Math.random().toString(),
+                            weight: log.weight_kg || 0,
+                            reps: log.reps || 0,
+                            time: log.time || 0,
+                            distance: log.distance || 0,
+                            rpe: log.rpe || 0,
+                            custom: log.metrics_data || {},
+                            completed: true // Logged means completed/saved? Usually yes.
+                            // Actually, restore as uncompleted if we want them editable readily? 
+                            // User wants "datos donde escribes ... mantenerse". If allowed to edit old sets, keep incomplete?
+                            // But logs are usually final. Let's mark as completed but editable.
+                        });
+                    });
+
+                    if (restoredExercises.length > 0) {
+                        setActiveExercises(restoredExercises);
+                        console.log('📦 State Restored:', restoredExercises.length, 'exercises');
+                    }
+                }
+                setLoading(false);
+
             } else {
                 console.log('✨ No hay sesión activa. Iniciando nueva batalla AUTOMÁTICAMENTE.');
 
