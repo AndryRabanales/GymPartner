@@ -74,6 +74,13 @@ export const UserProfile = () => {
     // TUTORIAL STATE
     const [tutorialStep, setTutorialStep] = useState(0);
 
+    // NEW: Base Creation Modal State
+    const [showBaseCreationModal, setShowBaseCreationModal] = useState<{
+        isOpen: boolean;
+        lat: number;
+        lng: number;
+    }>({ isOpen: false, lat: 0, lng: 0 });
+
     useEffect(() => {
         console.log('[TUTORIAL] Current Step State:', tutorialStep);
         if (tutorialStep === 5) {
@@ -776,11 +783,12 @@ export const UserProfile = () => {
                                     handleStartWorkout(nearbyGym);
                                 } else {
                                     // 2. No known gym nearby -> Prompt to Create "Strategic Base"
-                                    const confirmCreate = window.confirm(
-                                        "⚠️ No se detecta ningún gimnasio conocido.\n\n" +
-                                        "¿Estás en ubación segura?\n" +
-                                        "Deseas establecer este punto como 'Base Estratégica' (Casa) e iniciar entrenamiento?"
-                                    );
+                                    const confirmCreate = false;
+                                    setShowBaseCreationModal({
+                                        isOpen: true,
+                                        lat: userLat,
+                                        lng: userLng
+                                    });
 
                                     if (confirmCreate) {
                                         try {
@@ -1134,6 +1142,84 @@ export const UserProfile = () => {
                     placement="top"
                     nonBlocking={true}
                 />
+            )}
+
+            {/* NEW: STRATEGIC BASE CREATION MODAL */}
+            {showBaseCreationModal.isOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
+                    <div className="bg-neutral-900 border border-gym-primary/30 rounded-3xl p-6 md:p-8 max-w-sm text-center shadow-[0_0_50px_rgba(250,204,21,0.2)] relative overflow-hidden">
+                        {/* Background Effect */}
+                        <div className="absolute inset-0 bg-gym-primary/5 pointer-events-none"></div>
+
+                        <div className="mx-auto w-16 h-16 bg-gym-primary/10 rounded-full flex items-center justify-center mb-4 relative z-10 animate-pulse">
+                            <MapPin className="text-gym-primary w-8 h-8" />
+                        </div>
+
+                        <h3 className="relative z-10 text-xl font-black text-white mb-2 uppercase italic tracking-tight">
+                            TERRITORIO DESCONOCIDO
+                        </h3>
+
+                        <p className="relative z-10 text-neutral-400 text-sm mb-6">
+                            No detectamos ningún gimnasio aliado en esta zona. <br />
+                            <span className="text-gym-primary font-bold">¿Deseas establecer una Base Estratégica aquí?</span>
+                        </p>
+
+                        <div className="relative z-10 flex gap-3">
+                            <button
+                                onClick={() => setShowBaseCreationModal({ isOpen: false, lat: 0, lng: 0 })}
+                                className="flex-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-bold py-3 rounded-xl transition-colors uppercase tracking-widest text-xs"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    const { lat, lng } = showBaseCreationModal;
+                                    setShowBaseCreationModal({ isOpen: false, lat: 0, lng: 0 }); // Close first
+
+                                    try {
+                                        const timestamp = new Date().getTime();
+                                        const customPlace = {
+                                            place_id: `custom_base_${timestamp}`,
+                                            // TODO: Could use reverse geocoding to get a real address name, 
+                                            // but for now "Base Estratégica" fits the theme perfectly.
+                                            name: "Base Estratégica",
+                                            address: "Ubicación Clasificada",
+                                            location: { lat, lng },
+                                            types: ['gym', 'point_of_interest']
+                                        };
+
+                                        // Add to passport (creates gym if needed)
+                                        const result = await userService.addGymToPassport(user!.id, customPlace);
+
+                                        if (result.success && result.gym_id) {
+                                            const newGym: UserPrimaryGym = {
+                                                gym_id: result.gym_id,
+                                                google_place_id: customPlace.place_id,
+                                                gym_name: customPlace.name,
+                                                since: new Date().toISOString(),
+                                                is_home_base: false,
+                                                lat,
+                                                lng,
+                                                equipment_count: 0
+                                            };
+
+                                            handleStartWorkout(newGym);
+                                        } else {
+                                            alert("Error al establecer la base: " + (result.error || "Desconocido"));
+                                        }
+                                    } catch (err) {
+                                        console.error("Error creating base:", err);
+                                        alert("Error crítico al crear la base.");
+                                    }
+                                }}
+                                className="flex-1 bg-gym-primary hover:bg-yellow-400 text-black font-bold py-3 rounded-xl transition-colors uppercase tracking-widest text-xs flex items-center justify-center gap-2"
+                            >
+                                <MapPin size={14} fill="currentColor" />
+                                Establecer Base
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
