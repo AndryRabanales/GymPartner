@@ -53,7 +53,7 @@ export const ActiveWorkoutBubble = () => {
         const session = await workoutService.getActiveSession(user!.id);
         if (session) {
             setSessionId(session.id);
-            setGymId(session.gym_id); // Capture Gym ID
+            setGymId(session.gym_id || null); // Fix: undefined -> null
             setStartTime(new Date(session.started_at));
             setIsVisible(true);
         } else {
