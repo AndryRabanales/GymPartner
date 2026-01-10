@@ -8,6 +8,7 @@ export const ActiveWorkoutBubble = () => {
     const { user } = useAuth();
     const location = useLocation();
     const [sessionId, setSessionId] = useState<string | null>(null);
+    const [gymId, setGymId] = useState<string | null>(null); // NEW: Store Gym ID
     const [startTime, setStartTime] = useState<Date | null>(null);
     const [elapsedTime, setElapsedTime] = useState("00:00");
     const [isVisible, setIsVisible] = useState(false);
@@ -52,11 +53,13 @@ export const ActiveWorkoutBubble = () => {
         const session = await workoutService.getActiveSession(user!.id);
         if (session) {
             setSessionId(session.id);
+            setGymId(session.gym_id); // Capture Gym ID
             setStartTime(new Date(session.started_at));
             setIsVisible(true);
         } else {
             setIsVisible(false);
             setSessionId(null);
+            setGymId(null);
         }
     };
 
@@ -99,7 +102,7 @@ export const ActiveWorkoutBubble = () => {
 
                 {/* Resume Action */}
                 <Link
-                    to="/workout"
+                    to={`/workout/${gymId || 'personal'}`}
                     className="flex items-center justify-center gap-2 bg-gym-primary text-black font-black text-sm uppercase py-3 rounded-xl hover:bg-yellow-400 transition-colors shadow-lg"
                 >
                     <Play size={16} fill="currentColor" /> Volver
