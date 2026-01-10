@@ -1255,40 +1255,94 @@ export const WorkoutSession = () => {
                             <button onClick={() => setShowAddModal(false)} className="bg-neutral-900 p-2 rounded-full text-white hover:bg-neutral-800"><Flame size={20} /></button>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto space-y-3 pr-2">
+                        <div className="flex-1 overflow-y-auto pr-2">
                             {arsenal.length === 0 ? (
                                 <div className="text-center mt-20">
                                     <p className="text-neutral-500 mb-4">Tu Arsenal está vacío.</p>
                                     <Link to="/arsenal" className="text-red-500 font-bold underline">Ir a registrar máquinas</Link>
                                 </div>
                             ) : (
-                                arsenal.map(item => {
-                                    // Resolve Category info
-                                    // @ts-ignore
-                                    const defaultCat = EQUIPMENT_CATEGORIES[item.category];
-                                    const customCat = userSettings.categories.find(c => c.id === item.category);
-                                    const catLabel = customCat?.label || defaultCat?.label || item.category;
-                                    const catIcon = customCat?.icon || defaultCat?.icon;
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pb-20">
+                                    {arsenal.map(item => {
+                                        // Resolve Category info
+                                        // @ts-ignore
+                                        const defaultCat = EQUIPMENT_CATEGORIES[item.category];
+                                        const customCat = userSettings.categories.find(c => c.id === item.category);
+                                        const catIcon = customCat?.icon || defaultCat?.icon || '⚡';
 
-                                    return (
-                                        <button
-                                            key={item.id}
-                                            onClick={() => addExercise(item)}
-                                            className="w-full text-left bg-neutral-900 border border-neutral-800 p-5 rounded-2xl hover:bg-neutral-800 hover:border-red-500/50 transition-all flex items-center justify-between group"
-                                        >
-                                            <div>
-                                                <span className="font-black text-lg text-white group-hover:text-red-500 transition-colors uppercase italic flex items-center gap-2">
-                                                    {item.name}
-                                                    {catIcon && <span className="text-base not-italic grayscale group-hover:grayscale-0">{catIcon}</span>}
-                                                </span>
-                                                <p className="text-xs text-neutral-500 font-bold tracking-widest mt-1">{catLabel}</p>
-                                            </div>
-                                            <div className="bg-neutral-950 p-2 rounded-lg text-neutral-600 group-hover:text-white transition-colors">
-                                                <Plus size={20} />
-                                            </div>
-                                        </button>
-                                    );
-                                })
+                                        // Resolve Metrics
+                                        const activeMetricIds = item.metrics ? Object.keys(item.metrics).filter(k => item.metrics![k]) : ['weight', 'reps'];
+
+                                        // Helper for Metric Badges
+                                        const getMetricInfo = (id: string) => {
+                                            const custom = userSettings.metrics.find(m => m.id === id);
+                                            if (custom) return { label: custom.label, icon: custom.icon };
+                                            const defaults: Record<string, { label: string, icon: string }> = {
+                                                weight: { label: 'PESO', icon: '⚖️' },
+                                                reps: { label: 'REPS', icon: '🔄' },
+                                                time: { label: 'TIEMPO', icon: '⏱️' },
+                                                distance: { label: 'DIST', icon: '📏' },
+                                                rpe: { label: 'RPE', icon: '🔥' }
+                                            };
+                                            return defaults[id] || { label: id, icon: '📊' };
+                                        };
+
+                                        // Check if already active (Optional UI hint)
+                                        const isActive = activeExercises.some(e => e.equipmentId === item.id);
+
+                                        return (
+                                            <button
+                                                key={item.id}
+                                                onClick={() => addExercise(item)}
+                                                className={`
+                                                    relative group aspect-[3/4] flex flex-col items-center justify-between
+                                                    bg-neutral-900 border ${isActive ? 'border-gym-primary/50' : 'border-white/5'}
+                                                    hover:border-white/20 hover:bg-neutral-800
+                                                    rounded-2xl overflow-hidden transition-all duration-200
+                                                    shadow-lg
+                                                `}
+                                            >
+                                                {/* Selection / Active Indication */}
+                                                {isActive && (
+                                                    <div className="absolute top-2 right-2 w-6 h-6 bg-gym-primary text-black rounded-full flex items-center justify-center font-bold text-xs shadow-md z-10">
+                                                        <Check size={14} strokeWidth={4} />
+                                                    </div>
+                                                )}
+
+                                                {/* Icon Area */}
+                                                <div className="flex-1 flex items-center justify-center w-full relative z-0">
+                                                    <span className="text-6xl drop-shadow-2xl filter grayscale-[0.3] group-hover:grayscale-0 group-hover:scale-110 transition-all duration-300">
+                                                        {catIcon}
+                                                    </span>
+                                                </div>
+
+                                                {/* Labels Container - Anchored Bottom */}
+                                                <div className="w-full bg-black/40 backdrop-blur-md border-t border-white/5 p-3 flex flex-col gap-2 z-10">
+
+                                                    {/* Name */}
+                                                    <h4 className="text-[10px] md:text-xs font-black italic uppercase leading-none text-white text-center line-clamp-2 px-1">
+                                                        {item.name}
+                                                    </h4>
+
+                                                    {/* Badges Grid */}
+                                                    <div className="flex flex-wrap justify-center gap-1 opacity-80">
+                                                        {activeMetricIds.slice(0, 3).map(mid => {
+                                                            const info = getMetricInfo(mid);
+                                                            return (
+                                                                <span key={mid} className="text-[6px] font-bold bg-white/10 px-1.5 py-0.5 rounded-[2px] text-neutral-300 uppercase flex items-center gap-0.5">
+                                                                    {info.label}
+                                                                </span>
+                                                            )
+                                                        })}
+                                                        {activeMetricIds.length > 3 && (
+                                                            <span className="text-[6px] font-bold bg-white/10 px-1 py-0.5 rounded-[2px] text-neutral-400">+</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             )}
                         </div>
                     </div>
