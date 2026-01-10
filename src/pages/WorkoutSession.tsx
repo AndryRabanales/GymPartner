@@ -196,6 +196,11 @@ export const WorkoutSession = () => {
             // 3. Start or Resume Session
             const { data: active, error: activeError } = await workoutService.getActiveSession(userId);
 
+            if (activeError) {
+                console.error("Error fetching active session:", activeError);
+                // Optionally alert user or fail gracefully
+            }
+
             if (active) {
                 console.log('♻️ Sesión activa encontrada:', active.id);
                 setSessionId(active.id);
