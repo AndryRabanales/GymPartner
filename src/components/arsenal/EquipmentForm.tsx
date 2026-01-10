@@ -92,13 +92,17 @@ export const EquipmentForm = ({
 
             let resultItem: Equipment;
 
-            if (editingItem) {
-                // UPDATE
+            // Check if it's a "Virtual" item (from seeds) that is being "Start"ed/Modified for real use
+            const isVirtual = editingItem?.id.startsWith('virtual-') || editingItem?.id.startsWith('new-');
+
+            if (editingItem && !isVirtual) {
+                // UPDATE REAL ITEM
                 await equipmentService.updateEquipment(editingItem.id, payload);
                 resultItem = { ...editingItem, ...payload };
                 onSuccess(resultItem, true);
             } else {
-                // CREATE
+                // CREATE (Fresh or Instantiating Virtual Item)
+                // If it was virtual, we effectively "clone" it into a real DB item
                 // @ts-ignore
                 resultItem = await equipmentService.addEquipment({ ...payload, gym_id: personalGymId }, user.id);
                 onSuccess(resultItem, false);
