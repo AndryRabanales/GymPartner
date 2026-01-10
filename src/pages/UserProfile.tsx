@@ -754,7 +754,7 @@ export const UserProfile = () => {
 
                 {/* SMART START BUTTON - PRIMARY ACTION */}
                 <button
-                    onClick={() => {
+                    onClick={async () => {
                         // SMART START LOGIC
                         if (!navigator.geolocation) {
                             setLocationError({
@@ -766,85 +766,60 @@ export const UserProfile = () => {
                             return;
                         }
 
-                        // Show some loading state? For now, just instant check (async)
-                        // const btn = document.activeElement as HTMLButtonElement;
-                        // Optional: btn.disabled = true;
+                        // Helper for Promise-based Location
+                        const getPosition = (options?: PositionOptions): Promise<GeolocationPosition> => {
+                            return new Promise((resolve, reject) => {
+                                navigator.geolocation.getCurrentPosition(resolve, reject, options);
+                            });
+                        };
 
-                        navigator.geolocation.getCurrentPosition(
-                            async (position) => {
-                                const userLat = position.coords.latitude;
-                                const userLng = position.coords.longitude;
+                        try {
+                            let position: GeolocationPosition;
+                            try {
+                                // 1. Try High Accuracy (10s timeout)
+                                position = await getPosition({ enableHighAccuracy: true, timeout: 10000 });
+                            } catch (err: any) {
+                                console.warn("High Accuracy GPS failed:", err.message);
+                                // If Permission Denied (1), don't retry, just fail to show error.
+                                if (err.code === 1) throw err;
 
-                                // 1. Check existing gyms (Proximity < 100m)
-                                const ALLOWED_RADIUS = 0.1; // km
-                                const nearbyGym = userGyms.find(gym => {
-                                    if (!gym.lat || !gym.lng) return false;
-                                    const dist = getDistanceFromLatLonInKm(userLat, userLng, gym.lat, gym.lng);
-                                    return dist <= ALLOWED_RADIUS;
-                                });
+                                // 2. Retry with Low Accuracy (Less restrictive, helpful indoors)
+                                console.log("Retrying with Low Accuracy...");
+                                position = await getPosition({ enableHighAccuracy: false, timeout: 10000 });
+                            }
 
-                                if (nearbyGym) {
-                                    console.log(`📍 Gym Detected: ${nearbyGym.gym_name}`);
-                                    handleStartWorkout(nearbyGym);
-                                } else {
-                                    // 2. No known gym nearby -> Prompt to Create "Strategic Base"
-                                    const confirmCreate = false;
-                                    setShowBaseCreationModal({
-                                        isOpen: true,
-                                        lat: userLat,
-                                        lng: userLng
-                                    });
+                            const userLat = position.coords.latitude;
+                            const userLng = position.coords.longitude;
 
-                                    if (confirmCreate) {
-                                        try {
-                                            const timestamp = new Date().getTime();
-                                            const customPlace = {
-                                                place_id: `custom_base_${timestamp}`,
-                                                name: "Base Estratégica",
-                                                address: "Ubicación Secreta",
-                                                location: { lat: userLat, lng: userLng },
-                                                types: ['gym', 'point_of_interest']
-                                            };
+                            // 1. Check existing gyms (Proximity < 100m)
+                            const ALLOWED_RADIUS = 0.1; // km
+                            const nearbyGym = userGyms.find(gym => {
+                                if (!gym.lat || !gym.lng) return false;
+                                const dist = getDistanceFromLatLonInKm(userLat, userLng, gym.lat, gym.lng);
+                                return dist <= ALLOWED_RADIUS;
+                            });
 
-                                            // Add to passport (creates gym if needed)
-                                            const result = await userService.addGymToPassport(user!.id, customPlace);
-
-                                            if (result.success && result.gym_id) {
-                                                // Reload specific gym (or full profile? Full profile takes time)
-                                                // Optimistic object for immediate start
-                                                const newGym: UserPrimaryGym = {
-                                                    gym_id: result.gym_id,
-                                                    google_place_id: customPlace.place_id,
-                                                    gym_name: customPlace.name,
-                                                    since: new Date().toISOString(),
-                                                    is_home_base: false, // Or true?
-                                                    lat: userLat,
-                                                    lng: userLng,
-                                                    equipment_count: 0
-                                                };
-
-                                                handleStartWorkout(newGym);
-                                            } else {
-                                                alert("Error al establecer la base: " + (result.error || "Desconocido"));
-                                            }
-                                        } catch (err) {
-                                            console.error("Error creating base:", err);
-                                            alert("Error crítico al crear la base.");
-                                        }
-                                    }
-                                }
-                            },
-                            (err) => {
-                                console.error("GPS Error:", err);
-                                setLocationError({
+                            if (nearbyGym) {
+                                console.log(`📍 Gym Detected: ${nearbyGym.gym_name}`);
+                                handleStartWorkout(nearbyGym);
+                            } else {
+                                // 2. No known gym nearby -> Prompt to Create "Strategic Base" (Custom Modal)
+                                setShowBaseCreationModal({
                                     isOpen: true,
-                                    gymName: 'Ubicación',
-                                    distanceMeters: null,
-                                    errorType: 'GPS_ERROR'
+                                    lat: userLat,
+                                    lng: userLng
                                 });
-                            },
-                            { enableHighAccuracy: true, timeout: 5000 }
-                        );
+                            }
+
+                        } catch (err: any) {
+                            console.error("Critical GPS Error:", err);
+                            setLocationError({
+                                isOpen: true,
+                                gymName: 'Ubicación',
+                                distanceMeters: null,
+                                errorType: 'GPS_ERROR'
+                            });
+                        }
                     }}
                     className="col-span-2 group bg-gym-primary hover:bg-yellow-400 border border-yellow-500/50 hover:border-yellow-400 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center shadow-[0_0_20px_rgba(250,204,21,0.2)] hover:shadow-[0_0_30px_rgba(250,204,21,0.4)] relative overflow-hidden"
                 >
@@ -878,10 +853,10 @@ export const UserProfile = () => {
                     </div>
                     <span className="font-bold text-neutral-200 group-hover:text-white text-xs md:text-base">Historial</span>
                 </Link>
-            </div>
+            </div >
 
             {/* TERRITORIES SECTION (PASSPORT) */}
-            <div className="space-y-4">
+            < div className="space-y-4" >
                 <div className="flex items-center justify-between">
                     <h2 className="text-2xl font-bold text-white flex items-center gap-2 tracking-tight">
                         <MapPin className="text-gym-primary" />
@@ -972,41 +947,45 @@ export const UserProfile = () => {
                     {/* Add New Territory Button */}
 
                 </div>
-            </div>
+            </div >
 
             {/* Add Gym Modal */}
 
 
             {/* EDIT PROFILE MODAL */}
-            {showEditProfile && profile && (
-                <EditProfileModal
-                    user={user}
-                    currentUsername={profile.username || user.user_metadata.full_name}
-                    currentAvatarUrl={profile.avatar_url || user.user_metadata.avatar_url}
-                    currentBannerUrl={profile.custom_settings?.banner_url}
-                    currentFeaturedRoutineId={profile.featured_routine_id}
-                    onClose={() => {
-                        setShowEditProfile(false);
-                        showBottomNav();
-                    }}
-                    onUpdate={loadUserData}
-                />
-            )}
+            {
+                showEditProfile && profile && (
+                    <EditProfileModal
+                        user={user}
+                        currentUsername={profile.username || user.user_metadata.full_name}
+                        currentAvatarUrl={profile.avatar_url || user.user_metadata.avatar_url}
+                        currentBannerUrl={profile.custom_settings?.banner_url}
+                        currentFeaturedRoutineId={profile.featured_routine_id}
+                        onClose={() => {
+                            setShowEditProfile(false);
+                            showBottomNav();
+                        }}
+                        onUpdate={loadUserData}
+                    />
+                )
+            }
 
             {/* SOCIAL PROFILE MODAL */}
-            {showSocialProfile && user && (
-                <PlayerProfileModal
-                    player={{
-                        id: user.id,
-                        username: profile?.username || user.user_metadata.full_name,
-                        avatar_url: profile?.avatar_url || user.user_metadata.avatar_url,
-                        xp: profile?.xp || 0,
-                        rank: (profile?.rank || 0) as number, // Cast if enum mismatch
-                        banner_url: profile?.custom_settings?.banner_url
-                    }}
-                    onClose={() => setShowSocialProfile(false)}
-                />
-            )}
+            {
+                showSocialProfile && user && (
+                    <PlayerProfileModal
+                        player={{
+                            id: user.id,
+                            username: profile?.username || user.user_metadata.full_name,
+                            avatar_url: profile?.avatar_url || user.user_metadata.avatar_url,
+                            xp: profile?.xp || 0,
+                            rank: (profile?.rank || 0) as number, // Cast if enum mismatch
+                            banner_url: profile?.custom_settings?.banner_url
+                        }}
+                        onClose={() => setShowSocialProfile(false)}
+                    />
+                )
+            }
 
 
 
@@ -1018,66 +997,72 @@ export const UserProfile = () => {
 
 
             {/* TUTORIAL STEP 1: Global Arsenal (Create Routine) */}
-            {tutorialStep === 1 && (
-                <InteractiveOverlay
-                    targetId="tut-global-arsenal-btn"
-                    title="PASO 1: CREAR MIS RUTINAS"
-                    message="Haz clic en 'Crear mis Rutinas' para forjar tu primera estrategia de combate."
-                    step={1}
-                    totalSteps={7}
-                    onNext={() => { }}
-                    onClose={() => {
-                        setTutorialStep(0);
-                        localStorage.setItem('tutorial_step', '0');
-                        localStorage.setItem('hasSeenGlobalTutorial', 'true'); // Pivot point: Mark GLOBAL as seen
-                        localStorage.setItem('hasSeenImportTutorial', 'true');
-                    }}
-                    placement="top"
-                    disableNext={true}
-                />
-            )}
+            {
+                tutorialStep === 1 && (
+                    <InteractiveOverlay
+                        targetId="tut-global-arsenal-btn"
+                        title="PASO 1: CREAR MIS RUTINAS"
+                        message="Haz clic en 'Crear mis Rutinas' para forjar tu primera estrategia de combate."
+                        step={1}
+                        totalSteps={7}
+                        onNext={() => { }}
+                        onClose={() => {
+                            setTutorialStep(0);
+                            localStorage.setItem('tutorial_step', '0');
+                            localStorage.setItem('hasSeenGlobalTutorial', 'true'); // Pivot point: Mark GLOBAL as seen
+                            localStorage.setItem('hasSeenImportTutorial', 'true');
+                        }}
+                        placement="top"
+                        disableNext={true}
+                    />
+                )
+            }
 
             {/* TUTORIAL STEP 5: Find Gym on Map */}
-            {tutorialStep === 5 && (
-                <InteractiveOverlay
-                    targetId="tut-find-gyms-btn"
-                    title="PASO 5: BUSCA TU GIMNASIO"
-                    message="Haz clic en 'Encontrar Gimnasios' para ir al mapa. Luego, usa el buscador para encontrar tu gimnasio (ej: 'Spartanos') y selecciónalo para agregarlo a tu mapa."
-                    step={5}
-                    totalSteps={7}
-                    onNext={() => { }}
-                    onClose={() => {
-                        setTutorialStep(0);
-                        localStorage.setItem('tutorial_step', '0');
-                    }}
-                    placement="bottom"
-                    disableNext={true}
-                />
-            )}
+            {
+                tutorialStep === 5 && (
+                    <InteractiveOverlay
+                        targetId="tut-find-gyms-btn"
+                        title="PASO 5: BUSCA TU GIMNASIO"
+                        message="Haz clic en 'Encontrar Gimnasios' para ir al mapa. Luego, usa el buscador para encontrar tu gimnasio (ej: 'Spartanos') y selecciónalo para agregarlo a tu mapa."
+                        step={5}
+                        totalSteps={7}
+                        onNext={() => { }}
+                        onClose={() => {
+                            setTutorialStep(0);
+                            localStorage.setItem('tutorial_step', '0');
+                        }}
+                        placement="bottom"
+                        disableNext={true}
+                    />
+                )
+            }
 
             {/* TUTORIAL STEP 7: Start Workout (Final) */}
-            {tutorialStep === 7 && !locationError.isOpen && (
-                <InteractiveOverlay
-                    targetId="tut-start-workout-btn-0"
-                    title="PASO FINAL: INICIAR ENTRENAMIENTO"
-                    message="¡Todo listo! Inicia tu entrenamiento (Verificación GPS requerida)."
-                    step={7}
-                    totalSteps={7}
-                    onNext={() => {
-                        setTutorialStep(0);
-                        localStorage.setItem('tutorial_step', '0'); // Fixes persistence loop
-                        localStorage.setItem('hasSeenImportTutorial', 'true');
-                    }}
-                    onClose={() => {
-                        setTutorialStep(0);
-                        localStorage.setItem('tutorial_step', '0'); // Fixes persistence loop
-                        localStorage.setItem('hasSeenImportTutorial', 'true');
-                    }}
-                    placement="top"
-                    disableNext={false}
-                    nextLabel="ENTENDIDO"
-                />
-            )}
+            {
+                tutorialStep === 7 && !locationError.isOpen && (
+                    <InteractiveOverlay
+                        targetId="tut-start-workout-btn-0"
+                        title="PASO FINAL: INICIAR ENTRENAMIENTO"
+                        message="¡Todo listo! Inicia tu entrenamiento (Verificación GPS requerida)."
+                        step={7}
+                        totalSteps={7}
+                        onNext={() => {
+                            setTutorialStep(0);
+                            localStorage.setItem('tutorial_step', '0'); // Fixes persistence loop
+                            localStorage.setItem('hasSeenImportTutorial', 'true');
+                        }}
+                        onClose={() => {
+                            setTutorialStep(0);
+                            localStorage.setItem('tutorial_step', '0'); // Fixes persistence loop
+                            localStorage.setItem('hasSeenImportTutorial', 'true');
+                        }}
+                        placement="top"
+                        disableNext={false}
+                        nextLabel="ENTENDIDO"
+                    />
+                )
+            }
 
             <div className="flex flex-col items-center gap-4 mt-12 pb-12 opacity-50 hover:opacity-100 transition-opacity">
                 <button
@@ -1118,120 +1103,126 @@ export const UserProfile = () => {
             />
 
             {/* TUTORIAL STEP 6 Overlay (Configuration) */}
-            {tutorialStep === 6 && userGyms.length > 0 && (
-                <InteractiveOverlay
-                    targetId={`tut-config-gym-btn-${userGyms.length - 1}`}
-                    title="PASO 6: PREPARATIVOS"
-                    message="¡Base establecida! Ahora entra a configurar el equipo de tu gimnasio."
-                    step={6}
-                    totalSteps={8}
-                    onClose={() => { }}
-                    placement="top"
-                    nonBlocking={true}
-                    disableNext={true}
-                />
-            )}
+            {
+                tutorialStep === 6 && userGyms.length > 0 && (
+                    <InteractiveOverlay
+                        targetId={`tut-config-gym-btn-${userGyms.length - 1}`}
+                        title="PASO 6: PREPARATIVOS"
+                        message="¡Base establecida! Ahora entra a configurar el equipo de tu gimnasio."
+                        step={6}
+                        totalSteps={8}
+                        onClose={() => { }}
+                        placement="top"
+                        nonBlocking={true}
+                        disableNext={true}
+                    />
+                )
+            }
 
             {/* TUTORIAL STEP 8 Overlay (Start Training) */}
-            {tutorialStep === 8 && userGyms.length > 0 && (
-                <InteractiveOverlay
-                    targetId={`tut-start-workout-btn-${userGyms.length - 1}`}
-                    title="PASO 8: ¡A LA BATALLA!"
-                    message="Tu base está lista. Inicia tu entrenamiento y comienza a ganar experiencia."
-                    step={8}
-                    totalSteps={8}
-                    nextLabel="¡EMPEZAR!"
-                    onNext={() => {
-                        setTutorialStep(0);
-                        localStorage.setItem('tutorial_step', '0');
-                    }}
-                    onClose={() => {
-                        setTutorialStep(0);
-                        localStorage.setItem('tutorial_step', '0');
-                    }}
-                    placement="top"
-                    nonBlocking={true}
-                />
-            )}
+            {
+                tutorialStep === 8 && userGyms.length > 0 && (
+                    <InteractiveOverlay
+                        targetId={`tut-start-workout-btn-${userGyms.length - 1}`}
+                        title="PASO 8: ¡A LA BATALLA!"
+                        message="Tu base está lista. Inicia tu entrenamiento y comienza a ganar experiencia."
+                        step={8}
+                        totalSteps={8}
+                        nextLabel="¡EMPEZAR!"
+                        onNext={() => {
+                            setTutorialStep(0);
+                            localStorage.setItem('tutorial_step', '0');
+                        }}
+                        onClose={() => {
+                            setTutorialStep(0);
+                            localStorage.setItem('tutorial_step', '0');
+                        }}
+                        placement="top"
+                        nonBlocking={true}
+                    />
+                )
+            }
 
             {/* NEW: STRATEGIC BASE CREATION MODAL */}
-            {showBaseCreationModal.isOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
-                    <div className="bg-neutral-900 border border-gym-primary/30 rounded-3xl p-6 md:p-8 max-w-sm text-center shadow-[0_0_50px_rgba(250,204,21,0.2)] relative overflow-hidden">
-                        {/* Background Effect */}
-                        <div className="absolute inset-0 bg-gym-primary/5 pointer-events-none"></div>
+            {
+                showBaseCreationModal.isOpen && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
+                        <div className="bg-neutral-900 border border-gym-primary/30 rounded-3xl p-6 md:p-8 max-w-sm text-center shadow-[0_0_50px_rgba(250,204,21,0.2)] relative overflow-hidden">
+                            {/* Background Effect */}
+                            <div className="absolute inset-0 bg-gym-primary/5 pointer-events-none"></div>
 
-                        <div className="mx-auto w-16 h-16 bg-gym-primary/10 rounded-full flex items-center justify-center mb-4 relative z-10 animate-pulse">
-                            <MapPin className="text-gym-primary w-8 h-8" />
-                        </div>
+                            <div className="mx-auto w-16 h-16 bg-gym-primary/10 rounded-full flex items-center justify-center mb-4 relative z-10 animate-pulse">
+                                <MapPin className="text-gym-primary w-8 h-8" />
+                            </div>
 
-                        <h3 className="relative z-10 text-xl font-black text-white mb-2 uppercase italic tracking-tight">
-                            TERRITORIO DESCONOCIDO
-                        </h3>
+                            <h3 className="relative z-10 text-xl font-black text-white mb-2 uppercase italic tracking-tight">
+                                TERRITORIO DESCONOCIDO
+                            </h3>
 
-                        <p className="relative z-10 text-neutral-400 text-sm mb-6">
-                            No detectamos ningún gimnasio aliado en esta zona. <br />
-                            <span className="text-gym-primary font-bold">¿Deseas establecer una Base Estratégica aquí?</span>
-                        </p>
+                            <p className="relative z-10 text-neutral-400 text-sm mb-6">
+                                No detectamos ningún gimnasio aliado en esta zona. <br />
+                                <span className="text-gym-primary font-bold">¿Deseas establecer una Base Estratégica aquí?</span>
+                            </p>
 
-                        <div className="relative z-10 flex gap-3">
-                            <button
-                                onClick={() => setShowBaseCreationModal({ isOpen: false, lat: 0, lng: 0 })}
-                                className="flex-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-bold py-3 rounded-xl transition-colors uppercase tracking-widest text-xs"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={async () => {
-                                    const { lat, lng } = showBaseCreationModal;
-                                    setShowBaseCreationModal({ isOpen: false, lat: 0, lng: 0 }); // Close first
+                            <div className="relative z-10 flex gap-3">
+                                <button
+                                    onClick={() => setShowBaseCreationModal({ isOpen: false, lat: 0, lng: 0 })}
+                                    className="flex-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-bold py-3 rounded-xl transition-colors uppercase tracking-widest text-xs"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        const { lat, lng } = showBaseCreationModal;
+                                        setShowBaseCreationModal({ isOpen: false, lat: 0, lng: 0 }); // Close first
 
-                                    try {
-                                        const timestamp = new Date().getTime();
-                                        const customPlace = {
-                                            place_id: `custom_base_${timestamp}`,
-                                            // TODO: Could use reverse geocoding to get a real address name, 
-                                            // but for now "Base Estratégica" fits the theme perfectly.
-                                            name: "Base Estratégica",
-                                            address: "Ubicación Clasificada",
-                                            location: { lat, lng },
-                                            types: ['gym', 'point_of_interest']
-                                        };
-
-                                        // Add to passport (creates gym if needed)
-                                        const result = await userService.addGymToPassport(user!.id, customPlace);
-
-                                        if (result.success && result.gym_id) {
-                                            const newGym: UserPrimaryGym = {
-                                                gym_id: result.gym_id,
-                                                google_place_id: customPlace.place_id,
-                                                gym_name: customPlace.name,
-                                                since: new Date().toISOString(),
-                                                is_home_base: false,
-                                                lat,
-                                                lng,
-                                                equipment_count: 0
+                                        try {
+                                            const timestamp = new Date().getTime();
+                                            const customPlace = {
+                                                place_id: `custom_base_${timestamp}`,
+                                                // TODO: Could use reverse geocoding to get a real address name, 
+                                                // but for now "Base Estratégica" fits the theme perfectly.
+                                                name: "Base Estratégica",
+                                                address: "Ubicación Clasificada",
+                                                location: { lat, lng },
+                                                types: ['gym', 'point_of_interest']
                                             };
 
-                                            handleStartWorkout(newGym);
-                                        } else {
-                                            alert("Error al establecer la base: " + (result.error || "Desconocido"));
+                                            // Add to passport (creates gym if needed)
+                                            const result = await userService.addGymToPassport(user!.id, customPlace);
+
+                                            if (result.success && result.gym_id) {
+                                                const newGym: UserPrimaryGym = {
+                                                    gym_id: result.gym_id,
+                                                    google_place_id: customPlace.place_id,
+                                                    gym_name: customPlace.name,
+                                                    since: new Date().toISOString(),
+                                                    is_home_base: false,
+                                                    lat,
+                                                    lng,
+                                                    equipment_count: 0
+                                                };
+
+                                                handleStartWorkout(newGym);
+                                            } else {
+                                                alert("Error al establecer la base: " + (result.error || "Desconocido"));
+                                            }
+                                        } catch (err) {
+                                            console.error("Error creating base:", err);
+                                            alert("Error crítico al crear la base.");
                                         }
-                                    } catch (err) {
-                                        console.error("Error creating base:", err);
-                                        alert("Error crítico al crear la base.");
-                                    }
-                                }}
-                                className="flex-1 bg-gym-primary hover:bg-yellow-400 text-black font-bold py-3 rounded-xl transition-colors uppercase tracking-widest text-xs flex items-center justify-center gap-2"
-                            >
-                                <MapPin size={14} fill="currentColor" />
-                                Establecer Base
-                            </button>
+                                    }}
+                                    className="flex-1 bg-gym-primary hover:bg-yellow-400 text-black font-bold py-3 rounded-xl transition-colors uppercase tracking-widest text-xs flex items-center justify-center gap-2"
+                                >
+                                    <MapPin size={14} fill="currentColor" />
+                                    Establecer Base
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 };
 
