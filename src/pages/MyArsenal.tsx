@@ -6,12 +6,11 @@ import { userService } from '../services/UserService';
 import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
 import type { Equipment } from '../services/GymEquipmentService';
 import { equipmentService, COMMON_EQUIPMENT_SEEDS, EQUIPMENT_CATEGORIES } from '../services/GymEquipmentService';
-import type { CustomCategory, CustomSettings } from '../services/GymEquipmentService';
+import type { CustomSettings } from '../services/GymEquipmentService';
 import { workoutService } from '../services/WorkoutService';
 import { supabase } from '../lib/supabase';
 import { PublicTeaser } from '../components/common/PublicTeaser';
 import { normalizeText, getMuscleGroup } from '../utils/inventoryUtils';
-import { ArsenalCard } from '../components/arsenal/ArsenalCard';
 import { ArsenalGrid } from '../components/arsenal/ArsenalGrid';
 import { EquipmentForm } from '../components/arsenal/EquipmentForm';
 
@@ -1047,7 +1046,7 @@ export const MyArsenal = () => {
                     editingItem={editingItem}
                     onClose={() => { setAddingMode(false); setEditingItem(null); }}
                     onSuccess={handleEquipmentSuccess}
-                    activeSection={activeSection}
+                    activeSection={activeSection || undefined}
                     catalogItems={catalogItems}
                     onQuickAdd={handleQuickAdd}
                 />

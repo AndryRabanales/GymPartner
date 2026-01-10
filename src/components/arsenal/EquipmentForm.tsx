@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Plus, X, Loader } from 'lucide-react';
 import type { Equipment, CustomSettings, CustomCategory, CustomMetric } from '../../services/GymEquipmentService';
 import { equipmentService, EQUIPMENT_CATEGORIES } from '../../services/GymEquipmentService';
-import { normalizeText } from '../../utils/inventoryUtils';
 
 interface EquipmentFormProps {
     user: any;
