@@ -75,11 +75,12 @@ export const UserProfile = () => {
     const [tutorialStep, setTutorialStep] = useState(0);
 
     // NEW: Base Creation Modal State
-    const [showBaseCreationModal, setShowBaseCreationModal] = useState<{
+    const [startConfirmationModal, setStartConfirmationModal] = useState<{
         isOpen: boolean;
-        lat: number;
-        lng: number;
-    }>({ isOpen: false, lat: 0, lng: 0 });
+        type: 'GYM_FOUND' | 'NO_GYM';
+        gymData?: UserPrimaryGym;
+        location?: { lat: number, lng: number };
+    }>({ isOpen: false, type: 'NO_GYM' });
 
     useEffect(() => {
         console.log('[TUTORIAL] Current Step State:', tutorialStep);
@@ -801,13 +802,18 @@ export const UserProfile = () => {
 
                             if (nearbyGym) {
                                 console.log(`📍 Gym Detected: ${nearbyGym.gym_name}`);
-                                handleStartWorkout(nearbyGym);
-                            } else {
-                                // 2. No known gym nearby -> Prompt to Create "Strategic Base" (Custom Modal)
-                                setShowBaseCreationModal({
+                                // NEW: Prompt Confirmation for "Gym Detected"
+                                setStartConfirmationModal({
                                     isOpen: true,
-                                    lat: userLat,
-                                    lng: userLng
+                                    type: 'GYM_FOUND',
+                                    gymData: nearbyGym
+                                });
+                            } else {
+                                // 2. No known gym nearby -> Prompt "No Gym Detected" (Hidden: Create Base)
+                                setStartConfirmationModal({
+                                    isOpen: true,
+                                    type: 'NO_GYM',
+                                    location: { lat: userLat, lng: userLng }
                                 });
                             }
 
@@ -1144,8 +1150,9 @@ export const UserProfile = () => {
             }
 
             {/* NEW: STRATEGIC BASE CREATION MODAL */}
+            {/* NEW: SMART START CONFIRMATION MODAL */}
             {
-                showBaseCreationModal.isOpen && (
+                startConfirmationModal.isOpen && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
                         <div className="bg-neutral-900 border border-gym-primary/30 rounded-3xl p-6 md:p-8 max-w-sm text-center shadow-[0_0_50px_rgba(250,204,21,0.2)] relative overflow-hidden">
                             {/* Background Effect */}
@@ -1156,66 +1163,87 @@ export const UserProfile = () => {
                             </div>
 
                             <h3 className="relative z-10 text-xl font-black text-white mb-2 uppercase italic tracking-tight">
-                                TERRITORIO DESCONOCIDO
+                                {startConfirmationModal.type === 'GYM_FOUND' ? 'UBICACIÓN CONFIRMADA' : 'TERRITORIO DESCONOCIDO'}
                             </h3>
 
-                            <p className="relative z-10 text-neutral-400 text-sm mb-6">
-                                No detectamos ningún gimnasio aliado en esta zona. <br />
-                                <span className="text-gym-primary font-bold">¿Deseas establecer una Base Estratégica aquí?</span>
+                            <p className="relative z-10 text-neutral-400 text-sm mb-6 uppercase font-bold">
+                                {startConfirmationModal.type === 'GYM_FOUND' ? (
+                                    <>
+                                        TE ENCUENTRAS EN <span className="text-gym-primary">{startConfirmationModal.gymData?.gym_name}</span>
+                                        <br />¿DESEAS CONTINUAR?
+                                    </>
+                                ) : (
+                                    <>
+                                        NO TE ENCUENTRAS EN NINGUN GYM
+                                        <br /><span className="text-gym-primary">¿DESEAS CONTINUAR?</span>
+                                    </>
+                                )}
                             </p>
 
                             <div className="relative z-10 flex gap-3">
                                 <button
-                                    onClick={() => setShowBaseCreationModal({ isOpen: false, lat: 0, lng: 0 })}
+                                    onClick={() => setStartConfirmationModal({ isOpen: false, type: 'NO_GYM' })}
                                     className="flex-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-bold py-3 rounded-xl transition-colors uppercase tracking-widest text-xs"
                                 >
                                     Cancelar
                                 </button>
                                 <button
                                     onClick={async () => {
-                                        const { lat, lng } = showBaseCreationModal;
-                                        setShowBaseCreationModal({ isOpen: false, lat: 0, lng: 0 }); // Close first
+                                        const { type, gymData, location } = startConfirmationModal;
+                                        setStartConfirmationModal({ isOpen: false, type: 'NO_GYM' }); // Close first
 
-                                        try {
-                                            const timestamp = new Date().getTime();
-                                            const customPlace = {
-                                                place_id: `custom_base_${timestamp}`,
-                                                // TODO: Could use reverse geocoding to get a real address name, 
-                                                // but for now "Base Estratégica" fits the theme perfectly.
-                                                name: "Base Estratégica",
-                                                address: "Ubicación Clasificada",
-                                                location: { lat, lng },
-                                                types: ['gym', 'point_of_interest']
-                                            };
-
-                                            // Add to passport (creates gym if needed)
-                                            const result = await userService.addGymToPassport(user!.id, customPlace);
-
-                                            if (result.success && result.gym_id) {
-                                                const newGym: UserPrimaryGym = {
-                                                    gym_id: result.gym_id,
-                                                    google_place_id: customPlace.place_id,
-                                                    gym_name: customPlace.name,
-                                                    since: new Date().toISOString(),
-                                                    is_home_base: false,
-                                                    lat,
-                                                    lng,
-                                                    equipment_count: 0
+                                        if (type === 'GYM_FOUND' && gymData) {
+                                            handleStartWorkout(gymData);
+                                        } else if (type === 'NO_GYM' && location) {
+                                            // Handle "Strategic Base" creation silently
+                                            try {
+                                                const timestamp = new Date().getTime();
+                                                const customPlace = {
+                                                    place_id: `custom_base_${timestamp}`,
+                                                    name: "Base Estratégica",
+                                                    address: "Ubicación Clasificada",
+                                                    location: location,
+                                                    types: ['gym', 'point_of_interest']
                                                 };
 
-                                                handleStartWorkout(newGym);
-                                            } else {
-                                                alert("Error al establecer la base: " + (result.error || "Desconocido"));
+                                                // Add to passport (creates gym if needed)
+                                                const result = await userService.addGymToPassport(user!.id, customPlace);
+
+                                                if (result.success && result.gym_id) {
+                                                    // Optimistic object for immediate start
+                                                    const newGym: UserPrimaryGym = {
+                                                        gym_id: result.gym_id,
+                                                        google_place_id: customPlace.place_id,
+                                                        gym_name: customPlace.name,
+                                                        since: new Date().toISOString(),
+                                                        is_home_base: false,
+                                                        lat: location.lat,
+                                                        lng: location.lng,
+                                                        equipment_count: 0
+                                                    };
+                                                    handleStartWorkout(newGym);
+                                                } else {
+                                                    setLocationError({
+                                                        isOpen: true,
+                                                        gymName: 'Base',
+                                                        distanceMeters: null,
+                                                        errorType: 'GPS_ERROR' // Reuse generic error
+                                                    });
+                                                }
+                                            } catch (err) {
+                                                console.error("Error creating base:", err);
+                                                setLocationError({
+                                                    isOpen: true,
+                                                    gymName: 'Base',
+                                                    distanceMeters: null,
+                                                    errorType: 'GPS_ERROR'
+                                                });
                                             }
-                                        } catch (err) {
-                                            console.error("Error creating base:", err);
-                                            alert("Error crítico al crear la base.");
                                         }
                                     }}
-                                    className="flex-1 bg-gym-primary hover:bg-yellow-400 text-black font-bold py-3 rounded-xl transition-colors uppercase tracking-widest text-xs flex items-center justify-center gap-2"
+                                    className="flex-1 bg-gym-primary hover:bg-yellow-400 text-black font-black py-3 rounded-xl transition-colors uppercase tracking-widest text-xs shadow-[0_0_15px_rgba(250,204,21,0.3)]"
                                 >
-                                    <MapPin size={14} fill="currentColor" />
-                                    Establecer Base
+                                    CONFIRMAR
                                 </button>
                             </div>
                         </div>

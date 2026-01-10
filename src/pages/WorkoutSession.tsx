@@ -246,6 +246,12 @@ export const WorkoutSession = () => {
                 setElapsedTime("00:00");
                 setActiveExercises([]);
                 setIsFinished(false);
+
+                // NEW: If no routines exist, auto-open "Add Exercise" modal (All Exercises)
+                if (localRoutines.length === 0) {
+                    console.log('🔰 No routines found - Auto-opening exercise picker');
+                    setShowAddModal(true);
+                }
             }
 
         } catch (error) {
