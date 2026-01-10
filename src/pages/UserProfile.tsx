@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Trophy, MapPin, Edit2, LogIn, Loader, Swords, Dumbbell, LineChart, History, Star, Search, ArrowLeft, Crown } from 'lucide-react';
+import { MapPin, Swords, Medal, Users, Trophy, ChevronRight, Share2, Settings, History, Dumbbell, AlertTriangle, Monitor, Heart, Lock, UserPlus, Play } from 'lucide-react';
 // import { UserPlus, Grid } from 'lucide-react'; // UNUSED: Hidden Community Features
 // import { Grid } from 'lucide-react'; // UNUSED: Hidden Community Features
 import { Link, useNavigate } from 'react-router-dom';
@@ -75,12 +75,14 @@ export const UserProfile = () => {
     const [smartStartLoading, setSmartStartLoading] = useState(false);
     const [detectedGym, setDetectedGym] = useState<UserPrimaryGym | null>(null);
     const [showSmartStartModal, setShowSmartStartModal] = useState(false);
+    const [showForceStartModal, setShowForceStartModal] = useState(false);
 
+    // --- SMART START LOGIC ---
     // --- SMART START LOGIC ---
     const handleSmartStart = () => {
         setSmartStartLoading(true);
         if (!navigator.geolocation) {
-            alert("Necesitamos tu ubicación para detectar tu base.");
+            alert("Necesitamos tu ubicación para iniciar la misión.");
             setSmartStartLoading(false);
             return;
         }
@@ -92,13 +94,21 @@ export const UserProfile = () => {
                 const nearest = await userService.findNearestGym(latitude, longitude);
 
                 setSmartStartLoading(false);
-                if (nearest) {
-                    setDetectedGym(nearest);
-                    setShowSmartStartModal(true);
-                } else {
-                    alert("No se detectaron bases aliadas cercanas. Intenta registrar tu ubicación manualmente en el mapa.");
-                    navigate('/map');
+
+                if (nearest && nearest.lat !== undefined && nearest.lng !== undefined) {
+                    const distKm = getDistanceFromLatLonInKm(latitude, longitude, nearest.lat, nearest.lng);
+                    console.log(`[Smart Start] Nearest: ${nearest.gym_name}, Dist: ${distKm.toFixed(3)}km`);
+
+                    if (distKm <= 0.1) {
+                        // Success: Within 100m
+                        setDetectedGym(nearest);
+                        setShowSmartStartModal(true);
+                        return;
+                    }
                 }
+
+                // Fallback: No gym found OR too far
+                setShowForceStartModal(true);
             },
             (err) => {
                 console.error(err);
@@ -106,6 +116,19 @@ export const UserProfile = () => {
                 alert("Error al obtener ubicación. Asegúrate de tener el GPS activado.");
             }
         );
+    };
+
+    const handleForceStart = async () => {
+        // Start "Free Workout" (Global/Personal Mode)
+        try {
+            setSmartStartLoading(true);
+            const personalGymId = await userService.ensurePersonalGym(user!.id);
+            navigate(`/territory/${personalGymId}/workout`);
+        } catch (error) {
+            console.error("Error starting free workout:", error);
+            alert("Error al iniciar entrenamiento libre.");
+            setSmartStartLoading(false);
+        }
     };
 
     const confirmSmartStart = () => {
@@ -1033,6 +1056,44 @@ export const UserProfile = () => {
                 maxDistance={200}
                 errorType={locationError.errorType}
             />
+
+            {/* FORCE START MODAL (Fallback) */}
+            {showForceStartModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl relative">
+
+                        <div className="w-20 h-20 bg-neutral-800 rounded-full flex items-center justify-center mx-auto mb-6 border border-neutral-700">
+                            <MapPin size={40} className="text-neutral-500" />
+                        </div>
+
+                        <h3 className="text-2xl font-black text-white italic uppercase mb-2">
+                            FUERA DE RANGO
+                        </h3>
+
+                        <p className="text-neutral-400 mb-8">
+                            No te encuentras en ningún gym registrado (Rango 0.1km).<br /><br />
+                            <span className="text-white font-bold">¿Deseas continuar el entrenamiento en modo libre?</span>
+                        </p>
+
+                        <div className="grid gap-3">
+                            <button
+                                onClick={handleForceStart}
+                                className="w-full bg-white text-black font-black py-4 rounded-xl hover:bg-neutral-200 transition-colors shadow-lg flex items-center justify-center gap-2"
+                            >
+                                <Play size={20} fill="currentColor" />
+                                <span>SÍ, INICIAR LIBRE</span>
+                            </button>
+
+                            <button
+                                onClick={() => setShowForceStartModal(false)}
+                                className="w-full bg-neutral-800 text-neutral-400 font-bold py-3 rounded-xl hover:bg-neutral-700 transition-colors"
+                            >
+                                CANCELAR
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
