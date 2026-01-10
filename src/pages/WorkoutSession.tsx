@@ -198,7 +198,7 @@ export const WorkoutSession = () => {
             let activeError = null;
 
             // 3a. Check if we have an INTENDED session from navigation (Volver button)
-            const intendedSessionId = location.state?.sessionId;
+            const intendedSessionId = (location as any).state?.sessionId;
             if (intendedSessionId) {
                 console.log("📍 Resuming specific session from navigation:", intendedSessionId);
                 const result = await workoutService.getSessionById(intendedSessionId);

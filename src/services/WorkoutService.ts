@@ -6,6 +6,7 @@ export interface WorkoutSession {
     user_id: string;
     started_at: string;
     finished_at?: string;
+    end_time?: string; // DB Column
     notes?: string;
     gym?: {
         name: string;
