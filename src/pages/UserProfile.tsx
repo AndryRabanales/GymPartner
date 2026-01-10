@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { MapPin, Swords, Trophy, History, Dumbbell, Play, Loader, LogIn, ArrowLeft, Star, Crown, Edit2, LineChart, Search } from 'lucide-react';
+import { Trophy, MapPin, Edit2, LogIn, Loader, Swords, Dumbbell, LineChart, History, Star, Search, ArrowLeft, Crown } from 'lucide-react';
 // import { UserPlus, Grid } from 'lucide-react'; // UNUSED: Hidden Community Features
 // import { Grid } from 'lucide-react'; // UNUSED: Hidden Community Features
 import { Link, useNavigate } from 'react-router-dom';
@@ -21,7 +21,7 @@ import { StreakFlame } from '../components/gamification/StreakFlame';
 import { alphaService } from '../services/AlphaService';
 import { useBottomNav } from '../context/BottomNavContext';
 import { TierService } from '../services/TierService';
-
+import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
 
 
 interface ProfileData {
@@ -71,117 +71,53 @@ export const UserProfile = () => {
     const [userRanking, setUserRanking] = useState<number | null>(null); // 1-10 or null
     const [alphaHistory, setAlphaHistory] = useState<any[]>([]);
 
-    // SMART START STATE
-    const [smartStartLoading, setSmartStartLoading] = useState(false);
-    const [detectedGym, setDetectedGym] = useState<UserPrimaryGym | null>(null);
-    const [showSmartStartModal, setShowSmartStartModal] = useState(false);
-    const [showForceStartModal, setShowForceStartModal] = useState(false);
+    // TUTORIAL STATE
+    const [tutorialStep, setTutorialStep] = useState(0);
 
-    // --- SMART START LOGIC ---
-    // --- SMART START LOGIC ---
-    const handleSmartStart = () => {
-        setSmartStartLoading(true);
-        if (!navigator.geolocation) {
-            alert("Necesitamos tu ubicación para iniciar la misión.");
-            setSmartStartLoading(false);
+    useEffect(() => {
+        console.log('[TUTORIAL] Current Step State:', tutorialStep);
+        if (tutorialStep === 5) {
+            setTimeout(() => {
+                const el = document.getElementById('tut-find-gyms-btn');
+                console.log('[TUTORIAL] Step 5 Target found?', !!el);
+            }, 500);
+        }
+    }, [tutorialStep]);
+
+    useEffect(() => {
+        // Check URL for tutorial override (from redirect)
+        const params = new URLSearchParams(window.location.search);
+        const urlTutorialStep = params.get('tutorial');
+
+        if (urlTutorialStep) {
+            const step = parseInt(urlTutorialStep);
+            console.log('[TUTORIAL] Loading from URL param:', step);
+            setTutorialStep(step);
+            localStorage.setItem('tutorial_step', step.toString());
+            // Clean URL
+            window.history.replaceState({}, '', '/');
             return;
         }
 
-        navigator.geolocation.getCurrentPosition(
-            async (position) => {
-                const { latitude, longitude } = position.coords;
-                // Find Nearest Gym
-                const nearest = await userService.findNearestGym(latitude, longitude);
-
-                setSmartStartLoading(false);
-
-                if (nearest && nearest.lat !== undefined && nearest.lng !== undefined) {
-                    const distKm = getDistanceFromLatLonInKm(latitude, longitude, nearest.lat, nearest.lng);
-                    console.log(`[Smart Start] Nearest: ${nearest.gym_name}, Dist: ${distKm.toFixed(3)}km`);
-
-                    if (distKm <= 0.1) {
-                        // Success: Within 100m
-                        setDetectedGym(nearest);
-                        setShowSmartStartModal(true);
-                        return;
-                    }
-                }
-
-                // Fallback: No gym found OR too far
-                setShowForceStartModal(true);
-            },
-            (err) => {
-                console.error(err);
-                setSmartStartLoading(false);
-                alert("Error al obtener ubicación. Asegúrate de tener el GPS activado.");
-            }
-        );
-    };
-
-    const handleForceStart = async () => {
-        // Start "Free Workout" (Global/Personal Mode)
-        try {
-            setSmartStartLoading(true);
-            const personalGymId = await userService.ensurePersonalGym(user!.id);
-            navigate(`/territory/${personalGymId}/workout`);
-        } catch (error) {
-            console.error("Error starting free workout:", error);
-            alert("Error al iniciar entrenamiento libre.");
-            setSmartStartLoading(false);
-        }
-    };
-
-    const confirmSmartStart = () => {
-        if (detectedGym) {
-            navigate(`/territory/${detectedGym.gym_id}/workout`);
-        }
-    };
-
-    useEffect(() => {
-        if (user) {
-            loadUserData();
-            socialService.getProfileStats(user.id).then(setSocialStats);
-            if (!hasSeededRef.current) {
-                hasSeededRef.current = true;
-            }
+        // Resume tutorial if active
+        const savedStep = localStorage.getItem('tutorial_step');
+        if (savedStep) {
+            const step = parseInt(savedStep);
+            console.log('[TUTORIAL] Resuming from localStorage:', step);
+            setTutorialStep(step);
         } else {
-            setLoading(false);
+            // START TUTORIAL AUTOMATICALLY IF NEW USER (First time)
+            const hasSeen = localStorage.getItem('hasSeenGlobalTutorial');
+            if (!hasSeen) {
+                console.log('[TUTORIAL] New user detected, starting tutorial');
+                setTimeout(() => {
+                    setTutorialStep(1);
+                    localStorage.setItem('tutorial_step', '1');
+                    localStorage.setItem('hasSeenGlobalTutorial', 'true');
+                }, 1000);
+            }
         }
-    }, [user]);
-
-    useEffect(() => {
-        if (user && userGyms.length > 0) loadAlphaData();
-    }, [user, userGyms]);
-
-
-    if (authLoading) return <div className="min-h-screen flex items-center justify-center text-gym-primary"><Loader className="animate-spin" size={32} /></div>;
-
-    if (!user) {
-        // ... (Landing Page Code Omitted for Brevity - Keeping Existing)
-        return (
-            <div className="flex flex-col bg-neutral-950 flex-1 h-full">
-                {/* Re-insert Landing Page Content if necessary, or assume it's kept because I'm targeting specific lines? 
-                    Wait, replace_file_content replaces a BLOCK. I need to be careful not to delete the landing page if I am targeting the whole file structure.
-                    
-                    The user is asking to "deshagamosnos del tutorial". 
-                    
-                    The Landing Page is lines 347-410.
-                    The Onboarding (Target) is lines 417-487.
-                    
-                    I will TARGET the `Onboarding` block and `Hero` block if I can, but `replace_file_content` works on line numbers/content matching.
-                    
-                    This replacement chunk moves `handleSmartStart` to the top context.
-                    I will construct the replacement to cover the `tutorialStep` state (lines 75-120) and the Onboarding View (417-487).
-                 */}
-            </div>
-        )
-    }
-    // ACTUALLY, I will use multiple Replace calls to be safe.
-    // 1. Add State & Handlers near top.
-    // 2. Remove Tutorial Effects.
-    // 3. Replace Onboarding View with Smart Start View (or just remove it).
-    // Let's do a multi-replace.
-
+    }, [navigate]);
 
     useEffect(() => {
         if (user) {
@@ -289,6 +225,13 @@ export const UserProfile = () => {
                             }
                         } catch (err) {
                             console.error("Error checking first visit:", err);
+                        }
+
+                        // COMPLETE TUTORIAL if active (Step 7 -> Done)
+                        if (localStorage.getItem('tutorial_step') === '7') {
+                            localStorage.setItem('tutorial_step', '0');
+                            localStorage.setItem('hasSeenImportTutorial', 'true');
+                            setTutorialStep(0);
                         }
 
                         // Proceed to workout
@@ -801,29 +744,7 @@ export const UserProfile = () => {
 
             {/* Quick Actions / Passport Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-4">
-
-                {/* SMART START BUTTON - HERO */}
-                <button
-                    onClick={handleSmartStart}
-                    disabled={smartStartLoading}
-                    className="col-span-2 group bg-gym-primary hover:bg-yellow-400 border border-yellow-500/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center shadow-[0_0_20px_rgba(250,204,21,0.2)] hover:shadow-[0_0_30px_rgba(250,204,21,0.4)] relative overflow-hidden"
-                >
-                    {smartStartLoading ? (
-                        <Loader className="animate-spin text-black" size={32} />
-                    ) : (
-                        <>
-                            <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500 rounded-2xl"></div>
-                            <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-black/10 flex items-center justify-center group-hover:scale-115 transition-transform relative z-10">
-                                <Swords className="text-black w-4 h-4 md:w-6 md:h-6" strokeWidth={3} />
-                            </div>
-                            <div className="relative z-10">
-                                <span className="block font-black text-black text-sm md:text-xl uppercase italic tracking-tighter leading-none">INICIAR MISIÓN</span>
-                                <span className="block text-[10px] md:text-xs text-black/70 font-bold uppercase tracking-widest mt-1">Detectar Base</span>
-                            </div>
-                        </>
-                    )}
-                </button>
-                <Link to="/arsenal" className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-blue-500/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md">
+                <Link id="tut-global-arsenal-btn" to="/arsenal" onClick={() => { if (tutorialStep === 1) localStorage.setItem('tutorial_step', '2'); }} className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-blue-500/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md">
                     <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-blue-500/5 flex items-center justify-center group-hover:scale-110 transition-transform border border-blue-500/10">
                         <Dumbbell className="text-blue-500 w-4 h-4 md:w-6 md:h-6" />
                     </div>
@@ -896,7 +817,10 @@ export const UserProfile = () => {
 
 
                         return (
-                            <div id={`tut-gym-card-${index}`} key={gym.gym_id} className={`bg-neutral-900 border ${gym.is_home_base ? 'border-yellow-500/50 shadow-[0_0_20px_rgba(234,179,8,0.1)]' : 'border-neutral-800'} p-3 md:p-6 rounded-xl md:rounded-2xl flex items-center justify-between group hover:border-gym-primary/30 transition-colors shadow-sm relative overflow-hidden`}>
+                            <div id={`tut-gym-card-${index}`} key={gym.gym_id} onClick={() => {
+                                if (localStorage.getItem('tutorial_step') === '3') localStorage.setItem('tutorial_step', '4');
+                                if (localStorage.getItem('tutorial_step') === '5') localStorage.setItem('tutorial_step', '6');
+                            }} className={`bg-neutral-900 border ${gym.is_home_base ? 'border-yellow-500/50 shadow-[0_0_20px_rgba(234,179,8,0.1)]' : 'border-neutral-800'} p-3 md:p-6 rounded-xl md:rounded-2xl flex items-center justify-between group hover:border-gym-primary/30 transition-colors shadow-sm relative overflow-hidden`}>
                                 <div className="flex-1 min-w-0 mr-3">
                                     <h3 className={`font-bold text-sm md:text-lg mb-0.5 md:mb-1 transition-colors truncate max-w-[200px] md:max-w-none flex items-center gap-2 ${gym.is_home_base ? 'text-yellow-400' : 'text-white'}`}>
                                         {gym.gym_name}
@@ -939,6 +863,15 @@ export const UserProfile = () => {
                                         <Link
                                             id={`tut-config-gym-btn-${index}`}
                                             to={`/territory/${gym.gym_id}/arsenal`}
+                                            onClick={() => {
+                                                // Ensure tutorial advances if blindly following flow
+                                                if (localStorage.getItem('tutorial_step') === '5') {
+                                                    localStorage.setItem('tutorial_step', '6');
+                                                }
+                                                if (localStorage.getItem('tutorial_step') === '6') {
+                                                    localStorage.setItem('tutorial_step', '7');
+                                                }
+                                            }}
                                             className="bg-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-700 w-10 h-10 md:w-auto md:h-auto md:px-4 md:py-2 rounded-lg md:rounded-xl transition-all font-bold flex items-center justify-center gap-2 border border-neutral-700 hover:border-white/20"
                                         >
                                             <Dumbbell size={18} />
@@ -999,55 +932,96 @@ export const UserProfile = () => {
 
 
 
-            {/* SMART START MODAL */}
-            {showSmartStartModal && detectedGym && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-neutral-900 border border-gym-primary/30 rounded-3xl p-8 max-w-sm w-full text-center shadow-[0_0_50px_rgba(250,204,21,0.2)] relative">
-
-                        {/* Radar Pulse Effect */}
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gym-primary/5 rounded-full blur-3xl -z-10 animate-pulse"></div>
-
-                        <div className="w-20 h-20 bg-gym-primary/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-gym-primary/20">
-                            <MapPin size={40} className="text-gym-primary animate-bounce" />
-                        </div>
-
-                        <h3 className="text-2xl font-black text-white italic uppercase mb-2">
-                            UBICACIÓN DETECTADA
-                        </h3>
-
-                        <p className="text-neutral-400 mb-8">
-                            ¿Te encuentras en <br />
-                            <span className="text-gym-primary font-bold text-lg">{detectedGym.gym_name}</span>?
-                        </p>
-
-                        <div className="grid gap-3">
-                            <button
-                                onClick={confirmSmartStart}
-                                className="w-full bg-gym-primary text-black font-black py-4 rounded-xl hover:scale-105 transition-transform shadow-lg shadow-gym-primary/20 flex items-center justify-center gap-2"
-                            >
-                                <Swords size={20} />
-                                <span>SÍ, INICIAR MISIÓN</span>
-                            </button>
-
-                            <button
-                                onClick={() => setShowSmartStartModal(false)}
-                                className="w-full bg-neutral-800 text-neutral-400 font-bold py-3 rounded-xl hover:bg-neutral-700 transition-colors"
-                            >
-                                CANCELAR
-                            </button>
-                        </div>
-                    </div>
-                </div>
+            {/* TUTORIAL STEP 1: Global Arsenal (Create Routine) */}
+            {tutorialStep === 1 && (
+                <InteractiveOverlay
+                    targetId="tut-global-arsenal-btn"
+                    title="PASO 1: CREAR MIS RUTINAS"
+                    message="Haz clic en 'Crear mis Rutinas' para forjar tu primera estrategia de combate."
+                    step={1}
+                    totalSteps={7}
+                    onNext={() => { }}
+                    onClose={() => {
+                        setTutorialStep(0);
+                        localStorage.setItem('tutorial_step', '0');
+                        localStorage.setItem('hasSeenGlobalTutorial', 'true'); // Pivot point: Mark GLOBAL as seen
+                        localStorage.setItem('hasSeenImportTutorial', 'true');
+                    }}
+                    placement="top"
+                    disableNext={true}
+                />
             )}
+
+            {/* TUTORIAL STEP 5: Find Gym on Map */}
+            {tutorialStep === 5 && (
+                <InteractiveOverlay
+                    targetId="tut-find-gyms-btn"
+                    title="PASO 5: BUSCA TU GIMNASIO"
+                    message="Haz clic en 'Encontrar Gimnasios' para ir al mapa. Luego, usa el buscador para encontrar tu gimnasio (ej: 'Spartanos') y selecciónalo para agregarlo a tu mapa."
+                    step={5}
+                    totalSteps={7}
+                    onNext={() => { }}
+                    onClose={() => {
+                        setTutorialStep(0);
+                        localStorage.setItem('tutorial_step', '0');
+                    }}
+                    placement="bottom"
+                    disableNext={true}
+                />
+            )}
+
+            {/* TUTORIAL STEP 7: Start Workout (Final) */}
+            {tutorialStep === 7 && !locationError.isOpen && (
+                <InteractiveOverlay
+                    targetId="tut-start-workout-btn-0"
+                    title="PASO FINAL: INICIAR ENTRENAMIENTO"
+                    message="¡Todo listo! Inicia tu entrenamiento (Verificación GPS requerida)."
+                    step={7}
+                    totalSteps={7}
+                    onNext={() => {
+                        setTutorialStep(0);
+                        localStorage.setItem('tutorial_step', '0'); // Fixes persistence loop
+                        localStorage.setItem('hasSeenImportTutorial', 'true');
+                    }}
+                    onClose={() => {
+                        setTutorialStep(0);
+                        localStorage.setItem('tutorial_step', '0'); // Fixes persistence loop
+                        localStorage.setItem('hasSeenImportTutorial', 'true');
+                    }}
+                    placement="top"
+                    disableNext={false}
+                    nextLabel="ENTENDIDO"
+                />
+            )}
+
+            <div className="flex flex-col items-center gap-4 mt-12 pb-12 opacity-50 hover:opacity-100 transition-opacity">
+                <button
+                    onClick={() => {
+                        // 1. Force Scroll Top Instantly
+                        window.scrollTo(0, 0);
+
+                        // 2. Restart Unified Flow (Step 1)
+                        localStorage.removeItem('hasSeenImportTutorial');
+                        localStorage.setItem('tutorial_step', '1');
+                        setTutorialStep(0); // Force re-render
+                        setTimeout(() => {
+                            setTutorialStep(1);
+                        }, 50);
+                    }}
+                    className="flex items-center gap-2 px-8 py-3 rounded-full border border-neutral-800 bg-neutral-900/50 text-neutral-400 text-xs font-bold hover:bg-gym-primary/10 hover:text-white hover:border-gym-primary/50 transition-all uppercase tracking-widest"
+                >
+                    <span>INICIAR TUTORIAL</span>
+                </button>
+            </div>
+
+
 
             {/* MODALS */}
             <ReferralModal
                 isOpen={showReferralModal}
                 onClose={() => setShowReferralModal(false)}
                 user={user}
-            />
-
-            {/* LOCATION ACCESS MODAL */}
+            />    {/* LOCATION ACCESS MODAL */}
             <LocationAccessModal
                 isOpen={locationError.isOpen}
                 onClose={() => setLocationError(prev => ({ ...prev, isOpen: false }))}
@@ -1055,44 +1029,44 @@ export const UserProfile = () => {
                 distanceMeters={locationError.distanceMeters}
                 maxDistance={200}
                 errorType={locationError.errorType}
+
             />
 
-            {/* FORCE START MODAL (Fallback) */}
-            {showForceStartModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
-                    <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl relative">
+            {/* TUTORIAL STEP 6 Overlay (Configuration) */}
+            {tutorialStep === 6 && userGyms.length > 0 && (
+                <InteractiveOverlay
+                    targetId={`tut-config-gym-btn-${userGyms.length - 1}`}
+                    title="PASO 6: PREPARATIVOS"
+                    message="¡Base establecida! Ahora entra a configurar el equipo de tu gimnasio."
+                    step={6}
+                    totalSteps={8}
+                    onClose={() => { }}
+                    placement="top"
+                    nonBlocking={true}
+                    disableNext={true}
+                />
+            )}
 
-                        <div className="w-20 h-20 bg-neutral-800 rounded-full flex items-center justify-center mx-auto mb-6 border border-neutral-700">
-                            <MapPin size={40} className="text-neutral-500" />
-                        </div>
-
-                        <h3 className="text-2xl font-black text-white italic uppercase mb-2">
-                            FUERA DE RANGO
-                        </h3>
-
-                        <p className="text-neutral-400 mb-8">
-                            No te encuentras en ningún gym registrado (Rango 0.1km).<br /><br />
-                            <span className="text-white font-bold">¿Deseas continuar el entrenamiento en modo libre?</span>
-                        </p>
-
-                        <div className="grid gap-3">
-                            <button
-                                onClick={handleForceStart}
-                                className="w-full bg-white text-black font-black py-4 rounded-xl hover:bg-neutral-200 transition-colors shadow-lg flex items-center justify-center gap-2"
-                            >
-                                <Play size={20} fill="currentColor" />
-                                <span>SÍ, INICIAR LIBRE</span>
-                            </button>
-
-                            <button
-                                onClick={() => setShowForceStartModal(false)}
-                                className="w-full bg-neutral-800 text-neutral-400 font-bold py-3 rounded-xl hover:bg-neutral-700 transition-colors"
-                            >
-                                CANCELAR
-                            </button>
-                        </div>
-                    </div>
-                </div>
+            {/* TUTORIAL STEP 8 Overlay (Start Training) */}
+            {tutorialStep === 8 && userGyms.length > 0 && (
+                <InteractiveOverlay
+                    targetId={`tut-start-workout-btn-${userGyms.length - 1}`}
+                    title="PASO 8: ¡A LA BATALLA!"
+                    message="Tu base está lista. Inicia tu entrenamiento y comienza a ganar experiencia."
+                    step={8}
+                    totalSteps={8}
+                    nextLabel="¡EMPEZAR!"
+                    onNext={() => {
+                        setTutorialStep(0);
+                        localStorage.setItem('tutorial_step', '0');
+                    }}
+                    onClose={() => {
+                        setTutorialStep(0);
+                        localStorage.setItem('tutorial_step', '0');
+                    }}
+                    placement="top"
+                    nonBlocking={true}
+                />
             )}
         </div>
     );

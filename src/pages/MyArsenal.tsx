@@ -1,140 +1,27 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Plus, Search, ChevronRight, Check, Swords, Loader, Trash2, X, Dumbbell, Edit2, Save } from 'lucide-react';
+import { Link, useParams, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Plus, Search, ChevronRight, Check, Swords, Loader, Trash2, Dumbbell, Save, Edit2, X } from 'lucide-react';
 import { userService } from '../services/UserService';
-
+import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
 import type { Equipment } from '../services/GymEquipmentService';
 import { equipmentService, COMMON_EQUIPMENT_SEEDS, EQUIPMENT_CATEGORIES } from '../services/GymEquipmentService';
-import type { CustomCategory, CustomMetric, CustomSettings } from '../services/GymEquipmentService';
+import type { CustomCategory, CustomSettings } from '../services/GymEquipmentService';
 import { workoutService } from '../services/WorkoutService';
 import { supabase } from '../lib/supabase';
 import { PublicTeaser } from '../components/common/PublicTeaser';
+import { normalizeText, getMuscleGroup } from '../utils/inventoryUtils';
+import { ArsenalCard } from '../components/arsenal/ArsenalCard';
+import { ArsenalGrid } from '../components/arsenal/ArsenalGrid';
+import { EquipmentForm } from '../components/arsenal/EquipmentForm';
 
 // Local constants removed in favor of Service imports
 
-interface ArsenalCardProps {
-    item: Equipment;
-    muscleGroup?: string;
-    isSelected?: boolean;
-    userSettings: CustomSettings; // Changed from customCategories to full settings for metrics access
-    onEdit?: (item: Equipment) => void;
-    configOverride?: any; // Routine specific configuration
-}
-
-const ArsenalCard = ({ item, isSelected, userSettings, onEdit, configOverride }: ArsenalCardProps) => {
-    // Determine active metrics based on item data or fallback
-    // If configOverride is present (Routine Context), use it to determine active flags.
-    let activeMetricIds: string[] = [];
-
-    if (configOverride) {
-        // We are in routine context, check specific flags
-        if (configOverride.track_weight !== false && (configOverride.track_weight || item.metrics?.weight)) activeMetricIds.push('weight');
-        if (configOverride.track_reps !== false && (configOverride.track_reps || item.metrics?.reps)) activeMetricIds.push('reps');
-        if (configOverride.track_time) activeMetricIds.push('time');
-        if (configOverride.track_distance) activeMetricIds.push('distance');
-        if (configOverride.track_rpe) activeMetricIds.push('rpe');
-        if (configOverride.track_pr) activeMetricIds.push('track_pr');
-        // Custom metric string?
-    } else {
-        // Default View (Inventory)
-        activeMetricIds = item.metrics ? Object.keys(item.metrics).filter(k => item.metrics![k]) : ['weight', 'reps'];
-    }
-
-    const getMetricInfo = (id: string) => {
-        // 1. Check Custom
-        const custom = userSettings.metrics.find(m => m.id === id);
-        if (custom) return { label: custom.label, icon: custom.icon };
-
-        // 2. Check Defaults
-        const defaults: Record<string, { label: string, icon: string }> = {
-            weight: { label: 'PESO', icon: '⚖️' },
-            reps: { label: 'REPS', icon: '🔄' },
-            time: { label: 'TIEMPO', icon: '⏱️' },
-            distance: { label: 'DIST', icon: '📏' },
-            rpe: { label: 'RPE', icon: '🔥' }
-        };
-        return defaults[id] || { label: id, icon: '📊' };
-    };
-
-
-    // Find category icon
-    const catId = item.category;
-    const standardCat = EQUIPMENT_CATEGORIES[catId as keyof typeof EQUIPMENT_CATEGORIES];
-    const customCat = userSettings.categories.find(c => c.id === catId);
-
-    // Resolve Icon: Custom > Standard > Fallback string (if emoji directly stored) > Default
-    // Sometimes customCategory is just the keys, sometimes dynamic.
-    const icon = customCat?.icon || standardCat?.icon || '⚡';
-
-    return (
-        <div className={`
-            relative group h-full transition-all duration-300
-            ${isSelected
-                ? 'bg-gym-primary text-black ring-4 ring-gym-primary/30 shadow-[0_0_40px_rgba(255,255,255,0.3)]'
-                : 'bg-neutral-900 border border-white/5 hover:bg-neutral-800 hover:border-white/20'
-            }
-            rounded-2xl overflow-hidden flex flex-col
-        `}>
-            {/* Selection Indicator */}
-            <div className={`absolute top-2 left-2 z-20 flex gap-1 flex-row-reverse`}>
-                {onEdit && (
-                    <button
-                        onClick={(e) => { e.stopPropagation(); onEdit(item); }}
-                        className={`w-6 h-6 rounded-full flex items-center justify-center transition-all bg-white/10 hover:bg-white text-white hover:text-black`}
-                    >
-                        {/* Pencil Icon */}
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
-                    </button>
-                )}
-
-                <div className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${isSelected ? 'bg-black text-gym-primary' : 'bg-white/10 text-transparent group-hover:bg-white/20'
-                    }`}>
-                    <Check size={12} strokeWidth={4} />
-                </div>
-            </div>
-
-            <div className="flex flex-col h-full relative group aspect-[3/4] min-h-[130px] p-1.5 overflow-hidden bg-neutral-900 border border-white/5 rounded-lg">
-                {/* Icon - Centered, slightly smaller to allow breathing room */}
-                <div className="flex-1 flex items-center justify-center w-full z-10 pb-2 pt-2">
-                    <span className="text-5xl leading-none drop-shadow-md filter brightness-110 grayscale-[0.2] hover:grayscale-0 transition-transform duration-300 transform group-hover:scale-110 select-none">{icon}</span>
-                </div>
-
-                {/* Title - Anchored to bottom, with horizontal padding */}
-                <div className="text-center w-full px-1.5 leading-none z-20 pb-1.5 min-h-0 flex-shrink-0">
-                    <h4 className={`text-[9px] font-black italic uppercase tracking-wider line-clamp-3 text-wrap leading-tight ${isSelected ? 'text-black' : 'text-neutral-200'} drop-shadow-sm`}>
-                        {item.name}
-                    </h4>
-                </div>
-
-                {/* Footer / Stats - Distinct background */}
-                <div className={`border-t ${isSelected ? 'border-black/10' : 'border-white/5'} w-full bg-black/40 backdrop-blur-sm`}>
-                    <div className="flex flex-wrap gap-1 justify-center w-full py-1">
-                        {activeMetricIds.map(mid => {
-                            const info = getMetricInfo(mid);
-                            if (!info) return null;
-                            return (
-                                <span key={mid} className={`
-                                    text-[6px] font-bold px-1 py-0.5 rounded-[2px]
-                                    flex items-center gap-0.5 leading-none
-                                    ${isSelected ? 'text-black bg-white/20' : 'text-neutral-400'}
-                                `}>
-                                    <span>{info.icon}</span>
-                                    <span className="tracking-wide uppercase">{info.label}</span>
-                                </span>
-                            );
-                        })}
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
 
 export const MyArsenal = () => {
     const { user } = useAuth();
     const { gymId: routeGymId } = useParams<{ gymId: string }>();
-
+    const navigate = useNavigate();
 
     if (!user) {
         return (
@@ -167,28 +54,16 @@ export const MyArsenal = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
 
-
+    // TUTORIAL STATE
+    const [tutorialStep, setTutorialStep] = useState(0);
+    useEffect(() => {
+        const step = localStorage.getItem('tutorial_step');
+        if (step) setTutorialStep(parseInt(step));
+    }, []);
 
     // Custom Exercise State
-    const [customMode, setCustomMode] = useState(false);
-    const [customName, setCustomName] = useState('');
-    const [customCategory, setCustomCategory] = useState<string>('STRENGTH_MACHINE');
-    const [customMetrics, setCustomMetrics] = useState({
-        weight: true,
-        reps: true,
-        time: false,
-        distance: false,
-        rpe: false
-    });
+    // Custom Exercise State (Simplified for EquipmentForm)
     const [userSettings, setUserSettings] = useState<CustomSettings>({ categories: [], metrics: [] });
-    // New state for custom creation forms
-    const [isCreatingCategory, setIsCreatingCategory] = useState(false);
-    const [newCategoryName, setNewCategoryName] = useState('');
-    const [newCategoryIcon, setNewCategoryIcon] = useState('✨');
-
-    const [isCreatingMetric, setIsCreatingMetric] = useState(false);
-    const [newMetricName, setNewMetricName] = useState('');
-    const [newMetricIcon, setNewMetricIcon] = useState('📊');
     const [editingItem, setEditingItem] = useState<Equipment | null>(null);
 
 
@@ -289,196 +164,29 @@ export const MyArsenal = () => {
         const isVirtual = item.id.startsWith('virtual-') || item.verified_by === null;
 
         if (isVirtual) {
-            setEditingItem(null); // Treat as new
+            setEditingItem({ ...item, id: undefined } as any); // Treat as new, prepopulate form
         } else {
             setEditingItem(item); // Treat as update
         }
-
-        setCustomName(item.name);
-        setCustomCategory(item.category);
-
-        // 1. Load Base Metrics from Equipment
-        let loadedMetrics = { ...item.metrics };
-
-        // 2. [FIX] Override with Routine Specifics if available
-        // This ensures that if we enabled "RPE" in this routine, the modal shows it enabled.
-        const routineOverride = routineConfigs.get(item.id);
-        if (routineOverride) {
-            loadedMetrics = {
-                ...loadedMetrics,
-                weight: routineOverride.track_weight ?? loadedMetrics.weight,
-                reps: routineOverride.track_reps ?? loadedMetrics.reps,
-                time: routineOverride.track_time ?? loadedMetrics.time,
-                distance: routineOverride.track_distance ?? loadedMetrics.distance,
-                rpe: routineOverride.track_rpe ?? loadedMetrics.rpe,
-                track_pr: routineOverride.track_pr ?? (loadedMetrics as any).track_pr
-                // Note: custom_metric string is handled elsewhere or implicitly
-            };
-        }
-
-        if (item.metrics || routineOverride) {
-            setCustomMetrics(prev => ({ ...prev, ...loadedMetrics }));
-        }
         setAddingMode(true);
-        setCustomMode(true);
     };
 
-    const handleCreateCustom = async () => {
-        if (!user) {
-            alert("Error: Usuario no identificado.");
-            return;
-        }
-        if (!customName.trim()) {
-            alert("Por favor escribe un nombre para el ejercicio.");
-            return;
-        }
-
-        // [FIX] Always save Custom Exercises to Personal Gym so they are available globally
-        // instead of attaching them to the specific physical gym currently viewed.
-        let finalGymId = null;
-        try {
-            finalGymId = await userService.ensurePersonalGym(user.id);
-        } catch (e) {
-            console.error("Error securing personal gym for custom item:", e);
-            // Fallback (unlikely)
-            finalGymId = (await resolveTargetGymId()) || null;
-        }
-
-        // Resolve Icon from Category (Standard or Custom)
-        let resolvedIcon = '⚡';
-        // @ts-ignore
-        if (EQUIPMENT_CATEGORIES[customCategory]) {
-            // @ts-ignore
-            resolvedIcon = EQUIPMENT_CATEGORIES[customCategory].icon;
+    const handleEquipmentSuccess = (newItem: Equipment, isEdit: boolean) => {
+        // Optimistic Update
+        if (isEdit) {
+            setInventory(prev => prev.map(i => i.id === newItem.id ? newItem : i));
+            setGlobalInventory(prev => prev.map(i => i.id === newItem.id ? newItem : i));
         } else {
-            const customCat = userSettings.categories.find(c => c.id === customCategory);
-            if (customCat) resolvedIcon = customCat.icon;
-        }
-
-        const payload = {
-            name: customName,
-            category: customCategory,
-            gym_id: finalGymId, // Now pointing to Personal Gym
-            quantity: 1,
-            metrics: customMetrics,
-            icon: resolvedIcon // <--- SAVED TO DB
-        };
-        console.log('Attempting to create custom equipment:', payload);
-
-        try {
-            let newItem: Equipment;
-
-            // Debug Log
-            console.log('Updating/Creating equipment with payload:', { id: editingItem?.id, ...payload });
-
-            if (editingItem) {
-                const updatePayload = {
-                    name: customName,
-                    category: customCategory,
-                    metrics: customMetrics,
-                    icon: resolvedIcon
-                };
-                await equipmentService.updateEquipment(editingItem.id, updatePayload);
-                newItem = { ...editingItem, ...updatePayload };
-
-                // Optimistic Update for Edit - Update in both inventories
-                setInventory(prev => prev.map(i => i.id === newItem.id ? newItem : i));
-                setGlobalInventory(prev => prev.map(i => i.id === newItem.id ? newItem : i));
-
-            } else {
-                newItem = await equipmentService.addEquipment(payload, user.id);
-                console.log('✅ Exercise created successfully:', newItem);
-
-                // Add to BOTH inventory states so it appears immediately
-                setInventory(prev => [...prev, newItem]);
-                setGlobalInventory(prev => {
-                    // Avoid duplicates
-                    if (prev.some(item => item.id === newItem.id)) return prev;
-                    return [...prev, newItem];
-                });
-            }
-
-            // [FIX] Update Routine Configs immediately so the logic persists!
-            // Map the boolean metrics to the table columns format
-            const customKeys = Object.keys(customMetrics).filter(k => !['weight', 'reps', 'time', 'distance', 'rpe', 'track_pr'].includes(k) && (customMetrics as any)[k]);
-            const foundCustomMetric = customKeys.length > 0 ? customKeys[0] : null;
-
-            setRoutineConfigs(prev => {
-                const next = new Map(prev);
-                next.set(newItem.id, {
-                    track_weight: customMetrics.weight ?? true,
-                    track_reps: customMetrics.reps ?? true,
-                    track_time: customMetrics.time ?? false,
-                    track_distance: customMetrics.distance ?? false,
-                    track_rpe: customMetrics.rpe ?? false,
-                    track_pr: (customMetrics as any).track_pr ?? false,
-                    custom_metric: foundCustomMetric
-                });
-                return next;
+            setInventory(prev => [...prev, newItem]);
+            setGlobalInventory(prev => {
+                if (prev.some(item => item.id === newItem.id)) return prev;
+                return [...prev, newItem];
             });
-
-            // If creating new, auto-select it?
-            if (!editingItem) {
-                toggleSelection(newItem.id);
-            }
-
-            // Success - Close modal and reset form
-            setAddingMode(false);
-            setCustomMode(false);
-            setCustomName('');
-            setEditingItem(null);
-            setCustomMetrics({
-                weight: true,
-                reps: true,
-                time: false,
-                distance: false,
-                rpe: false
-            });
-
-            alert(`¡Ejercicio "${newItem.name}" creado y añadido a tu arsenal!`);
-
-            // NO LONGER NEEDED: Removed delayed initialize() that was overwriting optimistic updates
-            // The item is already in the state and will appear immediately
-
-        } catch (error: any) {
-            console.error('Detailed Error saving custom equipment:', error);
-
-            // Auto-Fallback for Enum Issues
-            if (error.message && (error.message.includes('enum') || error.message.includes('invalid input value'))) {
-                try {
-                    console.log('Falling back to STRENGTH_MACHINE due to Enum error...');
-                    const fallbackPayload = { ...payload, category: 'STRENGTH_MACHINE' };
-                    let fallbackItem: Equipment;
-
-                    if (editingItem) {
-                        await equipmentService.updateEquipment(editingItem.id, { ...fallbackPayload, id: undefined } as any);
-                        fallbackItem = { ...editingItem, ...fallbackPayload };
-                    } else {
-                        fallbackItem = await equipmentService.addEquipment(fallbackPayload, user.id);
-                        // Add to both inventories
-                        setInventory(prev => [...prev, fallbackItem]);
-                        setGlobalInventory(prev => {
-                            if (prev.some(item => item.id === fallbackItem.id)) return prev;
-                            return [...prev, fallbackItem];
-                        });
-                    }
-
-                    setAddingMode(false);
-                    setCustomMode(false);
-                    setCustomName('');
-                    setEditingItem(null);
-                    alert('¡Ejercicio guardado! (Nota: Se guardó como "Máquina" por restricciones del sistema, pero funcionará correctamente).');
-                    return;
-                } catch (retryError: any) {
-                    console.error('Fallback failed:', retryError);
-                    alert(`Error Crítico al guardar: ${retryError.message}`);
-                    return;
-                }
-            }
-
-            alert(`Error al guardar: ${error.message || JSON.stringify(error)}`);
+            if (!editingItem) toggleSelection(newItem.id);
         }
+        alert(`¡Ejercicio "${newItem.name}" guardado!`);
     };
+
 
     const handleImportRoutine = async (sourceRoutine: any) => {
         if (!user || !routeGymId) return;
@@ -490,8 +198,15 @@ export const MyArsenal = () => {
             await initialize(); // Refresh
             setImportingMode(false);
 
-            // Success
-            alert("¡Rutina Importada con éxito!");
+            // TUTORIAL ADVANCE: Step 7 -> 8 (Go to Training)
+            if (localStorage.getItem('tutorial_step') === '7') {
+                localStorage.setItem('tutorial_step', '8');
+                setTutorialStep(8);
+                alert("¡Arsenal Listo!\n\nRegresando a la base para iniciar el entrenamiento.");
+                navigate(-1); // Go back immediately to WorkoutSession/Profile
+            } else {
+                alert("¡Rutina Importada con éxito!");
+            }
         } catch (error) {
             console.error(error);
             alert("Error al importar estrategia.");
@@ -500,29 +215,6 @@ export const MyArsenal = () => {
         }
     };
 
-    const handleQuickAdd = async (seedItem: any) => {
-        if (!user) return;
-        // In a real scenario, this would create the item. 
-        // For now, we rely on the component re-render or explicit add call if needed.
-        // But since we use virtual items, we don't strictly *need* to add it to state if we select it.
-        // However, the user flow is "Browse > Click Add". 
-        // Let's implement optimistic update for adding a seed to "inventory" locally so it shows up immediately.
-
-        // Actually, we just need to "select" it? 
-        // No, "Add" suggests making it available. 
-        // Let's just create it immediately? Or add to local list.
-        // const fakeGymId = routeGymId || 'temp';
-        const tempId = `virtual-${seedItem.name}`; // Keep using virtual ID logic
-        // We just close the modal, assuming the user will find it in the list now?
-        // Wait, if it's already in the list (because we merge seeds), then "Add" in modal is redundant unless we are strictly filtering.
-        // Our seeds cover most things. 
-        // Let's say "Quick Add" adds it to SELECTION immediately.
-
-        if (!selectedItems.has(tempId)) {
-            toggleSelection(tempId);
-        }
-        setAddingMode(false);
-    };
 
     const toggleSelection = (id: string) => {
         setSelectedItems(prev => {
@@ -665,7 +357,11 @@ export const MyArsenal = () => {
         setViewMode('MACHINES');
         setSearchTerm('');
 
-
+        // TUTORIAL ADVANCE: Step 2 -> 3
+        if (tutorialStep === 2) {
+            setTutorialStep(3);
+            localStorage.setItem('tutorial_step', '3');
+        }
     };
 
     const handleDeleteRoutine = async (routineId: string, routineName: string) => {
@@ -681,10 +377,6 @@ export const MyArsenal = () => {
         }
 
         initialize(); // Refresh routines
-    };
-
-    const normalizeText = (text: string) => {
-        return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
     };
 
     const [globalInventory, setGlobalInventory] = useState<Equipment[]>([]);
@@ -705,9 +397,6 @@ export const MyArsenal = () => {
 
     const effectiveInventory = [...inventory, ...filteredGlobals];
 
-    // Removed excessive debug logs that were causing console noise during normal renders
-    // Only log when there are actual issues to diagnose
-
     // Merge Seeds (Virtual) only if not already present by NAME in the real/global list
     COMMON_EQUIPMENT_SEEDS.forEach(seed => {
         if (!effectiveInventory.some(i => normalizeText(i.name) === normalizeText(seed.name))) {
@@ -722,79 +411,33 @@ export const MyArsenal = () => {
         }
     });
 
-    const filteredInventory = effectiveInventory.filter(item =>
-        normalizeText(item.name).includes(normalizeText(searchTerm))
-    );
-
-    const getMuscleGroup = (item: Equipment | { name: string, category: string }): string => {
-        const n = normalizeText(item.name);
-        // FORCE_REFRESH: Ensure latest version is loaded
-
-        // 1. Check Custom Categories (Safety Check for userSettings)
-        if (userSettings?.categories) {
-            const matchedCategory = userSettings.categories.find(c => c.id === item.category);
-            if (matchedCategory) return matchedCategory.label;
-        }
-
-        // 2. Explicit Category Mapping (Standard)
-        if (item.category === 'CHEST') return 'Pecho';
-        if (item.category === 'BACK') return 'Espalda';
-        if (item.category === 'LEGS' || item.category === 'GLUTES' || item.category === 'CALVES') return 'Pierna';
-        if (item.category === 'SHOULDERS') return 'Hombros';
-        if (item.category === 'FOREARMS') return 'Antebrazo';
-        if (item.category === 'ARMS') {
-            if (n.includes('tricep') || n.includes('copa') || n.includes('fondos')) return 'Tríceps';
-            return 'Bíceps';
-        }
-
-        // 3. Fallback Keyword Matching
-        if (item.category === 'CARDIO') return 'Cardio';
-        if (n.includes('jalon') || n.includes('remo') || n.includes('espalda') || n.includes('dorsal') || n.includes('lumbares') || n.includes('dominada') || n.includes('pull over') || n.includes('hyper')) return 'Espalda';
-        if (n.includes('banca') || n.includes('pecho') || n.includes('chest') || n.includes('flexion') || n.includes('press plano') || n.includes('press inclinado') || n.includes('press declinado') || n.includes('pec deck') || n.includes('cruce de poleas') || n.includes('apertura')) return 'Pecho';
-        if (n.includes('pierna') || n.includes('sentadilla') || n.includes('squat') || n.includes('femoral') || n.includes('cuadriceps') || n.includes('gemelo') || n.includes('gluteo') || n.includes('hack') || n.includes('pantorrilla') || n.includes('hip thrust') || n.includes('prensa')) return 'Pierna';
-        if (n.includes('hombro') || n.includes('militar') || n.includes('lateral') || n.includes('press de hombro') || n.includes('trasnuca') || n.includes('face pull') || n.includes('pajaros')) return 'Hombros';
-        if (n.includes('bicep') || n.includes('curl') || n.includes('predicador')) return 'Bíceps';
-        if (n.includes('tricep') || n.includes('copa') || n.includes('fondos') || n.includes('frances')) return 'Tríceps';
-        if (n.includes('antebrazo') || n.includes('muñeca')) return 'Antebrazo';
-        if (n.includes('mancuerna') || n.includes('smith') || n.includes('multipower')) return 'Peso Libre (General)';
-        if (item.category === 'FREE_WEIGHT') return 'Peso Libre (General)';
-        if (item.category === 'CABLE') return 'Poleas / Varios';
-
-        return 'Otros';
+    const handleOpenCatalog = (section: string) => {
+        setActiveSection(section);
+        setAddingMode(true);
     };
 
-    const groupedInventory: Record<string, Equipment[]> = {};
-    const SECTION_ORDER = [
-        'Pecho', 'Espalda', 'Pierna', 'Hombros', 'Bíceps', 'Tríceps', 'Antebrazo',
-        'Cardio', 'Poleas / Varios', 'Peso Libre (General)', 'Otros',
-        ...userSettings.categories.map(c => c.label)
-    ];
-
-    filteredInventory.forEach(item => {
-        const group = getMuscleGroup(item);
-        if (!groupedInventory[group]) groupedInventory[group] = [];
-        groupedInventory[group].push(item);
+    // Filter seeds for the catalog modal based on active section
+    const catalogItems = COMMON_EQUIPMENT_SEEDS.filter(seed => {
+        // @ts-ignore
+        if (activeSection && EQUIPMENT_CATEGORIES[seed.category]) {
+            // @ts-ignore
+            const catLabel = EQUIPMENT_CATEGORIES[seed.category].label;
+            if (activeSection === 'Pecho' && catLabel === 'Pecho') return true;
+            // Simplified check:
+            return getMuscleGroup({ name: seed.name, category: seed.category }, userSettings) === activeSection;
+        }
+        return false;
     });
 
-    const openCatalog = (section: string) => {
-        setActiveSection(section);
-
-        // Auto-select category based on section
-        let defaultCat = 'STRENGTH_MACHINE';
-        switch (section) {
-            case 'Pecho': defaultCat = 'CHEST'; break;
-            case 'Espalda': defaultCat = 'BACK'; break;
-            case 'Pierna': defaultCat = 'LEGS'; break;
-            case 'Hombros': defaultCat = 'SHOULDERS'; break;
-            case 'Bíceps':
-            case 'Tríceps':
-                defaultCat = 'ARMS'; break;
-            case 'Antebrazo': defaultCat = 'FOREARMS'; break;
-            case 'Cardio': defaultCat = 'CARDIO'; break;
-            case 'Core': defaultCat = 'ABS'; break;
+    const handleQuickAdd = (seedItem: any) => {
+        // Create virtual item
+        const tempId = `virtual-${seedItem.name}`;
+        // Just select it
+        if (!selectedItems.has(tempId)) {
+            toggleSelection(tempId);
         }
-        setCustomCategory(defaultCat);
-        setAddingMode(true);
+        // Set adding mode to false to close modal
+        setAddingMode(false);
     };
 
     const handleSaveRoutine = async () => {
@@ -978,14 +621,38 @@ export const MyArsenal = () => {
                 }
                 alert("¡Nueva estrategia forjada!");
 
+                // TUTORIAL LOGIC:
+                // Step 4 (Creation Save) -> Step 5 (Profile Select Gym)
+                // Step 6 (Import Save) -> Step 7 (Profile Start)
+                const currentStep = localStorage.getItem('tutorial_step');
+                console.log('[TUTORIAL] Saving routine, current step:', currentStep);
 
+                // Allow 2, 3, 4, 5
+                if (currentStep && ['2', '3', '4', '5'].includes(currentStep)) {
+                    console.log('[TUTORIAL] Transitioning to step 5 and redirecting to home');
+                    localStorage.setItem('tutorial_step', '5');
+                    setTutorialStep(5);
 
-                // Reset
-                handleCreateNew();
-                initialize(); // Refresh lists
-                setViewMode('ROUTINES'); // Go back to list
-
+                    // Force full page reload to UserProfile with explicit tutorial param
+                    window.location.href = '/?tutorial=5';
+                    return; // Exit early
+                }
+                // Note: Import logic handles Step 6 elsewhere usually, or if Save handles imports too:
+                if (currentStep === '6' && routeGymId) {
+                    console.log('[TUTORIAL] Import completed, transitioning to step 7');
+                    localStorage.setItem('tutorial_step', '7');
+                    setTutorialStep(7);
+                    alert("¡Rutina importada con éxito!\n\nRegresa al INICIO para comenzar el entrenamiento.");
+                    navigate(-1); // Go back to UserProfile
+                    return;
+                }
             }
+
+            // Reset
+            handleCreateNew();
+            initialize(); // Refresh lists
+            setViewMode('ROUTINES'); // Go back to list
+
         } catch (error: any) {
             console.error(error);
             alert(`Error al guardar: ${error.message}`);
@@ -994,14 +661,6 @@ export const MyArsenal = () => {
         }
     };
 
-    const catalogItems = COMMON_EQUIPMENT_SEEDS.filter(seed => {
-        if (activeSection) {
-            // @ts-ignore
-            const seedGroup = getMuscleGroup(seed);
-            return seedGroup === activeSection;
-        }
-        return true;
-    });
 
     if (loading) return <div className="h-screen flex items-center justify-center bg-black text-gym-primary"><Loader className="animate-spin" /></div>;
 
@@ -1065,7 +724,41 @@ export const MyArsenal = () => {
                             </div>
                         )}
 
+                        {/* TUTORIAL OVERLAY STEP 2 (Create Routine) */}
+                        {tutorialStep === 2 && !addingMode && !importingMode && (
+                            <InteractiveOverlay
+                                targetId="tut-new-routine-btn"
+                                title="PASO 2: NUEVA RUTINA"
+                                message="Haz clic aquí para crear una nueva rutina personalizada desde cero."
+                                step={2}
+                                totalSteps={7}
+                                onNext={() => { }}
+                                onClose={() => {
+                                    setTutorialStep(0);
+                                    localStorage.setItem('hasSeenImportTutorial', 'true');
+                                }}
+                                placement="bottom"
+                                disableNext={true}
+                            />
+                        )}
 
+                        {/* TUTORIAL OVERLAY STEP 7 (Import Strategy) */}
+                        {tutorialStep === 7 && !addingMode && !importingMode && (
+                            <InteractiveOverlay
+                                targetId="tut-import-routine-btn"
+                                title="PASO 7: DESPLIEGUE RÁPIDO"
+                                message="Tu base está vacía. Haz clic en 'IMPORTAR MAESTRA' para equiparla con tu estrategia predefinida."
+                                step={7}
+                                totalSteps={8}
+                                onNext={() => { }}
+                                onClose={() => {
+                                    setTutorialStep(0);
+                                    localStorage.setItem('hasSeenImportTutorial', 'true');
+                                }}
+                                placement="top"
+                                disableNext={true}
+                            />
+                        )}
 
                         {/* Existing Routines */}
                         {
@@ -1138,6 +831,20 @@ export const MyArsenal = () => {
                         )}
                     </div>
 
+                    {/* TUTORIAL STEP 5 FALLBACK: Guide user back to Profile if they land here */}
+                    {tutorialStep === 5 && (
+                        <InteractiveOverlay
+                            step={5}
+                            totalSteps={7}
+                            targetId="tut-arsenal-back-btn"
+                            title="¡ESTRATEGIA FORJADA!"
+                            message="Has creado tu primera rutina maestra. Ahora regresa a tu perfil para desplegarla en un gimnasio real."
+                            placement="bottom"
+                            onNext={() => { navigate('/'); }}
+                            nextLabel="VOLVER AL INICIO"
+                            onClose={() => { }}
+                        />
+                    )}
 
                     {/* IMPORT MODAL (Local Mode Only) */}
                     {importingMode && (
@@ -1239,8 +946,9 @@ export const MyArsenal = () => {
                                 value={routineName}
                                 onChange={(e) => {
                                     setRoutineName(e.target.value);
-                                    if (e.target.value.length > 0) {
-                                        // Auto-save hint logic if needed, but no tutorial step
+                                    if (tutorialStep === 3 && e.target.value.length > 0) {
+                                        setTutorialStep(4);
+                                        localStorage.setItem('tutorial_step', '4');
                                     }
                                 }}
                                 required
@@ -1268,7 +976,45 @@ export const MyArsenal = () => {
             {/* MAIN CONTENT AREA */}
             <div className="max-w-7xl mx-auto px-4 md:px-6 pb-32 w-full relative">
 
+                {/* TUTORIAL STEP 3: NAME STRATEGY */}
+                {tutorialStep === 3 && (
+                    <InteractiveOverlay
+                        targetId="tut-routine-name-input"
+                        title="PASO 3: BAUTIZA TU ESTRATEGIA"
+                        message="Toda gran batalla comienza con un nombre. Escribe cómo llamarás a este plan de entrenamiento."
+                        step={3}
+                        totalSteps={7}
+                        placement="bottom"
+                        onClose={() => {
+                            setTutorialStep(0);
+                            localStorage.setItem('tutorial_step', '0');
+                        }}
+                        disableNext={true}
+                    />
+                )}
 
+                {/* TUTORIAL STEP 4: SELECT WEAPONS AND SAVE */}
+                {tutorialStep === 4 && (
+                    <InteractiveOverlay
+                        targetId={selectedItems.size > 0 ? "tut-save-routine-btn-mobile" : "tut-arsenal-grid"}
+                        title={selectedItems.size > 0 ? "PASO 4: GUARDA TU ESTRATEGIA" : "PASO 4: ELIGE TUS ARMAS"}
+                        message={selectedItems.size > 0
+                            ? "¡Perfecto! Ahora haz clic en el botón verde ✓ para guardar tu rutina y continuar."
+                            : "Selecciona las máquinas y ejercicios que formarán parte de esta rutina. Solo haz clic en ellas."}
+                        step={4}
+                        totalSteps={7}
+                        placement="top"
+                        onNext={() => {
+                            // Do nothing - tutorial continues to Step 5 after save
+                        }}
+                        nextLabel={selectedItems.size > 0 ? "¡A GUARDAR!" : "¡Entendido!"}
+                        onClose={() => {
+                            setTutorialStep(0);
+                            localStorage.setItem('tutorial_step', '0');
+                        }}
+                        disableNext={true}
+                    />
+                )}
 
 
                 {/* Visual Stats Bar */}
@@ -1281,391 +1027,34 @@ export const MyArsenal = () => {
                     </div>
                 </div>
 
-                <div className="space-y-6" id="tut-arsenal-grid">
-                    {/* Render Groups */}
-                    {SECTION_ORDER.map(section => {
-                        const items = groupedInventory[section] || [];
-                        const isCore = ['Pecho', 'Espalda', 'Pierna', 'Bíceps', 'Tríceps', 'Hombros'].includes(section);
-
-                        // Pass empty sections only if no search is active (so they can add), but if searching, hide empty.
-                        if (items.length === 0 && !isCore && searchTerm) return null;
-
-                        return (
-                            <div key={section} className="animate-in fade-in slide-in-from-bottom-8 duration-700 fill-mode-both">
-                                <h3 className="text-xs font-black text-neutral-500 uppercase tracking-widest mb-2 pl-1 sticky top-36 z-30 bg-black/80 backdrop-blur w-fit px-2 rounded-r-full">{section}</h3>
-
-                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
-                                    {items.map(item => {
-                                        const isSelected = selectedItems.has(item.id);
-                                        return (
-                                            <div key={item.id} className="cursor-pointer" onClick={() => toggleSelection(item.id)}>
-                                                <ArsenalCard
-                                                    item={item}
-                                                    muscleGroup={section}
-                                                    isSelected={isSelected}
-                                                    userSettings={userSettings}
-                                                    onEdit={handleEditEquipment}  // Always allow edit (Edit or Clone)
-                                                    configOverride={routineConfigs.get(item.id)}
-                                                />
-                                            </div>
-                                        );
-                                    })}
-
-                                    {/* Premium Add Button */}
-                                    <button
-                                        onClick={() => openCatalog(section)}
-                                        className="h-full min-h-[70px] rounded-lg border border-dashed border-neutral-800 hover:border-gym-primary/50 bg-neutral-900/30 hover:bg-neutral-900/80 flex flex-col items-center justify-center gap-1 transition-all group p-2"
-                                    >
-                                        <div className="w-16 h-16 rounded-full bg-neutral-800 group-hover:bg-gym-primary flex items-center justify-center text-neutral-500 group-hover:text-black transition-all shadow-lg group-hover:scale-110 duration-300">
-                                            <Plus size={32} strokeWidth={3} />
-                                        </div>
-                                        <span className="font-bold text-sm text-neutral-500 group-hover:text-white uppercase tracking-widest transition-colors">Agregar a {section}</span>
-                                    </button>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
+                <ArsenalGrid
+                    inventory={effectiveInventory}
+                    selectedItems={selectedItems}
+                    userSettings={userSettings}
+                    searchTerm={searchTerm}
+                    onToggleSelection={toggleSelection}
+                    onOpenCatalog={handleOpenCatalog}
+                    onEditItem={handleEditEquipment}
+                    routineConfigs={routineConfigs}
+                />
             </div>
 
-            {/* Quick Add Modal (Refined) */}
             {addingMode && (
-                <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
-                    <div className="bg-neutral-900 border border-white/10 w-full max-w-2xl rounded-[2rem] p-8 shadow-2xl relative max-h-[85vh] overflow-y-auto animate-in zoom-in-95 duration-200">
-
-                        {/* Header & Close */}
-                        <div className="flex justify-between items-start mb-6">
-                            <div>
-                                <h2 className="text-3xl font-black italic text-white uppercase mb-1">
-                                    {customMode ? (editingItem ? 'Editar Ejercicio' : 'Crear Ejercicio') : `Catálogo ${activeSection}`}
-                                </h2>
-                                <p className="text-neutral-400">
-                                    {customMode ? 'Diseña tu propia máquina o ejercicio.' : 'Añade artillería pesada a tu colección.'}
-                                </p>
-                            </div>
-                            <button onClick={() => { setAddingMode(false); setCustomMode(false); }} className="p-2 hover:bg-white/10 rounded-full transition-colors">
-                                <Plus size={24} className="rotate-45" />
-                            </button>
-                        </div>
-
-                        {!customMode ? (
-                            // MODE A: CATALOG SELECTION
-                            <div className="space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    {catalogItems.length > 0 ? catalogItems.map(seed => (
-                                        <button
-                                            key={seed.name}
-                                            onClick={() => handleQuickAdd(seed)}
-                                            className="text-left bg-black border border-white/10 hover:border-gym-primary p-4 rounded-xl flex items-center justify-between group transition-all"
-                                        >
-                                            <div className="flex items-center gap-4">
-                                                <span className="text-2xl bg-white/5 p-2 rounded-lg">
-                                                    {/* @ts-ignore */}
-                                                    {EQUIPMENT_CATEGORIES[seed.category]?.icon}
-                                                </span>
-                                                <span className="font-bold text-neutral-300 group-hover:text-white transition-colors">{seed.name}</span>
-                                            </div>
-                                            <div className="text-gym-primary opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all">
-                                                <Plus size={20} strokeWidth={3} />
-                                            </div>
-                                        </button>
-                                    )) : (
-                                        <div className="col-span-full py-8 text-center text-neutral-500 border border-dashed border-white/10 rounded-2xl">
-                                            <p>No hay más sugerencias comunes.</p>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="border-t border-white/10 pt-4 mt-4 text-center">
-                                    <button
-                                        onClick={() => setCustomMode(true)}
-                                        className="inline-flex items-center gap-2 text-gym-primary font-bold hover:text-white transition-colors px-6 py-3 rounded-full hover:bg-white/5"
-                                    >
-                                        <Plus size={18} />
-                                        CREAR EJERCICIO PERSONALIZADO
-                                    </button>
-                                </div>
-                            </div>
-                        ) : (
-                            // MODE B: CUSTOM CREATION FORM
-                            <div className="space-y-6">
-                                {/* Name Input */}
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Nombre del Ejercicio</label>
-                                    <input
-                                        type="text"
-                                        autoFocus
-                                        placeholder="Ej: Press Militar en Máquina Vikinga"
-                                        className="w-full bg-black border border-white/10 rounded-xl p-4 text-white placeholder-neutral-600 focus:border-gym-primary focus:outline-none text-lg font-bold"
-                                        value={customName}
-                                        onChange={(e) => setCustomName(e.target.value)}
-                                    />
-                                </div>
-
-                                {/* Category Selection */}
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Categoría</label>
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                        {/* Default Categories */}
-                                        {Object.entries(EQUIPMENT_CATEGORIES).map(([key, info]: [string, any]) => (
-                                            <button
-                                                key={key}
-                                                onClick={() => setCustomCategory(key as any)}
-                                                className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${customCategory === key
-                                                    ? 'bg-gym-primary/20 border-gym-primary text-white'
-                                                    : 'bg-black border-white/10 text-neutral-400 hover:border-white/30'
-                                                    }`}
-                                            >
-                                                <span className="text-2xl">{info.icon}</span>
-                                                <span className="text-xs font-bold uppercase">{info.label}</span>
-                                            </button>
-                                        ))}
-
-                                        {/* Custom Categories */}
-                                        {userSettings.categories.map((cat) => (
-                                            <button
-                                                key={cat.id}
-                                                onClick={() => setCustomCategory(cat.id)}
-                                                className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${customCategory === cat.id
-                                                    ? 'bg-gym-primary/20 border-gym-primary text-white'
-                                                    : 'bg-black border-white/10 text-neutral-400 hover:border-white/30'
-                                                    }`}
-                                            >
-                                                <span className="text-2xl">{cat.icon}</span>
-                                                <span className="text-xs font-bold uppercase">{cat.label}</span>
-                                            </button>
-                                        ))}
-
-                                        {/* Inline Category Creation Form */}
-                                        {isCreatingCategory && (
-                                            <div className="col-span-2 sm:col-span-3 bg-neutral-900 rounded-xl p-4 border border-white/10 flex flex-col gap-4 z-10 relative mt-2">
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-sm font-bold text-white uppercase">Nueva Categoría</span>
-                                                    <button onClick={() => setIsCreatingCategory(false)} className="text-neutral-500 hover:text-white"><X size={18} /></button>
-                                                </div>
-                                                <div className="space-y-3">
-                                                    <div className="space-y-1">
-                                                        <label className="text-xs text-neutral-400 font-bold uppercase">Nombre</label>
-                                                        <input
-                                                            type="text"
-                                                            placeholder="ej: Yoga"
-                                                            value={newCategoryName}
-                                                            onChange={e => setNewCategoryName(e.target.value)}
-                                                            className="w-full bg-black border border-white/10 rounded-lg p-3 text-white focus:border-gym-primary focus:outline-none font-bold"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-1">
-                                                        <label className="text-xs text-neutral-400 font-bold uppercase">Icono (Emoji)</label>
-                                                        <div className="flex gap-2">
-                                                            <input
-                                                                type="text"
-                                                                value={newCategoryIcon}
-                                                                onChange={e => setNewCategoryIcon(e.target.value)}
-                                                                className="w-16 bg-black border border-white/10 rounded-lg p-3 text-2xl text-center focus:border-gym-primary focus:outline-none bg-transparent"
-                                                            />
-                                                            <div className="flex-1 flex gap-2 overflow-x-auto pb-2 items-center">
-                                                                {['🧘', '🤸', '🧗', '🥊', '🏊', '🚴', '🏃', '🥋', '🎸', '💃'].map(emoji => (
-                                                                    <button
-                                                                        key={emoji}
-                                                                        onClick={() => setNewCategoryIcon(emoji)}
-                                                                        className="p-2 hover:bg-white/10 rounded-lg text-xl transition-colors"
-                                                                    >
-                                                                        {emoji}
-                                                                    </button>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <button
-                                                        onClick={async () => {
-                                                            if (!user) return;
-                                                            if (!newCategoryName.trim()) return;
-
-                                                            try {
-                                                                const newCategory: CustomCategory = {
-                                                                    id: newCategoryName.toUpperCase().replace(/\s+/g, '_'),
-                                                                    label: newCategoryName,
-                                                                    icon: newCategoryIcon || '✨'
-                                                                };
-
-                                                                const newSettings = {
-                                                                    ...userSettings,
-                                                                    categories: [...userSettings.categories, newCategory]
-                                                                };
-
-                                                                setUserSettings(newSettings);
-                                                                setCustomCategory(newCategory.id);
-                                                                await equipmentService.updateUserSettings(user.id, newSettings);
-                                                                setIsCreatingCategory(false);
-                                                                setNewCategoryName('');
-                                                                setNewCategoryIcon('✨');
-                                                            } catch (error: any) {
-                                                                console.error('Error creating category:', error);
-                                                                alert(`Error al crear categoría: ${error.message}`);
-                                                            }
-                                                        }}
-                                                        className="w-full py-3 bg-gym-primary text-black font-bold rounded-lg hover:brightness-110 transition-all mt-2"
-                                                    >
-                                                        CREAR CATEGORÍA
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Action Button for Category (Normal Mode) */}
-                                        {!isCreatingCategory && (
-                                            <button
-                                                onClick={() => setIsCreatingCategory(true)}
-                                                className="p-3 rounded-xl border border-dashed border-white/20 flex flex-col items-center gap-2 text-neutral-500 hover:text-white hover:bg-white/5 transition-all group min-h-[88px] justify-center"
-                                            >
-                                                <span className="p-1 rounded-full bg-white/5 group-hover:bg-gym-primary text-gym-primary group-hover:text-black transition-colors">
-                                                    <Plus size={16} />
-                                                </span>
-                                                <span className="text-[10px] font-bold uppercase">Nueva</span>
-                                            </button>
-                                        )}
-
-                                    </div>
-                                </div>
-
-                                {/* Metrics Configuration */}
-                                <div className="space-y-3">
-                                    <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider">¿Qué deseas registrar?</label>
-                                    <div className="bg-black/50 rounded-xl p-4 border border-white/5 space-y-3 max-h-[300px] overflow-y-auto">
-                                        {[
-                                            { id: 'weight', label: 'Peso (Lbs/Kgs)', icon: '⚖️' },
-                                            { id: 'reps', label: 'Repeticiones', icon: '🔄' },
-                                            { id: 'time', label: 'Tiempo / Duración', icon: '⏱️' },
-                                            { id: 'distance', label: 'Distancia', icon: '📏' },
-                                            { id: 'rpe', label: 'RPE (Esfuerzo)', icon: '🔥' },
-                                            ...userSettings.metrics
-                                        ].map(metric => (
-                                            <div key={metric.id} className="flex items-center justify-between group">
-                                                <div className="flex items-center gap-3">
-                                                    <span className="text-lg opacity-50 group-hover:opacity-100 transition-opacity">{metric.icon}</span>
-                                                    <span className="text-sm font-medium text-neutral-300">{metric.label}</span>
-                                                </div>
-                                                <button
-                                                    onClick={() => setCustomMetrics(prev => {
-                                                        const isSelected = prev[metric.id as keyof typeof prev];
-                                                        return { ...prev, [metric.id]: !isSelected };
-                                                    })}
-                                                    className={`w-12 h-7 rounded-full transition-colors relative ${customMetrics[metric.id as keyof typeof customMetrics] ? 'bg-gym-primary' : 'bg-neutral-800'
-                                                        }`}
-                                                >
-                                                    <div className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-transform ${customMetrics[metric.id as keyof typeof customMetrics] ? 'left-6' : 'left-1'
-                                                        }`} />
-                                                </button>
-                                            </div>
-                                        ))}
-
-                                        {/* Add Metric Button */}
-                                        {/* Add Metric Button */}
-                                        {!isCreatingMetric ? (
-                                            <button
-                                                onClick={() => setIsCreatingMetric(true)}
-                                                className="w-full py-2 border border-dashed border-white/20 rounded-lg text-neutral-500 hover:text-white hover:bg-white/5 text-xs font-bold uppercase transition-all flex items-center justify-center gap-2"
-                                            >
-                                                <Plus size={14} />
-                                                Crear Métrica
-                                            </button>
-                                        ) : (
-                                            <div className="bg-neutral-900 rounded-lg p-3 border border-white/10 space-y-3">
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-xs font-bold text-white uppercase">Nueva Métrica</span>
-                                                    <button onClick={() => setIsCreatingMetric(false)} className="text-neutral-500 hover:text-white"><X size={14} /></button>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Nombre (ej: Calorías)"
-                                                        value={newMetricName}
-                                                        onChange={e => setNewMetricName(e.target.value)}
-                                                        className="w-full bg-black border border-white/10 rounded p-2 text-sm text-white focus:border-gym-primary focus:outline-none"
-                                                        autoFocus
-                                                    />
-                                                    <div className="flex gap-2">
-                                                        <input
-                                                            type="text"
-                                                            value={newMetricIcon}
-                                                            onChange={e => setNewMetricIcon(e.target.value)}
-                                                            className="w-10 bg-black border border-white/10 rounded p-2 text-center text-lg focus:border-gym-primary focus:outline-none"
-                                                        />
-                                                        <div className="flex-1 flex gap-1 overflow-x-auto items-center pb-1">
-                                                            {['🔥', '💓', '🌡️', '📏', '⏱️', '📈', '💧', '⚡'].map(emoji => (
-                                                                <button
-                                                                    key={emoji}
-                                                                    onClick={() => setNewMetricIcon(emoji)}
-                                                                    className="p-1 hover:bg-white/10 rounded text-lg transition-colors"
-                                                                >
-                                                                    {emoji}
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    onClick={async () => {
-                                                        if (!user) return;
-                                                        if (!newMetricName.trim()) return;
-
-                                                        try {
-                                                            const newMetric: CustomMetric = {
-                                                                id: newMetricName.toLowerCase().replace(/\s+/g, '_'),
-                                                                label: newMetricName,
-                                                                icon: newMetricIcon || '📊',
-                                                                default_active: true
-                                                            };
-
-                                                            const newSettings = {
-                                                                ...userSettings,
-                                                                metrics: [...userSettings.metrics, newMetric]
-                                                            };
-
-                                                            setUserSettings(newSettings);
-                                                            setCustomMetrics(prev => ({ ...prev, [newMetric.id]: true }));
-                                                            await equipmentService.updateUserSettings(user.id, newSettings);
-                                                            setIsCreatingMetric(false);
-                                                            setNewMetricName('');
-                                                            setNewMetricIcon('📊');
-                                                        } catch (error: any) {
-                                                            console.error('Error creating metric:', error);
-                                                            alert(`Error al crear métrica: ${error.message}`);
-                                                        }
-                                                    }}
-                                                    className="w-full py-2 bg-gym-primary text-black font-bold rounded text-xs hover:brightness-110 transition-all"
-                                                >
-                                                    GUARDAR MÉTRICA
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Actions */}
-                                <div className="flex gap-3 pt-4 border-t border-white/10">
-                                    <button
-                                        onClick={() => setCustomMode(false)}
-                                        className="flex-1 py-4 rounded-xl font-bold bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white transition-colors"
-                                    >
-                                        VOLVER
-                                    </button>
-                                    <button
-                                        onClick={handleCreateCustom}
-                                        disabled={!customName.trim()}
-                                        className="flex-1 py-4 rounded-xl font-bold bg-gym-primary text-black hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        {editingItem ? 'GUARDAR CAMBIOS' : 'CREAR EJERCICIO'}
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
+                <EquipmentForm
+                    user={user}
+                    userSettings={userSettings}
+                    onUpdateSettings={setUserSettings}
+                    editingItem={editingItem}
+                    onClose={() => { setAddingMode(false); setEditingItem(null); }}
+                    onSuccess={handleEquipmentSuccess}
+                    activeSection={activeSection}
+                    catalogItems={catalogItems}
+                    onQuickAdd={handleQuickAdd}
+                />
             )}
 
             {/* ROUTINE NAME & SAVE BAR (Floating at bottom for Creation Mode) */}
-            {addingMode && !customMode && (
+            {addingMode === false && (
                 <div className="fixed bottom-0 left-0 right-0 p-4 bg-neutral-950/90 backdrop-blur-xl border-t border-white/10 z-[60] animate-in slide-in-from-bottom-5">
                     <div className="max-w-7xl mx-auto flex items-center gap-4">
                         <div className="flex-1 max-w-xl relative group">
@@ -1678,7 +1067,11 @@ export const MyArsenal = () => {
                                 value={routineName}
                                 onChange={(e) => {
                                     setRoutineName(e.target.value);
-                                    setRoutineName(e.target.value);
+                                    // TUTORIAL ADVANCE: Step 3 -> 4
+                                    if (tutorialStep === 3 && e.target.value.length > 2) {
+                                        setTutorialStep(4);
+                                        localStorage.setItem('tutorial_step', '4');
+                                    }
                                 }}
                             />
                             <div className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-600 pointer-events-none">
@@ -1715,7 +1108,41 @@ export const MyArsenal = () => {
                 </div>
             )}
 
+            {/* TUTORIAL STEP 3 (Routine Name) */}
+            {tutorialStep === 3 && (
+                <InteractiveOverlay
+                    targetId="tut-routine-name-input"
+                    title="PASO 3: PONER NOMBRE OBLIGATORIO"
+                    message="Escribe un nombre épico para tu nueva rutina (ej: 'Pecho Legendario')."
+                    step={3}
+                    totalSteps={7}
+                    onNext={() => { }}
+                    onClose={() => {
+                        setTutorialStep(0);
+                        localStorage.setItem('hasSeenImportTutorial', 'true');
+                    }}
+                    placement="top"
+                    disableNext={true}
+                />
+            )}
 
+            {/* TUTORIAL STEP 4 (Final Creation) */}
+            {tutorialStep === 4 && (
+                <InteractiveOverlay
+                    targetId="tut-save-routine-btn"
+                    title="PASO 4: SELECCIONAR Y GUARDAR"
+                    message="Guarda tu nueva rutina. Esto te mandará al inicio para que vayas al mapa."
+                    step={4}
+                    totalSteps={7}
+                    onNext={() => { }}
+                    onClose={() => {
+                        setTutorialStep(0);
+                        localStorage.setItem('hasSeenImportTutorial', 'true');
+                    }}
+                    placement="top"
+                    disableNext={true}
+                />
+            )}
         </div>
     );
 };

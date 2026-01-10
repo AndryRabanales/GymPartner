@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import type { Equipment, CustomSettings, CustomMetric } from '../services/GymEquipmentService';
-import { equipmentService, EQUIPMENT_CATEGORIES } from '../services/GymEquipmentService';
+import type { Equipment, CustomSettings } from '../services/GymEquipmentService';
+import { equipmentService, COMMON_EQUIPMENT_SEEDS } from '../services/GymEquipmentService';
 import { userService } from '../services/UserService';
 import { workoutService } from '../services/WorkoutService';
 import { WorkoutCarousel } from '../components/workout/WorkoutCarousel';
+import { ArsenalGrid } from '../components/arsenal/ArsenalGrid';
+import { EquipmentForm } from '../components/arsenal/EquipmentForm';
+import { normalizeText, getMuscleGroup } from '../utils/inventoryUtils';
 import { SmartNumpad } from '../components/ui/SmartNumpad';
 
 interface NumpadTarget {
@@ -17,7 +20,7 @@ interface NumpadTarget {
     suggestion?: number;
 }
 // BattleTimer removed
-import { ArrowLeft, Check, Edit2, Flame, Loader, MoreVertical, Plus, RotateCcw, Save, Search, Swords, Trash2, X } from 'lucide-react';
+import { Plus, Swords, Trash2, Flame, Loader, Check, ArrowLeft, MoreVertical, X, RotateCcw, Search } from 'lucide-react';
 import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
@@ -54,52 +57,18 @@ export const WorkoutSession = () => {
     const navigate = useNavigate();
     const { gymId: routeGymId } = useParams<{ gymId: string }>();
 
-    // --- STATE ---
+    // State
     const [loading, setLoading] = useState(true);
-    const [arsenal, setArsenal] = useState<Equipment[]>([]);
-    const [routines, setRoutines] = useState<any[]>([]);
-    const [resolvedGymId, setResolvedGymId] = useState<string | null>(null);
-    const [currentGym, setCurrentGym] = useState<any>(null);
-    const [userSettings, setUserSettings] = useState<CustomSettings>({ categories: [], metrics: [] });
-    const [showExitMenu, setShowExitMenu] = useState(false);
-
-    // Session State
+    const [sessionId, setSessionId] = useState<string | null>(null);
     const [activeExercises, setActiveExercises] = useState<WorkoutExercise[]>([]);
     const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
-    const [startTime, setStartTime] = useState<Date | null>(null);
-    const [elapsedTime, setElapsedTime] = useState("00:00");
-    const [sessionId, setSessionId] = useState<string | null>(null);
-    const [isFinished, setIsFinished] = useState(false);
-
-    // UI State
+    const [arsenal, setArsenal] = useState<Equipment[]>([]);
+    const [routines, setRoutines] = useState<any[]>([]); // NEW: Local Routines
     const [showAddModal, setShowAddModal] = useState(false);
-    const [numpadTarget, setNumpadTarget] = useState<NumpadTarget | null>(null);
-    const [showNumpad, setShowNumpad] = useState(false);
+    const [resolvedGymId, setResolvedGymId] = useState<string | null>(null);
+    const [showExitMenu, setShowExitMenu] = useState(false);
 
-    // Advanced Add Modal State
-    const [searchTerm, setSearchTerm] = useState('');
-    const [customMode, setCustomMode] = useState(false);
-
-    const [customName, setCustomName] = useState('');
-    const [customCategory, setCustomCategory] = useState<string>('STRENGTH_MACHINE');
-    const [customMetrics, setCustomMetrics] = useState({
-        weight: true,
-        reps: true,
-        time: false,
-        distance: false,
-        rpe: false,
-        // Dynamic custom metrics will be added here
-        // [key: string]: boolean;
-    });
-    const [isCreatingMetric, setIsCreatingMetric] = useState(false);
-    const [newMetricName, setNewMetricName] = useState('');
-    const [newMetricIcon, setNewMetricIcon] = useState('📊');
-    const [editingItem, setEditingItem] = useState<Equipment | null>(null);
-
-    // Save Routine Prompt
-    const [showSavePrompt, setShowSavePrompt] = useState(false);
-    const [routineName, setRoutineName] = useState('');
-    const [isSavingRoutine, setIsSavingRoutine] = useState(false);
+    const [currentGym, setCurrentGym] = useState<any>(null);
 
     // Tutorial State
     const [tutorialStep, setTutorialStep] = useState(0);
@@ -111,7 +80,10 @@ export const WorkoutSession = () => {
         }
     }, []);
 
-    // Numpad Logic
+    // Numpad State
+    const [showNumpad, setShowNumpad] = useState(false);
+    const [numpadTarget, setNumpadTarget] = useState<NumpadTarget | null>(null);
+
     const handleNumpadOpen = (exIndex: number, sIndex: number, field: string, currentValue: number, label: string) => {
         // Find last valid value for suggestion (Smart Chip)
         // For now simple logic: check previous set or 0
@@ -134,6 +106,41 @@ export const WorkoutSession = () => {
         });
         setShowNumpad(true);
     };
+
+    const [userSettings, setUserSettings] = useState<CustomSettings>({ categories: [], metrics: [] });
+    // Arsenal Modal State
+    const [searchTerm, setSearchTerm] = useState('');
+    const [activeSection, setActiveSection] = useState<string | null>(null);
+    const [isCreatingExercise, setIsCreatingExercise] = useState(false);
+    const [editingItem, setEditingItem] = useState<Equipment | null>(null);
+
+    // Computed: Merge Seeds (Virtual) only if not already present by NAME in the real/global list
+    const effectiveInventory = [...arsenal];
+    COMMON_EQUIPMENT_SEEDS.forEach(seed => {
+        if (!effectiveInventory.some(i => normalizeText(i.name) === normalizeText(seed.name))) {
+            effectiveInventory.push({
+                ...seed,
+                id: `virtual-${seed.name}`,
+                // @ts-ignore
+                gym_id: 'virtual',
+                condition: 'GOOD',
+                quantity: 1
+            } as Equipment);
+        }
+    });
+
+    const catalogItems = COMMON_EQUIPMENT_SEEDS.filter(seed => {
+        if (activeSection) {
+            // @ts-ignore
+            return getMuscleGroup({ name: seed.name, category: seed.category }, userSettings) === activeSection;
+        }
+        return true;
+    });
+
+    // Timer State (RESTORED)
+    const [startTime, setStartTime] = useState<Date | null>(null);
+    const [elapsedTime, setElapsedTime] = useState("00:00");
+    const [isFinished, setIsFinished] = useState(false);
 
     // Timer Effect (RESTORED)
     useEffect(() => {
@@ -233,24 +240,12 @@ export const WorkoutSession = () => {
                 setSessionId(active.id);
                 setStartTime(new Date(active.started_at)); // Set Start Time (RESTORED)
             } else {
+                console.log('✨ No hay sesión activa. Preparando nueva batalla.');
+                setSessionId(null);
                 setStartTime(null);
                 setElapsedTime("00:00");
                 setActiveExercises([]);
                 setIsFinished(false);
-
-                // AUTO-START CHECKS (Smart Start)
-                // If user has NO routines (New User or Freestyle mode), start immediately.
-                if (localRoutines.length === 0) {
-                    console.log("🚀 Smart Start: No Routines detected. Starting Freestyle Session...");
-
-                    // Start Session Immediately
-                    const { data: newSession } = await workoutService.startSession(userId, targetGymId);
-                    if (newSession) {
-                        setSessionId(newSession.id);
-                        setStartTime(new Date());
-                        setShowAddModal(true); // Open Catalog immediately
-                    }
-                }
             }
 
         } catch (error) {
@@ -670,153 +665,6 @@ export const WorkoutSession = () => {
         );
     };
 
-    // --- HELPER FOR CATEGORIES (From MyArsenal) ---
-    const normalizeText = (text: string) => {
-        return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-    };
-
-    const getMuscleGroup = (item: Equipment | { name: string, category: string }): string => {
-        const n = normalizeText(item.name);
-
-        // 1. Check Custom Categories
-        if (userSettings?.categories) {
-            const matchedCategory = userSettings.categories.find(c => c.id === item.category);
-            if (matchedCategory) return matchedCategory.label;
-        }
-
-        // 2. Explicit Category Mapping (Standard)
-        if (item.category === 'CHEST') return 'Pecho';
-        if (item.category === 'BACK') return 'Espalda';
-        if (item.category === 'LEGS' || item.category === 'GLUTES' || item.category === 'CALVES') return 'Pierna';
-        if (item.category === 'SHOULDERS') return 'Hombros';
-        if (item.category === 'FOREARMS') return 'Antebrazo';
-        if (item.category === 'ARMS') {
-            if (n.includes('tricep') || n.includes('copa') || n.includes('fondos')) return 'Tríceps';
-            return 'Bíceps';
-        }
-
-        // 3. Fallback Keyword Matching
-        if (item.category === 'CARDIO') return 'Cardio';
-        if (n.includes('jalon') || n.includes('remo') || n.includes('espalda') || n.includes('dorsal') || n.includes('lumbares') || n.includes('dominada') || n.includes('pull over') || n.includes('hyper')) return 'Espalda';
-        if (n.includes('banca') || n.includes('pecho') || n.includes('chest') || n.includes('flexion') || n.includes('press plano') || n.includes('press inclinado') || n.includes('press declinado') || n.includes('pec deck') || n.includes('cruce de poleas') || n.includes('apertura')) return 'Pecho';
-        if (n.includes('pierna') || n.includes('sentadilla') || n.includes('squat') || n.includes('femoral') || n.includes('cuadriceps') || n.includes('gemelo') || n.includes('gluteo') || n.includes('hack') || n.includes('pantorrilla') || n.includes('hip thrust') || n.includes('prensa')) return 'Pierna';
-        if (n.includes('hombro') || n.includes('militar') || n.includes('lateral') || n.includes('press de hombro') || n.includes('trasnuca') || n.includes('face pull') || n.includes('pajaros')) return 'Hombros';
-        if (n.includes('bicep') || n.includes('curl') || n.includes('predicador')) return 'Bíceps';
-        if (n.includes('tricep') || n.includes('copa') || n.includes('fondos') || n.includes('frances')) return 'Tríceps';
-        if (n.includes('antebrazo') || n.includes('muñeca')) return 'Antebrazo';
-        if (n.includes('mancuerna') || n.includes('smith') || n.includes('multipower')) return 'Peso Libre (General)';
-        if (item.category === 'FREE_WEIGHT') return 'Peso Libre (General)';
-        if (item.category === 'CABLE') return 'Poleas / Varios';
-
-        return 'Otros';
-    };
-
-    const handleCreateCustom = async () => {
-        if (!user) return;
-        if (!customName.trim()) {
-            alert("Por favor escribe un nombre para el ejercicio.");
-            return;
-        }
-
-        let finalGymId = null;
-        try {
-            finalGymId = await userService.ensurePersonalGym(user.id);
-        } catch (e) {
-            console.error("Error securing personal gym:", e);
-        }
-
-        let resolvedIcon = '⚡';
-        // @ts-ignore
-        if (EQUIPMENT_CATEGORIES[customCategory]) {
-            // @ts-ignore
-            resolvedIcon = EQUIPMENT_CATEGORIES[customCategory].icon;
-        } else {
-            const customCat = userSettings.categories.find(c => c.id === customCategory);
-            if (customCat) resolvedIcon = customCat.icon;
-        }
-
-        const payload = {
-            name: customName,
-            category: customCategory,
-            gym_id: finalGymId,
-            quantity: 1,
-            metrics: customMetrics,
-            icon: resolvedIcon
-        };
-
-        try {
-            if (editingItem) {
-                // UPDATE
-                const updatePayload = {
-                    name: customName,
-                    category: customCategory,
-                    metrics: customMetrics,
-                    icon: resolvedIcon
-                };
-                await equipmentService.updateEquipment(editingItem.id, updatePayload);
-                const updatedItem = { ...editingItem, ...updatePayload };
-                setArsenal(prev => prev.map(i => i.id === updatedItem.id ? updatedItem : i));
-                setEditingItem(null);
-
-            } else {
-                // CREATE NEW
-                const newItem = await equipmentService.addEquipment(payload, user.id);
-                setArsenal(prev => [...prev, newItem]);
-                // OPTIONAL: Add directly to current workout?
-                // addExercise(newItem);
-            }
-
-            setCustomMode(false);
-            setCustomName('');
-            setCustomMetrics({ weight: true, reps: true, time: false, distance: false, rpe: false });
-            alert(editingItem ? "Ejercicio actualizado" : "Ejercicio creado");
-
-        } catch (error: any) {
-            console.error(error);
-            alert(`Error: ${error.message}`);
-        }
-    };
-
-    const handleEditRequest = (item: Equipment) => {
-        setEditingItem(item);
-        setCustomName(item.name);
-        setCustomCategory(item.category);
-        setCustomMetrics({
-            weight: item.metrics?.weight ?? true,
-            reps: item.metrics?.reps ?? true,
-            time: item.metrics?.time ?? false,
-            distance: item.metrics?.distance ?? false,
-            rpe: item.metrics?.rpe ?? false,
-            // Add other custom metrics from item.metrics
-            ...Object.fromEntries(
-                Object.entries(item.metrics || {}).filter(([key]) => !['weight', 'reps', 'time', 'distance', 'rpe'].includes(key))
-            )
-        });
-        setCustomMode(true);
-    };
-
-    const openCreateMode = (section: string) => {
-        // Map section name back to ID (approximate)
-        let defaultCat = 'STRENGTH_MACHINE';
-        switch (section) {
-            case 'Pecho': defaultCat = 'CHEST'; break;
-            case 'Espalda': defaultCat = 'BACK'; break;
-            case 'Pierna': defaultCat = 'LEGS'; break;
-            case 'Hombros': defaultCat = 'SHOULDERS'; break;
-            case 'Bíceps':
-            case 'Tríceps':
-                defaultCat = 'ARMS'; break;
-            case 'Antebrazo': defaultCat = 'FOREARMS'; break;
-            case 'Cardio': defaultCat = 'CARDIO'; break;
-            case 'Core': defaultCat = 'ABS'; break;
-        }
-        setCustomCategory(defaultCat);
-        setEditingItem(null);
-        setCustomName('');
-        setCustomMetrics({ weight: true, reps: true, time: false, distance: false, rpe: false });
-        setCustomMode(true);
-    }
-
     const startSessionInternal = async () => {
         if (!user) return;
         setLoading(true);
@@ -842,29 +690,10 @@ export const WorkoutSession = () => {
 
     const handleFinish = async () => {
         setIsFinished(true); // STOP TIMER IMMEDIATELY
-
-        // INTERCEPT: Ask to Save Routine first if we have exercises
-        // Only if we are NOT already in a routine session (checked via sessionId logic or routines list...
-        // actually simplest is just to ask ALWAYS, or ask if it was a freestyle?)
-        // User request: "finalizar(desea guardar su rutina?)" implies asking.
-
-        // Check if we already clicked "No Save" or verified save
-        // Actually, let's just show the modal, and the modal calls the REAL finish.
-        // We need a flag to bypass this if called from the modal itself?
-        // No, we can just split the logic.
-
-        setShowSavePrompt(true);
-    };
-
-    const confirmFinish = async (shouldSave: boolean) => {
-        setShowSavePrompt(false);
-        await finishSessionInternal(shouldSave);
-    };
-
-    const finishSessionInternal = async (shouldSaveRoutine: boolean) => {
         if (!sessionId) {
             console.error('❌ No sessionId found!');
-            setIsFinished(false);
+            // alert('Error: No hay sesión activa'); // Removed alert
+            setIsFinished(false); // Resume if error
             return;
         }
 
@@ -926,37 +755,9 @@ export const WorkoutSession = () => {
             }
         }
 
-
-
-        // SAVE ROUTINE IF REQUESTED
-        if (shouldSaveRoutine && routineName.trim()) {
-            setIsSavingRoutine(true);
-            try {
-                // Map activeExercises to ID list or Rich Config Payload
-                // We want to save the CONFIG (metrics used), not just IDs if possible.
-                // workoutService.createRoutine supports rich config now?
-                // Looking at createRoutine definition: async createRoutine(userId, name, equipmentIds, gymId)
-                // It takes string[] for equipmentIds.
-                // Wait, updateRoutine supports rich config. createRoutine might need update or we just pass IDs for now.
-                // Let's pass IDs for now to be safe, or check if we can pass more.
-                // The service reads: linkEquipmentToRoutine(routineId, equipmentIds).
-                // So currently it only links IDs.
-                // TODO: Enhance createRoutine to support rich config in one go.
-                // For now, we save basic routine.
-                const equipIds = activeExercises.map(e => e.equipmentId);
-                const { error: routineError } = await workoutService.createRoutine(user!.id, routineName, equipIds, resolvedGymId);
-
-                if (routineError) {
-                    console.error("Error creating routine:", routineError);
-                    alert("Entrenamiento guardado, pero hubo un error creando la rutina.");
-                } else {
-                    alert("¡Rutina creada con éxito!");
-                }
-
-            } catch (e) {
-                console.error("Exception saving routine:", e);
-            }
-            setIsSavingRoutine(false);
+        if (savedCount > 0) {
+            console.log(`📦 Guardando ${savedCount} sets pendientes...`);
+            await Promise.all(savePromises);
         }
 
         console.log('🏁 Terminando sesión en DB:', sessionId);
@@ -966,16 +767,26 @@ export const WorkoutSession = () => {
 
             if (result.success) {
                 console.log('✅ Sesión terminada exitosamente');
+                // Removed blocking alert. 
+                // We'll rely on the UI showing "Guardando..." or similar via loading state, 
+                // or we could add a specific "Finished" state to show a success message briefly.
+                // For now, let's just wait a moment so the user SEES the timer stopped.
+
+                // Optional: Force update the local duration to ensure it matches exactly what we sent? 
+                // Actually the backend sets the time. The difference is negligible.
+
                 setTimeout(() => {
                     navigate('/history');
-                }, 1500);
+                }, 1500); // 1.5s delay to admire the frozen timer and "Saving" state
             } else {
                 console.error('❌ Error terminando sesión:', result.error);
+                // alert('❌ Error guardando entrenamiento: ' + JSON.stringify(result.error));
                 setLoading(false);
                 setIsFinished(false); // Resume timer if failed
             }
         } catch (error) {
             console.error('❌ Exception terminando sesión:', error);
+            // alert('❌ Error inesperado: ' + error);
             setLoading(false);
             setIsFinished(false);
         }
@@ -1030,66 +841,39 @@ export const WorkoutSession = () => {
                             </div>
                         ) : (
                             <div className="flex-1 px-4 space-y-4 pb-32">
-                                {/* LIST EXISTING ROUTINES */}
-                                <div className="space-y-4">
-                                    <h4 className="text-white font-bold uppercase tracking-widest text-xs border-b border-white/10 pb-2 mb-2">
-                                        Mis Estrategias Guardadas
-                                    </h4>
-                                    {routines.map((routine, index) => (
-                                        <button
-                                            key={routine.id}
-                                            id={index === 0 ? 'tut-routine-first' : undefined}
-                                            onClick={() => {
-                                                if (tutorialStep === 6) {
-                                                    setTutorialStep(0);
-                                                    localStorage.setItem('tutorial_step', '0');
-                                                    localStorage.setItem('hasSeenImportTutorial', 'true');
-                                                }
-                                                loadRoutine(routine);
-                                            }}
-                                            className="w-full bg-neutral-900 border border-neutral-800 hover:border-gym-primary p-6 rounded-2xl flex items-center justify-between group transition-all"
-                                        >
-                                            <div className="text-left">
-                                                <h3 className="font-black text-xl text-white group-hover:text-gym-primary uppercase italic">{routine.name}</h3>
-                                                <span className="text-neutral-500 text-xs font-bold">{routine.equipment_ids?.length || 0} Ejercicios</span>
-                                            </div>
-                                            <div className="bg-neutral-800 p-3 rounded-full group-hover:bg-gym-primary group-hover:text-black transition-colors">
-                                                <Check size={20} strokeWidth={3} />
-                                            </div>
-                                        </button>
-                                    ))}
-                                </div>
+                                {routines.map((routine, index) => (
+                                    <button
+                                        key={routine.id}
+                                        id={index === 0 ? 'tut-routine-first' : undefined}
+                                        onClick={() => {
+                                            if (tutorialStep === 6) {
+                                                setTutorialStep(0);
+                                                localStorage.setItem('tutorial_step', '0');
+                                                localStorage.setItem('hasSeenImportTutorial', 'true');
+                                            }
+                                            loadRoutine(routine);
+                                        }}
+                                        className="w-full bg-neutral-900 border border-neutral-800 hover:border-gym-primary p-6 rounded-2xl flex items-center justify-between group transition-all"
+                                    >
+                                        <div className="text-left">
+                                            <h3 className="font-black text-xl text-white group-hover:text-gym-primary uppercase italic">{routine.name}</h3>
+                                            <span className="text-neutral-500 text-xs font-bold">{routine.equipment_ids?.length || 0} Ejercicios</span>
+                                        </div>
+                                        <div className="bg-neutral-800 p-3 rounded-full group-hover:bg-gym-primary group-hover:text-black transition-colors">
+                                            <Check size={20} strokeWidth={3} />
+                                        </div>
+                                    </button>
+                                ))}
 
                                 <div className="pt-8 space-y-4">
-                                    <h4 className="text-white font-bold uppercase tracking-widest text-xs border-b border-white/10 pb-2 mb-2">
-                                        Operaciones de Campo
-                                    </h4>
-
-                                    {/* FREESTYLE START BUTTON */}
-                                    <button
-                                        onClick={() => {
-                                            // Just close the "Empty State" by creating a session?
-                                            // We are ALREADY in a view that expects `activeExercises`.
-                                            // If we want to start empty, we just need to let them use the FAB.
-                                            // But the UI shows this block IF activeExercises.length === 0.
-                                            // So we need to switch "mode" or just trigger "Start Session" with 0 items?
-                                            // But initialize() handles session check.
-                                            // If we are here, we have no active session OR no exercises.
-                                            // Let's just manually trigger showAddModal?
-                                            setShowAddModal(true);
-                                        }}
-                                        className="w-full bg-neutral-800 hover:bg-white/10 text-white font-black uppercase tracking-widest py-5 rounded-2xl border border-white/10 flex items-center justify-center gap-3 transition-all"
-                                    >
-                                        <Swords size={20} className="text-neutral-400" />
-                                        Iniciar Entrenamiento Libre
-                                    </button>
-
                                     <Link
                                         to={`/territory/${resolvedGymId}/arsenal`}
-                                        className="w-full bg-neutral-900 border border-dashed border-neutral-700 hover:border-gym-primary text-neutral-400 hover:text-white font-bold uppercase tracking-widest py-4 rounded-xl flex items-center justify-center gap-2 transition-all opacity-60 hover:opacity-100"
+                                        className="w-full bg-neutral-900 border border-dashed border-neutral-700 hover:border-gym-primary text-neutral-400 hover:text-white font-bold uppercase tracking-widest py-4 rounded-xl flex items-center justify-center gap-2 transition-all"
                                     >
-                                        <Plus size={16} /> Construir Nueva Rutina
+                                        <Plus size={16} /> Crear Nueva Rutina
                                     </Link>
+
+                                    {/* Freestyle Removed */}
                                 </div>
                             </div>
                         )}
@@ -1332,8 +1116,8 @@ export const WorkoutSession = () => {
                                                 <Plus size={18} /> Añadir Serie
                                             </button>
 
-                                            {/* Finish/Next Actions specific to this card if needed, or keeping the global button?
-                                                The user can just swipe. But if it's the last card, maybe show Finish?
+                                            {/* Finish/Next Actions specific to this card if needed, or keeping the global button? 
+                                                The user can just swipe. But if it's the last card, maybe show Finish? 
                                             */}
                                             {mapIndex === activeExercises.length - 1 && (
                                                 <div className="pt-8 pb-4">
@@ -1354,12 +1138,12 @@ export const WorkoutSession = () => {
                     </div>
                 )}
 
-                {/* Legacy Finish Button (Now hidden inside the last card for cleaner UI, or we can keep it?)
+                {/* Legacy Finish Button (Now hidden inside the last card for cleaner UI, or we can keep it?) 
                     The previous code had it outside. I moved it inside the last card for "Focus Mode".
                     But wait, what if they want to finish early?
-                    Ideally there should be a global menu.
+                    Ideally there should be a global menu. 
                     Let's keep the global one HIDDEN if we have the carousel, to enforce focus, BUT standard UX says users might want to bail out early.
-                    Actually, let's keep it simple: "Finish" is on the last card.
+                    Actually, let's keep it simple: "Finish" is on the last card. 
                 */}
                 {activeExercises.length > 0 && !sessionId && (
                     <div className="fixed inset-0 z-40 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-300">
@@ -1395,9 +1179,9 @@ export const WorkoutSession = () => {
             </div>
 
 
-            {/* Fab Add Button (Always visible) */}
+            {/* Fab Add Button (Only if exercises exist) */}
             {
-                (activeExercises.length > 0 || sessionId) && (
+                activeExercises.length > 0 && (
                     <div className="fixed bottom-6 left-0 w-full px-4 flex justify-center z-50 pointer-events-none">
                         <button
                             onClick={() => setShowAddModal(true)}
@@ -1413,248 +1197,115 @@ export const WorkoutSession = () => {
             {
                 showAddModal && (
                     <div className="fixed inset-0 bg-black/95 z-50 flex flex-col animate-in fade-in duration-200">
-                        {/* HEADER */}
-                        <div className="flex justify-between items-center p-6 border-b border-white/5 bg-neutral-900/50 backdrop-blur-md z-10">
-                            <div>
-                                <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">
-                                    {customMode ? (editingItem ? 'Editar Arma' : 'Forjar Arma') : 'Armería'}
-                                </h2>
-                                <p className="text-neutral-500 text-sm">
-                                    {customMode ? 'Configura tu equipo.' : 'Elige tu arma para esta batalla.'}
-                                </p>
+                        {/* Header */}
+                        <div className="flex-none p-6 pb-2 border-b border-white/5 bg-neutral-950">
+                            <div className="flex justify-between items-start mb-4">
+                                <div>
+                                    <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">
+                                        {isCreatingExercise ? (editingItem ? 'Editar Ejercicio' : 'Crear Ejercicio') : 'Armería'}
+                                    </h2>
+                                    <p className="text-neutral-500 text-sm">
+                                        {isCreatingExercise ? 'Personaliza tu equipo.' : 'Elige tu arma para esta batalla.'}
+                                    </p>
+                                </div>
+                                <button onClick={() => {
+                                    if (isCreatingExercise) { setIsCreatingExercise(false); setEditingItem(null); }
+                                    else setShowAddModal(false);
+                                }} className="bg-neutral-900 p-2 rounded-full text-white hover:bg-neutral-800 transition-colors">
+                                    {isCreatingExercise ? <ArrowLeft size={20} /> : <X size={20} />}
+                                </button>
                             </div>
-                            <button onClick={() => { setShowAddModal(false); setCustomMode(false); }} className="bg-neutral-800 p-2 rounded-full text-white hover:bg-neutral-700 hover:text-red-500 transition-colors">
-                                <X size={24} />
-                            </button>
+
+                            {/* Search Bar - only show if NOT creating custom */}
+                            {!isCreatingExercise && (
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-3 text-neutral-500" size={20} />
+                                    <input
+                                        type="text"
+                                        placeholder="Buscar ejercicio o máquina..."
+                                        value={searchTerm}
+                                        onChange={e => setSearchTerm(e.target.value)}
+                                        className="w-full bg-neutral-900 border border-neutral-800 rounded-xl py-3 pl-10 text-white focus:outline-none focus:border-gym-primary transition-all"
+                                        autoFocus
+                                    />
+                                </div>
+                            )}
                         </div>
 
-                        <div className="flex-1 overflow-y-auto bg-black">
-                            {customMode ? (
-                                // --- CUSTOM CREATE/EDIT FORM (Reused from MyArsenal) ---
-                                <div className="p-6 max-w-2xl mx-auto space-y-8 pb-32">
-                                    {/* Name Input */}
-                                    <div className="space-y-4">
-                                        <div className="relative group">
-                                            <div className="absolute -inset-1 bg-gradient-to-r from-gym-primary/20 to-purple-600/20 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
-                                            <input
-                                                type="text"
-                                                placeholder="Nombre del Ejercicio (ej: Press de Banca)"
-                                                value={customName}
-                                                onChange={(e) => setCustomName(e.target.value)}
-                                                className="relative w-full bg-neutral-900 border border-white/10 rounded-xl px-6 py-6 text-2xl font-black text-white placeholder-neutral-600 focus:border-gym-primary focus:outline-none focus:ring-1 focus:ring-gym-primary transition-all text-center uppercase italic tracking-widest"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Category Selector */}
-                                    <div className="space-y-3">
-                                        <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Categoría / Músculo</label>
-                                        <div className="grid grid-cols-3 gap-2">
-                                            {[...Object.entries(EQUIPMENT_CATEGORIES), ...userSettings.categories.map(c => [c.id, c])].map(([key, cat]: any) => (
-                                                <button
-                                                    key={key}
-                                                    onClick={() => setCustomCategory(key)}
-                                                    className={`
-                                                        p-3 rounded-xl border flex flex-col items-center gap-2 transition-all
-                                                        ${customCategory === key
-                                                            ? 'bg-gym-primary text-black border-gym-primary shadow-[0_0_20px_rgba(250,204,21,0.3)]'
-                                                            : 'bg-neutral-900 border-white/5 text-neutral-500 hover:bg-neutral-800 hover:text-white'}
-                                                    `}
-                                                >
-                                                    <span className="text-2xl">{cat.icon}</span>
-                                                    <span className="text-[9px] font-bold uppercase truncate w-full text-center">{cat.label}</span>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Metrics Selector */}
-                                    <div className="space-y-3">
-                                        <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Métricas a Registrar</label>
-                                        <div className="bg-neutral-900 rounded-xl p-4 border border-white/5 space-y-3">
-                                            {[
-                                                { id: 'weight', label: 'Peso (Lbs/Kgs)', icon: '⚖️' },
-                                                { id: 'reps', label: 'Repeticiones', icon: '🔄' },
-                                                { id: 'time', label: 'Tiempo / Duración', icon: '⏱️' },
-                                                { id: 'distance', label: 'Distancia', icon: '📏' },
-                                                { id: 'rpe', label: 'RPE (Esfuerzo)', icon: '🔥' },
-                                                ...userSettings.metrics
-                                            ].map(metric => (
-                                                <div key={metric.id} className="flex items-center justify-between group">
-                                                    <div className="flex items-center gap-3">
-                                                        <span className="text-lg opacity-50 group-hover:opacity-100 transition-opacity">{metric.icon}</span>
-                                                        <span className="text-sm font-medium text-neutral-300">{metric.label}</span>
-                                                    </div>
-                                                    <button
-                                                        onClick={() => setCustomMetrics(prev => {
-                                                            const isSelected = prev[metric.id as keyof typeof prev];
-                                                            return { ...prev, [metric.id]: !isSelected };
-                                                        })}
-                                                        className={`w-12 h-7 rounded-full transition-colors relative ${customMetrics[metric.id as keyof typeof customMetrics] ? 'bg-gym-primary' : 'bg-neutral-800'}`}
-                                                    >
-                                                        <div className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-transform ${customMetrics[metric.id as keyof typeof customMetrics] ? 'left-6' : 'left-1'}`} />
-                                                    </button>
-                                                </div>
-                                            ))}
-                                            {/* New Metric Button */}
-                                            {!isCreatingMetric ? (
-                                                <button
-                                                    onClick={() => setIsCreatingMetric(true)}
-                                                    className="w-full py-2 border border-dashed border-white/20 rounded-lg text-neutral-500 hover:text-white hover:bg-white/5 text-xs font-bold uppercase transition-all flex items-center justify-center gap-2"
-                                                >
-                                                    <Plus size={14} /> Crear Métrica
-                                                </button>
-                                            ) : (
-                                                // Mini Form for Metric
-                                                <div className="bg-black rounded-lg p-3 border border-white/10 space-y-2">
-                                                    <div className="flex justify-between"><span className="text-xs font-bold uppercase">Nueva Métrica</span><button onClick={() => setIsCreatingMetric(false)}><X size={14} /></button></div>
-                                                    <input type="text" placeholder="Nombre" value={newMetricName} onChange={e => setNewMetricName(e.target.value)} className="w-full bg-neutral-900 border border-white/10 rounded p-2 text-sm focus:border-gym-primary outline-none" />
-                                                    <div className="flex gap-2">
-                                                        <input type="text" value={newMetricIcon} onChange={e => setNewMetricIcon(e.target.value)} className="w-10 bg-neutral-900 border border-white/10 rounded p-2 text-center" />
-                                                        <button onClick={async () => {
-                                                            if (!user) return;
-                                                            try {
-                                                                const newMetric: CustomMetric = {
-                                                                    id: newMetricName.toLowerCase().replace(/\s+/g, '_'),
-                                                                    label: newMetricName,
-                                                                    icon: newMetricIcon || '📊',
-                                                                    default_active: true
-                                                                };
-                                                                const newSettings = { ...userSettings, metrics: [...userSettings.metrics, newMetric] };
-                                                                setUserSettings(newSettings);
-                                                                setCustomMetrics(prev => ({ ...prev, [newMetric.id]: true }));
-                                                                await equipmentService.updateUserSettings(user.id, newSettings);
-                                                                setIsCreatingMetric(false);
-                                                            } catch (e: any) { alert(e.message); }
-                                                        }} className="flex-1 bg-gym-primary text-black font-bold rounded text-xs">GUARDAR</button>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <div className="pt-8 flex gap-4">
-                                        <button onClick={() => setCustomMode(false)} className="flex-1 py-4 rounded-xl bg-neutral-800 text-neutral-400 font-bold hover:bg-white/10 hover:text-white">CANCELAR</button>
-                                        <button onClick={handleCreateCustom} className="flex-1 py-4 rounded-xl bg-gym-primary text-black font-black hover:brightness-110 shadow-lg shadow-yellow-500/20">{editingItem ? 'GUARDAR' : 'CREAR'}</button>
-                                    </div>
-
+                        <div className="flex-1 overflow-y-auto min-h-0 px-2 sm:px-4 pb-4 bg-black">
+                            {/* Content Switch */}
+                            {!isCreatingExercise ? (
+                                <div className="pt-4">
+                                    <ArsenalGrid
+                                        inventory={effectiveInventory}
+                                        selectedItems={new Set()}
+                                        userSettings={userSettings}
+                                        searchTerm={searchTerm}
+                                        onToggleSelection={(id) => {
+                                            const item = effectiveInventory.find(i => i.id === id);
+                                            if (item) {
+                                                addExercise(item);
+                                                setShowAddModal(false);
+                                                setSearchTerm('');
+                                            }
+                                        }}
+                                        onOpenCatalog={(section) => {
+                                            setActiveSection(section);
+                                            setIsCreatingExercise(true);
+                                        }}
+                                        onEditItem={(item) => {
+                                            setEditingItem(item);
+                                            setIsCreatingExercise(true);
+                                        }}
+                                        routineConfigs={new Map()}
+                                        gridClassName="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2"
+                                    />
                                 </div>
                             ) : (
-                                // --- MAIN GRID ---
-                                <div className="p-4 md:p-6 space-y-12">
-                                    {searchTerm && (
-                                        <div className="sticky top-0 z-20 bg-black/80 backdrop-blur pb-4">
-                                            <p className="text-neutral-500 italic">Resultados para "{searchTerm}"...</p>
-                                        </div>
-                                    )}
-
-                                    {/* SEARCH BAR */}
-                                    <div className="relative mb-6">
-                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500" size={20} />
-                                        <input
-                                            type="text"
-                                            placeholder="Buscar ejercicio..."
-                                            value={searchTerm}
-                                            onChange={(e) => setSearchTerm(e.target.value)}
-                                            className="w-full bg-neutral-900 border border-white/10 rounded-xl pl-12 pr-4 py-4 text-white focus:border-gym-primary focus:outline-none font-bold placeholder-neutral-600"
-                                        />
-                                    </div>
-
-                                    {/* SECTIONS */}
-                                    {(() => {
-                                        // Group items
-                                        const grouped: Record<string, Equipment[]> = {};
-                                        const sections = [
-                                            'Pecho', 'Espalda', 'Pierna', 'Hombros', 'Bíceps', 'Tríceps', 'Antebrazo',
-                                            'Cardio', 'Poleas / Varios', 'Peso Libre (General)', 'Otros',
-                                            ...userSettings.categories.map(c => c.label)
-                                        ];
-
-                                        const filtered = arsenal.filter(item => normalizeText(item.name).includes(normalizeText(searchTerm)));
-
-                                        filtered.forEach(item => {
-                                            const g = getMuscleGroup(item);
-                                            if (!grouped[g]) grouped[g] = [];
-                                            grouped[g].push(item);
+                                <EquipmentForm
+                                    user={user}
+                                    userSettings={userSettings}
+                                    onUpdateSettings={setUserSettings}
+                                    editingItem={editingItem}
+                                    onClose={() => { setIsCreatingExercise(false); setEditingItem(null); }}
+                                    onSuccess={(newItem, isEdit) => {
+                                        // Update Local Inventory State (Optimistic)
+                                        setArsenal(prev => {
+                                            if (isEdit) return prev.map(i => i.id === newItem.id ? newItem : i);
+                                            return [...prev, newItem];
                                         });
 
-                                        return sections.map(section => {
-                                            const items = grouped[section] || [];
-                                            // Always show section if check is passed, OR if user wants to add new to this section?
-                                            // Ideally we show strictly populated sections + Always ability to add new?
-                                            // Or show ALL sections? Let's show all sections so user can add to empty ones.
+                                        // If it's a NEW item created specifically here, assume User wants to USE it immediately.
+                                        if (!isEdit) {
+                                            addExercise(newItem);
+                                            setShowAddModal(false);
+                                            setSearchTerm('');
+                                        } else {
+                                            // If executed Edit, just go back to grid
+                                            setIsCreatingExercise(false);
+                                            setEditingItem(null);
+                                        }
+                                    }}
+                                    activeSection={activeSection || 'CHEST'}
+                                    catalogItems={catalogItems}
+                                    onQuickAdd={(seed) => {
+                                        // Quick Add Seed from Catalog
+                                        const tempId = `virtual-${seed.name}`;
+                                        // Create virtual item object since it might not be in the list yet
+                                        // @ts-ignore
+                                        const virtualItem: Equipment = {
+                                            ...seed,
+                                            id: tempId,
+                                            gym_id: 'virtual',
+                                            quantity: 1,
+                                            condition: 'GOOD'
+                                        };
 
-                                            return (
-                                                <div key={section} className="space-y-4">
-                                                    <h3 className="text-xl font-black italic uppercase text-neutral-600 border-b border-white/10 pb-2 tracking-widest pl-2">
-                                                        {section}
-                                                    </h3>
-
-                                                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                                                        {items.map(item => {
-                                                            const isActive = activeExercises.some(e => e.equipmentId === item.id);
-                                                            const catInfo = userSettings.categories.find(c => c.id === item.category) || (EQUIPMENT_CATEGORIES as any)[item.category];
-                                                            const icon = item.icon || catInfo?.icon || '⚡';
-                                                            const metricIds = Object.keys(item.metrics || {}).filter(k => item.metrics?.[k as keyof typeof item.metrics]);
-
-                                                            return (
-                                                                <div key={item.id} className="relative group">
-                                                                    <button
-                                                                        onClick={() => { setShowAddModal(false); addExercise(item); }}
-                                                                        className={`
-                                                                            w-full aspect-[3/4] flex flex-col items-center justify-between
-                                                                            bg-neutral-900 border ${isActive ? 'border-gym-primary' : 'border-white/5'}
-                                                                            hover:bg-neutral-800 hover:border-white/20 hover:scale-[1.02]
-                                                                            rounded-2xl overflow-hidden transition-all duration-300 shadow-lg
-                                                                        `}
-                                                                    >
-                                                                        {/* Active Indicator */}
-                                                                        {isActive && <div className="absolute top-2 right-2 bg-gym-primary text-black w-6 h-6 rounded-full flex items-center justify-center font-bold z-10"><Check size={14} strokeWidth={4} /></div>}
-
-                                                                        {/* Icon */}
-                                                                        <div className="flex-1 flex items-center justify-center w-full">
-                                                                            <span className="text-5xl md:text-6xl drop-shadow-2xl filter grayscale-[0.3] group-hover:grayscale-0 transition-all">{icon}</span>
-                                                                        </div>
-
-                                                                        {/* Footer */}
-                                                                        <div className="w-full bg-black/40 backdrop-blur border-t border-white/5 p-3 flex flex-col gap-1 z-10">
-                                                                            <h4 className="text-[10px] md:text-xs font-black italic uppercase text-white leading-tight line-clamp-2 text-center h-8 flex items-center justify-center">{item.name}</h4>
-
-                                                                            <div className="flex flex-wrap justify-center gap-1 opacity-70">
-                                                                                {metricIds.slice(0, 3).map(m => (
-                                                                                    <span key={m} className="text-[6px] font-bold bg-white/10 px-1 py-[2px] rounded text-neutral-300 uppercase">{m === 'weight' ? 'PESO' : m === 'reps' ? 'REPS' : m}</span>
-                                                                                ))}
-                                                                            </div>
-                                                                        </div>
-                                                                    </button>
-
-                                                                    {/* Edit Button */}
-                                                                    <button
-                                                                        onClick={(e) => { e.stopPropagation(); handleEditRequest(item); }}
-                                                                        className="absolute top-2 left-2 p-1.5 rounded-full bg-black/20 text-neutral-500 hover:text-white hover:bg-neutral-700 backdrop-blur z-20 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                                    >
-                                                                        <Edit2 size={12} />
-                                                                    </button>
-                                                                </div>
-                                                            );
-                                                        })}
-
-                                                        {/* ADD NEW TO SECTION BUTTON */}
-                                                        <button
-                                                            onClick={() => openCreateMode(section)}
-                                                            className="aspect-[3/4] rounded-2xl border-2 border-dashed border-white/10 hover:border-gym-primary/50 hover:bg-gym-primary/5 flex flex-col items-center justify-center gap-2 group transition-all"
-                                                        >
-                                                            <div className="w-12 h-12 rounded-full bg-white/5 group-hover:bg-gym-primary group-hover:text-black flex items-center justify-center transition-colors">
-                                                                <Plus size={24} />
-                                                            </div>
-                                                            <span className="text-[10px] font-black uppercase text-neutral-500 group-hover:text-gym-primary">Agregar A<br />{section}</span>
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })
-                                    })()}
-                                </div>
+                                        addExercise(virtualItem);
+                                        setShowAddModal(false);
+                                        setIsCreatingExercise(false);
+                                    }}
+                                />
                             )}
                         </div>
                     </div>
@@ -1716,58 +1367,6 @@ export const WorkoutSession = () => {
             }
 
 
-
-
-
-
-            {/* SAVE ROUTINE PROMPT MODAL */}
-            {showSavePrompt && (
-                <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[60] flex items-center justify-center p-6 animate-in fade-in duration-300">
-                    <div className="w-full max-w-md bg-neutral-900 border border-white/10 rounded-3xl p-6 shadow-2xl space-y-6">
-                        <div className="text-center space-y-2">
-                            <div className="w-16 h-16 bg-yellow-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-yellow-500/20">
-                                <Swords size={32} className="text-yellow-500" />
-                            </div>
-                            <h2 className="text-2xl font-black italic uppercase text-white tracking-tighter">
-                                ¡Misión Cumplida!
-                            </h2>
-                            <p className="text-neutral-400 text-sm">
-                                ¿Deseas guardar esta configuración de batalla como una rutina para usarla en el futuro?
-                            </p>
-                        </div>
-
-                        <div className="space-y-4">
-                            <div>
-                                <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest pl-1 mb-2 block">Nombre de la Rutina</label>
-                                <input
-                                    type="text"
-                                    autoFocus
-                                    placeholder="Ej: Pierna día 1..."
-                                    className="w-full bg-neutral-950 border border-neutral-800 focus:border-yellow-500 rounded-xl p-4 text-white font-bold outline-none transition-colors"
-                                    value={routineName}
-                                    onChange={(e) => setRoutineName(e.target.value)}
-                                />
-                            </div>
-
-                            <button
-                                onClick={() => confirmFinish(true)}
-                                disabled={!routineName.trim() || isSavingRoutine}
-                                className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-black uppercase tracking-widest py-4 rounded-xl shadow-lg shadow-yellow-500/20 transition-all disabled:opacity-50 disabled:grayscale flex items-center justify-center gap-2"
-                            >
-                                {isSavingRoutine ? <Loader className="animate-spin" size={20} /> : <Save size={20} />}
-                                {isSavingRoutine ? "Guardando..." : "Guardar y Finalizar"}
-                            </button>
-
-                            <button
-                                onClick={() => confirmFinish(false)}
-                                className="w-full bg-transparent hover:bg-white/5 text-neutral-400 font-bold uppercase tracking-widest py-4 rounded-xl transition-all"
-                            >
-                                No, solo finalizar
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
         </div >
     )
