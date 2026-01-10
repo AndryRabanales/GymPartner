@@ -50,7 +50,7 @@ export const ActiveWorkoutBubble = () => {
             return;
         }
 
-        const session = await workoutService.getActiveSession(user!.id);
+        const { data: session } = await workoutService.getActiveSession(user!.id);
         if (session) {
             setSessionId(session.id);
             setGymId(session.gym_id || null); // Fix: undefined -> null

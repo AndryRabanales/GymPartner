@@ -118,8 +118,8 @@ class WorkoutService {
     }
 
     // Get incomplete session if app crashed or user left
-    async getActiveSession(userId: string): Promise<WorkoutSession | null> {
-        const { data } = await supabase
+    async getActiveSession(userId: string): Promise<{ data: WorkoutSession | null; error: any }> {
+        const { data, error } = await supabase
             .from('workout_sessions')
             .select('*')
             .eq('user_id', userId)
@@ -128,7 +128,12 @@ class WorkoutService {
             .limit(1)
             .maybeSingle();
 
-        return data;
+        if (error) {
+            console.error("Error getting active session:", error);
+            return { data: null, error };
+        }
+
+        return { data, error: null };
     }
 
     // Get logs for an active session (The "Replay")
