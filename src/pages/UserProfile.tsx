@@ -1253,7 +1253,6 @@ export const UserProfile = () => {
                         </div>
                     </div>
                 )
-                )
             }
 
             {/* NEW: AUTO-START OVERLAY */}
