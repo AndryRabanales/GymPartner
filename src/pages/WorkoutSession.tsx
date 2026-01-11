@@ -13,7 +13,7 @@ import { normalizeText, getMuscleGroup } from '../utils/inventoryUtils';
 
 // Interface NumpadTarget removed
 // BattleTimer removed
-import { Plus, Swords, Trash2, Check, ArrowLeft, MoreVertical, X, RotateCcw, Search, Loader } from 'lucide-react';
+import { Plus, Swords, Trash2, Check, ArrowLeft, MoreVertical, X, RotateCcw, Search, Loader, Map as MapIcon } from 'lucide-react';
 import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
@@ -721,12 +721,120 @@ export const WorkoutSession = () => {
 
     // startSessionInternal removed
 
-    const handleFinish = async () => {
-        setIsFinished(true); // STOP TIMER IMMEDIATELY
+    // --- FINISH FLOW STATE ---
+    const [showRoutineModal, setShowRoutineModal] = useState(false);
+    const [showLocationModal, setShowLocationModal] = useState(false);
+    const [routineName, setRoutineName] = useState('');
+    const [locationName, setLocationName] = useState('');
+    const [isSavingFlow, setIsSavingFlow] = useState(false);
+
+    // 1. Triggered by UI Button
+    const handleFinishRequest = async () => {
+        setIsFinished(true); // Stop timer
+        setShowRoutineModal(true);
+    };
+
+    // 2. Save Routine (Optional)
+    const onSaveRoutine = async (name: string) => {
+        if (name.trim()) {
+            setIsSavingFlow(true);
+            const equipmentIds = activeExercises.map(e => e.equipmentId);
+            // Create Routine logic
+            await workoutService.createRoutine(user!.id, name, equipmentIds, resolvedGymId !== 'personal' && !resolvedGymId?.startsWith('virtual') ? resolvedGymId : null);
+            setIsSavingFlow(false);
+        }
+        setShowRoutineModal(false);
+        checkLocationStep();
+    };
+
+    const onSkipRoutine = () => {
+        setShowRoutineModal(false);
+        checkLocationStep();
+    }
+
+    // 3. Check if we need to save location
+    const checkLocationStep = async () => {
+        // Fetch current gym details to see if it's "Personal" (dummy)
+        if (!resolvedGymId) {
+            handleFinalizeSession();
+            return;
+        }
+
+        const { data: gym } = await supabase.from('gyms').select('place_id').eq('id', resolvedGymId).single();
+
+        // If it's the Personal Arsenal (virtual/home), prompt to save location
+        if (gym && (gym.place_id.startsWith('personal_arsenal') || gym.place_id === 'virtual')) {
+            setShowLocationModal(true);
+        } else {
+            handleFinalizeSession();
+        }
+    };
+
+    // 4. Save Location (Optional)
+    const onSaveLocation = async (name: string) => {
+        if (name.trim()) {
+            setIsSavingFlow(true);
+            // Get GPS
+            if ('geolocation' in navigator) {
+                navigator.geolocation.getCurrentPosition(async (position) => {
+                    const { latitude, longitude } = position.coords;
+                    const placeId = `custom_loc_${Date.now()}`; // Unique ID
+
+                    // Create Gym
+                    const gymPlace = {
+                        place_id: placeId,
+                        name: name,
+                        address: "Ubicación Personalizada",
+                        location: { lat: latitude, lng: longitude },
+                        types: ['gym'],
+                        rating: 5,
+                        user_ratings_total: 1
+                    };
+
+                    const result = await userService.addGymToPassport(user!.id, gymPlace as any);
+
+                    if (result.success && result.gym_id && sessionId) {
+                        // Update the current session to point to this NEW gym
+                        await supabase.from('workout_sessions').update({ gym_id: result.gym_id }).eq('id', sessionId);
+                        console.log('📍 Session moved to new gym:', result.gym_id);
+                    }
+
+                    setIsSavingFlow(false);
+                    setShowLocationModal(false);
+                    handleFinalizeSession();
+
+                }, (err) => {
+                    console.error("GPS Error", err);
+                    alert("No se pudo obtener la ubicación. Guardando sin ubicación nueva.");
+                    setIsSavingFlow(false);
+                    setShowLocationModal(false);
+                    handleFinalizeSession();
+                });
+            } else {
+                alert("Geolocalización no soportada.");
+                setIsSavingFlow(false);
+                setShowLocationModal(false);
+                handleFinalizeSession();
+            }
+        } else {
+            // Empty name? Just skip
+            setShowLocationModal(false);
+            handleFinalizeSession();
+        }
+    };
+
+    const onSkipLocation = () => {
+        setShowLocationModal(false);
+        handleFinalizeSession();
+    };
+
+
+    // 5. Finalize (The original handleFinish)
+    const handleFinalizeSession = async () => {
+        // setIsFinished(true); // Already stopped
         if (!sessionId) {
             console.error('❌ No sessionId found!');
-            // alert('Error: No hay sesión activa'); // Removed alert
-            setIsFinished(false); // Resume if error
+            setIsFinished(false);
             return;
         }
 
@@ -1151,7 +1259,7 @@ export const WorkoutSession = () => {
                                             {mapIndex === activeExercises.length - 1 && (
                                                 <div className="pt-8 pb-4">
                                                     <button
-                                                        onClick={handleFinish}
+                                                        onClick={handleFinishRequest}
                                                         className="w-full bg-gradient-to-br from-yellow-400 to-orange-500 text-black font-black uppercase tracking-[0.2em] py-5 rounded-xl shadow-[0_0_30px_rgba(250,204,21,0.5)] hover:shadow-[0_0_50px_rgba(250,204,21,0.7)] text-lg hover:-translate-y-1 active:scale-95 transition-all duration-300 relative overflow-hidden group border border-yellow-300/50"
                                                     >
                                                         <span className="relative z-10">Finalizar Entrenamiento</span>
@@ -1314,6 +1422,93 @@ export const WorkoutSession = () => {
             {/* SmartNumpad Removed */}
 
 
+
+            {/* --- MODALS --- */}
+
+            {/* 1. Save Routine Modal */}
+            {showRoutineModal && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-4">
+                    <div className="bg-neutral-900 border border-neutral-800 p-6 rounded-2xl w-full max-w-sm shadow-2xl relative">
+                        <h3 className="text-xl font-black italic uppercase text-white mb-2">¿Guardar Estrategia?</h3>
+                        <p className="text-neutral-400 text-sm mb-6">Puedes guardar esta sesión como una rutina para repetirla en el futuro.</p>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-xs font-bold text-neutral-500 uppercase block mb-2">Nombre de la Rutina</label>
+                                <input
+                                    type="text"
+                                    autoFocus
+                                    placeholder="Ej. Pecho y Tríceps Destructor"
+                                    value={routineName}
+                                    onChange={(e) => setRoutineName(e.target.value)}
+                                    className="w-full bg-black border border-neutral-700 rounded-lg p-3 text-white font-bold focus:border-gym-primary outline-none transition-colors"
+                                />
+                            </div>
+
+                            <button
+                                onClick={() => onSaveRoutine(routineName)}
+                                disabled={isSavingFlow || !routineName.trim()}
+                                className="w-full bg-gym-primary text-black font-black uppercase py-4 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-yellow-400 transition-colors flex items-center justify-center gap-2"
+                            >
+                                {isSavingFlow ? <Loader className="animate-spin" size={20} /> : <Check size={20} strokeWidth={3} />}
+                                GUARDAR RUTINA
+                            </button>
+
+                            <button
+                                onClick={onSkipRoutine}
+                                disabled={isSavingFlow}
+                                className="w-full bg-transparent border border-neutral-800 text-neutral-400 font-bold uppercase py-3 rounded-xl hover:text-white hover:border-white transition-colors"
+                            >
+                                NO GUARDAR
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 2. Save Location Modal */}
+            {showLocationModal && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-4">
+                    <div className="bg-neutral-900 border border-neutral-800 p-6 rounded-2xl w-full max-w-sm shadow-2xl relative">
+                        <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-yellow-500 text-black px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest shadow-[0_0_20px_rgba(234,179,8,0.5)]">
+                            ¡Nueva Conquista!
+                        </div>
+                        <h3 className="text-xl font-black italic uppercase text-white mb-2 text-center mt-2">¿Guardar Territorio?</h3>
+                        <p className="text-neutral-400 text-sm mb-6 text-center">Parece que estás en una ubicación nueva. ¿Quieres guardarla como un gimnasio personalizado?</p>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-xs font-bold text-neutral-500 uppercase block mb-2">Nombre del Lugar</label>
+                                <input
+                                    type="text"
+                                    autoFocus
+                                    placeholder="Ej. Parque de Calistenia Norte"
+                                    value={locationName}
+                                    onChange={(e) => setLocationName(e.target.value)}
+                                    className="w-full bg-black border border-neutral-700 rounded-lg p-3 text-white font-bold focus:border-gym-primary outline-none transition-colors"
+                                />
+                            </div>
+
+                            <button
+                                onClick={() => onSaveLocation(locationName)}
+                                disabled={isSavingFlow || !locationName.trim()}
+                                className="w-full bg-white text-black font-black uppercase py-4 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 transition-transform flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(255,255,255,0.2)]"
+                            >
+                                {isSavingFlow ? <Loader className="animate-spin" size={20} /> : <MapIcon size={20} strokeWidth={3} />}
+                                GUARDAR UBICACIÓN
+                            </button>
+
+                            <button
+                                onClick={onSkipLocation}
+                                disabled={isSavingFlow}
+                                className="w-full bg-transparent border border-neutral-800 text-neutral-400 font-bold uppercase py-3 rounded-xl hover:text-white hover:border-white transition-colors"
+                            >
+                                NO, SOLO FINALIZAR
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
         </div >
     )
