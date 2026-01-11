@@ -229,6 +229,26 @@ export const WorkoutSession = () => {
 
                 // NEW: Restore State (Hydrate activeExercises)
                 setLoading(true);
+
+                // 1. FAST RESTORE: Local Storage Draft (Preserves unsaved inputs)
+                // This fixes the issue where returning to the session shows the routine list instead of the active exercises
+                const savedDraft = localStorage.getItem(`workout_draft_${active.id}`);
+                if (savedDraft) {
+                    try {
+                        const parsed = JSON.parse(savedDraft);
+                        if (parsed && Array.isArray(parsed) && parsed.length > 0) {
+                            setActiveExercises(parsed);
+                            console.log('⚡ Draft restored from LocalStorage - Skipping DB Log Fetch');
+                            setLoading(false);
+                            // Early return to skip DB fetch since we have the latest UI state
+                            return;
+                        }
+                    } catch (e) {
+                        console.warn('Failed to parse workout draft', e);
+                    }
+                }
+
+                // 2. SLOW RESTORE: Database Logs (Only if no local draft found)
                 const logs = await workoutService.getSessionLogs(active.id);
 
                 if (logs && logs.length > 0) {
@@ -596,6 +616,13 @@ export const WorkoutSession = () => {
 
 
 
+    // NEW: Persist Active Exercises to LocalStorage
+    useEffect(() => {
+        if (sessionId && activeExercises.length > 0) {
+            localStorage.setItem(`workout_draft_${sessionId}`, JSON.stringify(activeExercises));
+        }
+    }, [sessionId, activeExercises]);
+
     // NEW: Handle Cancel
     const handleCancelSession = async () => {
         if (!sessionId) {
@@ -603,6 +630,9 @@ export const WorkoutSession = () => {
             return;
         }
         if (window.confirm("¿Seguro que quieres cancelar? Se perderá todo el progreso de esta sesión.")) {
+            // Clear Local Storage
+            localStorage.removeItem(`workout_draft_${sessionId}`);
+
             setLoading(true);
             await workoutService.deleteSession(sessionId);
             setLoading(false);
@@ -614,6 +644,9 @@ export const WorkoutSession = () => {
     const handleRestartSession = async () => {
         if (!sessionId) return;
         if (window.confirm("¿Reiniciar entrenamiento? Se borrarán todas las series de hoy.")) {
+            // Clear Local Storage
+            localStorage.removeItem(`workout_draft_${sessionId}`);
+
             setLoading(true);
             await workoutService.deleteSession(sessionId);
 
@@ -767,6 +800,7 @@ export const WorkoutSession = () => {
 
             if (result.success) {
                 console.log('✅ Sesión terminada exitosamente');
+                localStorage.removeItem(`workout_draft_${sessionId}`);
                 // Removed blocking alert. 
                 // We'll rely on the UI showing "Guardando..." or similar via loading state, 
                 // or we could add a specific "Finished" state to show a success message briefly.
