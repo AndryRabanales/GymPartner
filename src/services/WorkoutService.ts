@@ -341,7 +341,7 @@ class WorkoutService {
     }
 
     // Create a new Routine (Master or Gym-Specific)
-    async createRoutine(userId: string, name: string, equipmentIds: string[], gymId?: string | null) {
+    async createRoutine(userId: string, name: string, exercises: string[] | any[], gymId?: string | null) {
         // 1. Create Routine
         const { data: routineData, error: routineError } = await supabase
             .from('routines')
@@ -360,9 +360,30 @@ class WorkoutService {
             return { error: routineError };
         }
 
-        if (equipmentIds.length > 0) {
-            await this.linkEquipmentToRoutine(routineData.id, equipmentIds);
+        // 2. Link Exercises
+        if (exercises.length > 0) {
+            if (typeof exercises[0] === 'string') {
+                // Legacy: Array of IDs
+                await this.linkEquipmentToRoutine(routineData.id, exercises as string[]);
+            } else {
+                // Rich Objects: Array of ActiveExercise/GymEquipment
+                // We need to map them to the format expected by linkRichExercisesToRoutine
+                // If it comes from ActiveExercise (UI), it has 'equipmentId' and 'name'
+                // If it comes from DB, it has 'id' and 'name'
+                const richPayload = exercises.map(ex => ({
+                    id: ex.equipmentId || ex.id, // Support both formats
+                    name: ex.equipmentName || ex.name,
+                    track_weight: ex.track_weight, // Pass-through
+                    track_reps: ex.track_reps,
+                    track_time: ex.track_time,
+                    track_distance: ex.track_distance,
+                    track_rpe: ex.track_rpe,
+                    custom_metric: ex.custom_metric
+                }));
+                await this.linkRichExercisesToRoutine(routineData.id, richPayload);
+            }
         }
+
         return { data: routineData };
     }
 

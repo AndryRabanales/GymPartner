@@ -738,9 +738,8 @@ export const WorkoutSession = () => {
     const onSaveRoutine = async (name: string) => {
         if (name.trim()) {
             setIsSavingFlow(true);
-            const equipmentIds = activeExercises.map(e => e.equipmentId);
-            // Create Routine logic
-            await workoutService.createRoutine(user!.id, name, equipmentIds, resolvedGymId !== 'personal' && !resolvedGymId?.startsWith('virtual') ? resolvedGymId : null);
+            // Pass FULL activeExercises to capture config (metrics, etc.)
+            await workoutService.createRoutine(user!.id, name, activeExercises, resolvedGymId !== 'personal' && !resolvedGymId?.startsWith('virtual') ? resolvedGymId : null);
             setIsSavingFlow(false);
         }
         setShowRoutineModal(false);

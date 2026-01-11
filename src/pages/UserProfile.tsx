@@ -82,6 +82,9 @@ export const UserProfile = () => {
         location?: { lat: number, lng: number };
     }>({ isOpen: false, type: 'NO_GYM' });
 
+    // NEW: Auto-Start Overlay State
+    const [autoStartGymName, setAutoStartGymName] = useState<string | null>(null);
+
     useEffect(() => {
         console.log('[TUTORIAL] Current Step State:', tutorialStep);
         if (tutorialStep === 5) {
@@ -802,12 +805,13 @@ export const UserProfile = () => {
 
                             if (nearbyGym) {
                                 console.log(`📍 Gym Detected: ${nearbyGym.gym_name}`);
-                                // NEW: Prompt Confirmation for "Gym Detected"
-                                setStartConfirmationModal({
-                                    isOpen: true,
-                                    type: 'GYM_FOUND',
-                                    gymData: nearbyGym
-                                });
+
+                                // NEW: AUTO-START with Visual Feedback
+                                setAutoStartGymName(nearbyGym.gym_name);
+                                await new Promise(r => setTimeout(r, 2000)); // 2s delay to read the message
+
+                                await handleStartWorkout(nearbyGym);
+                                setAutoStartGymName(null); // Reset (though we navigated away)
                             } else {
                                 // 2. No known gym nearby -> Prompt "No Gym Detected" (Hidden: Create Base)
                                 setStartConfirmationModal({
@@ -1249,7 +1253,30 @@ export const UserProfile = () => {
                         </div>
                     </div>
                 )
+                )
             }
+
+            {/* NEW: AUTO-START OVERLAY */}
+            {autoStartGymName && (
+                <div className="fixed inset-0 z-[110] flex flex-col items-center justify-center bg-black/90 backdrop-blur-xl animate-in fade-in duration-300">
+                    <div className="w-24 h-24 mb-6 rounded-full bg-gym-primary/20 flex items-center justify-center animate-pulse shadow-[0_0_50px_rgba(250,204,21,0.3)]">
+                        <MapPin size={48} className="text-gym-primary animate-bounce" />
+                    </div>
+
+                    <h2 className="text-white text-3xl font-black italic uppercase tracking-tighter mb-2 animate-in slide-in-from-bottom-4 fade-in duration-500 text-center px-4">
+                        Iniciando Operación en
+                    </h2>
+                    <h1 className="text-transparent bg-clip-text bg-gradient-to-r from-gym-primary to-yellow-200 text-4xl md:text-6xl font-black uppercase italic tracking-tighter animate-in slide-in-from-bottom-8 fade-in duration-700 delay-100 text-center px-4">
+                        {autoStartGymName}
+                    </h1>
+
+                    <div className="mt-8 flex gap-2">
+                        <div className="w-3 h-3 bg-gym-primary rounded-full animate-bounce delay-0"></div>
+                        <div className="w-3 h-3 bg-gym-primary rounded-full animate-bounce delay-150"></div>
+                        <div className="w-3 h-3 bg-gym-primary rounded-full animate-bounce delay-300"></div>
+                    </div>
+                </div>
+            )}
         </div >
     );
 };
