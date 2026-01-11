@@ -370,16 +370,43 @@ class WorkoutService {
                 // We need to map them to the format expected by linkRichExercisesToRoutine
                 // If it comes from ActiveExercise (UI), it has 'equipmentId' and 'name'
                 // If it comes from DB, it has 'id' and 'name'
-                const richPayload = exercises.map(ex => ({
-                    id: ex.equipmentId || ex.id, // Support both formats
-                    name: ex.equipmentName || ex.name,
-                    track_weight: ex.track_weight, // Pass-through
-                    track_reps: ex.track_reps,
-                    track_time: ex.track_time,
-                    track_distance: ex.track_distance,
-                    track_rpe: ex.track_rpe,
-                    custom_metric: ex.custom_metric
-                }));
+                const richPayload = exercises.map(ex => {
+                    // RESOLVE CONFIGURATION:
+                    // Source A: "metrics" object (from WorkoutSession ActiveExercise)
+                    // Source B: Direct "track_*" props (from MyArsenal RoutineConfig)
+                    let config = {
+                        track_weight: ex.track_weight,
+                        track_reps: ex.track_reps,
+                        track_time: ex.track_time,
+                        track_distance: ex.track_distance,
+                        track_rpe: ex.track_rpe,
+                        track_pr: ex.track_pr,
+                        custom_metric: ex.custom_metric
+                    };
+
+                    if (ex.metrics) {
+                        config.track_weight = ex.metrics.weight;
+                        config.track_reps = ex.metrics.reps;
+                        config.track_time = ex.metrics.time;
+                        config.track_distance = ex.metrics.distance;
+                        config.track_rpe = ex.metrics.rpe;
+                        config.track_pr = ex.metrics.track_pr; // Sometimes in metrics
+
+                        // FIND CUSTOM METRIC
+                        // Any key in metrics that is TRUE and NOT standard
+                        const standardKeys = ['weight', 'reps', 'time', 'distance', 'rpe', 'track_pr'];
+                        const customKey = Object.keys(ex.metrics).find(k => !standardKeys.includes(k) && ex.metrics[k] === true);
+                        if (customKey) {
+                            config.custom_metric = customKey;
+                        }
+                    }
+
+                    return {
+                        id: ex.equipmentId || ex.id, // Support both formats
+                        name: ex.equipmentName || ex.name,
+                        ...config
+                    };
+                });
                 await this.linkRichExercisesToRoutine(routineData.id, richPayload);
             }
         }
