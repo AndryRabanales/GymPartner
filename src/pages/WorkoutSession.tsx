@@ -65,6 +65,9 @@ export const WorkoutSession = () => {
     // Tutorial State
     const [tutorialStep, setTutorialStep] = useState(0);
 
+    // NEW: Start Options Modal
+    const [showStartOptionsModal, setShowStartOptionsModal] = useState(false);
+
     useEffect(() => {
         const step = parseInt(localStorage.getItem('tutorial_step') || '0');
         if (step === 6 || step === 7) {
@@ -323,9 +326,13 @@ export const WorkoutSession = () => {
                 }
 
                 // If no routines exist, auto-open "Add Exercise" modal (All Exercises)
+                // If routines exist, prompt choices (Start Options Modal)
                 if (localRoutines.length === 0) {
                     console.log('🔰 No routines found - Auto-opening exercise picker');
                     setShowAddModal(true);
+                } else {
+                    console.log('🔰 Routines found - Asking user intent');
+                    setShowStartOptionsModal(true);
                 }
             }
 
@@ -1505,6 +1512,62 @@ export const WorkoutSession = () => {
                                 NO, SOLO FINALIZAR
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 3. NEW: Start Options Modal (Routine vs Quick Start) */}
+            {showStartOptionsModal && (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/95 backdrop-blur-md animate-in fade-in duration-300 p-4">
+                    <div className="w-full max-w-md bg-neutral-900/50 border border-neutral-800 rounded-3xl p-6 md:p-8 flex flex-col gap-6 relative overflow-hidden">
+                        {/* Background FX */}
+                        <div className="absolute -top-20 -right-20 w-64 h-64 bg-gym-primary/5 rounded-full blur-3xl pointer-events-none"></div>
+
+                        <div className="text-center">
+                            <h2 className="text-2xl font-black italic uppercase text-white tracking-tighter mb-1">Estrategia de Hoy</h2>
+                            <p className="text-neutral-500 font-bold text-sm">Selecciona una rutina o inicia libre.</p>
+                        </div>
+
+                        {/* Routine List (Compact) */}
+                        <div className="grid grid-cols-1 gap-2 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
+                            {routines.map((routine) => (
+                                <button
+                                    key={routine.id}
+                                    onClick={() => {
+                                        loadRoutine(routine);
+                                        setShowStartOptionsModal(false);
+                                    }}
+                                    className="flex items-center justify-between p-4 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 hover:border-gym-primary/50 transition-all group"
+                                >
+                                    <div className="text-left">
+                                        <h3 className="font-bold text-white group-hover:text-gym-primary transition-colors uppercase italic">{routine.name}</h3>
+                                        <span className="text-xs text-neutral-500 font-medium">
+                                            {(routine.equipment_ids?.length || routine.routine_exercises?.length || 0)} Ejercicios
+                                        </span>
+                                    </div>
+                                    <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-gym-primary group-hover:text-black transition-colors">
+                                        <Swords size={16} />
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="relative">
+                            <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-neutral-800"></div>
+                            <span className="relative z-10 bg-neutral-900 px-2 text-neutral-500 text-[10px] font-black uppercase tracking-widest mx-auto block w-fit">O inicia libre</span>
+                        </div>
+
+                        {/* Quick Start Button */}
+                        <button
+                            onClick={() => {
+                                setShowStartOptionsModal(false);
+                                setShowAddModal(true); // Open the exercise picker directly
+                            }}
+                            className="w-full bg-white text-black font-black uppercase py-4 rounded-xl hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(255,255,255,0.1)]"
+                        >
+                            <Plus size={20} strokeWidth={3} />
+                            INICIO RÁPIDO
+                        </button>
                     </div>
                 </div>
             )}
