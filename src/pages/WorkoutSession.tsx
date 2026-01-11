@@ -742,11 +742,61 @@ export const WorkoutSession = () => {
     };
 
     // 2. Save Routine (Optional)
+    // 2. Save Routine (Optional)
     const onSaveRoutine = async (name: string) => {
         if (name.trim()) {
             setIsSavingFlow(true);
-            // Pass FULL activeExercises to capture config (metrics, etc.)
-            await workoutService.createRoutine(user!.id, name, activeExercises, resolvedGymId !== 'personal' && !resolvedGymId?.startsWith('virtual') ? resolvedGymId : null);
+
+            // 0. Resolve Virtual IDs to Real UUIDs
+            // Just like MyArsenal, we must ensure every item exists in the DB before linking.
+            const resolvedExercises = await Promise.all(activeExercises.map(async (ex) => {
+                let finalId = ex.equipmentId;
+
+                if (finalId.startsWith('virtual-')) {
+                    // It's a seed item. Check if it exists in the current gym by name first.
+                    const seedName = ex.equipmentName; // Should match the seed name
+                    const targetGym = resolvedGymId === 'personal' || !resolvedGymId ? await userService.ensurePersonalGym(user!.id) : resolvedGymId;
+
+                    try {
+                        // Check if already exists in target gym (by name)
+                        const { data: existing } = await supabase
+                            .from('gym_equipment')
+                            .select('id')
+                            .eq('gym_id', targetGym)
+                            .ilike('name', seedName)
+                            .maybeSingle();
+
+                        if (existing) {
+                            finalId = existing.id;
+                        } else {
+                            // Create it!
+                            // Find seed data to get category/icon
+                            const seed = COMMON_EQUIPMENT_SEEDS.find(s => normalizeText(s.name) === normalizeText(seedName));
+
+                            const newEq = await equipmentService.addEquipment({
+                                name: seedName,
+                                category: seed?.category || 'FREE_WEIGHT',
+                                gym_id: targetGym,
+                                quantity: 1,
+                                condition: 'GOOD',
+                                icon: (seed as any)?.icon
+                            }, user!.id);
+
+                            if (newEq) finalId = newEq.id;
+                        }
+                    } catch (err) {
+                        console.error("Error resolving virtual item:", err);
+                    }
+                }
+
+                return {
+                    ...ex,
+                    equipmentId: finalId
+                };
+            }));
+
+            // Pass FULL activeExercises (resolved) to capture config (metrics, etc.)
+            await workoutService.createRoutine(user!.id, name, resolvedExercises, resolvedGymId !== 'personal' && !resolvedGymId?.startsWith('virtual') ? resolvedGymId : null);
             setIsSavingFlow(false);
         }
         setShowRoutineModal(false);
