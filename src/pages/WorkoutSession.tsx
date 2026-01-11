@@ -1181,7 +1181,7 @@ export const WorkoutSession = () => {
             {/* Fab Add Button (Only if exercises exist) */}
             {
                 activeExercises.length > 0 && (
-                    <div className="fixed bottom-6 left-0 w-full px-4 flex justify-center z-50 pointer-events-none">
+                    <div className="fixed bottom-24 left-0 w-full px-4 flex justify-center z-50 pointer-events-none">
                         <button
                             onClick={() => setShowAddModal(true)}
                             className="pointer-events-auto bg-red-600 text-white font-black py-4 px-10 rounded-2xl shadow-[0_10px_40px_rgba(220,38,38,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center gap-3 text-lg border border-red-500/50 backdrop-blur-md"
