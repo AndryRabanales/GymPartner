@@ -13,7 +13,7 @@ import { normalizeText, getMuscleGroup } from '../utils/inventoryUtils';
 
 // Interface NumpadTarget removed
 // BattleTimer removed
-import { Plus, Swords, Trash2, Check, ArrowLeft, MoreVertical, X, RotateCcw, Search, Loader, Map as MapIcon, BrainCircuit, History } from 'lucide-react';
+import { Plus, Swords, Trash2, Check, ArrowLeft, MoreVertical, X, RotateCcw, Search, Loader, Map as MapIcon, BrainCircuit } from 'lucide-react';
 import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
@@ -1007,45 +1007,8 @@ export const WorkoutSession = () => {
                 <h2 className="text-2xl font-black uppercase tracking-widest animate-pulse">Iniciando...</h2>
             </div>
             {/* 4. NEW: SUMMARY / MISSION COMPLETE MODAL */}
-            {
-                showSummary && (
-                    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/95 backdrop-blur-md animate-in fade-in duration-500 p-4">
-                        <div className="w-full max-w-sm flex flex-col items-center text-center space-y-8 relative">
-                            {/* Confetti/Success FX (CSS only for now) */}
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gym-primary/10 rounded-full blur-3xl pointer-events-none animate-pulse"></div>
+            {/* Moved to main return */}
 
-                            <div className="relative">
-                                <Check size={64} className="text-gym-primary animate-bounce" strokeWidth={4} />
-                            </div>
-
-                            <div className="space-y-2">
-                                <h2 className="text-4xl font-black italic uppercase text-white tracking-tighter">
-                                    SESIÓN<br />FINALIZADA
-                                </h2>
-                                <p className="text-neutral-400 font-bold">Sesión registrada en la base de datos.</p>
-                            </div>
-
-                            <div className="w-full space-y-3">
-                                <button
-                                    onClick={() => navigate('/journal')}
-                                    className="w-full bg-purple-600 hover:bg-purple-500 text-white font-black uppercase py-4 rounded-xl shadow-[0_0_30px_rgba(147,51,234,0.3)] transition-all hover:scale-105 flex items-center justify-center gap-2 group"
-                                >
-                                    <BrainCircuit size={24} className="group-hover:animate-pulse" />
-                                    VER ANÁLISIS
-                                </button>
-
-                                <button
-                                    onClick={() => navigate('/history')}
-                                    className="w-full bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white font-bold uppercase py-4 rounded-xl border border-neutral-700 hover:border-white/20 transition-all flex items-center justify-center gap-2"
-                                >
-                                    <History size={20} />
-                                    IR AL HISTORIAL
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )
-            }
         </div>
     );
 
@@ -1626,68 +1589,128 @@ export const WorkoutSession = () => {
                     </div>
                 )
             }
+            <button
+                onClick={() => onSaveLocation(locationName)}
+                disabled={isSavingFlow || !locationName.trim()}
+                className="w-full bg-white text-black font-black uppercase py-4 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 transition-transform flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(255,255,255,0.2)]"
+            >
+                {isSavingFlow ? <Loader className="animate-spin" size={20} /> : <MapIcon size={20} strokeWidth={3} />}
+                GUARDAR UBICACIÓN
+            </button>
 
-            {/* 3. NEW: Start Options Modal (Routine vs Quick Start) */}
-            {
-                showStartOptionsModal && (
-                    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/95 backdrop-blur-md animate-in fade-in duration-300 p-4">
-                        <div className="w-full max-w-md bg-neutral-900/50 border border-neutral-800 rounded-3xl p-6 md:p-8 flex flex-col gap-6 relative overflow-hidden">
-                            {/* Background FX */}
-                            <div className="absolute -top-20 -right-20 w-64 h-64 bg-gym-primary/5 rounded-full blur-3xl pointer-events-none"></div>
-
-                            <div className="text-center">
-                                <h2 className="text-2xl font-black italic uppercase text-white tracking-tighter mb-1">Estrategia de Hoy</h2>
-                                <p className="text-neutral-500 font-bold text-sm">Selecciona una rutina o inicia libre.</p>
-                            </div>
-
-                            {/* Routine List (Compact) */}
-                            <div className="grid grid-cols-1 gap-2 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
-                                {routines.map((routine) => (
-                                    <button
-                                        key={routine.id}
-                                        onClick={() => {
-                                            loadRoutine(routine);
-                                            setShowStartOptionsModal(false);
-                                        }}
-                                        className="flex items-center justify-between p-4 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 hover:border-gym-primary/50 transition-all group"
-                                    >
-                                        <div className="text-left">
-                                            <h3 className="font-bold text-white group-hover:text-gym-primary transition-colors uppercase italic">{routine.name}</h3>
-                                            <span className="text-xs text-neutral-500 font-medium">
-                                                {(routine.equipment_ids?.length || routine.routine_exercises?.length || 0)} Ejercicios
-                                            </span>
-                                        </div>
-                                        <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-gym-primary group-hover:text-black transition-colors">
-                                            <Swords size={16} />
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
-
-                            <div className="relative">
-                                <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-neutral-800"></div>
-                                <span className="relative z-10 bg-neutral-900 px-2 text-neutral-500 text-[10px] font-black uppercase tracking-widest mx-auto block w-fit">O inicia libre</span>
-                            </div>
-
-                            {/* Quick Start Button */}
-                            <button
-                                onClick={() => {
-                                    setShowStartOptionsModal(false);
-                                    setShowAddModal(true); // Open the exercise picker directly
-                                }}
-                                className="w-full bg-white text-black font-black uppercase py-4 rounded-xl hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(255,255,255,0.1)]"
-                            >
-                                <Plus size={20} strokeWidth={3} />
-                                INICIO RÁPIDO
-                            </button>
-                        </div>
-                    </div>
+            <button
+                onClick={onSkipLocation}
+                disabled={isSavingFlow}
+                className="w-full bg-transparent border border-neutral-800 text-neutral-400 font-bold uppercase py-3 rounded-xl hover:text-white hover:border-white transition-colors"
+            >
+                NO, SOLO FINALIZAR
+            </button>
+        </div>
+                        </div >
+                    </div >
                 )
             }
 
-        </div >
-    )
+{/* 3. NEW: Start Options Modal (Routine vs Quick Start) */ }
+{
+    showStartOptionsModal && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/95 backdrop-blur-md animate-in fade-in duration-300 p-4">
+            <div className="w-full max-w-md bg-neutral-900/50 border border-neutral-800 rounded-3xl p-6 md:p-8 flex flex-col gap-6 relative overflow-hidden">
+                {/* Background FX */}
+                <div className="absolute -top-20 -right-20 w-64 h-64 bg-gym-primary/5 rounded-full blur-3xl pointer-events-none"></div>
 
+                <div className="text-center">
+                    <h2 className="text-2xl font-black italic uppercase text-white tracking-tighter mb-1">Estrategia de Hoy</h2>
+                    <p className="text-neutral-500 font-bold text-sm">Selecciona una rutina o inicia libre.</p>
+                </div>
+
+                {/* Routine List (Compact) */}
+                <div className="grid grid-cols-1 gap-2 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
+                    {routines.map((routine) => (
+                        <button
+                            key={routine.id}
+                            onClick={() => {
+                                loadRoutine(routine);
+                                setShowStartOptionsModal(false);
+                            }}
+                            className="flex items-center justify-between p-4 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 hover:border-gym-primary/50 transition-all group"
+                        >
+                            <div className="text-left">
+                                <h3 className="font-bold text-white group-hover:text-gym-primary transition-colors uppercase italic">{routine.name}</h3>
+                                <span className="text-xs text-neutral-500 font-medium">
+                                    {(routine.equipment_ids?.length || routine.routine_exercises?.length || 0)} Ejercicios
+                                </span>
+                            </div>
+                            <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-gym-primary group-hover:text-black transition-colors">
+                                <Swords size={16} />
+                            </div>
+                        </button>
+                    ))}
+                </div>
+
+                <div className="relative">
+                    <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-neutral-800"></div>
+                    <span className="relative z-10 bg-neutral-900 px-2 text-neutral-500 text-[10px] font-black uppercase tracking-widest mx-auto block w-fit">O inicia libre</span>
+                </div>
+
+                {/* Quick Start Button */}
+                <button
+                    onClick={() => {
+                        setShowStartOptionsModal(false);
+                        setShowAddModal(true); // Open the exercise picker directly
+                    }}
+                    className="w-full bg-white text-black font-black uppercase py-4 rounded-xl hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(255,255,255,0.1)]"
+                >
+                    <Plus size={20} strokeWidth={3} />
+                    INICIO RÁPIDO
+                </button>
+            </div>
+        </div>
+    )
+}
+
+{/* 4. NEW: SUMMARY / MISSION COMPLETE MODAL (Correct Position) */ }
+{
+    showSummary && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/95 backdrop-blur-md animate-in fade-in duration-500 p-4">
+            <div className="w-full max-w-sm flex flex-col items-center text-center space-y-8 relative">
+                {/* Confetti/Success FX */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gym-primary/10 rounded-full blur-3xl pointer-events-none animate-pulse"></div>
+
+                <div className="relative">
+                    <Check size={64} className="text-gym-primary animate-bounce" strokeWidth={4} />
+                </div>
+
+                <div className="space-y-2">
+                    <h2 className="text-4xl font-black italic uppercase text-white tracking-tighter">
+                        SESIÓN<br />FINALIZADA
+                    </h2>
+                    <p className="text-neutral-400 font-bold">Sesión registrada exitosamente.</p>
+                </div>
+
+                <div className="w-full space-y-3">
+                    <button
+                        onClick={() => navigate('/')}
+                        className="w-full bg-gym-primary hover:bg-yellow-400 text-black font-black uppercase py-4 rounded-xl shadow-[0_0_30px_rgba(250,204,21,0.3)] transition-all hover:scale-105 flex items-center justify-center gap-2"
+                    >
+                        <ArrowLeft size={24} />
+                        VOLVER AL INICIO
+                    </button>
+
+                    <button
+                        onClick={() => navigate('/journal')}
+                        className="w-full bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white font-bold uppercase py-4 rounded-xl transition-all flex items-center justify-center gap-2"
+                    >
+                        <BrainCircuit size={20} />
+                        VER JOURNAL
+                    </button>
+                </div>
+            </div>
+        </div>
+    )
+}
+        </div >
+    );
 }
 
 // --- HELPER FUNCTIONS ---
