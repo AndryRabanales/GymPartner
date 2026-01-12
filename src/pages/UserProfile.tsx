@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Trophy, MapPin, Edit2, LogIn, Loader, Swords, Dumbbell, LineChart, History, Star, Search, ArrowLeft, ArrowRight, Crown } from 'lucide-react';
+import { MapPin, Edit2, LogIn, Loader, Swords, Dumbbell, LineChart, History, Star, Search, ArrowLeft, ArrowRight, Crown } from 'lucide-react';
 // import { UserPlus, Grid } from 'lucide-react'; // UNUSED: Hidden Community Features
 // import { Grid } from 'lucide-react'; // UNUSED: Hidden Community Features
 import { Link, useNavigate } from 'react-router-dom';
@@ -498,16 +498,7 @@ export const UserProfile = () => {
         );
     }
 
-    // DASHBOARD VIEW
-    const displayProfile = profile || {
-        username: user.user_metadata.full_name,
-        avatar_url: user.user_metadata.avatar_url,
-        description: 'New Recruit',
-        xp: 0,
-        rank: 'Novato' as UserRank,
-        checkins_count: 0,
-        photos_count: 0
-    };
+
 
     // Use new leveling logic
     // const { currentLevel, progressPercent } = getXPProgress(displayProfile.xp);
