@@ -169,9 +169,8 @@ export const Radar = () => {
                                             className="w-full h-full object-cover"
                                         />
                                     </div>
-                                    <div className={`absolute -bottom-2.5 left-1/2 transform -translate-x-1/2 px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border shadow-lg z-20 bg-black ${currentUser.tier.borderColor} ${currentUser.tier.color}`}>
-                                        {currentUser.tier.name}
-                                    </div>
+
+
                                 </div>
 
                                 {/* TEXT INFO */}
@@ -228,6 +227,6 @@ export const Radar = () => {
                     </div>
                 )}
             </div>
-        </div>
+        </div >
     );
 };
