@@ -722,11 +722,7 @@ export const UserProfile = () => {
 
                     {/* Stats & Territories */}
                     <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 mt-2">
-                        {/* XP Badge - FIXED VISIBILITY */}
-                        <div className="bg-yellow-500/10 border border-yellow-500/20 px-2 py-1 rounded-full flex items-center gap-1.5 text-yellow-400 font-bold text-[10px] sm:text-xs shadow-sm backdrop-blur-sm">
-                            <Trophy size={12} className="sm:w-4 sm:h-4" />
-                            <span>{Math.floor(displayProfile.xp)} XP</span>
-                        </div>
+
 
                         {/* Gym Tags - FIXED BORDERS & BACKGROUND */}
                         {userGyms.map(gym => (
