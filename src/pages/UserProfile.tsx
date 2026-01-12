@@ -604,11 +604,7 @@ export const UserProfile = () => {
 
                             {/* Rank: Dark Glass Pill */}
                             <div className="flex flex-col sm:flex-row items-center sm:items-center gap-3 mb-4">
-                                <div className={`inline-flex items-center gap-2 px-4 py-1.5 bg-black/40 border ${currentTier.borderColor}/30 rounded-full backdrop-blur-md shadow-lg group hover:${currentTier.borderColor}/60 transition-colors`}>
-                                    <span className={`${currentTier.color} font-bold text-xs tracking-widest uppercase`}>
-                                        {currentTier.name} TIER
-                                    </span>
-                                </div>
+
 
                                 {/* STREAK FLAME */}
                                 <StreakFlame userId={user.id} />
@@ -847,7 +843,7 @@ export const UserProfile = () => {
                     <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-blue-500/5 flex items-center justify-center group-hover:scale-110 transition-transform border border-blue-500/10">
                         <Dumbbell className="text-blue-500 w-4 h-4 md:w-6 md:h-6" />
                     </div>
-                    <span className="font-bold text-neutral-200 group-hover:text-white text-xs md:text-base">Crear mis Rutinas</span>
+                    <span className="font-bold text-neutral-200 group-hover:text-white text-xs md:text-base">Rutinas</span>
                 </Link>
 
                 <Link to="/stats" className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-green-500/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md">
