@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, BrainCircuit, Calendar, Save, Terminal, Flame, Snowflake, Skull, Minus } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { journalService, JournalEntry } from '../services/JournalService';
+import { journalService, type JournalEntry } from '../services/JournalService';
 
 export const JournalPage = () => {
     const { user } = useAuth();
