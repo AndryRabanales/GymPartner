@@ -1373,7 +1373,14 @@ export const WorkoutSession = () => {
                                 </div>
                                 <button onClick={() => {
                                     if (isCreatingExercise) { setIsCreatingExercise(false); setEditingItem(null); }
-                                    else setShowAddModal(false);
+                                    else {
+                                        // If closing "Armería" with 0 exercises, go back to Profile (Cancel Session)
+                                        if (activeExercises.length === 0) {
+                                            navigate('/');
+                                        } else {
+                                            setShowAddModal(false);
+                                        }
+                                    }
                                 }} className="bg-neutral-900 p-2 rounded-full text-white hover:bg-neutral-800 transition-colors">
                                     {isCreatingExercise ? <ArrowLeft size={20} /> : <X size={20} />}
                                 </button>
@@ -1482,145 +1489,151 @@ export const WorkoutSession = () => {
             {/* --- MODALS --- */}
 
             {/* 1. Save Routine Modal */}
-            {showRoutineModal && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-4">
-                    <div className="bg-neutral-900 border border-neutral-800 p-6 rounded-2xl w-full max-w-sm shadow-2xl relative">
-                        <h3 className="text-xl font-black italic uppercase text-white mb-2">¿Guardar Estrategia?</h3>
-                        <p className="text-neutral-400 text-sm mb-6">Puedes guardar esta sesión como una rutina para repetirla en el futuro.</p>
+            {
+                showRoutineModal && (
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-4">
+                        <div className="bg-neutral-900 border border-neutral-800 p-6 rounded-2xl w-full max-w-sm shadow-2xl relative">
+                            <h3 className="text-xl font-black italic uppercase text-white mb-2">¿Guardar Estrategia?</h3>
+                            <p className="text-neutral-400 text-sm mb-6">Puedes guardar esta sesión como una rutina para repetirla en el futuro.</p>
 
-                        <div className="space-y-4">
-                            <div>
-                                <label className="text-xs font-bold text-neutral-500 uppercase block mb-2">Nombre de la Rutina</label>
-                                <input
-                                    type="text"
-                                    autoFocus
-                                    placeholder="Ej. Pecho y Tríceps Destructor"
-                                    value={routineName}
-                                    onChange={(e) => setRoutineName(e.target.value)}
-                                    className="w-full bg-black border border-neutral-700 rounded-lg p-3 text-white font-bold focus:border-gym-primary outline-none transition-colors"
-                                />
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-xs font-bold text-neutral-500 uppercase block mb-2">Nombre de la Rutina</label>
+                                    <input
+                                        type="text"
+                                        autoFocus
+                                        placeholder="Ej. Pecho y Tríceps Destructor"
+                                        value={routineName}
+                                        onChange={(e) => setRoutineName(e.target.value)}
+                                        className="w-full bg-black border border-neutral-700 rounded-lg p-3 text-white font-bold focus:border-gym-primary outline-none transition-colors"
+                                    />
+                                </div>
+
+                                <button
+                                    onClick={() => onSaveRoutine(routineName)}
+                                    disabled={isSavingFlow || !routineName.trim()}
+                                    className="w-full bg-gym-primary text-black font-black uppercase py-4 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-yellow-400 transition-colors flex items-center justify-center gap-2"
+                                >
+                                    {isSavingFlow ? <Loader className="animate-spin" size={20} /> : <Check size={20} strokeWidth={3} />}
+                                    GUARDAR RUTINA
+                                </button>
+
+                                <button
+                                    onClick={onSkipRoutine}
+                                    disabled={isSavingFlow}
+                                    className="w-full bg-transparent border border-neutral-800 text-neutral-400 font-bold uppercase py-3 rounded-xl hover:text-white hover:border-white transition-colors"
+                                >
+                                    NO GUARDAR
+                                </button>
                             </div>
-
-                            <button
-                                onClick={() => onSaveRoutine(routineName)}
-                                disabled={isSavingFlow || !routineName.trim()}
-                                className="w-full bg-gym-primary text-black font-black uppercase py-4 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-yellow-400 transition-colors flex items-center justify-center gap-2"
-                            >
-                                {isSavingFlow ? <Loader className="animate-spin" size={20} /> : <Check size={20} strokeWidth={3} />}
-                                GUARDAR RUTINA
-                            </button>
-
-                            <button
-                                onClick={onSkipRoutine}
-                                disabled={isSavingFlow}
-                                className="w-full bg-transparent border border-neutral-800 text-neutral-400 font-bold uppercase py-3 rounded-xl hover:text-white hover:border-white transition-colors"
-                            >
-                                NO GUARDAR
-                            </button>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* 2. Save Location Modal */}
-            {showLocationModal && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-4">
-                    <div className="bg-neutral-900 border border-neutral-800 p-6 rounded-2xl w-full max-w-sm shadow-2xl relative">
-                        <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-yellow-500 text-black px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest shadow-[0_0_20px_rgba(234,179,8,0.5)]">
-                            ¡Nueva Conquista!
-                        </div>
-                        <h3 className="text-xl font-black italic uppercase text-white mb-2 text-center mt-2">¿Guardar Territorio?</h3>
-                        <p className="text-neutral-400 text-sm mb-6 text-center">Parece que estás en una ubicación nueva. ¿Quieres guardarla como un gimnasio personalizado?</p>
-
-                        <div className="space-y-4">
-                            <div>
-                                <label className="text-xs font-bold text-neutral-500 uppercase block mb-2">Nombre del Lugar</label>
-                                <input
-                                    type="text"
-                                    autoFocus
-                                    placeholder="Ej. Parque de Calistenia Norte"
-                                    value={locationName}
-                                    onChange={(e) => setLocationName(e.target.value)}
-                                    className="w-full bg-black border border-neutral-700 rounded-lg p-3 text-white font-bold focus:border-gym-primary outline-none transition-colors"
-                                />
+            {
+                showLocationModal && (
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-4">
+                        <div className="bg-neutral-900 border border-neutral-800 p-6 rounded-2xl w-full max-w-sm shadow-2xl relative">
+                            <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-yellow-500 text-black px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest shadow-[0_0_20px_rgba(234,179,8,0.5)]">
+                                ¡Nueva Conquista!
                             </div>
+                            <h3 className="text-xl font-black italic uppercase text-white mb-2 text-center mt-2">¿Guardar Territorio?</h3>
+                            <p className="text-neutral-400 text-sm mb-6 text-center">Parece que estás en una ubicación nueva. ¿Quieres guardarla como un gimnasio personalizado?</p>
 
-                            <button
-                                onClick={() => onSaveLocation(locationName)}
-                                disabled={isSavingFlow || !locationName.trim()}
-                                className="w-full bg-white text-black font-black uppercase py-4 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 transition-transform flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(255,255,255,0.2)]"
-                            >
-                                {isSavingFlow ? <Loader className="animate-spin" size={20} /> : <MapIcon size={20} strokeWidth={3} />}
-                                GUARDAR UBICACIÓN
-                            </button>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-xs font-bold text-neutral-500 uppercase block mb-2">Nombre del Lugar</label>
+                                    <input
+                                        type="text"
+                                        autoFocus
+                                        placeholder="Ej. Parque de Calistenia Norte"
+                                        value={locationName}
+                                        onChange={(e) => setLocationName(e.target.value)}
+                                        className="w-full bg-black border border-neutral-700 rounded-lg p-3 text-white font-bold focus:border-gym-primary outline-none transition-colors"
+                                    />
+                                </div>
 
-                            <button
-                                onClick={onSkipLocation}
-                                disabled={isSavingFlow}
-                                className="w-full bg-transparent border border-neutral-800 text-neutral-400 font-bold uppercase py-3 rounded-xl hover:text-white hover:border-white transition-colors"
-                            >
-                                NO, SOLO FINALIZAR
-                            </button>
+                                <button
+                                    onClick={() => onSaveLocation(locationName)}
+                                    disabled={isSavingFlow || !locationName.trim()}
+                                    className="w-full bg-white text-black font-black uppercase py-4 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 transition-transform flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(255,255,255,0.2)]"
+                                >
+                                    {isSavingFlow ? <Loader className="animate-spin" size={20} /> : <MapIcon size={20} strokeWidth={3} />}
+                                    GUARDAR UBICACIÓN
+                                </button>
+
+                                <button
+                                    onClick={onSkipLocation}
+                                    disabled={isSavingFlow}
+                                    className="w-full bg-transparent border border-neutral-800 text-neutral-400 font-bold uppercase py-3 rounded-xl hover:text-white hover:border-white transition-colors"
+                                >
+                                    NO, SOLO FINALIZAR
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* 3. NEW: Start Options Modal (Routine vs Quick Start) */}
-            {showStartOptionsModal && (
-                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/95 backdrop-blur-md animate-in fade-in duration-300 p-4">
-                    <div className="w-full max-w-md bg-neutral-900/50 border border-neutral-800 rounded-3xl p-6 md:p-8 flex flex-col gap-6 relative overflow-hidden">
-                        {/* Background FX */}
-                        <div className="absolute -top-20 -right-20 w-64 h-64 bg-gym-primary/5 rounded-full blur-3xl pointer-events-none"></div>
+            {
+                showStartOptionsModal && (
+                    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/95 backdrop-blur-md animate-in fade-in duration-300 p-4">
+                        <div className="w-full max-w-md bg-neutral-900/50 border border-neutral-800 rounded-3xl p-6 md:p-8 flex flex-col gap-6 relative overflow-hidden">
+                            {/* Background FX */}
+                            <div className="absolute -top-20 -right-20 w-64 h-64 bg-gym-primary/5 rounded-full blur-3xl pointer-events-none"></div>
 
-                        <div className="text-center">
-                            <h2 className="text-2xl font-black italic uppercase text-white tracking-tighter mb-1">Estrategia de Hoy</h2>
-                            <p className="text-neutral-500 font-bold text-sm">Selecciona una rutina o inicia libre.</p>
+                            <div className="text-center">
+                                <h2 className="text-2xl font-black italic uppercase text-white tracking-tighter mb-1">Estrategia de Hoy</h2>
+                                <p className="text-neutral-500 font-bold text-sm">Selecciona una rutina o inicia libre.</p>
+                            </div>
+
+                            {/* Routine List (Compact) */}
+                            <div className="grid grid-cols-1 gap-2 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
+                                {routines.map((routine) => (
+                                    <button
+                                        key={routine.id}
+                                        onClick={() => {
+                                            loadRoutine(routine);
+                                            setShowStartOptionsModal(false);
+                                        }}
+                                        className="flex items-center justify-between p-4 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 hover:border-gym-primary/50 transition-all group"
+                                    >
+                                        <div className="text-left">
+                                            <h3 className="font-bold text-white group-hover:text-gym-primary transition-colors uppercase italic">{routine.name}</h3>
+                                            <span className="text-xs text-neutral-500 font-medium">
+                                                {(routine.equipment_ids?.length || routine.routine_exercises?.length || 0)} Ejercicios
+                                            </span>
+                                        </div>
+                                        <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-gym-primary group-hover:text-black transition-colors">
+                                            <Swords size={16} />
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="relative">
+                                <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-neutral-800"></div>
+                                <span className="relative z-10 bg-neutral-900 px-2 text-neutral-500 text-[10px] font-black uppercase tracking-widest mx-auto block w-fit">O inicia libre</span>
+                            </div>
+
+                            {/* Quick Start Button */}
+                            <button
+                                onClick={() => {
+                                    setShowStartOptionsModal(false);
+                                    setShowAddModal(true); // Open the exercise picker directly
+                                }}
+                                className="w-full bg-white text-black font-black uppercase py-4 rounded-xl hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(255,255,255,0.1)]"
+                            >
+                                <Plus size={20} strokeWidth={3} />
+                                INICIO RÁPIDO
+                            </button>
                         </div>
-
-                        {/* Routine List (Compact) */}
-                        <div className="grid grid-cols-1 gap-2 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
-                            {routines.map((routine) => (
-                                <button
-                                    key={routine.id}
-                                    onClick={() => {
-                                        loadRoutine(routine);
-                                        setShowStartOptionsModal(false);
-                                    }}
-                                    className="flex items-center justify-between p-4 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 hover:border-gym-primary/50 transition-all group"
-                                >
-                                    <div className="text-left">
-                                        <h3 className="font-bold text-white group-hover:text-gym-primary transition-colors uppercase italic">{routine.name}</h3>
-                                        <span className="text-xs text-neutral-500 font-medium">
-                                            {(routine.equipment_ids?.length || routine.routine_exercises?.length || 0)} Ejercicios
-                                        </span>
-                                    </div>
-                                    <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-gym-primary group-hover:text-black transition-colors">
-                                        <Swords size={16} />
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
-
-                        <div className="relative">
-                            <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-neutral-800"></div>
-                            <span className="relative z-10 bg-neutral-900 px-2 text-neutral-500 text-[10px] font-black uppercase tracking-widest mx-auto block w-fit">O inicia libre</span>
-                        </div>
-
-                        {/* Quick Start Button */}
-                        <button
-                            onClick={() => {
-                                setShowStartOptionsModal(false);
-                                setShowAddModal(true); // Open the exercise picker directly
-                            }}
-                            className="w-full bg-white text-black font-black uppercase py-4 rounded-xl hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(255,255,255,0.1)]"
-                        >
-                            <Plus size={20} strokeWidth={3} />
-                            INICIO RÁPIDO
-                        </button>
                     </div>
-                </div>
-            )}
+                )
+            }
 
         </div >
     )
