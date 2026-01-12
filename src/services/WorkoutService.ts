@@ -244,8 +244,10 @@ class WorkoutService {
             .order('created_at', { ascending: false });
 
         if (gymId) {
-            query = query.eq('gym_id', gymId);
+            // Show Gym-Specific AND Global Routines
+            query = query.or(`gym_id.eq.${gymId},gym_id.is.null`);
         } else {
+            // No gym context? Show only Global
             query = query.is('gym_id', null);
         }
 

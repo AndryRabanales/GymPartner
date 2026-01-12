@@ -796,7 +796,7 @@ export const WorkoutSession = () => {
             }));
 
             // Pass FULL activeExercises (resolved) to capture config (metrics, etc.)
-            await workoutService.createRoutine(user!.id, name, resolvedExercises, resolvedGymId !== 'personal' && !resolvedGymId?.startsWith('virtual') ? resolvedGymId : null);
+            await workoutService.createRoutine(user!.id, name, resolvedExercises, null);
             setIsSavingFlow(false);
         }
         setShowRoutineModal(false);

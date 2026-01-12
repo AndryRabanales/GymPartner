@@ -820,7 +820,7 @@ export const UserProfile = () => {
                             setStartLoading(false);
                         }
                     }}
-                    className="col-span-2 group relative overflow-hidden bg-gradient-to-r from-yellow-400 to-orange-500 rounded-3xl p-1 shadow-[0_0_20px_rgba(250,204,21,0.3)] hover:shadow-[0_0_40px_rgba(250,204,21,0.6)] hover:-translate-y-1 transition-all duration-300 active:scale-95 ring-4 ring-yellow-400/20 animate-pulse"
+                    className="col-span-2 group relative overflow-hidden bg-gradient-to-r from-yellow-400 to-orange-500 rounded-3xl p-1 shadow-[0_0_20px_rgba(250,204,21,0.3)] hover:shadow-[0_0_40px_rgba(250,204,21,0.6)] hover:-translate-y-1 transition-all duration-300 active:scale-95 ring-4 ring-yellow-400/20"
                 >
                     {/* Inner Glass Container */}
                     <div className="relative bg-black/10 backdrop-blur-sm w-full h-full rounded-[20px] px-4 md:px-8 py-4 md:py-6 flex items-center justify-between border border-white/20 group-hover:bg-transparent transition-all">
