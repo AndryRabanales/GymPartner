@@ -578,18 +578,7 @@ export const UserProfile = () => {
                             />
                         </div>
 
-                        {/* Tier Badge (Bottom Center) - Replaces Level Hexagon */}
-                        <div className="absolute bottom-0 left-0 right-0 mx-auto w-12 z-20 filter drop-shadow-lg">
-                            <div className="relative w-12 h-12 flex items-center justify-center">
-                                {/* Hexagon Shape CSS */}
-                                <div className={`absolute inset-0 bg-gradient-to-b ${currentTier.gradient} clip-path-hexagon`}></div>
-                                <div className="absolute inset-[2px] bg-neutral-900 clip-path-hexagon flex items-center justify-center">
-                                    <span className={`font-black text-xl leading-none ${currentTier.color}`}>
-                                        {currentTier.icon}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
+
                     </div>
                 </div>
 
