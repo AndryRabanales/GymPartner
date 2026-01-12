@@ -18,6 +18,7 @@ import { NotificationsPage } from './pages/NotificationsPage';
 import { Radar } from './pages/Radar';
 import { ChatPage } from './pages/ChatPage';
 import { InboxPage } from './pages/InboxPage';
+import { JournalPage } from './pages/JournalPage';
 import { BottomNavProvider } from './context/BottomNavContext';
 
 
@@ -45,6 +46,7 @@ function App() {
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="stats" element={<StatsPage />} />
               <Route path="radar" element={<Radar />} />
+              <Route path="journal" element={<JournalPage />} />
               <Route path="inbox" element={<InboxPage />} />
               <Route path="chat/:chatId" element={<ChatPage />} />
               <Route path="history" element={<HistoryPage />} />

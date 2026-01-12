@@ -13,7 +13,7 @@ import { normalizeText, getMuscleGroup } from '../utils/inventoryUtils';
 
 // Interface NumpadTarget removed
 // BattleTimer removed
-import { Plus, Swords, Trash2, Check, ArrowLeft, MoreVertical, X, RotateCcw, Search, Loader, Map as MapIcon } from 'lucide-react';
+import { Plus, Swords, Trash2, Check, ArrowLeft, MoreVertical, X, RotateCcw, Search, Loader, Map as MapIcon, BrainCircuit, History } from 'lucide-react';
 import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
@@ -60,6 +60,7 @@ export const WorkoutSession = () => {
     const [showAddModal, setShowAddModal] = useState(false);
     const [resolvedGymId, setResolvedGymId] = useState<string | null>(null);
     const [showExitMenu, setShowExitMenu] = useState(false);
+    const [showSummary, setShowSummary] = useState(false);
     // currentGym state removed
 
     // Tutorial State
@@ -982,7 +983,8 @@ export const WorkoutSession = () => {
                 // Actually the backend sets the time. The difference is negligible.
 
                 setTimeout(() => {
-                    navigate('/history');
+                    setLoading(false);
+                    setShowSummary(true);
                 }, 1500); // 1.5s delay to admire the frozen timer and "Saving" state
             } else {
                 console.error('❌ Error terminando sesión:', result.error);
@@ -1004,6 +1006,46 @@ export const WorkoutSession = () => {
                 <Loader className="animate-spin mx-auto mb-4" size={48} />
                 <h2 className="text-2xl font-black uppercase tracking-widest animate-pulse">Iniciando Protocolo</h2>
             </div>
+            {/* 4. NEW: SUMMARY / MISSION COMPLETE MODAL */}
+            {
+                showSummary && (
+                    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/95 backdrop-blur-md animate-in fade-in duration-500 p-4">
+                        <div className="w-full max-w-sm flex flex-col items-center text-center space-y-8 relative">
+                            {/* Confetti/Success FX (CSS only for now) */}
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gym-primary/10 rounded-full blur-3xl pointer-events-none animate-pulse"></div>
+
+                            <div className="relative">
+                                <Check size={64} className="text-gym-primary animate-bounce" strokeWidth={4} />
+                            </div>
+
+                            <div className="space-y-2">
+                                <h2 className="text-4xl font-black italic uppercase text-white tracking-tighter">
+                                    MISIÓN<br />CUMPLIDA
+                                </h2>
+                                <p className="text-neutral-400 font-bold">Sesión registrada en la base de datos.</p>
+                            </div>
+
+                            <div className="w-full space-y-3">
+                                <button
+                                    onClick={() => navigate('/journal')}
+                                    className="w-full bg-purple-600 hover:bg-purple-500 text-white font-black uppercase py-4 rounded-xl shadow-[0_0_30px_rgba(147,51,234,0.3)] transition-all hover:scale-105 flex items-center justify-center gap-2 group"
+                                >
+                                    <BrainCircuit size={24} className="group-hover:animate-pulse" />
+                                    VER ANÁLISIS TÁCTICO
+                                </button>
+
+                                <button
+                                    onClick={() => navigate('/history')}
+                                    className="w-full bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white font-bold uppercase py-4 rounded-xl border border-neutral-700 hover:border-white/20 transition-all flex items-center justify-center gap-2"
+                                >
+                                    <History size={20} />
+                                    IR AL HISTORIAL
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
         </div>
     );
 

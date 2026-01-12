@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { MapPin, Edit2, LogIn, Loader, Swords, Dumbbell, LineChart, History, Star, Search, ArrowLeft, ArrowRight, Crown } from 'lucide-react';
+import { MapPin, Edit2, LogIn, Loader, Swords, Dumbbell, LineChart, History, Star, Search, ArrowLeft, ArrowRight, Crown, BrainCircuit } from 'lucide-react';
 // import { UserPlus, Grid } from 'lucide-react'; // UNUSED: Hidden Community Features
 // import { Grid } from 'lucide-react'; // UNUSED: Hidden Community Features
 import { Link, useNavigate } from 'react-router-dom';
@@ -859,6 +859,13 @@ export const UserProfile = () => {
                         <History className="text-orange-500 w-4 h-4 md:w-6 md:h-6" />
                     </div>
                     <span className="font-bold text-neutral-200 group-hover:text-white text-xs md:text-base">Historial</span>
+                </Link>
+
+                <Link to="/journal" className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-purple-500/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md">
+                    <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-purple-500/5 flex items-center justify-center group-hover:scale-110 transition-transform border border-purple-500/10">
+                        <BrainCircuit className="text-purple-500 w-4 h-4 md:w-6 md:h-6" />
+                    </div>
+                    <span className="font-bold text-neutral-200 group-hover:text-white text-xs md:text-base">Diario IA</span>
                 </Link>
             </div >
 
