@@ -35,8 +35,8 @@ export const StatsPage = () => {
             <PublicTeaser
                 icon={TrendingUp}
                 title="Centro de Análisis Biomecánico"
-                description="Convierte tus entrenamientos en telemetría pura. Analiza cada músculo, cada repetición y cada gota de sudor."
-                benefitTitle="Intel Táctico"
+                description="Convierte tus entrenamientos en datos puros. Analiza cada músculo, cada repetición y cada serie."
+                benefitTitle="Análisis de Rendimiento"
                 benefitDescription="Gráficos de radar, tendencias de volumen por grupo muscular y cálculo de 1RM estimado."
                 iconColor="text-green-500"
                 bgAccent="bg-green-500/10"
@@ -214,20 +214,19 @@ export const StatsPage = () => {
                     </div>
 
                     <h2 className="text-4xl font-black text-white mb-4 italic uppercase tracking-tighter">
-                        CENTRO DE INTELIGENCIA <br />
                         <span className="text-gym-primary">SISTEMA BLOQUEADO</span>
                     </h2>
 
                     <p className="text-neutral-400 mb-10 font-medium text-lg leading-relaxed">
-                        No hay datos de batalla suficientes para generar un perfil biomecánico.
-                        Completa tu primer entrenamiento para desbloquear el análisis táctico.
+                        <h2 className="text-4xl font-black text-white mb-4 italic uppercase tracking-tighter">
+                            CENTRO DE ESTADÍSTICAS <br />
                     </p>
 
                     <div className="flex flex-col gap-4">
                         <Link to="/map" className="bg-gym-primary text-black font-black py-4 px-8 rounded-2xl hover:bg-yellow-400 transition-all transform hover:scale-[1.02] shadow-xl shadow-gym-primary/20 no-underline italic">
-                            DESPLEGAR EN EL MAPA
+                            IR AL MAPA
                         </Link>
-                        <p className="text-[10px] text-neutral-600 font-bold uppercase tracking-[0.3em]">Status: Esperando telemetría de combate...</p>
+                        <p className="text-[10px] text-neutral-600 font-bold uppercase tracking-[0.3em]">Estado: Esperando datos de entrenamiento...</p>
                     </div>
                 </div>
             </div>

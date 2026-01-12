@@ -14,7 +14,7 @@ export const TacticalTutorialModal = ({ onClose, showMapMission = false }: Tutor
     const baseSteps = [
         {
             icon: <Dumbbell size={48} className="text-blue-500" />,
-            title: "EL ARSENAL",
+            title: "CATÁLOGO",
             description: "Tu inventario de pesas y máquinas. Configura aquí el equipo disponible en tu gimnasio para obtener recomendaciones precisas.",
             color: "border-blue-500/30 bg-blue-500/10"
         },
@@ -26,8 +26,8 @@ export const TacticalTutorialModal = ({ onClose, showMapMission = false }: Tutor
         },
         {
             icon: <History size={48} className="text-orange-500" />,
-            title: "BITÁCORA",
-            description: "Tu historial de batalla. Revisa sesiones pasadas, récords personales y la consistencia de tu disciplina.",
+            title: "HISTORIAL",
+            description: "Tu historial de entrenamiento. Revisa sesiones pasadas, records personales y la consistencia de tu disciplina.",
             color: "border-orange-500/30 bg-orange-500/10"
         },
         {
@@ -67,8 +67,8 @@ export const TacticalTutorialModal = ({ onClose, showMapMission = false }: Tutor
 
     const missionStep = {
         icon: <MapPin size={48} className="text-red-500" />,
-        title: "TU PRIMERA MISIÓN",
-        description: "El sistema no detecta ninguna base operativa. Debes dirigirte al MAPA y registrar tu gimnasio usando GPS en tiempo real para desbloquear el resto de la app.",
+        title: "PRIMEROS PASOS",
+        description: "El sistema no detecta ningún gimnasio. Debes dirigirte al MAPA y registrar tu gimnasio usando GPS en tiempo real para desbloquear el resto de la app.",
         color: "border-red-500/50 bg-red-500/20 shadow-[0_0_50px_rgba(239,68,68,0.2)]",
         isMission: true
     };
@@ -141,7 +141,7 @@ export const TacticalTutorialModal = ({ onClose, showMapMission = false }: Tutor
                                 (steps[step] as any).isMission ? (
                                     <>
                                         <MapPin size={20} strokeWidth={3} />
-                                        <span>IR AL MAPA AHORA</span>
+                                        <span>IR AL MAPA</span>
                                     </>
                                 ) : (
                                     <>

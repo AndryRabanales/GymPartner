@@ -26,9 +26,9 @@ export const MyArsenal = () => {
         return (
             <PublicTeaser
                 icon={Dumbbell}
-                title="Tu Armería Personal"
-                description="Digitaliza el inventario de tu gimnasio y diseña estrategias de entrenamiento ultra-precisas."
-                benefitTitle="Arsenal Digital"
+                title="Tu Catálogo Personal"
+                description="Digitaliza el inventario de tu gimnasio y diseña rutinas de entrenamiento precisas."
+                benefitTitle="Inventario Digital"
                 benefitDescription="Sabe exactamente qué máquinas hay en tu sede base. Configura métricas por equipo y optimiza cada serie."
                 iconColor="text-purple-500"
                 bgAccent="bg-purple-500/10"
@@ -189,7 +189,7 @@ export const MyArsenal = () => {
 
     const handleImportRoutine = async (sourceRoutine: any) => {
         if (!user || !routeGymId) return;
-        if (!confirm(`¿Importar estrategia "${sourceRoutine.name}" a este gimnasio?`)) return;
+        if (!confirm(`¿Importar rutina "${sourceRoutine.name}" a este gimnasio?`)) return;
 
         setLoading(true);
         try {
@@ -201,14 +201,14 @@ export const MyArsenal = () => {
             if (localStorage.getItem('tutorial_step') === '7') {
                 localStorage.setItem('tutorial_step', '8');
                 setTutorialStep(8);
-                alert("¡Arsenal Listo!\n\nRegresando a la base para iniciar el entrenamiento.");
+                alert("¡Inventario Listo!\n\nRegresando al inicio para iniciar el entrenamiento.");
                 navigate(-1); // Go back immediately to WorkoutSession/Profile
             } else {
                 alert("¡Rutina Importada con éxito!");
             }
         } catch (error) {
             console.error(error);
-            alert("Error al importar estrategia.");
+            alert("Error al importar rutina.");
         } finally {
             setLoading(false);
         }
@@ -364,14 +364,14 @@ export const MyArsenal = () => {
     };
 
     const handleDeleteRoutine = async (routineId: string, routineName: string) => {
-        if (!confirm(`¿Eliminar estrategia "${routineName}" permanentemente?`)) return;
+        if (!confirm(`¿Eliminar rutina "${routineName}" permanentemente?`)) return;
 
         // Optimistic update or refresh
         const { error } = await workoutService.deleteRoutine(routineId);
 
         if (error) {
             console.error(error);
-            alert("Error al eliminar la estrategia.");
+            alert("Error al eliminar la rutina.");
             return;
         }
 
@@ -447,11 +447,11 @@ export const MyArsenal = () => {
         }
 
         if (!routineName.trim()) {
-            alert("Tu estrategia necesita un nombre legendario.");
+            alert("Tu rutina necesita un nombre descriptivo.");
             return;
         }
         if (selectedItems.size === 0) {
-            alert("Selecciona al menos una máquina para la batalla.");
+            alert("Selecciona al menos una máquina para entrenar.");
             return;
         }
 
@@ -608,7 +608,7 @@ export const MyArsenal = () => {
             if (editingRoutineId) {
                 const { error } = await workoutService.updateRoutine(editingRoutineId, routineName, finalConfigPayload);
                 if (error) throw error;
-                alert("¡Estrategia actualizada correctamente!");
+                alert("¡Rutina actualizada correctamente!");
             } else {
                 // 2-Step Creation for Rich Config
                 const { data, error } = await workoutService.createRoutine(user.id, routineName, [], routeGymId);
@@ -618,7 +618,7 @@ export const MyArsenal = () => {
                     const { error: updateError } = await workoutService.updateRoutine(data.id, routineName, finalConfigPayload);
                     if (updateError) throw updateError;
                 }
-                alert("¡Nueva estrategia forjada!");
+                alert("¡Nueva rutina guardada!");
 
                 // TUTORIAL LOGIC:
                 // Step 4 (Creation Save) -> Step 5 (Profile Select Gym)
@@ -675,9 +675,9 @@ export const MyArsenal = () => {
                                 <ArrowLeft size={16} className="md:w-6 md:h-6" />
                             </Link>
                             <div>
-                                <h1 className="text-xl md:text-5xl font-black uppercase italic tracking-tighter leading-none">Mi Arsenal <span className="text-gym-primary">⚔️</span></h1>
+                                <h1 className="text-xl md:text-5xl font-black uppercase italic tracking-tighter leading-none">Mis Rutinas <span className="text-gym-primary">📋</span></h1>
                                 <p className="text-neutral-500 text-xs md:text-lg font-bold">
-                                    {routeGymId ? "Arsenal de Territorio (Local)" : "Rutinas Maestras (Global)"}
+                                    {routeGymId ? "Rutinas de Gimnasio (Local)" : "Rutinas Globales"}
                                 </p>
                             </div>
                         </div>
@@ -695,7 +695,7 @@ export const MyArsenal = () => {
                                 <div className="w-16 h-16 rounded-full bg-gym-primary/10 flex items-center justify-center group-hover:bg-gym-primary group-hover:text-black transition-colors text-gym-primary">
                                     <Plus size={32} />
                                 </div>
-                                <span className="font-black italic uppercase tracking-wider text-neutral-400 group-hover:text-white">Nueva Rutina Maestra</span>
+                                <span className="font-black italic uppercase tracking-wider text-neutral-400 group-hover:text-white">Nueva Rutina Global</span>
                             </button>
                         ) : (
                             // GYM: Create OR Import
@@ -980,7 +980,7 @@ export const MyArsenal = () => {
                     <InteractiveOverlay
                         targetId="tut-routine-name-input"
                         title="PASO 3: BAUTIZA TU ESTRATEGIA"
-                        message="Toda gran batalla comienza con un nombre. Escribe cómo llamarás a este plan de entrenamiento."
+                        message="Toda gran rutina comienza con un nombre. Escribe cómo llamarás a este plan de entrenamiento."
                         step={3}
                         totalSteps={7}
                         placement="bottom"
@@ -996,7 +996,7 @@ export const MyArsenal = () => {
                 {tutorialStep === 4 && (
                     <InteractiveOverlay
                         targetId={selectedItems.size > 0 ? "tut-save-routine-btn-mobile" : "tut-arsenal-grid"}
-                        title={selectedItems.size > 0 ? "PASO 4: GUARDA TU ESTRATEGIA" : "PASO 4: ELIGE TUS ARMAS"}
+                        title={selectedItems.size > 0 ? "PASO 4: GUARDA TU RUTINA" : "PASO 4: ELIGE TUS EJERCICIOS"}
                         message={selectedItems.size > 0
                             ? "¡Perfecto! Ahora haz clic en el botón verde ✓ para guardar tu rutina y continuar."
                             : "Selecciona las máquinas y ejercicios que formarán parte de esta rutina. Solo haz clic en ellas."}

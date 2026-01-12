@@ -13,6 +13,7 @@ export interface JournalEntry {
         workouts_count: number;
         prs_count: number;
         skipped_days: number;
+        avg_weekly_sessions?: number;
     };
     created_at: string;
 }
@@ -24,26 +25,26 @@ const genAI = new GoogleGenerativeAI(GEN_AI_KEY);
 
 class JournalService {
 
-    // FALLBACK PROMPTS (First Person - "Ghostwriter" Mode)
+    // FALLBACK PROMPTS (Formal & Professional)
     private fallbackPrompts = {
         fire: [
-            "Hoy me sentí imparable. Moví {volume}kg, un {diff}% más que la última vez. La constancia está pagando dividendos y me siento más fuerte que nunca.",
-            "Increíble sesión. Rompí récords personales y siento que recuperé el control. {volume}kg totales es mi nueva norma. A seguir así.",
-            "Territorio conquistado. Completé mi entrenamiento con {volume}kg de volumen. Me siento disciplinado y en camino a mi mejor versión."
+            "Hoy registré un excelente rendimiento. Moví {volume}kg, lo que representa un aumento del {diff}% respecto a la sesión anterior. La progresión es sólida.",
+            "Sesión muy productiva. He superado mis marcas anteriores y el volumen total de {volume}kg refleja un avance significativo en mi capacidad de trabajo.",
+            "Buen desempeño físico hoy. Completé el entrenamiento con {volume}kg de carga total. La constancia está generando resultados medibles."
         ],
         ice: [
-            "Cumplí con el deber. {volume}kg movidos. No fue mi mejor sesión, pero la disciplina es ir incluso cuando no hay ganas.",
-            "Entrenamiento finalizado. Mantuve el ritmo con {volume}kg, aunque sé que puedo dar un poco más de intensidad la próxima vez.",
-            "Día de trabajo honesto. {volume}kg en la bolsa. No rompí récords, pero mantuve la racha viva."
+            "Entrenamiento completado sin contratiempos. Registré {volume}kg de volumen. Mantuve la técnica y la constancia, aunque el objetivo es aumentar la intensidad progresivamente.",
+            "Sesión finalizada. {volume}kg acumulados. Fue un día de mantenimiento; el enfoque estuvo en cumplir con la programación establecida.",
+            "Día de trabajo técnico. {volume}kg en total. No hubo récords personales, pero la regularidad es clave para el progreso a largo plazo."
         ],
         skull: [
-            "He fallado. Llevo {skipped} días sin entrenar y se nota. Me siento estancado y necesito romper este ciclo de inactividad ya.",
-            "La pereza me ganó estos últimos {skipped} días. Es hora de dejar las excusas y volver al hierro. Me siento decepcionado pero motivado a cambiar.",
-            "Desconexión total. {skipped} días fuera del gimnasio. Mi disciplina está flaqueando y necesito retomarla urgentemente."
+            "Llevo {skipped} días sin registrar actividad. Es importante retomar la rutina para no perder las adaptaciones físicas ganadas.",
+            "He notado una pausa de {skipped} días en mis entrenamientos. Necesito reorganizar mi agenda para recuperar la frecuencia habitual.",
+            "Inactividad detectada de {skipped} días. La consistencia es el factor más importante; debo volver al gimnasio lo antes posible."
         ],
         neutral: [
-            "Hoy toca descanso o desconexión. La recuperación es parte del proceso, siempre y cuando no se convierta en hábito.",
-            "Sin actividad registrada. Es un buen momento para reflexionar sobre mis objetivos y planificar la semana."
+            "Día de descanso activo o recuperación. Es fundamental permitir que el cuerpo asimile el esfuerzo de las sesiones anteriores.",
+            "Sin datos recientes. Es un buen momento para revisar la planificación y establecer objetivos para la próxima semana."
         ]
     };
 
@@ -82,7 +83,7 @@ class JournalService {
     }
 
     /**
-     * GENERATE DAILY ANALYSIS (GEMINI POWERED - ABOTBIOGRAPHER MODE)
+     * GENERATE DAILY ANALYSIS (GEMINI POWERED - PROFESSIONAL MODE)
      */
     async generateEntry(userId: string): Promise<JournalEntry | null> {
         const today = new Date().toISOString().split('T')[0];
@@ -187,28 +188,28 @@ class JournalService {
                     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
                     const systemPrompt = `
-                        ACT AS: The user writing their own personal gym journal / diary.
-                        PERSPECTIVE: First Person ("I", "Me", "My", "Hoy hice...", "Me sentí...").
-                        TONE: Realistic, introspective, slightly analytical but human. "Quantified Self".
-                        LANGUAGE: Spanish (Español Neutro/Latino).
+                        ACT AS: The user writing their own professional fitness journal.
+                        PERSPECTIVE: First Person ("I", "Me", "My", "Hoy completé...", "He notado...").
+                        TONE: Formal, Professional, Analytic, Objective. Avoid slang, military terms, or excessive emotion.
+                        LANGUAGE: Spanish (Español Neutro/Formal).
                         
-                        TASK: Write a diary entry summarizing my gym performance today based on the data.
+                        TASK: Write a brief, formal summary of my gym performance based on the data.
                         
                         RULES:
-                        1. START DIRECTLY with the reflection. No "Querido diario".
-                        2. Max 3 sentences. Concise but meaningful.
-                        3. MENTION SPECIFICS: "Today I lifted X kg", "I've been consistent this week", "I skipped X days".
-                        4. ANALYZE CONSISTENCY: Compare today vs my 30-day average (avg_per_week).
-                        5. MOOD LOGIC:
-                           - FIRE: workouts_today > 0 AND (volume_change_percent > 5 OR total_volume_kg > previous_volume_kg). Be proud.
-                           - ICE: workouts_today > 0 AND volume mainly flat/lower. Be honest/neutral about effort.
-                           - SKULL: workouts_today == 0 AND skipped_days_streak > 2. Be disappointed/worried about the streak.
-                           - NEUTRAL: Rest day or light activity.
+                        1. START DIRECTLY with the analysis. No greetings.
+                        2. Max 3 sentences. Concise and data-driven.
+                        3. AVOID: terms like "battle", "war", "soldier", "beast", "no pain no gain". Use "session", "training", "consistency", "load".
+                        4. ANALYZE CONSISTENCY: Reference the 30-day trend formally (e.g., "Maintained average frequency").
+                        5. MOOD LOGIC (Internal classification only):
+                           - FIRE: workouts_today > 0 AND volume improved.
+                           - ICE: workouts_today > 0 AND volume stable.
+                           - SKULL: workouts_today == 0 AND skipped_days_streak > 2.
+                           - NEUTRAL: Rest day.
                         
                         OUTPUT FORMAT (JSON):
                         {
                             "mood": "fire" | "ice" | "skull" | "neutral",
-                            "content": "The text of the entry..."
+                            "content": "The formal text entry..."
                         }
                         
                         DATA:

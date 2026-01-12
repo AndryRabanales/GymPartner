@@ -10,9 +10,9 @@ export const MapPage = () => {
         return (
             <PublicTeaser
                 icon={MapPin}
-                title="Visualiza el Campo de Batalla"
-                description="Descubre los gimnasios más equipados de tu zona y domina cualquier territorio."
-                benefitTitle="Radar de Inteligencia"
+                title="Explora Gimnasios Cercanos"
+                description="Descubre los gimnasios más equipados de tu zona y encuentra el mejor lugar para entrenar."
+                benefitTitle="Información Detallada"
                 benefitDescription="Localiza máquinas específicas, reportes de comunidad y disponibilidad en tiempo real."
                 iconColor="text-blue-500"
                 bgAccent="bg-blue-500/10"

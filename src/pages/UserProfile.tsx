@@ -232,7 +232,7 @@ export const UserProfile = () => {
                                 console.log("🎉 FIRST DEPLOYMENT DETECTED! Awarding XP...");
                                 const xpResult = await userService.addXP(user!.id, 500);
                                 if (xpResult.success) {
-                                    alert(`🎖️ DESPLIEGUE CONFIRMADO: +500 XP\n\nBienvenido a ${gym.gym_name}. Tu primera incursión ha sido recompensada.`);
+                                    alert(`🎖️ GIMNASIO REGISTRADO: +500 XP\n\nBienvenido a ${gym.gym_name}. Tu primera visita ha sido recompensada.`);
                                 }
                             }
                         } catch (err) {
@@ -300,7 +300,7 @@ export const UserProfile = () => {
 
                 if (!refError) {
                     sessionStorage.removeItem('gym_referral_id');
-                    alert("🎖️ ¡Has sido reclutado con éxito! Tu comandante recibirá su recompensa pronto.");
+                    alert("🎖️ ¡Has sido registrado con éxito! Quien te refirió recibirá su recompensa pronto.");
                 } else {
                     console.error("Referral Error:", refError);
                 }
@@ -376,7 +376,7 @@ export const UserProfile = () => {
 
                         <p className="text-lg md:text-xl text-neutral-400 mb-8 max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200">
                             Deja de adivinar. Domina tu entorno. <br />
-                            Mapa de máquinas, rastreo de batallas y rango social en una sola app.
+                            Mapa de gimnasios, seguimiento de progreso y rango social en una sola app.
                         </p>
 
                         <div className="flex flex-col sm:flex-row gap-4 justify-center animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-300">
@@ -385,7 +385,7 @@ export const UserProfile = () => {
                                 className="bg-gym-primary text-black font-black text-xl px-12 py-5 rounded-[2rem] hover:bg-yellow-400 transition-all transform hover:scale-105 shadow-2xl shadow-gym-primary/40 flex items-center justify-center gap-3 no-underline italic tracking-tighter"
                             >
                                 <LogIn size={28} strokeWidth={3} />
-                                <span>INICIAR MISIÓN</span>
+                                <span>INICIAR SESIÓN</span>
                             </Link>
                         </div>
                     </div>
@@ -406,7 +406,7 @@ export const UserProfile = () => {
                             <Dumbbell size={24} className="text-purple-500 md:hidden" />
                             <Dumbbell size={32} className="text-purple-500 hidden md:block" />
                         </div>
-                        <h3 className="text-sm md:text-xl font-bold text-white mb-2 uppercase italic tracking-tighter">El Arsenal</h3>
+                        <h3 className="text-sm md:text-xl font-bold text-white mb-2 uppercase italic tracking-tighter">Inventario</h3>
                         <p className="text-[10px] md:text-sm text-neutral-500 leading-tight">Inventario digital de máquinas. Sabe qué equipamiento tienes antes de llegar.</p>
                     </div>
                     <div className="bg-neutral-950 p-4 md:p-10 text-center hover:bg-neutral-900 transition-colors group cursor-default">
@@ -415,7 +415,7 @@ export const UserProfile = () => {
                             <Swords size={32} className="text-green-500 hidden md:block" />
                         </div>
                         <h3 className="text-sm md:text-xl font-bold text-white mb-2 uppercase italic tracking-tighter">Entrenamiento</h3>
-                        <p className="text-[10px] md:text-sm text-neutral-500 leading-tight">Tracker de entrenamiento de guerra. Series, reps y progreso real.</p>
+                        <p className="text-[10px] md:text-sm text-neutral-500 leading-tight">Seguimiento de entrenamiento avanzado. Series, reps y progreso real.</p>
                     </div>
                 </div>
             </div>
@@ -458,10 +458,10 @@ export const UserProfile = () => {
                         </div>
                         <div className="space-y-2">
                             <h1 className="text-4xl md:text-6xl font-black text-white italic uppercase tracking-tighter leading-none">
-                                RECLAMA TU <span className="text-gym-primary">PRIMERA BASE</span>
+                                RECLAMA TU <span className="text-gym-primary">PRIMER GIMNASIO</span>
                             </h1>
                             <p className="text-neutral-500 font-bold tracking-widest uppercase text-xs md:text-sm">
-                                Detectando territorio no explorado... Busca tu gimnasio en el mapa.
+                                Buscando gimnasios cercanos... Encuentra tu gimnasio en el mapa.
                             </p>
                         </div>
                     </div>
@@ -473,7 +473,7 @@ export const UserProfile = () => {
                                 className="bg-gym-primary text-black font-black text-xl px-12 py-5 rounded-[2rem] hover:bg-yellow-400 transition-all transform hover:scale-105 shadow-2xl shadow-gym-primary/40 flex items-center justify-center gap-3 no-underline italic tracking-tighter animate-bounce"
                             >
                                 <MapPin size={28} strokeWidth={3} />
-                                <span>ABRIR MAPA TÁCTICO</span>
+                                <span>ABRIR MAPA</span>
                             </Link>
                         </div>
 
@@ -490,7 +490,7 @@ export const UserProfile = () => {
                         </div>
                         <div className="bg-neutral-900/50 p-4 rounded-2xl border border-white/5 space-y-1">
                             <div className="text-xl">⚒️</div>
-                            <div className="text-[10px] font-black text-white uppercase tracking-widest">Arma tu Arsenal</div>
+                            <div className="text-[10px] font-black text-white uppercase tracking-widest">Configura tu Equipo</div>
                         </div>
                     </div>
                 </div>
@@ -825,7 +825,7 @@ export const UserProfile = () => {
                                     {startLoading ? 'INICIANDO...' : 'INICIAR'}
                                 </span>
                                 <span className="font-bold text-black/80 text-[10px] md:text-xs tracking-[0.2em] uppercase">
-                                    Entrenamiento Táctico
+                                    Entrenamiento
                                 </span>
                             </div>
                         </div>
@@ -874,7 +874,7 @@ export const UserProfile = () => {
                 <div className="flex items-center justify-between">
                     <h2 className="text-2xl font-bold text-white flex items-center gap-2 tracking-tight">
                         <MapPin className="text-gym-primary" />
-                        Mis Territorios
+                        Mis Ubicaciones
                     </h2>
                     <button
                         id="tut-find-gyms-btn"
@@ -1016,7 +1016,7 @@ export const UserProfile = () => {
                     <InteractiveOverlay
                         targetId="tut-global-arsenal-btn"
                         title="PASO 1: CREAR MIS RUTINAS"
-                        message="Haz clic en 'Crear mis Rutinas' para forjar tu primera estrategia de combate."
+                        message="Haz clic en 'Crear mis Rutinas' para crear tu primer plan de entrenamiento."
                         step={1}
                         totalSteps={7}
                         onNext={() => { }}
@@ -1138,8 +1138,8 @@ export const UserProfile = () => {
                 tutorialStep === 8 && userGyms.length > 0 && (
                     <InteractiveOverlay
                         targetId={`tut-start-workout-btn-${userGyms.length - 1}`}
-                        title="PASO 8: ¡A LA BATALLA!"
-                        message="Tu base está lista. Inicia tu entrenamiento y comienza a ganar experiencia."
+                        title="PASO 8: ¡A ENTRENAR!"
+                        message="Tu gimnasio está listo. Inicia tu entrenamiento y comienza a ganar experiencia."
                         step={8}
                         totalSteps={8}
                         nextLabel="¡EMPEZAR!"
@@ -1208,7 +1208,7 @@ export const UserProfile = () => {
                                                 const timestamp = new Date().getTime();
                                                 const customPlace = {
                                                     place_id: `custom_base_${timestamp}`,
-                                                    name: "Base Estratégica",
+                                                    name: "Gimnasio Personalizado",
                                                     address: "Ubicación Clasificada",
                                                     location: location,
                                                     types: ['gym', 'point_of_interest']
@@ -1267,7 +1267,7 @@ export const UserProfile = () => {
                     </div>
 
                     <h2 className="text-white text-3xl font-black italic uppercase tracking-tighter mb-2 animate-in slide-in-from-bottom-4 fade-in duration-500 text-center px-4">
-                        Iniciando Operación en
+                        Iniciando en
                     </h2>
                     <h1 className="text-transparent bg-clip-text bg-gradient-to-r from-gym-primary to-yellow-200 text-4xl md:text-6xl font-black uppercase italic tracking-tighter animate-in slide-in-from-bottom-8 fade-in duration-700 delay-100 text-center px-4">
                         {autoStartGymName}

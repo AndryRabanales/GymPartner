@@ -30,7 +30,7 @@ export const ReferralModal: React.FC<ReferralModalProps> = ({ isOpen, onClose, u
     };
 
     const handleShareWhatsapp = () => {
-        const text = `¡Únete a mi escuadrón en GymPartner! 🏋️‍♂️\n\nDomina tu gimnasio, rastrea tu progreso y sube de rango.\n\nRegístrate aquí: ${referralLink}`;
+        const text = `¡Únete a GymPartner! 🏋️‍♂️\n\nEntrena, registra tu progreso y sube de rango.\n\nRegístrate aquí: ${referralLink}`;
         window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
     };
 
@@ -59,10 +59,10 @@ export const ReferralModal: React.FC<ReferralModalProps> = ({ isOpen, onClose, u
 
                     <div className="space-y-2">
                         <h2 className="text-2xl font-black text-white italic uppercase tracking-tighter leading-none">
-                            PROTOCOLO DE <span className="text-yellow-500">RECLUTAMIENTO</span>
+                            PROGRAMA DE <span className="text-yellow-500">REFERIDOS</span>
                         </h2>
                         <p className="text-neutral-400 text-sm">
-                            Construye tu ejército. Gana recompensas.
+                            Invita a tus amigos. Gana recompensas.
                         </p>
                     </div>
 
@@ -73,14 +73,14 @@ export const ReferralModal: React.FC<ReferralModalProps> = ({ isOpen, onClose, u
                         </div>
                         <div className="text-left">
                             <div className="text-white font-bold text-lg leading-none">+250 XP</div>
-                            <div className="text-neutral-500 text-xs mt-1">Por cada recluta registrado</div>
+                            <div className="text-neutral-500 text-xs mt-1">Por cada amigo registrado</div>
                         </div>
                     </div>
 
                     {/* Link Section */}
                     <div className="w-full space-y-2">
                         <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest block text-left pl-1">
-                            Tu Enlace Táctico
+                            Tu Enlace de Invitación
                         </label>
                         <div
                             onClick={handleCopy}

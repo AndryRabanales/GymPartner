@@ -111,7 +111,7 @@ export const JournalPage = () => {
                     </button>
                     <h1 className="text-xl font-black italic uppercase tracking-tighter flex items-center gap-2">
                         <BrainCircuit className="text-purple-500" />
-                        Diario Táctico
+                        Diario de Entrenamiento
                     </h1>
                 </div>
             </div>
@@ -122,23 +122,23 @@ export const JournalPage = () => {
                 <section>
                     <h2 className="text-sm font-bold text-neutral-500 uppercase tracking-widest mb-4 flex items-center gap-2">
                         <Terminal size={16} />
-                        Informe del Día
+                        Resumen del Día
                     </h2>
 
                     {generating ? (
                         <div className="bg-neutral-900/50 border border-purple-500/30 rounded-2xl p-8 flex flex-col items-center justify-center gap-4 animate-pulse">
                             <BrainCircuit size={48} className="text-purple-500" />
-                            <div className="text-purple-400 font-mono text-sm">ANALIZANDO CONSTANCIA... CALCULANDO VOLUMEN...</div>
+                            <div className="text-purple-400 font-mono text-sm">Analizando datos... Calculando volumen...</div>
                         </div>
                     ) : todayEntry ? (
                         <div className={`rounded-2xl border-2 p-1 relative overflow-hidden ${getMoodColor(todayEntry.mood).split(' ')[0]} ${todayEntry.mood === 'skull' ? 'shadow-[0_0_30px_rgba(239,68,68,0.2)]' : 'shadow-lg'}`}>
                             {/* TERMINAL CONTENT */}
                             <div className="bg-black/90 p-6 rounded-xl font-mono relative z-10">
                                 <div className="flex justify-between items-start mb-4 border-b border-white/10 pb-4">
-                                    <div className="text-xs text-neutral-500">Target: {user?.user_metadata?.full_name || 'Agente'}</div>
+                                    <div className="text-xs text-neutral-500">Usuario: {user?.user_metadata?.full_name || 'Agente'}</div>
                                     <div className={`text-xs font-bold uppercase flex items-center gap-1 ${getMoodColor(todayEntry.mood).split(' ')[2]}`}>
                                         {getMoodIcon(todayEntry.mood)}
-                                        STATUS: {todayEntry.mood.toUpperCase()}
+                                        ESTADO: {todayEntry.mood === 'fire' ? 'EXCELENTE' : todayEntry.mood === 'ice' ? 'CONSTANTE' : todayEntry.mood === 'skull' ? 'INACTIVO' : 'NEUTRAL'}
                                     </div>
                                 </div>
 
@@ -173,7 +173,7 @@ export const JournalPage = () => {
                         <textarea
                             value={userNote}
                             onChange={(e) => setUserNote(e.target.value)}
-                            placeholder="Añade contexto táctico (lesiones, estado mental, etc)..."
+                            placeholder="Añade una nota personal..."
                             className="w-full bg-transparent text-sm text-white placeholder-neutral-600 outline-none resize-none min-h-[80px]"
                         />
                     </div>
@@ -183,7 +183,7 @@ export const JournalPage = () => {
                 <section>
                     <h2 className="text-sm font-bold text-neutral-500 uppercase tracking-widest mb-4 flex items-center gap-2">
                         <Calendar size={16} />
-                        Historial de Comportamiento
+                        Historial
                     </h2>
 
                     <div className="space-y-3 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-neutral-800 before:to-transparent">

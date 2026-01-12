@@ -209,7 +209,7 @@ export default function WorkoutDetailPage() {
                 </button>
 
                 <h1 className="text-2xl md:text-3xl font-black uppercase italic mb-2">
-                    Detalles de Batalla
+                    Detalles de Sesión
                 </h1>
 
                 <div className="flex flex-col gap-1 mb-4 text-neutral-400">

@@ -1004,7 +1004,7 @@ export const WorkoutSession = () => {
         <div className="h-screen flex items-center justify-center bg-black text-yellow-500">
             <div className="text-center">
                 <Loader className="animate-spin mx-auto mb-4" size={48} />
-                <h2 className="text-2xl font-black uppercase tracking-widest animate-pulse">Iniciando Protocolo</h2>
+                <h2 className="text-2xl font-black uppercase tracking-widest animate-pulse">Iniciando...</h2>
             </div>
             {/* 4. NEW: SUMMARY / MISSION COMPLETE MODAL */}
             {
@@ -1020,7 +1020,7 @@ export const WorkoutSession = () => {
 
                             <div className="space-y-2">
                                 <h2 className="text-4xl font-black italic uppercase text-white tracking-tighter">
-                                    MISIÓN<br />CUMPLIDA
+                                    SESIÓN<br />FINALIZADA
                                 </h2>
                                 <p className="text-neutral-400 font-bold">Sesión registrada en la base de datos.</p>
                             </div>
@@ -1031,7 +1031,7 @@ export const WorkoutSession = () => {
                                     className="w-full bg-purple-600 hover:bg-purple-500 text-white font-black uppercase py-4 rounded-xl shadow-[0_0_30px_rgba(147,51,234,0.3)] transition-all hover:scale-105 flex items-center justify-center gap-2 group"
                                 >
                                     <BrainCircuit size={24} className="group-hover:animate-pulse" />
-                                    VER ANÁLISIS TÁCTICO
+                                    VER ANÁLISIS
                                 </button>
 
                                 <button
@@ -1067,8 +1067,8 @@ export const WorkoutSession = () => {
                             >
                                 <ArrowLeft size={24} />
                             </button>
-                            <h2 className="text-3xl font-black italic uppercase text-white mb-2 tracking-tighter">Estrategia</h2>
-                            <p className="text-neutral-400 text-sm">Selecciona un plan para desplegar en este territorio.</p>
+                            <h2 className="text-3xl font-black italic uppercase text-white mb-2 tracking-tighter">Rutina</h2>
+                            <p className="text-neutral-400 text-sm">Selecciona un plan de entrenamiento.</p>
                         </div>
 
                         {routines.length === 0 ? (
@@ -1076,7 +1076,7 @@ export const WorkoutSession = () => {
                                 <div className="bg-neutral-900/50 p-6 rounded-full border border-neutral-800 mb-6 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
                                     <Swords size={64} className="text-neutral-600" strokeWidth={1} />
                                 </div>
-                                <h3 className="text-xl font-bold text-white mb-2">No hay estrategias</h3>
+                                <h3 className="text-xl font-bold text-white mb-2">No hay rutinas</h3>
                                 <p className="text-neutral-500 text-sm max-w-xs mx-auto mb-8">Este gimnasio no tiene rutinas asignadas aún.</p>
 
                                 <Link
@@ -1129,7 +1129,7 @@ export const WorkoutSession = () => {
                         {tutorialStep === 6 && (
                             <InteractiveOverlay
                                 targetId="tut-routine-first"
-                                title="PASO 2: IMPORTAR ESTRATEGIA"
+                                title="PASO 2: IMPORTAR RUTINA"
                                 message="Aquí está tu rutina creada. Selecciónala para cargar tu plan de entrenamiento en este gimnasio."
                                 step={2}
                                 totalSteps={2}
@@ -1147,8 +1147,8 @@ export const WorkoutSession = () => {
                         {tutorialStep === 7 && (
                             <InteractiveOverlay
                                 targetId="tut-routine-first"
-                                title="PASO 3: DESPLIEGUE"
-                                message="Estrategia adquirida. Selecciónala para proceder al despliegue operativo."
+                                title="PASO 3: COMENZAR"
+                                message="Rutina cargada. Selecciónala para iniciar el entrenamiento."
                                 step={3}
                                 totalSteps={3}
                                 onNext={() => { }}
@@ -1415,10 +1415,10 @@ export const WorkoutSession = () => {
                             <div className="flex justify-between items-start mb-4">
                                 <div>
                                     <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">
-                                        {isCreatingExercise ? (editingItem ? 'Editar Ejercicio' : 'Crear Ejercicio') : 'Armería'}
+                                        {isCreatingExercise ? (editingItem ? 'Editar Ejercicio' : 'Crear Ejercicio') : 'Catálogo'}
                                     </h2>
                                     <p className="text-neutral-500 text-sm">
-                                        {isCreatingExercise ? 'Personaliza tu equipo.' : 'Elige tu arma para esta batalla.'}
+                                        {isCreatingExercise ? 'Personaliza tu equipo.' : 'Selecciona los ejercicios para hoy.'}
                                     </p>
                                 </div>
                                 <button onClick={() => {
@@ -1543,7 +1543,7 @@ export const WorkoutSession = () => {
                 showRoutineModal && (
                     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-4">
                         <div className="bg-neutral-900 border border-neutral-800 p-6 rounded-2xl w-full max-w-sm shadow-2xl relative">
-                            <h3 className="text-xl font-black italic uppercase text-white mb-2">¿Guardar Estrategia?</h3>
+                            <h3 className="text-xl font-black italic uppercase text-white mb-2">¿Guardar Rutina?</h3>
                             <p className="text-neutral-400 text-sm mb-6">Puedes guardar esta sesión como una rutina para repetirla en el futuro.</p>
 
                             <div className="space-y-4">
@@ -1587,10 +1587,10 @@ export const WorkoutSession = () => {
                     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-4">
                         <div className="bg-neutral-900 border border-neutral-800 p-6 rounded-2xl w-full max-w-sm shadow-2xl relative">
                             <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-yellow-500 text-black px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest shadow-[0_0_20px_rgba(234,179,8,0.5)]">
-                                ¡Nueva Conquista!
+                                ¡Nueva Ubicación!
                             </div>
-                            <h3 className="text-xl font-black italic uppercase text-white mb-2 text-center mt-2">¿Guardar Territorio?</h3>
-                            <p className="text-neutral-400 text-sm mb-6 text-center">Parece que estás en una ubicación nueva. ¿Quieres guardarla como un gimnasio personalizado?</p>
+                            <h3 className="text-xl font-black italic uppercase text-white mb-2 text-center mt-2">¿Guardar Ubicación?</h3>
+                            <p className="text-neutral-400 text-sm mb-6 text-center">Parece que estás en un lugar nuevo. ¿Quieres guardarlo como un gimnasio personalizado?</p>
 
                             <div className="space-y-4">
                                 <div>

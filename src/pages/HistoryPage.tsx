@@ -22,10 +22,10 @@ export const HistoryPage = () => {
         return (
             <PublicTeaser
                 icon={Calendar}
-                title="Bitácora de Batalla"
-                description="Visualiza tu historial de conquistas. Cada sesión es un registro imborrable de tu progreso táctico."
-                benefitTitle="Memoria Eterna"
-                benefitDescription="Accede a un cronograma detallado de todos tus despliegues. Compara tu rendimiento pasado y supérate."
+                title="Historial de Entrenamiento"
+                description="Visualiza tu historial de sesiones. Cada sesión es un registro imborrable de tu progreso real."
+                benefitTitle="Historial Completo"
+                benefitDescription="Accede a un cronograma detallado de todos tus entrenamientos. Compara tu rendimiento pasado y supérate."
                 iconColor="text-blue-500"
                 bgAccent="bg-blue-500/10"
             />
@@ -194,7 +194,7 @@ export const HistoryPage = () => {
             {/* Header */}
             <div className="text-center mb-8">
                 <h1 className="text-3xl md:text-4xl font-black text-white mb-2 tracking-tight uppercase italic">
-                    Historial de Batalla
+                    Historial de Entrenamiento
                 </h1>
                 <p className="text-neutral-400 text-sm mb-4">Registro completo de tus entrenamientos</p>
                 <button
