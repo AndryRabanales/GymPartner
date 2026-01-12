@@ -301,7 +301,15 @@ export const WorkoutSession = () => {
                     if (restoredExercises.length > 0) {
                         setActiveExercises(restoredExercises);
                         console.log('📦 State Restored:', restoredExercises.length, 'exercises');
+                    } else {
+                        // Active Session found, but 0 exercises logged -> User was in "Armería"
+                        console.log('📦 Empty Active Session -> Re-opening Armería');
+                        setShowAddModal(true);
                     }
+                } else {
+                    // No logs found -> User implies 0 exercises -> Open Armería
+                    console.log('📦 No Logs -> Re-opening Armería');
+                    setShowAddModal(true);
                 }
                 setLoading(false);
 
