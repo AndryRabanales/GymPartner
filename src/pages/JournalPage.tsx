@@ -47,12 +47,12 @@ export const JournalPage = () => {
         }
     };
 
-    const generateReport = async () => {
+    const generateReport = async (force: boolean = false) => {
         setGenerating(true);
         try {
             // Artificial delay for "Thinking" effect
             await new Promise(r => setTimeout(r, 1500));
-            const entry = await journalService.generateEntry(user!.id);
+            const entry = await journalService.generateEntry(user!.id, force);
             if (entry) {
                 setTodayEntry(entry);
                 setUserNote(entry.user_note || '');
@@ -135,10 +135,23 @@ export const JournalPage = () => {
                             {/* TERMINAL CONTENT */}
                             <div className="bg-black/90 p-6 rounded-xl font-mono relative z-10">
                                 <div className="flex justify-between items-start mb-4 border-b border-white/10 pb-4">
-                                    <div className="text-xs text-neutral-500">Usuario: {user?.user_metadata?.full_name || 'Agente'}</div>
-                                    <div className={`text-xs font-bold uppercase flex items-center gap-1 ${getMoodColor(todayEntry.mood).split(' ')[2]}`}>
-                                        {getMoodIcon(todayEntry.mood)}
-                                        ESTADO: {todayEntry.mood === 'fire' ? 'EXCELENTE' : todayEntry.mood === 'ice' ? 'CONSTANTE' : todayEntry.mood === 'skull' ? 'INACTIVO' : 'NEUTRAL'}
+                                    <div className="text-xs text-neutral-500">
+                                        Usuario: {user?.user_metadata?.full_name || 'Agente'}
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <button
+                                            onClick={() => generateReport(true)}
+                                            disabled={generating}
+                                            className="text-[10px] uppercase font-bold text-neutral-500 hover:text-purple-400 transition-colors flex items-center gap-1"
+                                            title="Regenerar Análisis"
+                                        >
+                                            <BrainCircuit size={12} />
+                                            {generating ? '...' : 'Refrescar'}
+                                        </button>
+                                        <div className={`text-xs font-bold uppercase flex items-center gap-1 ${getMoodColor(todayEntry.mood).split(' ')[2]}`}>
+                                            {getMoodIcon(todayEntry.mood)}
+                                            ESTADO: {todayEntry.mood === 'fire' ? 'EXCELENTE' : todayEntry.mood === 'ice' ? 'CONSTANTE' : todayEntry.mood === 'skull' ? 'INACTIVO' : 'NEUTRAL'}
+                                        </div>
                                     </div>
                                 </div>
 

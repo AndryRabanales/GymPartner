@@ -85,19 +85,25 @@ class JournalService {
     /**
      * GENERATE DAILY ANALYSIS (GEMINI POWERED - PROFESSIONAL MODE)
      */
-    async generateEntry(userId: string): Promise<JournalEntry | null> {
+    /**
+     * GENERATE DAILY ANALYSIS (GEMINI POWERED - PROFESSIONAL MODE)
+     * @param force If true, ignores existing entry and regenerates.
+     */
+    async generateEntry(userId: string, force: boolean = false): Promise<JournalEntry | null> {
         const today = new Date().toISOString().split('T')[0];
 
-        // 1. Check if already exists
-        const { data: existing } = await this.getTodayEntry(userId);
-        if (existing) return existing;
+        // 1. Check if already exists (unless forced)
+        if (!force) {
+            const { data: existing } = await this.getTodayEntry(userId);
+            if (existing) return existing;
+        }
 
         try {
             // 2. GATHER DATA
-            // A. Get Today's Workouts
+            // A. Get Today's Workouts with RICH DETAILS
             const { data: todayWorkoutsData } = await supabase
                 .from('workout_sessions')
-                .select('*, workout_logs(*)')
+                .select('*, workout_logs(*, equipment:exercise_id(name, target_muscle_group))')
                 .eq('user_id', userId)
                 .gte('started_at', `${today}T00:00:00`)
                 .lte('started_at', `${today}T23:59:59`);
@@ -129,19 +135,37 @@ class JournalService {
                 .limit(1)
                 .maybeSingle();
 
-            // 3. CALCULATE METRICS
+            // 3. CALCULATE METRICS & CONTEXT
             const todayWorkouts = todayWorkoutsData || [];
             const workoutsCount = todayWorkouts.length;
 
             let totalVolume = 0;
-            // Simplified PR tracking (would need real checking against history)
-            let prsCount = 0;
+            const exercisesDetails: any[] = [];
+            const trainedMuscles = new Set<string>();
 
             todayWorkouts.forEach(session => {
                 session.workout_logs?.forEach((log: any) => {
-                    totalVolume += (log.weight_kg || 0) * (log.reps || 0);
+                    const vol = (log.weight_kg || 0) * (log.reps || 0);
+                    totalVolume += vol;
+
+                    const exerciseName = log.equipment?.name || "Ejercicio Desconocido";
+                    const muscle = log.equipment?.target_muscle_group || "General";
+                    trainedMuscles.add(muscle);
+
+                    exercisesDetails.push({
+                        name: exerciseName,
+                        muscle: muscle,
+                        weight: log.weight_kg,
+                        reps: log.reps,
+                        set_vol: vol,
+                        is_pr: log.is_pr || false
+                    });
                 });
             });
+
+            const topExercises = exercisesDetails
+                .sort((a, b) => b.weight_kg - a.weight_kg) // Sort by heavy lift
+                .slice(0, 5); // Take top 5 heaviest lifts
 
             let prevVolume = 0;
             if (lastSession && lastSession.workout_logs) {
@@ -168,6 +192,8 @@ class JournalService {
                 user_id: userId,
                 date: today,
                 workouts_today: workoutsCount,
+                trained_muscles: Array.from(trainedMuscles),
+                top_exercises_performed: topExercises,
                 total_volume_kg: totalVolume,
                 previous_volume_kg: prevVolume,
                 volume_change_percent: volumeDiffPercent,
@@ -188,32 +214,38 @@ class JournalService {
                     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
                     const systemPrompt = `
-                        ACT AS: The user writing their own professional fitness journal.
-                        PERSPECTIVE: First Person ("I", "Me", "My", "Hoy completé...", "He notado...").
-                        TONE: Formal, Professional, Analytic, Objective. Avoid slang, military terms, or excessive emotion.
+                        ACT AS: An elite professional sports analyst and personal trainer writing a daily journal for the user.
+                        PERSPECTIVE: First Person ("Hoy entrené...", "Me sentí...", "Logré...").
+                        TONE: Formal, Objective, Analytical, encouraging but grounded in data.
                         LANGUAGE: Spanish (Español Neutro/Formal).
                         
-                        TASK: Write a brief, formal summary of my gym performance based on the data.
+                        GOAL: Provide a deep yet concise analysis of today's performance, comparing it with history.
                         
-                        RULES:
-                        1. START DIRECTLY with the analysis. No greetings.
-                        2. Max 3 sentences. Concise and data-driven.
-                        3. AVOID: terms like "battle", "war", "soldier", "beast", "no pain no gain". Use "session", "training", "consistency", "load".
-                        4. ANALYZE CONSISTENCY: Reference the 30-day trend formally (e.g., "Maintained average frequency").
-                        5. MOOD LOGIC (Internal classification only):
-                           - FIRE: workouts_today > 0 AND volume improved.
+                        INPUT DATA:
+                        ${JSON.stringify(context, null, 2)}
+                        
+                        GUIDELINES:
+                        1. **Focus on Muscles & Exercises**: Mention specific muscles trained (e.g., "El enfoque de hoy fue Pectoral y Tríceps"). Mention the heaviest or most significant exercises.
+                        2. **Analyze Progress**: Compare today's volume vs previous. Did I lift more? Did I maintain? 
+                        3. **Check Consistency**: If I missed days, mention it constructively ("Tras 3 días de inactividad..."). If constant, praise discipline.
+                        4. **Structure**: 
+                           - Sentence 1: Summary of what was done (Muscles/Key Exercises).
+                           - Sentence 2: Quantitative analysis (Volume, progress, intensity).
+                           - Sentence 3: Conclusion/Forward looking statement.
+                        5. **Safety**: No medical advice. No "pain" talk unless recovery related.
+                        6. **Length**: Maximum 3-4 powerful sentences.
+                        
+                        MOOD LOGIC (Internal):
+                           - FIRE: workouts_today > 0 AND (volume improved OR PR set).
                            - ICE: workouts_today > 0 AND volume stable.
-                           - SKULL: workouts_today == 0 AND skipped_days_streak > 2.
-                           - NEUTRAL: Rest day.
+                           - SKULL: skipped_days_streak > 3.
+                           - NEUTRAL: Rest day or light recovery.
                         
                         OUTPUT FORMAT (JSON):
                         {
                             "mood": "fire" | "ice" | "skull" | "neutral",
-                            "content": "The formal text entry..."
+                            "content": "The narrative text..."
                         }
-                        
-                        DATA:
-                        ${JSON.stringify(context)}
                     `;
 
                     const result = await model.generateContent(systemPrompt);
@@ -228,11 +260,11 @@ class JournalService {
 
                 } catch (apiError) {
                     console.error("Gemini API Error:", apiError);
-                    // Fallback to local logic logic below
+                    // Fallback handled below
                 }
             }
 
-            // FALLBACK LOGIC (If API Key missing or API error)
+            // FALLBACK LOGIC
             if (!aiContent) {
                 console.warn("Using Fallback AI Logic");
                 if (workoutsCount > 0) {
@@ -242,6 +274,10 @@ class JournalService {
                     } else {
                         aiMood = 'ice';
                         aiContent = this.getRandomFallback('ice');
+                    }
+                    // Simple replacement for fallback genericness
+                    if (trainedMuscles.size > 0) {
+                        aiContent += ` El enfoque principal fue: ${Array.from(trainedMuscles).join(', ')}.`;
                     }
                 } else {
                     if (skippedDays > 2) {
@@ -253,33 +289,38 @@ class JournalService {
                     }
                 }
 
-                // Replace placeholders in fallback
                 aiContent = aiContent
                     .replace('{volume}', totalVolume.toLocaleString())
                     .replace('{diff}', volumeDiffPercent > 0 ? `+${volumeDiffPercent}` : `${volumeDiffPercent}`)
-                    .replace('{prs}', prsCount.toString())
                     .replace('{skipped}', skippedDays.toString());
             }
 
-            // 6. SAVE TO DB
+            // 6. SAVE OR UPDATE DB
+            // If forced, we might want to update the existing record instead of inserting specific constraints
+            // But 'upsert' works if we have a unique constraint on (user_id, date). 
+            // In setup we might not have set unique constraint strictly, let's check basic logic:
+
             const snapshot = {
                 total_volume: totalVolume,
                 volume_diff_percent: volumeDiffPercent,
                 workouts_count: workoutsCount,
-                prs_count: prsCount,
+                prs_count: 0, // Need deeper logic for real PRs
                 skipped_days: skippedDays,
-                avg_weekly_sessions: avgSessionsPerWeek
+                avg_weekly_sessions: avgSessionsPerWeek,
+                muscles: Array.from(trainedMuscles)
+            };
+
+            const payload = {
+                user_id: userId,
+                date: today,
+                content: aiContent,
+                mood: aiMood,
+                metrics_snapshot: snapshot
             };
 
             const { data: newEntry, error } = await supabase
                 .from('ai_journals')
-                .insert({
-                    user_id: userId,
-                    date: today,
-                    content: aiContent,
-                    mood: aiMood,
-                    metrics_snapshot: snapshot
-                })
+                .upsert(payload, { onConflict: 'user_id,date' }) // Assuming unique index exists
                 .select()
                 .single();
 
