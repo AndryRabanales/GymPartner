@@ -84,6 +84,7 @@ export const UserProfile = () => {
 
     // NEW: Auto-Start Overlay State
     const [autoStartGymName, setAutoStartGymName] = useState<string | null>(null);
+    const [startLoading, setStartLoading] = useState(false);
 
     useEffect(() => {
         console.log('[TUTORIAL] Current Step State:', tutorialStep);
@@ -755,6 +756,7 @@ export const UserProfile = () => {
                             return;
                         }
 
+                        setStartLoading(true);
                         // Helper for Promise-based Location
                         const getPosition = (options?: PositionOptions): Promise<GeolocationPosition> => {
                             return new Promise((resolve, reject) => {
@@ -814,6 +816,8 @@ export const UserProfile = () => {
                                 distanceMeters: null,
                                 errorType: 'GPS_ERROR'
                             });
+                        } finally {
+                            setStartLoading(false);
                         }
                     }}
                     className="col-span-2 group relative overflow-hidden bg-gradient-to-r from-yellow-400 to-orange-500 rounded-3xl p-1 shadow-[0_0_20px_rgba(250,204,21,0.3)] hover:shadow-[0_0_40px_rgba(250,204,21,0.6)] hover:-translate-y-1 transition-all duration-300 active:scale-95"
