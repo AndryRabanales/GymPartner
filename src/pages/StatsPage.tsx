@@ -214,12 +214,13 @@ export const StatsPage = () => {
                     </div>
 
                     <h2 className="text-4xl font-black text-white mb-4 italic uppercase tracking-tighter">
+                        CENTRO DE ESTADÍSTICAS <br />
                         <span className="text-gym-primary">SISTEMA BLOQUEADO</span>
                     </h2>
 
                     <p className="text-neutral-400 mb-10 font-medium text-lg leading-relaxed">
-                        <h2 className="text-4xl font-black text-white mb-4 italic uppercase tracking-tighter">
-                            CENTRO DE ESTADÍSTICAS <br />
+                        No hay datos de entrenamiento suficientes para generar un perfil biomecánico.
+                        Completa tu primer entrenamiento para desbloquear el análisis.
                     </p>
 
                     <div className="flex flex-col gap-4">
