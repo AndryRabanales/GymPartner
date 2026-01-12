@@ -24,26 +24,26 @@ const genAI = new GoogleGenerativeAI(GEN_AI_KEY);
 
 class JournalService {
 
-    // FALLBACK PROMPTS (Used if AI fails)
+    // FALLBACK PROMPTS (First Person - "Ghostwriter" Mode)
     private fallbackPrompts = {
         fire: [
-            "Has despertado. {volume}kg movidos. Un incremento del {diff}% respecto a tu última batalla. Mantén este ritmo o vuelve a ser mediocre.",
-            "Excelente despliegue. Rompiste {prs} marcas personales hoy. La debilidad está abandonando tu cuerpo, pero no te confíes.",
-            "Territorio conquistado. Tu volumen de {volume}kg demuestra disciplina. Mañana te quiero igual o mejor."
+            "Hoy me sentí imparable. Moví {volume}kg, un {diff}% más que la última vez. La constancia está pagando dividendos y me siento más fuerte que nunca.",
+            "Increíble sesión. Rompí récords personales y siento que recuperé el control. {volume}kg totales es mi nueva norma. A seguir así.",
+            "Territorio conquistado. Completé mi entrenamiento con {volume}kg de volumen. Me siento disciplinado y en camino a mi mejor versión."
         ],
         ice: [
-            "Cumpliste, pero no impresionaste. {volume}kg es un número estándar para alguien de tu nivel. Exígete más.",
-            "Asistencia registrada. Hiciste el trabajo, pero faltó intensidad. La guerra no se gana con esfuerzo mínimo.",
-            "Estás en zona de confort. {volume}kg es aceptable, pero no es legendario. Define si quieres ser soldado o general."
+            "Cumplí con el deber. {volume}kg movidos. No fue mi mejor sesión, pero la disciplina es ir incluso cuando no hay ganas.",
+            "Entrenamiento finalizado. Mantuve el ritmo con {volume}kg, aunque sé que puedo dar un poco más de intensidad la próxima vez.",
+            "Día de trabajo honesto. {volume}kg en la bolsa. No rompí récords, pero mantuve la racha viva."
         ],
         skull: [
-            "Deserción detectada. Has faltado {skipped} días. Tu legado se desmorona mientras buscas excusas.",
-            "Indigno. La inactividad es el enemigo y hoy perdiste. {skipped} días sin reportarte es inaceptable.",
-            "Patético. Tu disciplina brilla por su ausencia. Vuelve al frente antes de que sea tarde."
+            "He fallado. Llevo {skipped} días sin entrenar y se nota. Me siento estancado y necesito romper este ciclo de inactividad ya.",
+            "La pereza me ganó estos últimos {skipped} días. Es hora de dejar las excusas y volver al hierro. Me siento decepcionado pero motivado a cambiar.",
+            "Desconexión total. {skipped} días fuera del gimnasio. Mi disciplina está flaqueando y necesito retomarla urgentemente."
         ],
         neutral: [
-            "Día de descanso o actividad no registrada. Recuerda que la recuperación también es estrategia, si es merecida.",
-            "Sin datos de combate recientes. El silencio en el radar es peligroso."
+            "Hoy toca descanso o desconexión. La recuperación es parte del proceso, siempre y cuando no se convierta en hábito.",
+            "Sin actividad registrada. Es un buen momento para reflexionar sobre mis objetivos y planificar la semana."
         ]
     };
 
@@ -82,7 +82,7 @@ class JournalService {
     }
 
     /**
-     * GENERATE DAILY ANALYSIS (GEMINI POWERED)
+     * GENERATE DAILY ANALYSIS (GEMINI POWERED - ABOTBIOGRAPHER MODE)
      */
     async generateEntry(userId: string): Promise<JournalEntry | null> {
         const today = new Date().toISOString().split('T')[0];
@@ -93,13 +93,32 @@ class JournalService {
 
         try {
             // 2. GATHER DATA
-            const { data: workouts } = await supabase
+            // A. Get Today's Workouts
+            const { data: todayWorkoutsData } = await supabase
                 .from('workout_sessions')
                 .select('*, workout_logs(*)')
                 .eq('user_id', userId)
                 .gte('started_at', `${today}T00:00:00`)
                 .lte('started_at', `${today}T23:59:59`);
 
+            // B. Get Recent History (Last 30 Days) for consistency analysis
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            const strThirtyDaysAgo = thirtyDaysAgo.toISOString().split('T')[0];
+
+            const { data: historyWorkouts } = await supabase
+                .from('workout_sessions')
+                .select('started_at, gym_id')
+                .eq('user_id', userId)
+                .gte('started_at', `${strThirtyDaysAgo}T00:00:00`)
+                .lt('started_at', `${today}T00:00:00`) // Exclude today
+                .order('started_at', { ascending: false });
+
+            // Analyze History
+            const uniqueDays = new Set(historyWorkouts?.map(w => w.started_at.split('T')[0])).size;
+            const avgSessionsPerWeek = Math.round((uniqueDays / 30) * 7);
+
+            // B. Get Previous Session (Most recent before today)
             const { data: lastSession } = await supabase
                 .from('workout_sessions')
                 .select('*, workout_logs(*)')
@@ -110,7 +129,7 @@ class JournalService {
                 .maybeSingle();
 
             // 3. CALCULATE METRICS
-            const todayWorkouts = workouts || [];
+            const todayWorkouts = todayWorkoutsData || [];
             const workoutsCount = todayWorkouts.length;
 
             let totalVolume = 0;
@@ -121,9 +140,6 @@ class JournalService {
                 session.workout_logs?.forEach((log: any) => {
                     totalVolume += (log.weight_kg || 0) * (log.reps || 0);
                 });
-                // Naive way to get exercise names if available (would need join or separate query usually, 
-                // but logs might not have name directly depending on structure. 
-                // Assuming we might not have names easily without join. We will stick to numbers for now.)
             });
 
             let prevVolume = 0;
@@ -155,6 +171,10 @@ class JournalService {
                 previous_volume_kg: prevVolume,
                 volume_change_percent: volumeDiffPercent,
                 skipped_days_streak: skippedDays,
+                history_30_days: {
+                    total_sessions: uniqueDays,
+                    avg_per_week: avgSessionsPerWeek
+                },
                 is_active_day: workoutsCount > 0
             };
 
@@ -167,21 +187,23 @@ class JournalService {
                     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
                     const systemPrompt = `
-                        ACT AS: "Iron Sergeant", a tactical military training analyst.
-                        TONE: Stoic, tough, disciplined, aggressively motivating but fair. "Tough Love".
+                        ACT AS: The user writing their own personal gym journal / diary.
+                        PERSPECTIVE: First Person ("I", "Me", "My", "Hoy hice...", "Me sentí...").
+                        TONE: Realistic, introspective, slightly analytical but human. "Quantified Self".
                         LANGUAGE: Spanish (Español Neutro/Latino).
                         
-                        TASK: Analyze the provided workout data and generate a daily report entry.
+                        TASK: Write a diary entry summarizing my gym performance today based on the data.
                         
                         RULES:
-                        1. NO greeting like "Hola". Start directly with the verdict.
-                        2. Max 3 sentences. Short, punchy.
-                        3. Use military/tactical terminology (battle, war, front, mission, ops).
-                        4. IF workouts_today > 0 AND volume_change_percent > 5: Praise lightly but demand more. (Mood: FIRE)
-                        5. IF workouts_today > 0 AND volume_change_percent <= 5: Acknowledge effort, criticize lack of intensity. (Mood: ICE)
-                        6. IF workouts_today == 0:
-                           - If skipped_days_streak > 2: BRUTAL criticism. Call them deserter. (Mood: SKULL)
-                           - If skipped_days_streak <= 2: Suspicious check-in. Ask if they are resting or slacking. (Mood: NEUTRAL)
+                        1. START DIRECTLY with the reflection. No "Querido diario".
+                        2. Max 3 sentences. Concise but meaningful.
+                        3. MENTION SPECIFICS: "Today I lifted X kg", "I've been consistent this week", "I skipped X days".
+                        4. ANALYZE CONSISTENCY: Compare today vs my 30-day average (avg_per_week).
+                        5. MOOD LOGIC:
+                           - FIRE: workouts_today > 0 AND (volume_change_percent > 5 OR total_volume_kg > previous_volume_kg). Be proud.
+                           - ICE: workouts_today > 0 AND volume mainly flat/lower. Be honest/neutral about effort.
+                           - SKULL: workouts_today == 0 AND skipped_days_streak > 2. Be disappointed/worried about the streak.
+                           - NEUTRAL: Rest day or light activity.
                         
                         OUTPUT FORMAT (JSON):
                         {
@@ -244,7 +266,8 @@ class JournalService {
                 volume_diff_percent: volumeDiffPercent,
                 workouts_count: workoutsCount,
                 prs_count: prsCount,
-                skipped_days: skippedDays
+                skipped_days: skippedDays,
+                avg_weekly_sessions: avgSessionsPerWeek
             };
 
             const { data: newEntry, error } = await supabase
