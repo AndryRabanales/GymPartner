@@ -820,7 +820,7 @@ export const UserProfile = () => {
                             setStartLoading(false);
                         }
                     }}
-                    className="col-span-2 group relative overflow-hidden bg-gradient-to-r from-yellow-400 to-orange-500 rounded-3xl p-1 shadow-[0_0_20px_rgba(250,204,21,0.3)] hover:shadow-[0_0_40px_rgba(250,204,21,0.6)] hover:-translate-y-1 transition-all duration-300 active:scale-95"
+                    className="col-span-2 group relative overflow-hidden bg-gradient-to-r from-yellow-400 to-orange-500 rounded-3xl p-1 shadow-[0_0_20px_rgba(250,204,21,0.3)] hover:shadow-[0_0_40px_rgba(250,204,21,0.6)] hover:-translate-y-1 transition-all duration-300 active:scale-95 ring-4 ring-yellow-400/20 animate-pulse"
                 >
                     {/* Inner Glass Container */}
                     <div className="relative bg-black/10 backdrop-blur-sm w-full h-full rounded-[20px] px-4 md:px-8 py-4 md:py-6 flex items-center justify-between border border-white/20 group-hover:bg-transparent transition-all">
@@ -828,7 +828,7 @@ export const UserProfile = () => {
                         {/* Left Side: Icon & Text */}
                         <div className="flex items-center gap-4 md:gap-6">
                             {/* Icon Circle */}
-                            <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-white text-black flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:rotate-12 transition-all duration-500 shrink-0">
+                            <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-white text-black flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:rotate-12 transition-all duration-500 shrink-0 animate-bounce">
                                 {startLoading ? <Loader className="animate-spin w-6 h-6 md:w-8 md:h-8" /> : <Swords className="w-6 h-6 md:w-8 md:h-8" strokeWidth={2.5} />}
                             </div>
 
