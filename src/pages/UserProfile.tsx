@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Trophy, MapPin, Edit2, LogIn, Loader, Swords, Dumbbell, LineChart, History, Star, Search, ArrowLeft, Crown } from 'lucide-react';
+import { Trophy, MapPin, Edit2, LogIn, Loader, Swords, Dumbbell, LineChart, History, Star, Search, ArrowLeft, ArrowRight, Crown } from 'lucide-react';
 // import { UserPlus, Grid } from 'lucide-react'; // UNUSED: Hidden Community Features
 // import { Grid } from 'lucide-react'; // UNUSED: Hidden Community Features
 import { Link, useNavigate } from 'react-router-dom';
@@ -816,15 +816,36 @@ export const UserProfile = () => {
                             });
                         }
                     }}
-                    className="col-span-2 group bg-gym-primary hover:bg-yellow-400 border border-yellow-500/50 hover:border-yellow-400 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center shadow-[0_0_20px_rgba(250,204,21,0.2)] hover:shadow-[0_0_30px_rgba(250,204,21,0.4)] relative overflow-hidden"
+                    className="col-span-2 group relative overflow-hidden bg-gradient-to-r from-yellow-400 to-orange-500 rounded-3xl p-1 shadow-[0_0_20px_rgba(250,204,21,0.3)] hover:shadow-[0_0_40px_rgba(250,204,21,0.6)] hover:-translate-y-1 transition-all duration-300 active:scale-95"
                 >
-                    <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    <div className="w-10 h-10 md:w-14 md:h-14 rounded-full bg-black/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <Swords size={24} className="text-black md:w-8 md:h-8" strokeWidth={2.5} />
-                    </div>
-                    <div className="flex flex-col">
-                        <span className="font-black text-black text-lg md:text-2xl italic uppercase tracking-tighter leading-none">INICIAR ENTRENAMIENTO</span>
-                        <span className="text-[10px] md:text-xs font-bold text-black/60 uppercase tracking-widest group-hover:text-black/80">Entrenamiento Táctico</span>
+                    {/* Inner Glass Container */}
+                    <div className="relative bg-black/10 backdrop-blur-sm w-full h-full rounded-[20px] px-4 md:px-8 py-4 md:py-6 flex items-center justify-between border border-white/20 group-hover:bg-transparent transition-all">
+
+                        {/* Left Side: Icon & Text */}
+                        <div className="flex items-center gap-4 md:gap-6">
+                            {/* Icon Circle */}
+                            <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-white text-black flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:rotate-12 transition-all duration-500 shrink-0">
+                                {startLoading ? <Loader className="animate-spin w-6 h-6 md:w-8 md:h-8" /> : <Swords className="w-6 h-6 md:w-8 md:h-8" strokeWidth={2.5} />}
+                            </div>
+
+                            {/* Text Stack */}
+                            <div className="flex flex-col items-start gap-0.5 md:gap-1 text-left">
+                                <span className="font-black text-black text-2xl md:text-4xl italic uppercase tracking-tighter leading-none drop-shadow-sm">
+                                    {startLoading ? 'INICIANDO...' : 'INICIAR'}
+                                </span>
+                                <span className="font-bold text-black/80 text-[10px] md:text-xs tracking-[0.2em] uppercase">
+                                    Entrenamiento Táctico
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Right Side: Action Arrow */}
+                        <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-black/10 flex items-center justify-center opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
+                            <ArrowRight className="text-black w-5 h-5 md:w-6 md:h-6" />
+                        </div>
+
+                        {/* Shine Effect */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 translate-x-[-200%] group-hover:animate-shine pointer-events-none" />
                     </div>
                 </button>
 
