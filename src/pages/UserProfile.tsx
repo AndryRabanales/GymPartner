@@ -911,49 +911,7 @@ export const UserProfile = () => {
                                     </div>
                                 </div>
 
-                                {/* ACTION BUTTONS */}
-                                <div className="flex items-center gap-3 shrink-0">
-                                    {/* ALWAYS SHOW ACTIONS (Requested by User) */}
-                                    <div className="flex flex-col items-center gap-1">
-                                        <button
-                                            id={`tut-start-workout-btn-${index}`}
-                                            onClick={() => handleStartWorkout(gym)}
-                                            disabled={verifyingLocation === gym.gym_id}
-                                            className={`bg-gym-primary text-black w-10 h-10 md:w-auto md:h-auto md:px-4 md:py-2 rounded-lg md:rounded-xl transition-all hover:scale-105 font-bold flex items-center justify-center gap-2 shadow-[0_0_10px_rgba(250,204,21,0.2)] ${verifyingLocation === gym.gym_id ? 'opacity-80 cursor-wait' : ''}`}
-                                        >
-                                            {verifyingLocation === gym.gym_id ? (
-                                                <Loader size={18} className="animate-spin" />
-                                            ) : (
-                                                <Swords size={18} strokeWidth={2.5} />
-                                            )}
-                                            <span className="hidden md:inline text-xs">
-                                                {verifyingLocation === gym.gym_id ? 'VERIFICANDO...' : 'INICIAR'}
-                                            </span>
-                                        </button>
-                                        <span className="text-[9px] font-bold text-gym-primary uppercase tracking-tight text-center max-w-[60px] leading-tight md:hidden">Iniciar entrenamiento</span>
-                                    </div>
 
-                                    <div className="flex flex-col items-center gap-1">
-                                        <Link
-                                            id={`tut-config-gym-btn-${index}`}
-                                            to={`/territory/${gym.gym_id}/arsenal`}
-                                            onClick={() => {
-                                                // Ensure tutorial advances if blindly following flow
-                                                if (localStorage.getItem('tutorial_step') === '5') {
-                                                    localStorage.setItem('tutorial_step', '6');
-                                                }
-                                                if (localStorage.getItem('tutorial_step') === '6') {
-                                                    localStorage.setItem('tutorial_step', '7');
-                                                }
-                                            }}
-                                            className="bg-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-700 w-10 h-10 md:w-auto md:h-auto md:px-4 md:py-2 rounded-lg md:rounded-xl transition-all font-bold flex items-center justify-center gap-2 border border-neutral-700 hover:border-white/20"
-                                        >
-                                            <Dumbbell size={18} />
-                                            <span className="hidden md:inline text-xs">CONFIG</span>
-                                        </Link>
-                                        <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-tight text-center max-w-[60px] leading-tight md:hidden">Configurar gym</span>
-                                    </div>
-                                </div>
                             </div>
                         );
                     })}
