@@ -25,7 +25,6 @@ const genAI = new GoogleGenerativeAI(GEN_AI_KEY);
 
 class JournalService {
 
-    // FALLBACK PROMPTS (Formal & Professional)
     // FALLBACK PROMPTS (Strictly Factual & 3rd Person)
     private fallbackPrompts = {
         fire: [
@@ -295,13 +294,8 @@ class JournalService {
                 const modelsToTry = ["gemini-1.5-flash-001", "gemini-1.5-flash", "gemini-pro"];
                 let analyzed = false;
 
-                for (const modelName of modelsToTry) {
-                    if (analyzed) break;
-                    try {
-                        // console.log(`🤖 Gemini Auditor: Attempting with ${modelName}...`);
-                        const model = genAI.getGenerativeModel({ model: modelName });
-
-                        const systemPrompt = `
+                // Construct Prompts for 1.5 Architecture
+                const systemInstructionText = `
                         ROL: Eres el AUDITOR DE RENDIMIENTO DEPORTIVO. Tu memoria es perfecta y abarca las últimas 30 sesiones.
                         FILOSOFÍA: "Los números no mienten, pero el contexto del usuario es la LEY."
                         
@@ -318,6 +312,15 @@ class JournalService {
                         PROHIBIDO (Banneados): "Soldado", "Misión", "Guerra", "Batalla", "Técnica" (a menos que el usuario la mencione), "Intuir" (no adivines). USAR PRIMERA PERSONA ("Hoy registré", "Me sentí") ESTÁ PROHIBIDO.
                         PALABRAS CLAVE: Carga, Volumen, Intensidad Relativa, Frecuencia, Adaptación, Sobrecarga Progresiva.
 
+                        SALIDA REQUERIDA (JSON):
+                        {
+                            "mood": "fire" | "ice" | "skull",
+                            "verdict": "Resumen de 3-5 palabras.",
+                            "content": "Análisis fáctico en TERCERA PERSONA."
+                        }
+                `;
+
+                const userPromptText = `
                         OBJETIVO:
                         1. Comparar sesión actual vs anterior.
                         2. Determinar el enfoque fisiológico (Fuerza vs Hipertrofia) basado en datos.
@@ -328,34 +331,38 @@ class JournalService {
 
                         DATOS DE ENTRADA:
                         ${JSON.stringify(context, null, 2)}
-                        
-                        SALIDA REQUERIDA (JSON):
-                        {
-                            "mood": "fire" (Progreso Real) | "ice" (Mantenimiento/Deload) | "skull" (Regresión Injustificada),
-                            "verdict": "Resumen de 3-5 palabras. Ej: 'Fuerza +5%. Recuperación visible.'",
-                            "content": "Análisis fáctico en TERCERA PERSONA. Ej: '${userName} ha aumentado su volumen total...'. IMPORTANTE: Si hay notas de usuario relevantes en el historial, CÍTALAS indirectamente para demostrar que recuerdas."
-                        }
-                    `;
+                `;
 
-                        const result = await model.generateContent(systemPrompt);
+                for (const modelName of modelsToTry) {
+                    if (analyzed) break;
+                    try {
+                        const model = genAI.getGenerativeModel({
+                            model: modelName,
+                            systemInstruction: systemInstructionText,
+                            generationConfig: { responseMimeType: "application/json" }
+                        });
+
+                        const result = await model.generateContent(userPromptText);
                         const responseText = result.response.text();
                         const cleanJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
                         const parsed = JSON.parse(cleanJson);
 
                         aiContent = parsed.content;
                         aiMood = parsed.mood;
-                        // Note: 'verdict' is currently not stored in DB, we inject it into content or handle it later. 
-                        // To keep DB schema simple, we'll PREPEND the verdict to the content formatted nicely.
                         aiContent = `[${parsed.verdict}] ${aiContent}`;
                         analyzed = true; // Mark as success to exit loop
 
                     } catch (apiError: any) {
                         console.warn(`⚠️ Gemini Model ${modelName} Failed.`);
+                        // console.error(apiError);
 
                         // Specific diagnostic for 404 (Service Not Enabled)
                         if (apiError.toString().includes('404')) {
-                            console.error("🔴 ERROR 404: Es muy probable que no hayas habilitado la API 'Generative Language API' en Google Cloud Console.");
-                            console.error("🔗 Visita: https://console.cloud.google.com/apis/library/generativelanguage.googleapis.com");
+                            console.error("🔴 ERROR 404: API no habilitada o Modelo no encontrado.");
+                        }
+                        // Specific diagnostic for 400 (Bad Request)
+                        if (apiError.toString().includes('400')) {
+                            console.error("🔴 ERROR 400: Solicitud inválida. Revisa el formato JSON o la clave API.");
                         }
                     }
                 }
@@ -394,10 +401,6 @@ class JournalService {
             }
 
             // 6. SAVE OR UPDATE DB
-            // If forced, we might want to update the existing record instead of inserting specific constraints
-            // But 'upsert' works if we have a unique constraint on (user_id, date). 
-            // In setup we might not have set unique constraint strictly, let's check basic logic:
-
             const snapshot = {
                 total_volume: totalVolume,
                 volume_diff_percent: volumeDiffPercent,
@@ -418,7 +421,7 @@ class JournalService {
 
             const { data: newEntry, error } = await supabase
                 .from('ai_journals')
-                .upsert(payload, { onConflict: 'user_id,date' }) // Assuming unique index exists
+                .upsert(payload, { onConflict: 'user_id,date' })
                 .select()
                 .single();
 
