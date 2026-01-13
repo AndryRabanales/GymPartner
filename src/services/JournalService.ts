@@ -292,6 +292,7 @@ class JournalService {
 
             if (GEN_AI_KEY) {
                 try {
+                    console.log("🤖 Gemini Auditor: Analyzing...");
                     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
                     const systemPrompt = `
@@ -330,8 +331,10 @@ class JournalService {
                         }
                     `;
 
+                    console.log("📤 Sending Prompt to Gemini...");
                     const result = await model.generateContent(systemPrompt);
                     const responseText = result.response.text();
+                    console.log("📥 Gemini Response:", responseText); // DEBUG
                     const cleanJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
                     const parsed = JSON.parse(cleanJson);
 
@@ -342,8 +345,11 @@ class JournalService {
                     aiContent = `[${parsed.verdict}] ${aiContent}`;
 
                 } catch (apiError) {
-                    console.error("Gemini API Error:", apiError);
+                    console.error("🔴 Gemini API Error:", apiError);
+                    console.warn("⚠️ Falling back to local logic due to API failure.");
                 }
+            } else {
+                console.error("🔴 VITE_GEMINI_API_KEY is missing! Skipping AI.");
             }
 
             // FALLBACK LOGIC
