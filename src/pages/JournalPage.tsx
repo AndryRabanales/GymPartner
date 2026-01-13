@@ -208,14 +208,14 @@ export const JournalPage = () => {
                                         </div>
 
                                         {/* METRICS FLOATING */}
-                                        <div className="flex gap-4 p-4 bg-white/5 rounded-2xl border border-white/5 backdrop-blur-sm">
-                                            <div className="text-center">
-                                                <div className="text-[10px] text-neutral-500 uppercase tracking-wider">Volumen</div>
+                                        <div className="flex items-center gap-6 p-3 bg-white/5 rounded-xl border border-white/5 backdrop-blur-sm self-start w-fit shadow-lg">
+                                            <div className="text-center min-w-[80px]">
+                                                <div className="text-[10px] text-neutral-500 uppercase tracking-wider mb-1">Volumen</div>
                                                 <div className="text-lg font-mono font-bold text-white">{todayEntry.metrics_snapshot.total_volume.toLocaleString()}</div>
                                             </div>
-                                            <div className="w-px bg-white/10" />
-                                            <div className="text-center">
-                                                <div className="text-[10px] text-neutral-500 uppercase tracking-wider">Sesiones</div>
+                                            <div className="h-8 w-px bg-white/10" />
+                                            <div className="text-center min-w-[80px]">
+                                                <div className="text-[10px] text-neutral-500 uppercase tracking-wider mb-1">Sesiones</div>
                                                 <div className="text-lg font-mono font-bold text-white">{todayEntry.metrics_snapshot.workouts_count}</div>
                                             </div>
                                         </div>
