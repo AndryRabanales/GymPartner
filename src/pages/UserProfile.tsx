@@ -1266,40 +1266,42 @@ export const UserProfile = () => {
                         <MapPin size={48} className="text-gym-primary animate-bounce" />
                     </div>
 
-                    <h2 className="text-white text-3xl font-black italic uppercase tracking-tighter mb-2 animate-in slide-in-from-bottom-4 fade-in duration-500 text-center px-4">
-                        Iniciando en
-                    </h2>
-                    <h1 className="text-transparent bg-clip-text bg-gradient-to-r from-gym-primary to-yellow-200 text-4xl md:text-6xl font-black uppercase italic tracking-tighter animate-in slide-in-from-bottom-8 fade-in duration-700 delay-100 text-center px-4">
-                        {autoStartGymName}
-                    </h1>
-
-                    <div className="mt-8 flex gap-2">
-                        <div className="w-3 h-3 bg-gym-primary rounded-full animate-bounce delay-0"></div>
-                        <div className="w-3 h-3 bg-gym-primary rounded-full animate-bounce delay-150"></div>
-                        <div className="w-3 h-3 bg-gym-primary rounded-full animate-bounce delay-300"></div>
+                    <div className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center animate-in fade-in duration-500">
+                        <div className="relative mb-8">
+                            <div className="absolute inset-0 bg-yellow-500/20 rounded-full blur-xl animate-pulse"></div>
+                            <MapIcon className="relative z-10 text-yellow-500 animate-bounce" size={64} />
+                        </div>
+                        <h2 className="text-2xl font-black italic uppercase text-white tracking-widest mb-2 text-center">
+                            INICIANDO ENTRENAMIENTO<br />
+                            <span className="text-yellow-400">EN LUGAR DESCONOCIDO</span>
+                        </h2>
+                        <div className="flex gap-2">
+                            <div className="w-3 h-3 bg-yellow-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                            <div className="w-3 h-3 bg-yellow-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                            <div className="w-3 h-3 bg-yellow-500 rounded-full animate-bounce"></div>
+                        </div>
                     </div>
-                </div>
             )}
-        </div >
-    );
+                </div >
+            );
 };
 
-// --- HELPER FUNCTIONS ---
+            // --- HELPER FUNCTIONS ---
 
-function getDistanceFromLatLonInKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+            function getDistanceFromLatLonInKm(lat1: number, lon1: number, lat2: number, lon2: number) {
     const R = 6371; // Radius of the earth in km
-    const dLat = deg2rad(lat2 - lat1);  // deg2rad below
-    const dLon = deg2rad(lon2 - lon1);
-    const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-        Math.sin(dLon / 2) * Math.sin(dLon / 2)
-        ;
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const d = R * c; // Distance in km
-    return d;
+            const dLat = deg2rad(lat2 - lat1);  // deg2rad below
+            const dLon = deg2rad(lon2 - lon1);
+            const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2)
+            ;
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            const d = R * c; // Distance in km
+            return d;
 }
 
-function deg2rad(deg: number) {
+            function deg2rad(deg: number) {
     return deg * (Math.PI / 180)
 }
