@@ -294,14 +294,14 @@ class JournalService {
             let aiMood: 'fire' | 'ice' | 'skull' | 'neutral' = 'neutral';
 
             if (GEN_AI_KEY) {
-                // FALLBACK MODEL STRATEGY (Updated 2026-01-13)
-                // 1. gemini-1.5-flash-002: Latest stable production build. Good quotas.
-                // 2. gemini-1.5-flash-8b: High efficiency, likely to bypass 429s.
-                // 3. gemini-2.0-flash: New but experimental, high 429 risk.
-                const modelsToTry = ["gemini-1.5-flash-002", "gemini-1.5-flash-8b", "gemini-2.0-flash"];
+                // FALLBACK MODEL STRATEGY (Updated 2026-01-13 - GEMINI 2.5 ERA)
+                // 1. gemini-2.5-flash: The new standard (Balanced/Fast).
+                // 2. gemini-2.5-flash-lite: Ultra-fast/Cheap (Backup for high load).
+                // 3. gemini-1.5-flash: Legacy stable fallback.
+                const modelsToTry = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-1.5-flash"];
                 let analyzed = false;
 
-                // 2026-01-13 FIX: Merge System Prompt into User Message to avoid 404/400 errors
+                // 2026-01-13 FIX: Unified Prompt to support all model versions safely
                 const combinedPrompt = `
                     [SYSTEM INSTRUCTIONS]
                     ROL: Eres el AUDITOR DE RENDIMIENTO DEPORTIVO. Tu memoria es perfecta y abarca las últimas 30 sesiones.
@@ -344,15 +344,14 @@ class JournalService {
 
                     // AGGRESSIVE RETRY LOOP (Handle 429 Rate Limits)
                     let attempts = 0;
-                    const maxAttempts = 3; // 3 retries per model is enough if we rotate models
+                    const maxAttempts = 3; // 3 retries per model
 
                     while (attempts < maxAttempts && !analyzed) {
                         attempts++;
                         try {
-                            // Use SIMPLEST config: Model name only (no systemInstruction param)
                             const model = genAI.getGenerativeModel({
                                 model: modelName,
-                                generationConfig: { responseMimeType: "application/json" } // Keep JSON safeguard
+                                generationConfig: { responseMimeType: "application/json" }
                             });
 
                             const result = await model.generateContent(combinedPrompt);
