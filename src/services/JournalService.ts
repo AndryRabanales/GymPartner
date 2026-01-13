@@ -87,6 +87,10 @@ class JournalService {
      * @param force If true, ignores existing entry and regenerates.
      */
     async generateEntry(userId: string, userName: string, force: boolean = false, userContext?: string): Promise<JournalEntry | null> {
+        // DEBUG: Check API Key status
+        const keyStatus = GEN_AI_KEY ? `Present (${GEN_AI_KEY.substring(0, 10)}...)` : "MISSING";
+        console.log(`🔑 Gemini Key Status: ${keyStatus}`);
+
         const today = new Date().toISOString().split('T')[0];
 
         // 0. Use Provided Name (Safe Fallback)
