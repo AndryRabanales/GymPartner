@@ -292,7 +292,8 @@ class JournalService {
 
             if (GEN_AI_KEY) {
                 try {
-                    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+                    // Using pinned version to avoid 404 on alias
+                    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-001" });
 
                     const systemPrompt = `
                         ROL: Eres el AUDITOR DE RENDIMIENTO DEPORTIVO. Tu memoria es perfecta y abarca las últimas 30 sesiones.
