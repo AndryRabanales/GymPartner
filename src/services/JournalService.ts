@@ -250,14 +250,14 @@ class JournalService {
             }
 
             // 4. GATHER HISTORICAL CONTEXT (MEMORY)
-            // Fetch last 5 entries to give the AI a "Memory" of recent user notes/events
+            // Fetch last 30 entries (USER REQUEST: DEEP MEMORY)
             const { data: recentHistoryEntries } = await supabase
                 .from('ai_journals')
                 .select('date, user_note, mood')
                 .eq('user_id', userId)
                 .lt('date', today)
                 .order('date', { ascending: false })
-                .limit(5);
+                .limit(30);
 
             const narrativeHistory = recentHistoryEntries?.map(e => ({
                 date: e.date,
@@ -272,7 +272,7 @@ class JournalService {
                 date: today,
                 routine_name: routineName || "Entrenamiento Libre",
                 user_input_context: userContext || "Sin comentarios del usuario para hoy.",
-                past_user_notes: narrativeHistory, // NEW: Long-term memory
+                past_user_notes: narrativeHistory, // NEW: Long-term memory (30 days)
                 workouts_today: workoutsCount,
                 trained_muscles: Array.from(trainedMuscles),
                 performance: {
@@ -295,23 +295,28 @@ class JournalService {
                     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
                     const systemPrompt = `
-                        ROL: Eres el AUDITOR DE RENDIMIENTO DEPORTIVO. Tu memoria es perfecta.
-                        FILOSOFÍA: "Los números no mienten, pero el contexto importa."
+                        ROL: Eres el AUDITOR DE RENDIMIENTO DEPORTIVO. Tu memoria es perfecta y abarca las últimas 30 sesiones.
+                        FILOSOFÍA: "Los números no mienten, pero el contexto del usuario es la LEY."
                         
                         TONO: 100% Objetivo, Científico-Deportivo, Profesional.
                         PERSPECTIVA: TERCERA PERSONA (El Observador).
                         SUJETO: ${userName}. (Refiérete a él/ella por su nombre o como "el atleta"/"el usuario").
                         IDIOMA: Español (Neutro).
                         
+                        MANDAMIENTOS DE MEMORIA:
+                        1. **ADHERENCIA TOTAL A NOTAS:** Si el usuario escribió "Tomé pre-entreno" o "Meta: Hipertrofia" en CUALQUIERA de las últimas 30 notas, tómalo como un HECHO ACTUAL a menos que se contradiga después.
+                        2. **DETECTIVISMO DE 30 DÍAS:** Lee las "past_user_notes". Busca patrones a largo plazo. ¿El usuario dice "me duele la rodilla" recurrentemente? ¿Menciona suplementos? ÚSALO.
+                        3. **EVOLUCIÓN:** No mires solo hoy. ¿Está cumpliendo lo que dijo hace 3 semanas?
+
                         PROHIBIDO (Banneados): "Soldado", "Misión", "Guerra", "Batalla", "Técnica" (a menos que el usuario la mencione), "Intuir" (no adivines). USAR PRIMERA PERSONA ("Hoy registré", "Me sentí") ESTÁ PROHIBIDO.
                         PALABRAS CLAVE: Carga, Volumen, Intensidad Relativa, Frecuencia, Adaptación, Sobrecarga Progresiva.
 
                         OBJETIVO:
                         1. Comparar sesión actual vs anterior.
                         2. Determinar el enfoque fisiológico (Fuerza vs Hipertrofia) basado en datos.
-                        3. **MEMORIA SINTETIZADA:** Analiza el "past_user_notes" (Historial de notas del usuario).
-                           - Si ${userName} reportó lesión hace 2 sesiones y hoy bajó carga, MENCIONALO: "Coherente con lesión reportada el [fecha]".
-                           - Si dijo "voy a comer mejor" y hoy rompió PRs, MENCIONALO: "Posible correlación con dieta reportada".
+                        3. **MEMORIA SINTETIZADA:** Analiza el "past_user_notes" (Historial de 30 sesiones).
+                           - Si ${userName} dijo "tomé pre entreno" hace 5 sesiones y hoy rompe récord, di: "Consistente con uso de ayudas ergogénicas reportadas".
+                           - CONCLUYE SOBRE SU PLAN: Basado en las 30 notas, ¿cuál parece ser su objetivo real? (Fuerza, Estética, Salud).
                            - Construye una narrativa continua sobre la evolución de ${userName}.
 
                         DATOS DE ENTRADA:
@@ -321,7 +326,7 @@ class JournalService {
                         {
                             "mood": "fire" (Progreso Real) | "ice" (Mantenimiento/Deload) | "skull" (Regresión Injustificada),
                             "verdict": "Resumen de 3-5 palabras. Ej: 'Fuerza +5%. Recuperación visible.'",
-                            "content": "Análisis fáctico en TERCERA PERSONA. Ej: '${userName} ha aumentado su volumen total...'. Conecta los puntos entre los datos de hoy y las notas pasadas."
+                            "content": "Análisis fáctico en TERCERA PERSONA. Ej: '${userName} ha aumentado su volumen total...'. IMPORTANTE: Si hay notas de usuario relevantes en el historial, CÍTALAS indirectamente para demostrar que recuerdas."
                         }
                     `;
 
