@@ -98,6 +98,13 @@ export const JournalPage = () => {
             await journalService.updateUserNote(todayEntry.id, userNote);
             // Update local state
             setTodayEntry({ ...todayEntry, user_note: userNote });
+
+            // AUTOMATIC RE-DIAGNOSIS (User Request: Note -> New Analysis)
+            // Once note is saved, force a regeneration to incorporate the new context
+            if (userNote.trim().length > 0) {
+                console.log("📝 Note saved. Triggering Context-Aware Re-Diagnosis...");
+                await generateReport(true);
+            }
         } catch (error) {
             console.error("Failed to save note", error);
         } finally {
