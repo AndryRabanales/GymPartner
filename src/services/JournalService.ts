@@ -26,25 +26,26 @@ const genAI = new GoogleGenerativeAI(GEN_AI_KEY);
 class JournalService {
 
     // FALLBACK PROMPTS (Formal & Professional)
+    // FALLBACK PROMPTS (Formal & Professional - 3rd Person Auditor)
     private fallbackPrompts = {
         fire: [
-            "Hoy registré un excelente rendimiento. Moví {volume}kg, lo que representa un aumento del {diff}% respecto a la sesión anterior. La progresión es sólida.",
-            "Sesión muy productiva. He superado mis marcas anteriores y el volumen total de {volume}kg refleja un avance significativo en mi capacidad de trabajo.",
-            "Buen desempeño físico hoy. Completé el entrenamiento con {volume}kg de carga total. La constancia está generando resultados medibles."
+            "El atleta ha registrado un excelente rendimiento. Movió {volume}kg, lo que representa un aumento del {diff}% respecto a la sesión anterior. La progresión es sólida.",
+            "Sesión muy productiva del usuario. Ha superado sus marcas anteriores y el volumen total de {volume}kg refleja un avance significativo en su capacidad de trabajo.",
+            "Buen desempeño físico hoy. El usuario completó el entrenamiento con {volume}kg de carga total. La constancia está generando resultados medibles."
         ],
         ice: [
-            "Entrenamiento completado sin contratiempos. Registré {volume}kg de volumen. Mantuve la técnica y la constancia, aunque el objetivo es aumentar la intensidad progresivamente.",
-            "Sesión finalizada. {volume}kg acumulados. Fue un día de mantenimiento; el enfoque estuvo en cumplir con la programación establecida.",
-            "Día de trabajo técnico. {volume}kg en total. No hubo récords personales, pero la regularidad es clave para el progreso a largo plazo."
+            "Entrenamiento completado sin contratiempos. El atleta registró {volume}kg de volumen. Mantuve la técnica y la constancia, el objetivo del usuario debe ser aumentar la intensidad progresivamente.",
+            "Sesión finalizada. {volume}kg acumulados. Fue un día de mantenimiento para el usuario; el enfoque estuvo en cumplir con la programación establecida.",
+            "Día de trabajo técnico. {volume}kg en total. No hubo récords personales, pero la regularidad del atleta es clave para su progreso a largo plazo."
         ],
         skull: [
-            "Llevo {skipped} días sin registrar actividad. Es importante retomar la rutina para no perder las adaptaciones físicas ganadas.",
-            "He notado una pausa de {skipped} días en mis entrenamientos. Necesito reorganizar mi agenda para recuperar la frecuencia habitual.",
-            "Inactividad detectada de {skipped} días. La consistencia es el factor más importante; debo volver al gimnasio lo antes posible."
+            "El usuario lleva {skipped} días sin registrar actividad. Es importante que retome la rutina para no perder las adaptaciones físicas ganadas.",
+            "Se ha detectado una pausa de {skipped} días en los entrenamientos del atleta. Necesita reorganizar su agenda para recuperar la frecuencia habitual.",
+            "Inactividad detectada de {skipped} días. La consistencia es el factor más importante; el usuario debe volver al gimnasio lo antes posible."
         ],
         neutral: [
-            "Día de descanso activo o recuperación. Es fundamental permitir que el cuerpo asimile el esfuerzo de las sesiones anteriores.",
-            "Sin datos recientes. Es un buen momento para revisar la planificación y establecer objetivos para la próxima semana."
+            "Día de descanso activo o recuperación para el atleta. Es fundamental permitir que el cuerpo asimile el esfuerzo de las sesiones anteriores.",
+            "Sin datos recientes del usuario. Es un buen momento para revisar la planificación y establecer objetivos para la próxima semana."
         ]
     };
 
@@ -88,6 +89,22 @@ class JournalService {
      */
     async generateEntry(userId: string, force: boolean = false, userContext?: string): Promise<JournalEntry | null> {
         const today = new Date().toISOString().split('T')[0];
+
+        // 0a. FETCH USER PROFILE (For 3rd Person Personalization)
+        let userName = "El Atleta";
+        try {
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('full_name, username')
+                .eq('id', userId)
+                .single();
+
+            if (profile) {
+                userName = profile.full_name || profile.username || "El Atleta";
+            }
+        } catch (e) {
+            console.warn("Could not fetch user profile for name, using default.", e);
+        }
 
         try {
             // 0. CHECK FOR STALE DATA (Smart Refresh)
@@ -264,6 +281,7 @@ class JournalService {
             // 5. PREPARE CONTEXT FOR AI (THE AUDITOR DOSSIER WITH MEMORY)
             const context = {
                 user_id: userId,
+                user_name: userName, // NEW: For personalized 3rd person
                 date: today,
                 routine_name: routineName || "Entrenamiento Libre",
                 user_input_context: userContext || "Sin comentarios del usuario para hoy.",
@@ -294,18 +312,20 @@ class JournalService {
                         FILOSOFÍA: "Los números no mienten, pero el contexto importa."
                         
                         TONO: 100% Objetivo, Científico-Deportivo, Profesional.
+                        PERSPECTIVA: TERCERA PERSONA (El Observador).
+                        SUJETO: ${userName}. (Refiérete a él/ella por su nombre o como "el atleta"/"el usuario").
                         IDIOMA: Español (Neutro).
                         
-                        PROHIBIDO (Banneados): "Soldado", "Misión", "Guerra", "Batalla", "Técnica" (a menos que el usuario la mencione), "Intuir" (no adivines).
+                        PROHIBIDO (Banneados): "Soldado", "Misión", "Guerra", "Batalla", "Técnica" (a menos que el usuario la mencione), "Intuir" (no adivines). USAR PRIMERA PERSONA ("Hoy registré", "Me sentí") ESTÁ PROHIBIDO.
                         PALABRAS CLAVE: Carga, Volumen, Intensidad Relativa, Frecuencia, Adaptación, Sobrecarga Progresiva.
 
                         OBJETIVO:
                         1. Comparar sesión actual vs anterior.
                         2. Determinar el enfoque fisiológico (Fuerza vs Hipertrofia) basado en datos.
                         3. **MEMORIA SINTETIZADA:** Analiza el "past_user_notes" (Historial de notas del usuario).
-                           - Si el usuario reportó lesión hace 2 sesiones y hoy bajó carga, MENCIONALO: "Coherente con lesión reportada el [fecha]".
-                           - Si el usuario dijo "voy a comer mejor" y hoy rompió PRs, MENCIONALO: "Posible correlación con dieta reportada".
-                           - Construye una narrativa continua, no solo analises el día aislado.
+                           - Si ${userName} reportó lesión hace 2 sesiones y hoy bajó carga, MENCIONALO: "Coherente con lesión reportada el [fecha]".
+                           - Si dijo "voy a comer mejor" y hoy rompió PRs, MENCIONALO: "Posible correlación con dieta reportada".
+                           - Construye una narrativa continua sobre la evolución de ${userName}.
 
                         DATOS DE ENTRADA:
                         ${JSON.stringify(context, null, 2)}
@@ -314,7 +334,7 @@ class JournalService {
                         {
                             "mood": "fire" (Progreso Real) | "ice" (Mantenimiento/Deload) | "skull" (Regresión Injustificada),
                             "verdict": "Resumen de 3-5 palabras. Ej: 'Fuerza +5%. Recuperación visible.'",
-                            "content": "Análisis fáctico. Conecta los puntos entre los datos de hoy y las notas pasadas del usuario. Si hay continuidad en sus comentarios (ej: dolor persistente), señálalo."
+                            "content": "Análisis fáctico en TERCERA PERSONA. Ej: '${userName} ha aumentado su volumen total...'. Conecta los puntos entre los datos de hoy y las notas pasadas."
                         }
                     `;
 
