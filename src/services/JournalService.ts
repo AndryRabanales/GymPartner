@@ -294,12 +294,11 @@ class JournalService {
             let aiMood: 'fire' | 'ice' | 'skull' | 'neutral' = 'neutral';
 
             if (GEN_AI_KEY) {
-                // FALLBACK MODEL STRATEGY: Try New 2.0 -> Flash (Generic) -> Legacy Pro
-                const modelsToTry = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-001"];
+                // FALLBACK MODEL STRATEGY: 2.0 (Rate Limited?) -> 1.5 Pro (Stable?) -> Legacy Pro
+                const modelsToTry = ["gemini-2.0-flash", "gemini-1.5-pro", "gemini-pro"];
                 let analyzed = false;
 
-                // 2026-01-13 FIX: Merge System Prompt into User Message to avoid "systemInstruction" 404/400 errors
-                // This is a compat-mode for Gemini 1.5 Flash 001 via current endpoint.
+                // 2026-01-13 FIX: Merge System Prompt into User Message to avoid 404/400 errors
                 const combinedPrompt = `
                     [SYSTEM INSTRUCTIONS]
                     ROL: Eres el AUDITOR DE RENDIMIENTO DEPORTIVO. Tu memoria es perfecta y abarca las últimas 30 sesiones.
@@ -334,33 +333,51 @@ class JournalService {
                     }
                 `;
 
+                // Helper for exponential backoff
+                const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
                 for (const modelName of modelsToTry) {
                     if (analyzed) break;
-                    try {
-                        // Use SIMPLEST config: Model name only (no systemInstruction param)
-                        const model = genAI.getGenerativeModel({
-                            model: modelName,
-                            generationConfig: { responseMimeType: "application/json" } // Keep JSON safeguard
-                        });
 
-                        const result = await model.generateContent(combinedPrompt);
-                        const responseText = result.response.text();
-                        const cleanJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-                        const parsed = JSON.parse(cleanJson);
+                    // Retry loop for the SAME model (handle 429)
+                    let attempts = 0;
+                    const maxAttempts = 2; // Try twice per model
 
-                        aiContent = parsed.content;
-                        aiMood = parsed.mood;
-                        aiContent = `[${parsed.verdict}] ${aiContent}`;
-                        analyzed = true; // Mark as success to exit loop
+                    while (attempts < maxAttempts && !analyzed) {
+                        attempts++;
+                        try {
+                            // Use SIMPLEST config: Model name only (no systemInstruction param)
+                            const model = genAI.getGenerativeModel({
+                                model: modelName,
+                                generationConfig: { responseMimeType: "application/json" } // Keep JSON safeguard
+                            });
 
-                    } catch (apiError: any) {
-                        console.warn(`⚠️ Gemini Model ${modelName} Failed.`);
+                            const result = await model.generateContent(combinedPrompt);
+                            const responseText = result.response.text();
+                            const cleanJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+                            const parsed = JSON.parse(cleanJson);
 
-                        if (apiError.toString().includes('404')) {
-                            console.error("🔴 ERROR 404: API no habilitada o Modelo no encontrado.");
-                        }
-                        if (apiError.toString().includes('400')) {
-                            console.error("🔴 ERROR 400: Solicitud inválida.");
+                            aiContent = parsed.content;
+                            aiMood = parsed.mood;
+                            aiContent = `[${parsed.verdict}] ${aiContent}`;
+                            analyzed = true; // Mark as success to exit loop
+
+                        } catch (apiError: any) {
+                            const isRateLimit = apiError.toString().includes('429');
+
+                            if (isRateLimit && attempts < maxAttempts) {
+                                console.warn(`⏳ Rate Limit (429) on ${modelName}. Retrying in 2.5s...`);
+                                await wait(2500);
+                                continue; // Retry loop
+                            }
+
+                            if (!isRateLimit) {
+                                console.warn(`⚠️ Gemini Model ${modelName} Failed:`, apiError);
+                                // Break retry loop, go to next model
+                                break;
+                            }
+
+                            console.warn(`❌ Model ${modelName} exhausted retries.`);
                         }
                     }
                 }
