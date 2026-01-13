@@ -89,13 +89,34 @@ class JournalService {
     async generateEntry(userId: string, force: boolean = false): Promise<JournalEntry | null> {
         const today = new Date().toISOString().split('T')[0];
 
-        // 1. Check if already exists (unless forced)
-        if (!force) {
-            const { data: existing } = await this.getTodayEntry(userId);
-            if (existing) return existing;
-        }
-
         try {
+            // 0. CHECK FOR STALE DATA (Smart Refresh)
+            // If strictly NOT forced, we check if we have a "lazy" entry
+            if (!force) {
+                const { data: existing } = await this.getTodayEntry(userId);
+
+                if (existing) {
+                    // Check if existing says "0 workouts" but REALITY is different
+                    // Only do this expensive check if existing seems empty
+                    if (existing.metrics_snapshot.workouts_count === 0) {
+                        const { count } = await supabase
+                            .from('workout_sessions')
+                            .select('*', { count: 'exact', head: true })
+                            .eq('user_id', userId)
+                            .gte('started_at', `${today}T00:00:00`)
+                            .lte('started_at', `${today}T23:59:59`);
+
+                        // If DB has data but Entry says 0 -> FORCE REFRESH
+                        if (count && count > 0) {
+                            console.log("🔄 Smart Refresh: Validating Stale Entry (DB has workouts, Entry has 0)");
+                            return this.generateEntry(userId, true);
+                        }
+                    }
+                    // Otherwise return cached
+                    return existing;
+                }
+            }
+
             // 2. GATHER DATA
             // A. Get Today's Workouts with RICH DETAILS
             const { data: todayWorkoutsData } = await supabase
