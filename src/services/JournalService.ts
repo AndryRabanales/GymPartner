@@ -294,9 +294,11 @@ class JournalService {
             let aiMood: 'fire' | 'ice' | 'skull' | 'neutral' = 'neutral';
 
             if (GEN_AI_KEY) {
-                // FALLBACK MODEL STRATEGY: 2.0 Flash (Fastest, Primary) -> 1.5 Flash (Backup)
-                // We removed 'Pro' because it consistently returns 404 (Not Found) in this environment.
-                const modelsToTry = ["gemini-2.0-flash", "gemini-1.5-flash"];
+                // FALLBACK MODEL STRATEGY (Updated 2026-01-13)
+                // 1. gemini-1.5-flash-002: Latest stable production build. Good quotas.
+                // 2. gemini-1.5-flash-8b: High efficiency, likely to bypass 429s.
+                // 3. gemini-2.0-flash: New but experimental, high 429 risk.
+                const modelsToTry = ["gemini-1.5-flash-002", "gemini-1.5-flash-8b", "gemini-2.0-flash"];
                 let analyzed = false;
 
                 // 2026-01-13 FIX: Merge System Prompt into User Message to avoid 404/400 errors
@@ -342,7 +344,7 @@ class JournalService {
 
                     // AGGRESSIVE RETRY LOOP (Handle 429 Rate Limits)
                     let attempts = 0;
-                    const maxAttempts = 5; // Try up to 5 times (Exponential Backoff)
+                    const maxAttempts = 3; // 3 retries per model is enough if we rotate models
 
                     while (attempts < maxAttempts && !analyzed) {
                         attempts++;
@@ -368,8 +370,8 @@ class JournalService {
 
                             if (isRateLimit) {
                                 if (attempts < maxAttempts) {
-                                    // Exponential Backoff: 1s, 2s, 4s, 8s, 16s
-                                    const delay = Math.pow(2, attempts - 1) * 1000;
+                                    // Modified Backoff: 1s, 3s, 5s (Faster rotation to next model)
+                                    const delay = attempts * 1000 + 500;
                                     console.warn(`⏳ Rate Limit (429) on ${modelName}. Retry ${attempts}/${maxAttempts} in ${delay}ms...`);
                                     await wait(delay);
                                     continue; // Retry loop
