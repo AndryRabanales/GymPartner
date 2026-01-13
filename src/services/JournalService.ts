@@ -25,26 +25,26 @@ const genAI = new GoogleGenerativeAI(GEN_AI_KEY);
 
 class JournalService {
 
-    // FALLBACK PROMPTS (Updated: Direct, Short, Normal Vocabulary)
+    // FALLBACK PROMPTS (Updated: Pure Diagnostic, No Advice)
     private fallbackPrompts = {
         fire: [
-            "Volumen subió a {volume}kg (+{diff}%). Buen entreno.",
-            "Carga total: {volume}kg. Superaste la sesión anterior.",
-            "Aumento de intensidad registrado. {volume}kg movidos en total."
+            "Volumen subió a {volume}kg (+{diff}%). Rendimiento superior al promedio.",
+            "Carga total: {volume}kg. Se registra superávit de trabajo.",
+            "Intensidad elevada detectada. {volume}kg movidos en total."
         ],
         ice: [
-            "Volumen estable: {volume}kg. Mantenimiento cumplido.",
-            "Entreno completado con {volume}kg. Sin cambios drásticos.",
-            "Cumpliste la sesión. Carga acumulada: {volume}kg."
+            "Volumen estable: {volume}kg. Carga de mantenimiento.",
+            "Sesión completada con {volume}kg. Sin variaciones significativas.",
+            "Registro estándar. Carga acumulada: {volume}kg."
         ],
         skull: [
-            "{skipped} días sin ir al gym. Hay que retomar.",
-            "Pausa de {skipped} días detectada. El rendimiento bajará si no vuelves.",
-            "Inactividad de {skipped} días. Cuidado con perder el hábito."
+            "{skipped} días de inactividad registrados.",
+            "Pausa de {skipped} días. Se detecta caída en la frecuencia de entrenamiento.",
+            "Inactividad de {skipped} días confirmada."
         ],
         neutral: [
-            "Descanso o falta de datos recientes.",
-            "Sin registros de gym hoy."
+            "Sin datos de actividad reciente.",
+            "No se registran sesiones hoy."
         ]
     };
 
@@ -304,19 +304,24 @@ class JournalService {
                 // 2026-01-13 FIX: Unified Prompt to support all model versions safely
                 const combinedPrompt = `
                     [DIRECTIVAS DE IA]
-                    ROL: Analista de Gym. (Nada de "Asistente", "Observador", "Atleta").
-                    OBJETIVO: Diagnóstico técnico y directo. Sin relleno.
+                    ROL: Analista de Datos Biométricos. (NO ERES ENTRENADOR).
+                    OBJETIVO: Diagnóstico técnico y objetivo.
                     IDIOMA: Español.
                     
-                    ESTILO Y TONO (RIGUROSO):
-                    - EXTREMADAMENTE CONCISO. Máximo 2-3 oraciones breves.
-                    - VOCABULARIO: Usa palabras normales de gimnasio ("Entreno", "Gym", "Series", "Kg", "Lesión", "Descanso").
-                    - PROHIBIDO: "Sujeto", "Misión", "Observador", "Atleta", "Estimado", "Poesía", "Motivación barata", "Batalla".
-                    - ACTITUD: Fría, directa, útil. Ve al grano.
+                    REGLAS DE ORO (PROHIBICIONES):
+                    1. PROHIBIDO ACONSEJAR ("Deberías", "Te recomiendo", "Prueba", "Intenta").
+                    2. PROHIBIDO SUGERIR ("Sería bueno", "Quizás").
+                    3. PROHIBIDO MOTIVAR ("Sigue así", "Vamos", "Tú puedes").
+                    4. SOLO HECHOS Y DATOS ("El volumen bajó", "La frecuencia es baja", "Se detecta fatiga").
+
+                    ESTILO:
+                    - TÉCNICO, FRÍO, CLINICO.
+                    - Máximo 2 oraciones.
+                    - Solo describe lo que VES en los datos. No lo que se debe hacer.
                     
                     REGLA DE ABSURDEZ (SANITY CHECK):
-                    - Si las notas del usuario son absurdas (ej. "Levanté 5000kg en curl", "Fui a marte"), IGNÓRALAS o responde con sarcasmo seco ("Dato inverosímil detectado.").
-                    - Si los métricas son imposibles, señálalo como error de registro.
+                    - Si las notas del usuario son absurdas, responde: "Dato subjetivo inconsistente."
+                    - Si los métricas son imposibles, responde: "Anomalía estadística detectada."
                     
                     DATOS:
                     ${JSON.stringify(context, null, 2)}
@@ -324,8 +329,8 @@ class JournalService {
                     SALIDA JSON (STRICT):
                     {
                         "mood": "fire" | "ice" | "skull",
-                        "verdict": "Resumen de 3 palabras.",
-                        "content": "Texto del análisis. Directo y corto."
+                        "verdict": "Resumen de 3 palabras (Ej: FATIGA ACUMULADA).",
+                        "content": "Texto del análisis. Solo diagnóstico."
                     }
                 `;
 
