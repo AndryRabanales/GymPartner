@@ -84,9 +84,6 @@ class JournalService {
 
     /**
      * GENERATE DAILY ANALYSIS (GEMINI POWERED - PROFESSIONAL MODE)
-     */
-    /**
-     * GENERATE DAILY ANALYSIS (GEMINI POWERED - PROFESSIONAL MODE)
      * @param force If true, ignores existing entry and regenerates.
      */
     async generateEntry(userId: string, force: boolean = false): Promise<JournalEntry | null> {
@@ -107,6 +104,23 @@ class JournalService {
                 .eq('user_id', userId)
                 .gte('started_at', `${today}T00:00:00`)
                 .lte('started_at', `${today}T23:59:59`);
+
+            // B. Get Recent History (Last 30 Days) for consistency analysis
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            const strThirtyDaysAgo = thirtyDaysAgo.toISOString().split('T')[0];
+
+            const { data: historyWorkouts } = await supabase
+                .from('workout_sessions')
+                .select('started_at, gym_id')
+                .eq('user_id', userId)
+                .gte('started_at', `${strThirtyDaysAgo}T00:00:00`)
+                .lt('started_at', `${today}T00:00:00`) // Exclude today
+                .order('started_at', { ascending: false });
+
+            // Analyze History
+            const uniqueDays = new Set(historyWorkouts?.map(w => w.started_at.split('T')[0])).size;
+            const avgSessionsPerWeek = Math.round((uniqueDays / 30) * 7);
 
             const todayWorkouts = todayWorkoutsData || [];
             const workoutsCount = todayWorkouts.length;
@@ -183,7 +197,7 @@ class JournalService {
             }
 
             // Consistency (Days since LAST workout of ANY kind)
-            let daysSinceLastAction = 0;
+            let skippedDays = 0;
             // Fetch strict last active date ignoring routine
             const { data: lastActiveSession } = await supabase
                 .from('workout_sessions')
@@ -198,7 +212,7 @@ class JournalService {
                 const lastDate = new Date(lastActiveSession.started_at);
                 const now = new Date();
                 const diffTime = Math.abs(now.getTime() - lastDate.getTime());
-                daysSinceLastAction = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) - 1;
+                skippedDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) - 1;
             }
 
             // 4. PREPARE CONTEXT FOR AI (THE AUDITOR DOSSIER)
@@ -211,15 +225,17 @@ class JournalService {
                 total_volume_kg: totalVolume,
                 previous_volume_kg: prevVolume,
                 volume_change_percent: volumeDiffPercent,
-                days_since_last_workout: daysSinceLastAction,
+                days_since_last_workout: skippedDays,
+                history_30_days: {
+                    total_sessions: uniqueDays,
+                    avg_per_week: avgSessionsPerWeek
+                },
                 is_active_day: workoutsCount > 0
             };
 
             // 5. CALL GEMINI (THE AUDITOR)
             let aiContent = "";
             let aiMood: 'fire' | 'ice' | 'skull' | 'neutral' = 'neutral';
-            // NEW: Diagnosis Verdict
-            let verdict = "";
 
             if (GEN_AI_KEY) {
                 try {
