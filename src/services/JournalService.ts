@@ -294,8 +294,8 @@ class JournalService {
             let aiMood: 'fire' | 'ice' | 'skull' | 'neutral' = 'neutral';
 
             if (GEN_AI_KEY) {
-                // FALLBACK MODEL STRATEGY: Try Pinned Flash -> Generic Flash -> Legacy Pro
-                const modelsToTry = ["gemini-1.5-flash-001", "gemini-1.5-flash", "gemini-pro"];
+                // FALLBACK MODEL STRATEGY: Try New 2.0 -> Flash (Generic) -> Legacy Pro
+                const modelsToTry = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-001"];
                 let analyzed = false;
 
                 // 2026-01-13 FIX: Merge System Prompt into User Message to avoid "systemInstruction" 404/400 errors
