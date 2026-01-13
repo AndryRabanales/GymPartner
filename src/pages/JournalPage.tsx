@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, BrainCircuit, Calendar, Save, Terminal, Flame, Snowflake, Skull, Minus, TrendingUp, TrendingDown } from 'lucide-react';
+import { ArrowLeft, BrainCircuit, Calendar, Save, Terminal, Flame, Snowflake, Skull, Minus, TrendingUp, TrendingDown, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { journalService, type JournalEntry } from '../services/JournalService';
 
@@ -25,26 +25,19 @@ export const JournalPage = () => {
     const loadJournal = async () => {
         try {
             setLoading(true);
-            // 1. Get History
             const { data: entries } = await journalService.getEntries(user!.id);
             if (entries) {
                 setHistory(entries);
-
-                // 2. Check Today
                 const today = new Date().toISOString().split('T')[0];
                 const todayRecord = entries.find(e => e.date === today);
 
                 if (todayRecord) {
                     setTodayEntry(todayRecord);
                     setUserNote(todayRecord.user_note || '');
-
-                    // SMART REFRESH CHECK:
                     if (todayRecord.metrics_snapshot.workouts_count === 0) {
-                        console.log("🧐 Found weak entry for today. Attempting Smart Refresh...");
-                        generateReport(false); // force=false lets the service decide based on DB count
+                        generateReport(false);
                     }
                 } else {
-                    // Auto-generate if missing
                     generateReport();
                 }
             }
@@ -58,31 +51,21 @@ export const JournalPage = () => {
     const generateReport = async (force: boolean = false) => {
         setGenerating(true);
         try {
-            // Artificial delay for "Thinking" effect
             await new Promise(r => setTimeout(r, 1500));
-
-            // FETCH NAME (Safe Strategy: Metadata -> Profile -> Default)
             let userName = user?.user_metadata?.full_name || "Usuario";
             try {
-                // Try to get "Agent Name" (Username) from profiles if set
                 const { data: profile } = await supabase
                     .from('profiles')
-                    .select('username') // Select ONLY username (full_name doesn't exist)
+                    .select('username')
                     .eq('id', user!.id)
                     .maybeSingle();
-
                 if (profile?.username) userName = profile.username;
-            } catch (e) {
-                console.warn("Name fetch fallback used", e);
-            }
+            } catch (e) { console.warn(e); }
 
-            // Pass the current userNote as context if we are forcing a refresh (Re-diagnose)
-            // If it's an auto-refresh (force=false), userNote might be empty which is fine.
             const entry = await journalService.generateEntry(user!.id, userName, force, userNote);
             if (entry) {
                 setTodayEntry(entry);
                 setUserNote(entry.user_note || '');
-                // Reload history to include new entry
                 const { data: entries } = await journalService.getEntries(user!.id);
                 if (entries) setHistory(entries);
             }
@@ -96,13 +79,8 @@ export const JournalPage = () => {
         setSavingNote(true);
         try {
             await journalService.updateUserNote(todayEntry.id, userNote);
-            // Update local state
             setTodayEntry({ ...todayEntry, user_note: userNote });
-
-            // AUTOMATIC RE-DIAGNOSIS (User Request: Note -> New Analysis)
-            // Once note is saved, force a regeneration to incorporate the new context
             if (userNote.trim().length > 0) {
-                console.log("📝 Note saved. Triggering Context-Aware Re-Diagnosis...");
                 await generateReport(true);
             }
         } catch (error) {
@@ -112,171 +90,236 @@ export const JournalPage = () => {
         }
     };
 
-    const getMoodIcon = (mood: string) => {
+    const getMoodConfig = (mood: string) => {
         switch (mood) {
-            case 'fire': return <Flame className="text-orange-500" size={20} />;
-            case 'ice': return <Snowflake className="text-blue-400" size={20} />;
-            case 'skull': return <Skull className="text-red-500" size={20} />;
-            default: return <Minus className="text-neutral-500" size={20} />;
+            case 'fire': return {
+                icon: <Flame className="drop-shadow-[0_0_8px_rgba(249,115,22,0.8)]" size={24} />,
+                color: 'text-orange-500',
+                border: 'border-orange-500/30',
+                bg: 'bg-orange-500/5',
+                glow: 'shadow-[0_0_40px_-10px_rgba(249,115,22,0.3)]',
+                label: 'PROGRESO'
+            };
+            case 'ice': return {
+                icon: <Snowflake className="drop-shadow-[0_0_8px_rgba(96,165,250,0.8)]" size={24} />,
+                color: 'text-blue-400',
+                border: 'border-blue-500/30',
+                bg: 'bg-blue-500/5',
+                glow: 'shadow-[0_0_40px_-10px_rgba(96,165,250,0.3)]',
+                label: 'MANTENIMIENTO'
+            };
+            case 'skull': return {
+                icon: <Skull className="drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]" size={24} />,
+                color: 'text-red-500',
+                border: 'border-red-500/30',
+                bg: 'bg-red-500/5',
+                glow: 'shadow-[0_0_40px_-10px_rgba(239,68,68,0.3)]',
+                label: 'REGRESIÓN'
+            };
+            default: return {
+                icon: <Minus size={24} />,
+                color: 'text-neutral-400',
+                border: 'border-neutral-700',
+                bg: 'bg-neutral-900',
+                glow: 'shadow-none',
+                label: 'NEUTRAL'
+            };
         }
     };
 
-    const getMoodColor = (mood: string) => {
-        switch (mood) {
-            case 'fire': return 'border-orange-500/50 bg-orange-500/5 text-orange-500';
-            case 'ice': return 'border-blue-500/50 bg-blue-500/5 text-blue-400';
-            case 'skull': return 'border-red-500/50 bg-red-500/5 text-red-500';
-            default: return 'border-neutral-700 bg-neutral-900 text-neutral-400';
-        }
-    };
+    const moodStyle = todayEntry ? getMoodConfig(todayEntry.mood) : getMoodConfig('neutral');
 
     if (loading && !todayEntry && !generating) {
-        return <div className="min-h-screen bg-black flex items-center justify-center text-purple-500 animate-pulse">Cargando Sistema...</div>;
+        return (
+            <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+                <div className="flex flex-col items-center gap-4">
+                    <BrainCircuit className="text-purple-500 animate-pulse" size={48} />
+                    <span className="text-neutral-500 font-mono text-sm tracking-widest uppercase animate-pulse">Cargando Sistema...</span>
+                </div>
+            </div>
+        );
     }
 
     return (
-        <div className="min-h-screen bg-black text-white pb-24">
-            {/* HERADER */}
-            <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-md border-b border-white/10 p-4">
+        <div className="min-h-screen bg-[#0a0a0a] text-white pb-24 font-sans selection:bg-purple-500/30">
+            {/* AMBIENT BACKGROUND GLOWS */}
+            <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
+                <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-purple-900/10 blur-[120px] rounded-full" />
+                <div className="absolute top-[40%] -right-[10%] w-[40%] h-[40%] bg-blue-900/10 blur-[120px] rounded-full" />
+            </div>
+
+            {/* HEADER */}
+            <div className="sticky top-0 z-50 bg-[#0a0a0a]/80 backdrop-blur-xl border-b border-white/5 p-4 transition-all duration-300">
                 <div className="max-w-4xl mx-auto flex items-center gap-4">
-                    <button onClick={() => navigate(-1)} className="p-2 bg-neutral-900 rounded-full text-neutral-400 hover:text-white">
+                    <button onClick={() => navigate(-1)} className="p-2 bg-white/5 hover:bg-white/10 rounded-full text-neutral-400 hover:text-white transition-colors border border-white/5">
                         <ArrowLeft size={20} />
                     </button>
-                    <h1 className="text-xl font-black italic uppercase tracking-tighter flex items-center gap-2">
-                        <BrainCircuit className="text-purple-500" />
-                        Diario de Entrenamiento
-                    </h1>
+                    <div className="flex flex-col">
+                        <h1 className="text-lg font-bold tracking-tight flex items-center gap-2">
+                            <Sparkles className="text-purple-500" size={16} />
+                            GYMPARTNER <span className="text-neutral-500 font-normal">INTELLIGENCE</span>
+                        </h1>
+                    </div>
                 </div>
             </div>
 
-            <div className="max-w-4xl mx-auto p-4 space-y-8">
+            <div className="max-w-4xl mx-auto p-4 space-y-8 relative z-10">
 
-                {/* TODAY'S REPORT */}
-                <section>
-                    <h2 className="text-sm font-bold text-neutral-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                        <Terminal size={16} />
-                        Diagnóstico del Auditor
-                    </h2>
+                {/* DIAGNOSIS CARD (HERO) */}
+                <section className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-xs font-bold text-neutral-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                            <Terminal size={14} />
+                            Diagnóstico Diario
+                        </h2>
+                        {todayEntry && (
+                            <span className="text-[10px] uppercase font-mono text-neutral-600 bg-white/5 px-2 py-1 rounded border border-white/5">
+                                {new Date(todayEntry.date).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}
+                            </span>
+                        )}
+                    </div>
 
                     {generating ? (
-                        <div className="bg-neutral-900/50 border border-purple-500/30 rounded-2xl p-8 flex flex-col items-center justify-center gap-4 animate-pulse">
-                            <BrainCircuit size={48} className="text-purple-500" />
-                            <div className="text-purple-400 font-mono text-sm">Analizando datos... Consultando historial...</div>
+                        <div className="bg-black/40 border border-purple-500/20 rounded-3xl p-12 flex flex-col items-center justify-center gap-6 relative overflow-hidden">
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-purple-500/5 to-transparent animate-[shimmer_2s_infinite]" />
+                            <BrainCircuit size={56} className="text-purple-500 animate-pulse relative z-10" />
+                            <div className="space-y-1 text-center relative z-10">
+                                <div className="text-white font-medium">Analizando Métricas...</div>
+                                <div className="text-neutral-500 text-xs font-mono">Conectando con Gemini 2.5 Flash...</div>
+                            </div>
                         </div>
                     ) : todayEntry ? (
-                        <div className={`rounded-2xl border-2 p-1 relative overflow-hidden ${getMoodColor(todayEntry.mood).split(' ')[0]} ${todayEntry.mood === 'skull' ? 'shadow-[0_0_30px_rgba(239,68,68,0.2)]' : 'shadow-lg'}`}>
-                            {/* TERMINAL CONTENT */}
-                            <div className="bg-black/90 p-6 rounded-xl font-mono relative z-10">
-                                <div className="flex justify-between items-start mb-4 border-b border-white/10 pb-4">
-                                    <div className="flex flex-col">
-                                        <div className="text-[10px] uppercase font-bold text-neutral-500 mb-1">AUDITOR (IA)</div>
-                                        <div className={`text-lg font-black uppercase italic tracking-tighter flex items-center gap-2 ${getMoodColor(todayEntry.mood).split(' ')[2]}`}>
-                                            {getMoodIcon(todayEntry.mood)}
-                                            {todayEntry.content.match(/^\[(.*?)\]/)?.[1] || (todayEntry.mood === 'fire' ? 'PROGRESO' : todayEntry.mood === 'ice' ? 'MANTENIMIENTO' : 'REGRESIÓN')}
+                        <div className={`group relative rounded-3xl p-[1px] bg-gradient-to-b from-white/10 to-transparent transition-all duration-500 ${moodStyle.glow}`}>
+                            {/* DYNAMIC BORDER GRADIENT */}
+                            <div className={`absolute inset-0 rounded-3xl bg-gradient-to-br ${todayEntry.mood === 'fire' ? 'from-orange-500/20' : todayEntry.mood === 'ice' ? 'from-blue-500/20' : todayEntry.mood === 'skull' ? 'from-red-500/20' : 'from-white/5'} to-transparent opacity-50 blur-sm`} />
+
+                            <div className="relative bg-[#0F0F0F] rounded-[23px] overflow-hidden">
+                                {/* CARD CONTENT */}
+                                <div className="p-6 md:p-8">
+                                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6 mb-6">
+                                        <div className="flex-1">
+                                            <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest mb-3 border ${moodStyle.border} ${moodStyle.bg} ${moodStyle.color}`}>
+                                                {moodStyle.icon}
+                                                {moodStyle.label}
+                                            </div>
+                                            <h3 className="text-2xl md:text-3xl font-bold text-white mb-2 leading-tight">
+                                                {todayEntry.content.match(/^\[(.*?)\]/)?.[1] || "Análisis Completado"}
+                                            </h3>
+                                        </div>
+
+                                        {/* METRICS FLOATING */}
+                                        <div className="flex gap-4 p-4 bg-white/5 rounded-2xl border border-white/5 backdrop-blur-sm">
+                                            <div className="text-center">
+                                                <div className="text-[10px] text-neutral-500 uppercase tracking-wider">Volumen</div>
+                                                <div className="text-lg font-mono font-bold text-white">{todayEntry.metrics_snapshot.total_volume.toLocaleString()}</div>
+                                            </div>
+                                            <div className="w-px bg-white/10" />
+                                            <div className="text-center">
+                                                <div className="text-[10px] text-neutral-500 uppercase tracking-wider">Sesiones</div>
+                                                <div className="text-lg font-mono font-bold text-white">{todayEntry.metrics_snapshot.workouts_count}</div>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    {/* POWER ARROW */}
-                                    <div className="flex items-center gap-3">
-                                        <div className={`p-2 rounded-lg border ${getMoodColor(todayEntry.mood).split(' ')[0]} ${getMoodColor(todayEntry.mood).split(' ')[1]}`}>
-                                            {todayEntry.mood === 'fire' && <TrendingUp size={32} className="text-orange-500" />}
-                                            {todayEntry.mood === 'ice' && <Minus size={32} className="text-blue-400" />}
-                                            {todayEntry.mood === 'skull' && <TrendingDown size={32} className="text-red-500" />}
-                                            {todayEntry.mood === 'neutral' && <Minus size={32} className="text-neutral-500" />}
-                                        </div>
+                                    {/* DIAGNOSIS TEXT */}
+                                    <div className="prose prose-invert prose-sm max-w-none">
+                                        <p className="text-base md:text-lg text-neutral-300 font-light leading-relaxed">
+                                            {todayEntry.content.replace(/^\[.*?\]\s*/, '')}
+                                        </p>
                                     </div>
                                 </div>
 
-                                <p className="text-sm md:text-base leading-relaxed text-neutral-200">
-                                    {todayEntry.content.replace(/^\[.*?\]\s*/, '')}
-                                </p>
-
-                                {/* METRICS SNAPSHOT */}
-                                <div className="mt-6 grid grid-cols-2 gap-2 text-xs text-neutral-500 border-t border-white/10 pt-4">
-                                    <div>Volumen: <span className="text-white">{todayEntry.metrics_snapshot.total_volume.toLocaleString()}kg</span></div>
-                                    <div>Sesiones: <span className="text-white">{todayEntry.metrics_snapshot.workouts_count}</span></div>
-                                </div>
-
-                                <div className="mt-4 flex justify-end">
+                                {/* BOTTOM ACTION BAR */}
+                                <div className="bg-black/40 border-t border-white/5 p-4 flex items-center justify-between">
+                                    <div className="text-[10px] text-neutral-600 font-mono">AI-MODEL: GEMINI-2.5-FLASH</div>
                                     <button
                                         onClick={() => generateReport(true)}
                                         disabled={generating}
-                                        className="text-[10px] uppercase font-bold text-neutral-600 hover:text-purple-400 transition-colors flex items-center gap-1"
-                                        title="Regenerar Análisis"
+                                        className="text-xs font-bold text-neutral-400 hover:text-white hover:bg-white/10 px-4 py-2 rounded-lg transition-all flex items-center gap-2"
                                     >
-                                        <BrainCircuit size={12} />
+                                        <BrainCircuit size={14} />
                                         RE-DIAGNOSTICAR
                                     </button>
                                 </div>
                             </div>
                         </div>
                     ) : null}
+                </section>
 
-                    {/* USER NOTE (THE ANALYST) */}
-                    <div className="mt-6 bg-neutral-900/30 rounded-xl p-4 border border-white/5 relative group focus-within:border-purple-500/50 transition-colors">
-                        <div className="absolute -top-3 left-4 bg-black px-2 text-xs font-bold text-neutral-500 uppercase flex items-center gap-2 group-focus-within:text-purple-400 transition-colors">
-                            <Save size={12} />
-                            Contexto / Causa (El Analista)
-                        </div>
-
-                        <textarea
-                            value={userNote}
-                            onChange={(e) => setUserNote(e.target.value)}
-                            placeholder="¿Por qué ocurrió esto? (Ej: 'Me dolía el hombro', 'Dormí poco', 'Tomé pre-entreno')..."
-                            className="w-full bg-transparent text-sm text-white placeholder-neutral-700 outline-none resize-none min-h-[80px] mt-2"
-                        />
-
-                        {todayEntry && userNote !== todayEntry.user_note && (
-                            <div className="flex justify-end mt-2">
-                                <button
-                                    onClick={handleSaveNote}
-                                    disabled={savingNote}
-                                    className="bg-purple-600 text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-purple-500 transition-colors shadow-lg shadow-purple-900/20"
-                                >
-                                    {savingNote ? 'Guardando...' : 'GUARDAR ANÁLISIS'}
-                                </button>
+                {/* CONTEXT INPUT (THE ANALYST) */}
+                <section className="animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-100">
+                    <div className="relative group">
+                        <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 to-blue-500/20 rounded-2xl blur opacity-0 group-focus-within:opacity-100 transition-opacity duration-500" />
+                        <div className="bg-neutral-900/80 backdrop-blur-md rounded-2xl p-1 border border-white/10 relative">
+                            <div className="p-4">
+                                <label className="text-xs font-bold text-neutral-500 uppercase flex items-center gap-2 mb-3">
+                                    <Save size={12} className="text-purple-400" />
+                                    Contexto / Causa
+                                </label>
+                                <textarea
+                                    value={userNote}
+                                    onChange={(e) => setUserNote(e.target.value)}
+                                    placeholder="¿Algo que añadir? (Ej: 'Dormí mal', 'Me dolía la rodilla')..."
+                                    className="w-full bg-transparent text-sm text-white placeholder-neutral-600 outline-none resize-none h-20"
+                                />
+                                <div className="flex justify-end mt-2 overflow-hidden h-0 group-focus-within:h-10 transition-all duration-300">
+                                    {todayEntry && userNote !== todayEntry.user_note && (
+                                        <button
+                                            onClick={handleSaveNote}
+                                            disabled={savingNote}
+                                            className="bg-white text-black text-xs font-black px-6 py-2 rounded-full hover:scale-105 transition-transform"
+                                        >
+                                            {savingNote ? 'GUARDANDO...' : 'GUARDAR'}
+                                        </button>
+                                    )}
+                                </div>
                             </div>
-                        )}
+                        </div>
                     </div>
                 </section>
 
                 {/* TIMELINE */}
-                <section>
-                    <h2 className="text-sm font-bold text-neutral-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                        <Calendar size={16} />
-                        Historial
+                <section className="animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-200">
+                    <h2 className="text-xs font-bold text-neutral-500 uppercase tracking-[0.2em] flex items-center gap-2 mb-6">
+                        <Calendar size={14} />
+                        Historial Reciente
                     </h2>
 
-                    <div className="space-y-3 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-neutral-800 before:to-transparent">
-                        {history.filter(h => h.id !== todayEntry?.id).map((entry) => (
-                            <div key={entry.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                                {/* ICON */}
-                                <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 bg-black shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow z-10 ${getMoodColor(entry.mood).split(' ')[0]}`}>
-                                    {getMoodIcon(entry.mood)}
-                                </div>
+                    <div className="relative pl-8 space-y-8 before:absolute before:left-[11px] before:top-2 before:bottom-0 before:w-px before:bg-gradient-to-b before:from-white/20 before:to-transparent">
+                        {history.filter(h => h.id !== todayEntry?.id).map((entry, index) => {
+                            const entryConfig = getMoodConfig(entry.mood);
+                            return (
+                                <div key={entry.id} className="relative group">
+                                    {/* DOT */}
+                                    <div className={`absolute -left-[29px] top-1.5 w-3 h-3 rounded-full border-2 border-[#0a0a0a] ${entryConfig.bg.replace('/5', '')} ${entryConfig.color} shadow-[0_0_10px_rgba(0,0,0,0.5)] z-10`} />
 
-                                {/* CARD */}
-                                <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-neutral-900 p-4 rounded-xl border border-white/5">
-                                    <div className="flex justify-between items-center mb-1">
-                                        <time className="font-mono text-xs text-neutral-500">{new Date(entry.date).toLocaleDateString()}</time>
-                                    </div>
-                                    <p className="text-sm text-neutral-300 line-clamp-2 italic">"{entry.content}"</p>
-                                    {entry.user_note && (
-                                        <div className="mt-2 pt-2 border-t border-white/5 text-xs text-neutral-500">
-                                            Nota: {entry.user_note}
+                                    <div className="bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10 rounded-xl p-4 transition-all duration-300 backdrop-blur-md">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <div className="flex items-center gap-2">
+                                                {/* Mini Icon */}
+                                                <div className={`${entryConfig.color}`}>
+                                                    {entryConfig.icon.type && <entryConfig.icon.type {...entryConfig.icon.props} size={16} />}
+                                                </div>
+                                                <time className="text-xs text-neutral-400 font-mono">
+                                                    {new Date(entry.date).toLocaleDateString()}
+                                                </time>
+                                            </div>
+                                            {entry.metric_snapshot?.total_volume > 0 && (
+                                                <span className="text-[10px] font-mono text-neutral-600">{entry.metrics_snapshot?.total_volume}kg</span>
+                                            )}
                                         </div>
-                                    )}
+                                        <p className="text-sm text-neutral-300 italic line-clamp-2">
+                                            "{entry.content.replace(/^\[.*?\]\s*/, '')}"
+                                        </p>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                         {history.length <= 1 && (
-                            <div className="text-center text-neutral-600 text-sm py-8">
-                                No hay más registros en la bitácora.
-                            </div>
+                            <div className="text-neutral-600 text-xs font-mono py-4">Inicia tu viaje para ver el historial aqui.</div>
                         )}
                     </div>
                 </section>
-
             </div>
         </div>
     );
