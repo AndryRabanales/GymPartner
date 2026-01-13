@@ -61,6 +61,8 @@ export const WorkoutSession = () => {
     const [resolvedGymId, setResolvedGymId] = useState<string | null>(null);
     const [showExitMenu, setShowExitMenu] = useState(false);
     const [showSummary, setShowSummary] = useState(false);
+    // NEW: Track Routine Name for AI Diagnosis
+    const [currentRoutineName, setCurrentRoutineName] = useState<string | undefined>(undefined);
     // currentGym state removed
 
     // Tutorial State
@@ -969,7 +971,7 @@ export const WorkoutSession = () => {
         console.log('🏁 Terminando sesión en DB:', sessionId);
 
         try {
-            const result = await workoutService.finishSession(sessionId, "Battle Finished");
+            const result = await workoutService.finishSession(sessionId, "Battle Finished", currentRoutineName);
 
             if (result.success) {
                 console.log('✅ Sesión terminada exitosamente');
@@ -1063,6 +1065,7 @@ export const WorkoutSession = () => {
                                                 localStorage.setItem('hasSeenImportTutorial', 'true');
                                             }
                                             loadRoutine(routine);
+                                            setCurrentRoutineName(routine.name);
                                         }}
                                         className="w-full bg-neutral-900 border border-neutral-800 hover:border-gym-primary p-6 rounded-2xl flex items-center justify-between group transition-all"
                                     >
@@ -1611,6 +1614,7 @@ export const WorkoutSession = () => {
                                         key={routine.id}
                                         onClick={() => {
                                             loadRoutine(routine);
+                                            setCurrentRoutineName(routine.name);
                                             setShowStartOptionsModal(false);
                                         }}
                                         className="flex items-center justify-between p-4 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 hover:border-gym-primary/50 transition-all group"

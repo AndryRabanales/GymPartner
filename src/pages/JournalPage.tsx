@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, BrainCircuit, Calendar, Save, Terminal, Flame, Snowflake, Skull, Minus } from 'lucide-react';
+import { ArrowLeft, BrainCircuit, Calendar, Save, Terminal, Flame, Snowflake, Skull, Minus, TrendingUp, TrendingDown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { journalService, type JournalEntry } from '../services/JournalService';
 
@@ -122,41 +122,40 @@ export const JournalPage = () => {
                 <section>
                     <h2 className="text-sm font-bold text-neutral-500 uppercase tracking-widest mb-4 flex items-center gap-2">
                         <Terminal size={16} />
-                        Resumen del Día
+                        Diagnóstico del Auditor
                     </h2>
 
                     {generating ? (
                         <div className="bg-neutral-900/50 border border-purple-500/30 rounded-2xl p-8 flex flex-col items-center justify-center gap-4 animate-pulse">
                             <BrainCircuit size={48} className="text-purple-500" />
-                            <div className="text-purple-400 font-mono text-sm">Analizando datos... Calculando volumen...</div>
+                            <div className="text-purple-400 font-mono text-sm">Analizando datos... Consultando historial...</div>
                         </div>
                     ) : todayEntry ? (
                         <div className={`rounded-2xl border-2 p-1 relative overflow-hidden ${getMoodColor(todayEntry.mood).split(' ')[0]} ${todayEntry.mood === 'skull' ? 'shadow-[0_0_30px_rgba(239,68,68,0.2)]' : 'shadow-lg'}`}>
                             {/* TERMINAL CONTENT */}
                             <div className="bg-black/90 p-6 rounded-xl font-mono relative z-10">
                                 <div className="flex justify-between items-start mb-4 border-b border-white/10 pb-4">
-                                    <div className="text-xs text-neutral-500">
-                                        Usuario: {user?.user_metadata?.full_name || 'Agente'}
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <button
-                                            onClick={() => generateReport(true)}
-                                            disabled={generating}
-                                            className="text-[10px] uppercase font-bold text-neutral-500 hover:text-purple-400 transition-colors flex items-center gap-1"
-                                            title="Regenerar Análisis"
-                                        >
-                                            <BrainCircuit size={12} />
-                                            {generating ? '...' : 'Refrescar'}
-                                        </button>
-                                        <div className={`text-xs font-bold uppercase flex items-center gap-1 ${getMoodColor(todayEntry.mood).split(' ')[2]}`}>
+                                    <div className="flex flex-col">
+                                        <div className="text-[10px] uppercase font-bold text-neutral-500 mb-1">AUDITOR (IA)</div>
+                                        <div className={`text-lg font-black uppercase italic tracking-tighter flex items-center gap-2 ${getMoodColor(todayEntry.mood).split(' ')[2]}`}>
                                             {getMoodIcon(todayEntry.mood)}
-                                            ESTADO: {todayEntry.mood === 'fire' ? 'EXCELENTE' : todayEntry.mood === 'ice' ? 'CONSTANTE' : todayEntry.mood === 'skull' ? 'INACTIVO' : 'NEUTRAL'}
+                                            {todayEntry.content.match(/^\[(.*?)\]/)?.[1] || (todayEntry.mood === 'fire' ? 'PROGRESO' : todayEntry.mood === 'ice' ? 'MANTENIMIENTO' : 'REGRESIÓN')}
+                                        </div>
+                                    </div>
+
+                                    {/* POWER ARROW */}
+                                    <div className="flex items-center gap-3">
+                                        <div className={`p-2 rounded-lg border ${getMoodColor(todayEntry.mood).split(' ')[0]} ${getMoodColor(todayEntry.mood).split(' ')[1]}`}>
+                                            {todayEntry.mood === 'fire' && <TrendingUp size={32} className="text-orange-500" />}
+                                            {todayEntry.mood === 'ice' && <Minus size={32} className="text-blue-400" />}
+                                            {todayEntry.mood === 'skull' && <TrendingDown size={32} className="text-red-500" />}
+                                            {todayEntry.mood === 'neutral' && <Minus size={32} className="text-neutral-500" />}
                                         </div>
                                     </div>
                                 </div>
 
                                 <p className="text-sm md:text-base leading-relaxed text-neutral-200">
-                                    {todayEntry.content}
+                                    {todayEntry.content.replace(/^\[.*?\]\s*/, '')}
                                 </p>
 
                                 {/* METRICS SNAPSHOT */}
@@ -164,31 +163,47 @@ export const JournalPage = () => {
                                     <div>Volumen: <span className="text-white">{todayEntry.metrics_snapshot.total_volume.toLocaleString()}kg</span></div>
                                     <div>Sesiones: <span className="text-white">{todayEntry.metrics_snapshot.workouts_count}</span></div>
                                 </div>
+
+                                <div className="mt-4 flex justify-end">
+                                    <button
+                                        onClick={() => generateReport(true)}
+                                        disabled={generating}
+                                        className="text-[10px] uppercase font-bold text-neutral-600 hover:text-purple-400 transition-colors flex items-center gap-1"
+                                        title="Regenerar Análisis"
+                                    >
+                                        <BrainCircuit size={12} />
+                                        RE-DIAGNOSTICAR
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     ) : null}
 
-                    {/* USER NOTE */}
-                    <div className="mt-4 bg-neutral-900/30 rounded-xl p-4 border border-white/5">
-                        <div className="flex justify-between items-center mb-2">
-                            <label className="text-xs font-bold text-neutral-500 uppercase">Nota Personal</label>
-                            {todayEntry && (
-                                <button
-                                    onClick={handleSaveNote}
-                                    disabled={savingNote || userNote === todayEntry.user_note}
-                                    className={`text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1 transition-colors ${userNote !== todayEntry.user_note ? 'bg-purple-600 text-white' : 'bg-neutral-800 text-neutral-500'}`}
-                                >
-                                    <Save size={12} />
-                                    {savingNote ? 'Guardando...' : 'Guardar'}
-                                </button>
-                            )}
+                    {/* USER NOTE (THE ANALYST) */}
+                    <div className="mt-6 bg-neutral-900/30 rounded-xl p-4 border border-white/5 relative group focus-within:border-purple-500/50 transition-colors">
+                        <div className="absolute -top-3 left-4 bg-black px-2 text-xs font-bold text-neutral-500 uppercase flex items-center gap-2 group-focus-within:text-purple-400 transition-colors">
+                            <Save size={12} />
+                            Contexto / Causa (El Analista)
                         </div>
+
                         <textarea
                             value={userNote}
                             onChange={(e) => setUserNote(e.target.value)}
-                            placeholder="Añade una nota personal..."
-                            className="w-full bg-transparent text-sm text-white placeholder-neutral-600 outline-none resize-none min-h-[80px]"
+                            placeholder="¿Por qué ocurrió esto? (Ej: 'Me dolía el hombro', 'Dormí poco', 'Tomé pre-entreno')..."
+                            className="w-full bg-transparent text-sm text-white placeholder-neutral-700 outline-none resize-none min-h-[80px] mt-2"
                         />
+
+                        {todayEntry && userNote !== todayEntry.user_note && (
+                            <div className="flex justify-end mt-2">
+                                <button
+                                    onClick={handleSaveNote}
+                                    disabled={savingNote}
+                                    className="bg-purple-600 text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-purple-500 transition-colors shadow-lg shadow-purple-900/20"
+                                >
+                                    {savingNote ? 'Guardando...' : 'GUARDAR ANÁLISIS'}
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </section>
 

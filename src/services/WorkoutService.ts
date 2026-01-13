@@ -50,15 +50,21 @@ class WorkoutService {
     }
 
     // Finish the session (The "Victory")
-    async finishSession(sessionId: string, notes?: string): Promise<{ success: boolean; error?: any }> {
+    async finishSession(sessionId: string, notes?: string, routineName?: string): Promise<{ success: boolean; error?: any }> {
         const now = new Date().toISOString();
+        const updatePayload: any = {
+            end_time: now,
+            finished_at: now,
+            notes
+        };
+
+        if (routineName) {
+            updatePayload.routine_name = routineName;
+        }
+
         const { error } = await supabase
             .from('workout_sessions')
-            .update({
-                end_time: now,
-                finished_at: now, // Update both to be safe against schema variations
-                notes
-            })
+            .update(updatePayload)
             .eq('id', sessionId);
 
         if (error) {

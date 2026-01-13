@@ -108,41 +108,46 @@ class JournalService {
                 .gte('started_at', `${today}T00:00:00`)
                 .lte('started_at', `${today}T23:59:59`);
 
-            // B. Get Recent History (Last 30 Days) for consistency analysis
-            const thirtyDaysAgo = new Date();
-            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-            const strThirtyDaysAgo = thirtyDaysAgo.toISOString().split('T')[0];
-
-            const { data: historyWorkouts } = await supabase
-                .from('workout_sessions')
-                .select('started_at, gym_id')
-                .eq('user_id', userId)
-                .gte('started_at', `${strThirtyDaysAgo}T00:00:00`)
-                .lt('started_at', `${today}T00:00:00`) // Exclude today
-                .order('started_at', { ascending: false });
-
-            // Analyze History
-            const uniqueDays = new Set(historyWorkouts?.map(w => w.started_at.split('T')[0])).size;
-            const avgSessionsPerWeek = Math.round((uniqueDays / 30) * 7);
-
-            // B. Get Previous Session (Most recent before today)
-            const { data: lastSession } = await supabase
-                .from('workout_sessions')
-                .select('*, workout_logs(*)')
-                .eq('user_id', userId)
-                .lt('started_at', `${today}T00:00:00`)
-                .order('started_at', { ascending: false })
-                .limit(1)
-                .maybeSingle();
-
-            // 3. CALCULATE METRICS & CONTEXT
             const todayWorkouts = todayWorkoutsData || [];
             const workoutsCount = todayWorkouts.length;
 
+            // IDENTIFY ROUTINE CONTEXT
+            // If multiple sessions, we focus on the last one for the main "Diagnosis"
+            const lastTodaySession = todayWorkouts.length > 0 ? todayWorkouts[todayWorkouts.length - 1] : null;
+            const routineName = lastTodaySession?.routine_name; // NEW COLUMN
+
+            // B. Get PREVIOUS SESSION OF THE SAME ROUTINE (The "Reference Point")
+            let referenceSession = null;
+            if (routineName) {
+                const { data: sameRoutineSession } = await supabase
+                    .from('workout_sessions')
+                    .select('*, workout_logs(*)')
+                    .eq('user_id', userId)
+                    .eq('routine_name', routineName) // Strict comparison
+                    .lt('started_at', `${today}T00:00:00`)
+                    .order('started_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+                referenceSession = sameRoutineSession;
+            } else {
+                // Fallback: Just get the absolute last session if no routine name match
+                const { data: anyLastSession } = await supabase
+                    .from('workout_sessions')
+                    .select('*, workout_logs(*)')
+                    .eq('user_id', userId)
+                    .lt('started_at', `${today}T00:00:00`)
+                    .order('started_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+                referenceSession = anyLastSession;
+            }
+
+            // 3. CALCULATE METRICS & CONTEXT
             let totalVolume = 0;
             const exercisesDetails: any[] = [];
             const trainedMuscles = new Set<string>();
 
+            // Current Session Analysis
             todayWorkouts.forEach(session => {
                 session.workout_logs?.forEach((log: any) => {
                     const vol = (log.weight_kg || 0) * (log.reps || 0);
@@ -163,104 +168,104 @@ class JournalService {
                 });
             });
 
-            const topExercises = exercisesDetails
-                .sort((a, b) => b.weight_kg - a.weight_kg) // Sort by heavy lift
-                .slice(0, 5); // Take top 5 heaviest lifts
-
+            // Reference Session Analysis
             let prevVolume = 0;
-            if (lastSession && lastSession.workout_logs) {
-                lastSession.workout_logs.forEach((log: any) => {
+            if (referenceSession && referenceSession.workout_logs) {
+                referenceSession.workout_logs.forEach((log: any) => {
                     prevVolume += (log.weight_kg || 0) * (log.reps || 0);
                 });
             }
 
+            // Metrics
             let volumeDiffPercent = 0;
             if (prevVolume > 0) {
                 volumeDiffPercent = Math.round(((totalVolume - prevVolume) / prevVolume) * 100);
             }
 
-            let skippedDays = 0;
-            if (workoutsCount === 0 && lastSession) {
-                const lastDate = new Date(lastSession.started_at);
+            // Consistency (Days since LAST workout of ANY kind)
+            let daysSinceLastAction = 0;
+            // Fetch strict last active date ignoring routine
+            const { data: lastActiveSession } = await supabase
+                .from('workout_sessions')
+                .select('started_at')
+                .eq('user_id', userId)
+                .lt('started_at', `${today}T00:00:00`)
+                .order('started_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            if (lastActiveSession) {
+                const lastDate = new Date(lastActiveSession.started_at);
                 const now = new Date();
                 const diffTime = Math.abs(now.getTime() - lastDate.getTime());
-                skippedDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) - 1;
+                daysSinceLastAction = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) - 1;
             }
 
-            // 4. PREPARE CONTEXT FOR AI
+            // 4. PREPARE CONTEXT FOR AI (THE AUDITOR DOSSIER)
             const context = {
                 user_id: userId,
                 date: today,
+                routine_name: routineName || "Entrenamiento Libre",
                 workouts_today: workoutsCount,
                 trained_muscles: Array.from(trainedMuscles),
-                top_exercises_performed: topExercises,
                 total_volume_kg: totalVolume,
                 previous_volume_kg: prevVolume,
                 volume_change_percent: volumeDiffPercent,
-                skipped_days_streak: skippedDays,
-                history_30_days: {
-                    total_sessions: uniqueDays,
-                    avg_per_week: avgSessionsPerWeek
-                },
+                days_since_last_workout: daysSinceLastAction,
                 is_active_day: workoutsCount > 0
             };
 
-            // 5. CALL GEMINI (OR FALLBACK)
+            // 5. CALL GEMINI (THE AUDITOR)
             let aiContent = "";
             let aiMood: 'fire' | 'ice' | 'skull' | 'neutral' = 'neutral';
+            // NEW: Diagnosis Verdict
+            let verdict = "";
 
             if (GEN_AI_KEY) {
                 try {
                     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
                     const systemPrompt = `
-                        ACT AS: An elite professional sports analyst and personal trainer writing a daily journal for the user.
-                        PERSPECTIVE: First Person ("Hoy entrené...", "Me sentí...", "Logré...").
-                        TONE: Formal, Objective, Analytical, encouraging but grounded in data.
-                        LANGUAGE: Spanish (Español Neutro/Formal).
+                        ROL: Eres el AUDITOR DE RENDIMIENTO DEPORTIVO. Tu trabajo es analizar datos fríamente y emitir un veredicto.
+                        NO tienen sentimientos. NO eres un coach motivacional cursi. Eres un analista de datos.
                         
-                        GOAL: Provide a deep yet concise analysis of today's performance, comparing it with history.
+                        TONO: Profesional, Directo, Basado en Hechos.
+                        IDIOMA: Español (Neutro/Profesional).
                         
-                        INPUT DATA:
+                        ESTRICTAMENTE PROHIBIDO (Banneados): "Soldado", "Base", "Combate", "Radar", "Misión", "Guerra", "Batalla".
+                        PALABRAS PERMITIDAS: "Sesión", "Entrenamiento", "Rutina", "Volumen", "Carga", "Objetivo", "Progreso".
+
+                        OBJETIVO: Diagnosticar la sesión de hoy comparándola con la anterior (si existe).
+                        
+                        DATOS DE ENTRADA:
                         ${JSON.stringify(context, null, 2)}
                         
-                        GUIDELINES:
-                        1. **Focus on Muscles & Exercises**: Mention specific muscles trained (e.g., "El enfoque de hoy fue Pectoral y Tríceps"). Mention the heaviest or most significant exercises.
-                        2. **Analyze Progress**: Compare today's volume vs previous. Did I lift more? Did I maintain? 
-                        3. **Check Consistency**: If I missed days, mention it constructively ("Tras 3 días de inactividad..."). If constant, praise discipline.
-                        4. **Structure**: 
-                           - Sentence 1: Summary of what was done (Muscles/Key Exercises).
-                           - Sentence 2: Quantitative analysis (Volume, progress, intensity).
-                           - Sentence 3: Conclusion/Forward looking statement.
-                        5. **Safety**: No medical advice. No "pain" talk unless recovery related.
-                        6. **Length**: Maximum 3-4 powerful sentences.
+                        REGLAS DE DIAGNÓSTICO:
+                        1. PROGRESO (Fuego): Volumen aumentó > 3% O hubo PRs.
+                        2. MANTENIMIENTO (Hielo): Volumen similar (+/- 3%). "Cumpliste pero no superaste".
+                        3. REGRESIÓN (Calavera): Volumen bajó > 10% sin justificación o hay inactividad > 4 días.
                         
-                        MOOD LOGIC (Internal):
-                           - FIRE: workouts_today > 0 AND (volume improved OR PR set).
-                           - ICE: workouts_today > 0 AND volume stable.
-                           - SKULL: skipped_days_streak > 3.
-                           - NEUTRAL: Rest day or light recovery.
-                        
-                        OUTPUT FORMAT (JSON):
+                        SALIDA REQUERIDA (JSON):
                         {
                             "mood": "fire" | "ice" | "skull" | "neutral",
-                            "content": "The narrative text..."
+                            "verdict": "Frase corta de 3-5 palabras resumen. Ej: 'Volumen +5%. Progreso detectado.'",
+                            "content": "Análisis de 2-3 frases. Fáctico. Ej: 'Hoy levantaste 8000kg, superando los 7500kg de la sesión anterior. La constancia es buena.'"
                         }
                     `;
 
                     const result = await model.generateContent(systemPrompt);
                     const responseText = result.response.text();
-
-                    // Clean code fences if present
                     const cleanJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
                     const parsed = JSON.parse(cleanJson);
 
                     aiContent = parsed.content;
                     aiMood = parsed.mood;
+                    // Note: 'verdict' is currently not stored in DB, we inject it into content or handle it later. 
+                    // To keep DB schema simple, we'll PREPEND the verdict to the content formatted nicely.
+                    aiContent = `[${parsed.verdict}] ${aiContent}`;
 
                 } catch (apiError) {
                     console.error("Gemini API Error:", apiError);
-                    // Fallback handled below
                 }
             }
 
