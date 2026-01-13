@@ -61,7 +61,9 @@ export const JournalPage = () => {
         try {
             // Artificial delay for "Thinking" effect
             await new Promise(r => setTimeout(r, 1500));
-            const entry = await journalService.generateEntry(user!.id, force);
+            // Pass the current userNote as context if we are forcing a refresh (Re-diagnose)
+            // If it's an auto-refresh (force=false), userNote might be empty which is fine.
+            const entry = await journalService.generateEntry(user!.id, force, userNote);
             if (entry) {
                 setTodayEntry(entry);
                 setUserNote(entry.user_note || '');

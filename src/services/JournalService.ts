@@ -86,7 +86,7 @@ class JournalService {
      * GENERATE DAILY ANALYSIS (GEMINI POWERED - PROFESSIONAL MODE)
      * @param force If true, ignores existing entry and regenerates.
      */
-    async generateEntry(userId: string, force: boolean = false): Promise<JournalEntry | null> {
+    async generateEntry(userId: string, force: boolean = false, userContext?: string): Promise<JournalEntry | null> {
         const today = new Date().toISOString().split('T')[0];
 
         try {
@@ -109,7 +109,7 @@ class JournalService {
                         // If DB has data but Entry says 0 -> FORCE REFRESH
                         if (count && count > 0) {
                             console.log("🔄 Smart Refresh: Validating Stale Entry (DB has workouts, Entry has 0)");
-                            return this.generateEntry(userId, true);
+                            return this.generateEntry(userId, true, userContext);
                         }
                     }
                     // Otherwise return cached
@@ -179,6 +179,8 @@ class JournalService {
 
             // 3. CALCULATE METRICS & CONTEXT
             let totalVolume = 0;
+            let totalReps = 0; // NEW: Track total reps for analysis
+            let maxWeight = 0; // NEW: Track max weight for analysis
             const exercisesDetails: any[] = [];
             const trainedMuscles = new Set<string>();
 
@@ -187,6 +189,8 @@ class JournalService {
                 session.workout_logs?.forEach((log: any) => {
                     const vol = (log.weight_kg || 0) * (log.reps || 0);
                     totalVolume += vol;
+                    totalReps += (log.reps || 0); // Accumulate reps
+                    if ((log.weight_kg || 0) > maxWeight) maxWeight = log.weight_kg || 0; // Track max load
 
                     const exerciseName = log.equipment?.name || "Ejercicio Desconocido";
                     const muscle = log.equipment?.target_muscle_group || "General";
@@ -205,9 +209,14 @@ class JournalService {
 
             // Reference Session Analysis
             let prevVolume = 0;
+            let prevReps = 0;
+            let prevMaxWeight = 0;
+
             if (referenceSession && referenceSession.workout_logs) {
                 referenceSession.workout_logs.forEach((log: any) => {
                     prevVolume += (log.weight_kg || 0) * (log.reps || 0);
+                    prevReps += (log.reps || 0);
+                    if ((log.weight_kg || 0) > prevMaxWeight) prevMaxWeight = log.weight_kg || 0;
                 });
             }
 
@@ -241,17 +250,18 @@ class JournalService {
                 user_id: userId,
                 date: today,
                 routine_name: routineName || "Entrenamiento Libre",
+                user_input_context: userContext || "Sin comentarios del usuario.",
                 workouts_today: workoutsCount,
                 trained_muscles: Array.from(trainedMuscles),
-                total_volume_kg: totalVolume,
-                previous_volume_kg: prevVolume,
-                volume_change_percent: volumeDiffPercent,
-                days_since_last_workout: skippedDays,
-                history_30_days: {
-                    total_sessions: uniqueDays,
-                    avg_per_week: avgSessionsPerWeek
+                performance: {
+                    volume: { current: totalVolume, previous: prevVolume, diff_percent: volumeDiffPercent },
+                    intensity_max_weight: { current: maxWeight, previous: prevMaxWeight },
+                    accumulated_reps: { current: totalReps, previous: prevReps }
                 },
-                is_active_day: workoutsCount > 0
+                consistency: {
+                    days_since_last_workout: skippedDays,
+                    avg_weekly_sessions: avgSessionsPerWeek
+                }
             };
 
             // 5. CALL GEMINI (THE AUDITOR)
@@ -263,30 +273,30 @@ class JournalService {
                     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
                     const systemPrompt = `
-                        ROL: Eres el AUDITOR DE RENDIMIENTO DEPORTIVO. Tu trabajo es analizar datos fríamente y emitir un veredicto.
-                        NO tienen sentimientos. NO eres un coach motivacional cursi. Eres un analista de datos.
+                        ROL: Eres el AUDITOR DE RENDIMIENTO DEPORTIVO. Analizas datos puros y duros.
+                        FILOSOFÍA: "Los números no mienten, pero el contexto importa."
                         
-                        TONO: Profesional, Directo, Basado en Hechos.
-                        IDIOMA: Español (Neutro/Profesional).
+                        TONO: 100% Objetivo, Científico-Deportivo, Profesional.
+                        IDIOMA: Español (Neutro).
                         
-                        ESTRICTAMENTE PROHIBIDO (Banneados): "Soldado", "Base", "Combate", "Radar", "Misión", "Guerra", "Batalla".
-                        PALABRAS PERMITIDAS: "Sesión", "Entrenamiento", "Rutina", "Volumen", "Carga", "Objetivo", "Progreso".
+                        PROHIBIDO (Banneados): "Soldado", "Misión", "Guerra", "Batalla", "Técnica" (a menos que el usuario la mencione), "Intuir" (no adivines).
+                        PALABRAS CLAVE: Carga, Volumen, Intensidad Relativa, Frecuencia, Adaptación, Sobrecarga Progresiva.
 
-                        OBJETIVO: Diagnosticar la sesión de hoy comparándola con la anterior (si existe).
-                        
+                        OBJETIVO:
+                        1. Comparar sesión actual vs anterior.
+                        2. Determinar el enfoque fisiológico basado en DATOS:
+                           - Si subió Peso y bajaron/mantuvieron Reps -> Foco en FUERZA/INTENSIDAD.
+                           - Si subió Volumen/Reps con mismo Peso -> Foco en HIPERTROFIA/RESISTENCIA.
+                        3. Incorporar el "CONTEXTO DEL USUARIO" si existe (ej: lesiones, falta de sueño) para justificar bajones.
+
                         DATOS DE ENTRADA:
                         ${JSON.stringify(context, null, 2)}
                         
-                        REGLAS DE DIAGNÓSTICO:
-                        1. PROGRESO (Fuego): Volumen aumentó > 3% O hubo PRs.
-                        2. MANTENIMIENTO (Hielo): Volumen similar (+/- 3%). "Cumpliste pero no superaste".
-                        3. REGRESIÓN (Calavera): Volumen bajó > 10% sin justificación o hay inactividad > 4 días.
-                        
                         SALIDA REQUERIDA (JSON):
                         {
-                            "mood": "fire" | "ice" | "skull" | "neutral",
-                            "verdict": "Frase corta de 3-5 palabras resumen. Ej: 'Volumen +5%. Progreso detectado.'",
-                            "content": "Análisis de 2-3 frases. Fáctico. Ej: 'Hoy levantaste 8000kg, superando los 7500kg de la sesión anterior. La constancia es buena.'"
+                            "mood": "fire" (Progreso Real) | "ice" (Mantenimiento/Deload) | "skull" (Regresión Injustificada),
+                            "verdict": "Resumen de 3-5 palabras. Ej: 'Fuerza +5%. Enfoque en Carga.'",
+                            "content": "Análisis. Si hubo progreso, explica si fue por Carga (Fuerza) o Volumen (Resistencia). NO asumas buena técnica ni sentimientos. Usa el contexto del usuario para explicar causas si es necesario."
                         }
                     `;
 
