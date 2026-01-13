@@ -29,23 +29,23 @@ class JournalService {
     // FALLBACK PROMPTS (Formal & Professional - 3rd Person Auditor)
     private fallbackPrompts = {
         fire: [
-            "El usuario ha registrado un excelente rendimiento. Movió {volume}kg, lo que representa un aumento del {diff}% respecto a la sesión anterior. La progresión es sólida.",
-            "Sesión muy productiva del usuario. Ha superado sus marcas anteriores y el volumen total de {volume}kg refleja un avance significativo en su capacidad de trabajo.",
-            "Buen desempeño físico hoy. El usuario completó el entrenamiento con {volume}kg de carga total. La constancia está generando resultados medibles."
+            "{userName} ha registrado un excelente rendimiento. Movió {volume}kg, lo que representa un aumento del {diff}% respecto a la sesión anterior. La progresión es sólida.",
+            "Sesión muy productiva de {userName}. Ha superado sus marcas anteriores y el volumen total de {volume}kg refleja un avance significativo en su capacidad de trabajo.",
+            "Buen desempeño físico hoy. {userName} completó el entrenamiento con {volume}kg de carga total. La constancia está generando resultados medibles."
         ],
         ice: [
-            "Entrenamiento completado sin contratiempos. El usuario registró {volume}kg de volumen. Mantuve la técnica y la constancia, el objetivo del usuario debe ser aumentar la intensidad progresivamente.",
-            "Sesión finalizada. {volume}kg acumulados. Fue un día de mantenimiento para el usuario; el enfoque estuvo en cumplir con la programación establecida.",
-            "Día de trabajo técnico. {volume}kg en total. No hubo récords personales, pero la regularidad del usuario es clave para su progreso a largo plazo."
+            "Entrenamiento completado sin contratiempos. {userName} registró {volume}kg de volumen. Se mantuvo la técnica y la constancia, el objetivo debe ser aumentar la intensidad progresivamente.",
+            "Sesión finalizada. {volume}kg acumulados. Fue un día de mantenimiento para {userName}; el enfoque estuvo en cumplir con la programación establecida.",
+            "Día de trabajo técnico. {volume}kg en total. No hubo récords personales, pero la regularidad de {userName} es clave para su progreso a largo plazo."
         ],
         skull: [
-            "El usuario lleva {skipped} días sin registrar actividad. Es importante que retome la rutina para no perder las adaptaciones físicas ganadas.",
-            "Se ha detectado una pausa de {skipped} días en los entrenamientos del usuario. Necesita reorganizar su agenda para recuperar la frecuencia habitual.",
-            "Inactividad detectada de {skipped} días. La consistencia es el factor más importante; el usuario debe volver al gimnasio lo antes posible."
+            "{userName} lleva {skipped} días sin registrar actividad. Es importante que retome la rutina para no perder las adaptaciones físicas ganadas.",
+            "Se ha detectado una pausa de {skipped} días en los entrenamientos. {userName} necesita reorganizar su agenda para recuperar la frecuencia habitual.",
+            "Inactividad detectada de {skipped} días. La consistencia es el factor más importante; {userName} debe volver al gimnasio lo antes posible."
         ],
         neutral: [
-            "Día de descanso activo o recuperación para el usuario. Es fundamental permitir que el cuerpo asimile el esfuerzo de las sesiones anteriores.",
-            "Sin datos recientes del usuario. Es un buen momento para revisar la planificación y establecer objetivos para la próxima semana."
+            "Día de descanso activo o recuperación para {userName}. Es fundamental permitir que el cuerpo asimile el esfuerzo de las sesiones anteriores.",
+            "Sin datos recientes de {userName}. Es un buen momento para revisar la planificación y establecer objetivos para la próxima semana."
         ]
     };
 
@@ -367,6 +367,7 @@ class JournalService {
                 }
 
                 aiContent = aiContent
+                    .replace(/{userName}/g, finalUserName) // Replace ALL occurrences
                     .replace('{volume}', totalVolume.toLocaleString())
                     .replace('{diff}', volumeDiffPercent > 0 ? `+${volumeDiffPercent}` : `${volumeDiffPercent}`)
                     .replace('{skipped}', skippedDays.toString());
