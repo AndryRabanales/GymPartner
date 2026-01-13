@@ -25,26 +25,26 @@ const genAI = new GoogleGenerativeAI(GEN_AI_KEY);
 
 class JournalService {
 
-    // FALLBACK PROMPTS (Strictly Factual & 3rd Person)
+    // FALLBACK PROMPTS (Updated: Direct, Short, Normal Vocabulary)
     private fallbackPrompts = {
         fire: [
-            "{userName} registró un aumento de volumen, moviendo un total de {volume}kg (+{diff}%).",
-            "Sesión de alto volumen para {userName}. Carga total acumulada: {volume}kg.",
-            "{userName} superó el rendimiento anterior con {volume}kg totales."
+            "Volumen subió a {volume}kg (+{diff}%). Buen entreno.",
+            "Carga total: {volume}kg. Superaste la sesión anterior.",
+            "Aumento de intensidad registrado. {volume}kg movidos en total."
         ],
         ice: [
-            "{userName} registró {volume}kg de volumen total.",
-            "Sesión finalizada por {userName} con {volume}kg acumulados.",
-            "{userName} completó el entrenamiento registrando {volume}kg."
+            "Volumen estable: {volume}kg. Mantenimiento cumplido.",
+            "Entreno completado con {volume}kg. Sin cambios drásticos.",
+            "Cumpliste la sesión. Carga acumulada: {volume}kg."
         ],
         skull: [
-            "{userName} lleva {skipped} días sin registrar actividad.",
-            "Se registra una pausa de {skipped} días en los entrenamientos de {userName}.",
-            "Inactividad de {skipped} días detectada para {userName}."
+            "{skipped} días sin ir al gym. Hay que retomar.",
+            "Pausa de {skipped} días detectada. El rendimiento bajará si no vuelves.",
+            "Inactividad de {skipped} días. Cuidado con perder el hábito."
         ],
         neutral: [
-            "Registro de descanso o recuperación para {userName}.",
-            "Sin datos de entrenamiento recientes para {userName}."
+            "Descanso o falta de datos recientes.",
+            "Sin registros de gym hoy."
         ]
     };
 
@@ -303,36 +303,29 @@ class JournalService {
 
                 // 2026-01-13 FIX: Unified Prompt to support all model versions safely
                 const combinedPrompt = `
-                    [SYSTEM INSTRUCTIONS]
-                    ROL: Eres el AUDITOR DE RENDIMIENTO DEPORTIVO. Tu memoria es perfecta y abarca las últimas 30 sesiones.
-                    FILOSOFÍA: "Los números no mienten, pero el contexto del usuario es la LEY."
-                    TONO: 100% Objetivo, Científico-Deportivo, Profesional.
-                    PERSPECTIVA: TERCERA PERSONA (El Observador).
-                    SUJETO: ${userName}.
-                    IDIOMA: Español (Neutro).
+                    [DIRECTIVAS DE IA]
+                    ROL: Analista de Gym. (Nada de "Asistente", "Observador", "Atleta").
+                    OBJETIVO: Diagnóstico técnico y directo. Sin relleno.
+                    IDIOMA: Español.
                     
-                    MANDAMIENTOS DE MEMORIA:
-                    1. ADHERENCIA A NOTAS: Si el usuario escribió algo en las últimas 30 sesiones, ÚSALO.
-                    2. DETECTIVISMO: Busca patrones en "past_user_notes".
-                    3. EVOLUCIÓN: Compara con hace 3 semanas.
+                    ESTILO Y TONO (RIGUROSO):
+                    - EXTREMADAMENTE CONCISO. Máximo 2-3 oraciones breves.
+                    - VOCABULARIO: Usa palabras normales de gimnasio ("Entreno", "Gym", "Series", "Kg", "Lesión", "Descanso").
+                    - PROHIBIDO: "Sujeto", "Misión", "Observador", "Atleta", "Estimado", "Poesía", "Motivación barata", "Batalla".
+                    - ACTITUD: Fría, directa, útil. Ve al grano.
                     
-                    PROHIBIDO: "Soldado", "Misión", "Guerra", "Batalla", Primera Persona ("Yo").
-                    PALABRAS CLAVE: Carga, Volumen, Intensidad Relativa, Frecuencia, Adaptación, Sobrecarga Progresiva.
-
-                    [USER REQUEST]
-                    OBJETIVO:
-                    1. Comparar sesión actual vs anterior.
-                    2. Determinar enfoque fisiológico.
-                    3. Analizar historial y notas (Memoria Sintetizada).
+                    REGLA DE ABSURDEZ (SANITY CHECK):
+                    - Si las notas del usuario son absurdas (ej. "Levanté 5000kg en curl", "Fui a marte"), IGNÓRALAS o responde con sarcasmo seco ("Dato inverosímil detectado.").
+                    - Si los métricas son imposibles, señálalo como error de registro.
                     
-                    DATOS DE ENTRADA:
+                    DATOS:
                     ${JSON.stringify(context, null, 2)}
                     
-                    SALIDA REQUERIDA (JSON):
+                    SALIDA JSON (STRICT):
                     {
                         "mood": "fire" | "ice" | "skull",
-                        "verdict": "Resumen de 3-5 palabras.",
-                        "content": "Análisis fáctico en TERCERA PERSONA. Cita notas históricas si son relevantes."
+                        "verdict": "Resumen de 3 palabras.",
+                        "content": "Texto del análisis. Directo y corto."
                     }
                 `;
 
@@ -401,7 +394,7 @@ class JournalService {
                         aiContent = this.getRandomFallback('ice');
                     }
                     if (trainedMuscles.size > 0) {
-                        aiContent += ` El enfoque principal fue: ${Array.from(trainedMuscles).join(', ')}.`;
+                        aiContent += ` Enfoque: ${Array.from(trainedMuscles).join(', ')}.`;
                     }
                 } else {
                     if (skippedDays > 2) {
