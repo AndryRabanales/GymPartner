@@ -286,7 +286,7 @@ export const JournalPage = () => {
                     </h2>
 
                     <div className="relative pl-8 space-y-8 before:absolute before:left-[11px] before:top-2 before:bottom-0 before:w-px before:bg-gradient-to-b before:from-white/20 before:to-transparent">
-                        {history.filter(h => h.id !== todayEntry?.id).map((entry, index) => {
+                        {history.filter(h => h.id !== todayEntry?.id).map((entry) => {
                             const entryConfig = getMoodConfig(entry.mood);
                             return (
                                 <div key={entry.id} className="relative group">
@@ -304,7 +304,7 @@ export const JournalPage = () => {
                                                     {new Date(entry.date).toLocaleDateString()}
                                                 </time>
                                             </div>
-                                            {entry.metric_snapshot?.total_volume > 0 && (
+                                            {entry.metrics_snapshot?.total_volume > 0 && (
                                                 <span className="text-[10px] font-mono text-neutral-600">{entry.metrics_snapshot?.total_volume}kg</span>
                                             )}
                                         </div>
