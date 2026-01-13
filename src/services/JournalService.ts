@@ -349,8 +349,14 @@ class JournalService {
                         aiContent = `[${parsed.verdict}] ${aiContent}`;
                         analyzed = true; // Mark as success to exit loop
 
-                    } catch (apiError) {
-                        console.warn(`Gemini Model ${modelName} Failed. Trying next...`, apiError);
+                    } catch (apiError: any) {
+                        console.warn(`⚠️ Gemini Model ${modelName} Failed.`);
+
+                        // Specific diagnostic for 404 (Service Not Enabled)
+                        if (apiError.toString().includes('404')) {
+                            console.error("🔴 ERROR 404: Es muy probable que no hayas habilitado la API 'Generative Language API' en Google Cloud Console.");
+                            console.error("🔗 Visita: https://console.cloud.google.com/apis/library/generativelanguage.googleapis.com");
+                        }
                     }
                 }
             }
