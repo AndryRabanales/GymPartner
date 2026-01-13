@@ -294,8 +294,9 @@ class JournalService {
             let aiMood: 'fire' | 'ice' | 'skull' | 'neutral' = 'neutral';
 
             if (GEN_AI_KEY) {
-                // FALLBACK MODEL STRATEGY: 2.0 (Rate Limited?) -> 1.5 Pro (Stable?) -> Legacy Pro
-                const modelsToTry = ["gemini-2.0-flash", "gemini-1.5-pro", "gemini-pro"];
+                // FALLBACK MODEL STRATEGY: 2.0 Flash (Fastest, Primary) -> 1.5 Flash (Backup)
+                // We removed 'Pro' because it consistently returns 404 (Not Found) in this environment.
+                const modelsToTry = ["gemini-2.0-flash", "gemini-1.5-flash"];
                 let analyzed = false;
 
                 // 2026-01-13 FIX: Merge System Prompt into User Message to avoid 404/400 errors
@@ -339,9 +340,9 @@ class JournalService {
                 for (const modelName of modelsToTry) {
                     if (analyzed) break;
 
-                    // Retry loop for the SAME model (handle 429)
+                    // AGGRESSIVE RETRY LOOP (Handle 429 Rate Limits)
                     let attempts = 0;
-                    const maxAttempts = 2; // Try twice per model
+                    const maxAttempts = 5; // Try up to 5 times (Exponential Backoff)
 
                     while (attempts < maxAttempts && !analyzed) {
                         attempts++;
@@ -365,19 +366,23 @@ class JournalService {
                         } catch (apiError: any) {
                             const isRateLimit = apiError.toString().includes('429');
 
-                            if (isRateLimit && attempts < maxAttempts) {
-                                console.warn(`⏳ Rate Limit (429) on ${modelName}. Retrying in 2.5s...`);
-                                await wait(2500);
-                                continue; // Retry loop
+                            if (isRateLimit) {
+                                if (attempts < maxAttempts) {
+                                    // Exponential Backoff: 1s, 2s, 4s, 8s, 16s
+                                    const delay = Math.pow(2, attempts - 1) * 1000;
+                                    console.warn(`⏳ Rate Limit (429) on ${modelName}. Retry ${attempts}/${maxAttempts} in ${delay}ms...`);
+                                    await wait(delay);
+                                    continue; // Retry loop
+                                } else {
+                                    console.error(`❌ Model ${modelName} exhausted ALL ${maxAttempts} retries.`);
+                                }
                             }
 
                             if (!isRateLimit) {
+                                // Real error (404, 400, etc) - Do not retry.
                                 console.warn(`⚠️ Gemini Model ${modelName} Failed:`, apiError);
-                                // Break retry loop, go to next model
-                                break;
+                                break; // Break retry loop, go to next model
                             }
-
-                            console.warn(`❌ Model ${modelName} exhausted retries.`);
                         }
                     }
                 }
