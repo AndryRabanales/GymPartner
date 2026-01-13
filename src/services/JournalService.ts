@@ -291,11 +291,17 @@ class JournalService {
             let aiMood: 'fire' | 'ice' | 'skull' | 'neutral' = 'neutral';
 
             if (GEN_AI_KEY) {
-                try {
-                    // Using pinned version to avoid 404 on alias
-                    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-001" });
+                // FALLBACK MODEL STRATEGY: Try Pinned Flash -> Generic Flash -> Legacy Pro
+                const modelsToTry = ["gemini-1.5-flash-001", "gemini-1.5-flash", "gemini-pro"];
+                let analyzed = false;
 
-                    const systemPrompt = `
+                for (const modelName of modelsToTry) {
+                    if (analyzed) break;
+                    try {
+                        // console.log(`🤖 Gemini Auditor: Attempting with ${modelName}...`);
+                        const model = genAI.getGenerativeModel({ model: modelName });
+
+                        const systemPrompt = `
                         ROL: Eres el AUDITOR DE RENDIMIENTO DEPORTIVO. Tu memoria es perfecta y abarca las últimas 30 sesiones.
                         FILOSOFÍA: "Los números no mienten, pero el contexto del usuario es la LEY."
                         
@@ -331,19 +337,21 @@ class JournalService {
                         }
                     `;
 
-                    const result = await model.generateContent(systemPrompt);
-                    const responseText = result.response.text();
-                    const cleanJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-                    const parsed = JSON.parse(cleanJson);
+                        const result = await model.generateContent(systemPrompt);
+                        const responseText = result.response.text();
+                        const cleanJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+                        const parsed = JSON.parse(cleanJson);
 
-                    aiContent = parsed.content;
-                    aiMood = parsed.mood;
-                    // Note: 'verdict' is currently not stored in DB, we inject it into content or handle it later. 
-                    // To keep DB schema simple, we'll PREPEND the verdict to the content formatted nicely.
-                    aiContent = `[${parsed.verdict}] ${aiContent}`;
+                        aiContent = parsed.content;
+                        aiMood = parsed.mood;
+                        // Note: 'verdict' is currently not stored in DB, we inject it into content or handle it later. 
+                        // To keep DB schema simple, we'll PREPEND the verdict to the content formatted nicely.
+                        aiContent = `[${parsed.verdict}] ${aiContent}`;
+                        analyzed = true; // Mark as success to exit loop
 
-                } catch (apiError) {
-                    console.error("Gemini API Error:", apiError);
+                    } catch (apiError) {
+                        console.warn(`Gemini Model ${modelName} Failed. Trying next...`, apiError);
+                    }
                 }
             }
 
