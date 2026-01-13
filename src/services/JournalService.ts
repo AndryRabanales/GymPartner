@@ -29,22 +29,22 @@ class JournalService {
     // FALLBACK PROMPTS (Formal & Professional - 3rd Person Auditor)
     private fallbackPrompts = {
         fire: [
-            "El atleta ha registrado un excelente rendimiento. Movió {volume}kg, lo que representa un aumento del {diff}% respecto a la sesión anterior. La progresión es sólida.",
+            "El usuario ha registrado un excelente rendimiento. Movió {volume}kg, lo que representa un aumento del {diff}% respecto a la sesión anterior. La progresión es sólida.",
             "Sesión muy productiva del usuario. Ha superado sus marcas anteriores y el volumen total de {volume}kg refleja un avance significativo en su capacidad de trabajo.",
             "Buen desempeño físico hoy. El usuario completó el entrenamiento con {volume}kg de carga total. La constancia está generando resultados medibles."
         ],
         ice: [
-            "Entrenamiento completado sin contratiempos. El atleta registró {volume}kg de volumen. Mantuve la técnica y la constancia, el objetivo del usuario debe ser aumentar la intensidad progresivamente.",
+            "Entrenamiento completado sin contratiempos. El usuario registró {volume}kg de volumen. Mantuve la técnica y la constancia, el objetivo del usuario debe ser aumentar la intensidad progresivamente.",
             "Sesión finalizada. {volume}kg acumulados. Fue un día de mantenimiento para el usuario; el enfoque estuvo en cumplir con la programación establecida.",
-            "Día de trabajo técnico. {volume}kg en total. No hubo récords personales, pero la regularidad del atleta es clave para su progreso a largo plazo."
+            "Día de trabajo técnico. {volume}kg en total. No hubo récords personales, pero la regularidad del usuario es clave para su progreso a largo plazo."
         ],
         skull: [
             "El usuario lleva {skipped} días sin registrar actividad. Es importante que retome la rutina para no perder las adaptaciones físicas ganadas.",
-            "Se ha detectado una pausa de {skipped} días en los entrenamientos del atleta. Necesita reorganizar su agenda para recuperar la frecuencia habitual.",
+            "Se ha detectado una pausa de {skipped} días en los entrenamientos del usuario. Necesita reorganizar su agenda para recuperar la frecuencia habitual.",
             "Inactividad detectada de {skipped} días. La consistencia es el factor más importante; el usuario debe volver al gimnasio lo antes posible."
         ],
         neutral: [
-            "Día de descanso activo o recuperación para el atleta. Es fundamental permitir que el cuerpo asimile el esfuerzo de las sesiones anteriores.",
+            "Día de descanso activo o recuperación para el usuario. Es fundamental permitir que el cuerpo asimile el esfuerzo de las sesiones anteriores.",
             "Sin datos recientes del usuario. Es un buen momento para revisar la planificación y establecer objetivos para la próxima semana."
         ]
     };
@@ -91,16 +91,16 @@ class JournalService {
         const today = new Date().toISOString().split('T')[0];
 
         // 0a. FETCH USER PROFILE (For 3rd Person Personalization)
-        let userName = "El Atleta";
+        let userName = "Usuario";
         try {
             const { data: profile } = await supabase
                 .from('profiles')
-                .select('full_name, username')
+                .select('full_name,username') // Removed space to prevent URL encoding issues
                 .eq('id', userId)
-                .single();
+                .maybeSingle(); // Safer than single()
 
             if (profile) {
-                userName = profile.full_name || profile.username || "El Atleta";
+                userName = profile.full_name || profile.username || "Usuario";
             }
         } catch (e) {
             console.warn("Could not fetch user profile for name, using default.", e);
