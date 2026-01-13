@@ -1602,7 +1602,15 @@ export const WorkoutSession = () => {
                             {/* Background FX */}
                             <div className="absolute -top-20 -right-20 w-64 h-64 bg-gym-primary/5 rounded-full blur-3xl pointer-events-none"></div>
 
-                            <div className="text-center">
+                            {/* Back Button */}
+                            <button
+                                onClick={() => navigate(-1)}
+                                className="absolute top-6 left-6 text-neutral-400 hover:text-white transition-colors p-2 hover:bg-white/5 rounded-full"
+                            >
+                                <ArrowLeft size={20} />
+                            </button>
+
+                            <div className="text-center pt-2">
                                 <h2 className="text-2xl font-black italic uppercase text-white tracking-tighter mb-1">Estrategia de Hoy</h2>
                                 <p className="text-neutral-500 font-bold text-sm">Selecciona una rutina o inicia libre.</p>
                             </div>
