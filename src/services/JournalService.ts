@@ -245,12 +245,29 @@ class JournalService {
                 skippedDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) - 1;
             }
 
-            // 4. PREPARE CONTEXT FOR AI (THE AUDITOR DOSSIER)
+            // 4. GATHER HISTORICAL CONTEXT (MEMORY)
+            // Fetch last 5 entries to give the AI a "Memory" of recent user notes/events
+            const { data: recentHistoryEntries } = await supabase
+                .from('ai_journals')
+                .select('date, user_note, mood')
+                .eq('user_id', userId)
+                .lt('date', today)
+                .order('date', { ascending: false })
+                .limit(5);
+
+            const narrativeHistory = recentHistoryEntries?.map(e => ({
+                date: e.date,
+                mood: e.mood,
+                note: e.user_note || "Sin nota"
+            })) || [];
+
+            // 5. PREPARE CONTEXT FOR AI (THE AUDITOR DOSSIER WITH MEMORY)
             const context = {
                 user_id: userId,
                 date: today,
                 routine_name: routineName || "Entrenamiento Libre",
-                user_input_context: userContext || "Sin comentarios del usuario.",
+                user_input_context: userContext || "Sin comentarios del usuario para hoy.",
+                past_user_notes: narrativeHistory, // NEW: Long-term memory
                 workouts_today: workoutsCount,
                 trained_muscles: Array.from(trainedMuscles),
                 performance: {
@@ -264,7 +281,7 @@ class JournalService {
                 }
             };
 
-            // 5. CALL GEMINI (THE AUDITOR)
+            // 6. CALL GEMINI (THE AUDITOR)
             let aiContent = "";
             let aiMood: 'fire' | 'ice' | 'skull' | 'neutral' = 'neutral';
 
@@ -273,7 +290,7 @@ class JournalService {
                     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
                     const systemPrompt = `
-                        ROL: Eres el AUDITOR DE RENDIMIENTO DEPORTIVO. Analizas datos puros y duros.
+                        ROL: Eres el AUDITOR DE RENDIMIENTO DEPORTIVO. Tu memoria es perfecta.
                         FILOSOFÍA: "Los números no mienten, pero el contexto importa."
                         
                         TONO: 100% Objetivo, Científico-Deportivo, Profesional.
@@ -284,10 +301,11 @@ class JournalService {
 
                         OBJETIVO:
                         1. Comparar sesión actual vs anterior.
-                        2. Determinar el enfoque fisiológico basado en DATOS:
-                           - Si subió Peso y bajaron/mantuvieron Reps -> Foco en FUERZA/INTENSIDAD.
-                           - Si subió Volumen/Reps con mismo Peso -> Foco en HIPERTROFIA/RESISTENCIA.
-                        3. Incorporar el "CONTEXTO DEL USUARIO" si existe (ej: lesiones, falta de sueño) para justificar bajones.
+                        2. Determinar el enfoque fisiológico (Fuerza vs Hipertrofia) basado en datos.
+                        3. **MEMORIA SINTETIZADA:** Analiza el "past_user_notes" (Historial de notas del usuario).
+                           - Si el usuario reportó lesión hace 2 sesiones y hoy bajó carga, MENCIONALO: "Coherente con lesión reportada el [fecha]".
+                           - Si el usuario dijo "voy a comer mejor" y hoy rompió PRs, MENCIONALO: "Posible correlación con dieta reportada".
+                           - Construye una narrativa continua, no solo analises el día aislado.
 
                         DATOS DE ENTRADA:
                         ${JSON.stringify(context, null, 2)}
@@ -295,8 +313,8 @@ class JournalService {
                         SALIDA REQUERIDA (JSON):
                         {
                             "mood": "fire" (Progreso Real) | "ice" (Mantenimiento/Deload) | "skull" (Regresión Injustificada),
-                            "verdict": "Resumen de 3-5 palabras. Ej: 'Fuerza +5%. Enfoque en Carga.'",
-                            "content": "Análisis. Si hubo progreso, explica si fue por Carga (Fuerza) o Volumen (Resistencia). NO asumas buena técnica ni sentimientos. Usa el contexto del usuario para explicar causas si es necesario."
+                            "verdict": "Resumen de 3-5 palabras. Ej: 'Fuerza +5%. Recuperación visible.'",
+                            "content": "Análisis fáctico. Conecta los puntos entre los datos de hoy y las notas pasadas del usuario. Si hay continuidad en sus comentarios (ej: dolor persistente), señálalo."
                         }
                     `;
 
