@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, BrainCircuit, Calendar, Save, Terminal, Flame, Snowflake, Skull, Minus, TrendingUp, TrendingDown, Sparkles } from 'lucide-react';
+import { ArrowLeft, BrainCircuit, Calendar, Save, Terminal, Flame, Snowflake, Skull, Minus, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { journalService, type JournalEntry } from '../services/JournalService';
 
