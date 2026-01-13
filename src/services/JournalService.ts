@@ -298,55 +298,52 @@ class JournalService {
                 const modelsToTry = ["gemini-1.5-flash-001", "gemini-1.5-flash", "gemini-pro"];
                 let analyzed = false;
 
-                // Construct Prompts for 1.5 Architecture
-                const systemInstructionText = `
-                        ROL: Eres el AUDITOR DE RENDIMIENTO DEPORTIVO. Tu memoria es perfecta y abarca las últimas 30 sesiones.
-                        FILOSOFÍA: "Los números no mienten, pero el contexto del usuario es la LEY."
-                        
-                        TONO: 100% Objetivo, Científico-Deportivo, Profesional.
-                        PERSPECTIVA: TERCERA PERSONA (El Observador).
-                        SUJETO: ${userName}. (Refiérete a él/ella por su nombre o como "el atleta"/"el usuario").
-                        IDIOMA: Español (Neutro).
-                        
-                        MANDAMIENTOS DE MEMORIA:
-                        1. **ADHERENCIA TOTAL A NOTAS:** Si el usuario escribió "Tomé pre-entreno" o "Meta: Hipertrofia" en CUALQUIERA de las últimas 30 notas, tómalo como un HECHO ACTUAL a menos que se contradiga después.
-                        2. **DETECTIVISMO DE 30 DÍAS:** Lee las "past_user_notes". Busca patrones a largo plazo. ¿El usuario dice "me duele la rodilla" recurrentemente? ¿Menciona suplementos? ÚSALO.
-                        3. **EVOLUCIÓN:** No mires solo hoy. ¿Está cumpliendo lo que dijo hace 3 semanas?
+                // 2026-01-13 FIX: Merge System Prompt into User Message to avoid "systemInstruction" 404/400 errors
+                // This is a compat-mode for Gemini 1.5 Flash 001 via current endpoint.
+                const combinedPrompt = `
+                    [SYSTEM INSTRUCTIONS]
+                    ROL: Eres el AUDITOR DE RENDIMIENTO DEPORTIVO. Tu memoria es perfecta y abarca las últimas 30 sesiones.
+                    FILOSOFÍA: "Los números no mienten, pero el contexto del usuario es la LEY."
+                    TONO: 100% Objetivo, Científico-Deportivo, Profesional.
+                    PERSPECTIVA: TERCERA PERSONA (El Observador).
+                    SUJETO: ${userName}.
+                    IDIOMA: Español (Neutro).
+                    
+                    MANDAMIENTOS DE MEMORIA:
+                    1. ADHERENCIA A NOTAS: Si el usuario escribió algo en las últimas 30 sesiones, ÚSALO.
+                    2. DETECTIVISMO: Busca patrones en "past_user_notes".
+                    3. EVOLUCIÓN: Compara con hace 3 semanas.
+                    
+                    PROHIBIDO: "Soldado", "Misión", "Guerra", "Batalla", Primera Persona ("Yo").
+                    PALABRAS CLAVE: Carga, Volumen, Intensidad Relativa, Frecuencia, Adaptación, Sobrecarga Progresiva.
 
-                        PROHIBIDO (Banneados): "Soldado", "Misión", "Guerra", "Batalla", "Técnica" (a menos que el usuario la mencione), "Intuir" (no adivines). USAR PRIMERA PERSONA ("Hoy registré", "Me sentí") ESTÁ PROHIBIDO.
-                        PALABRAS CLAVE: Carga, Volumen, Intensidad Relativa, Frecuencia, Adaptación, Sobrecarga Progresiva.
-
-                        SALIDA REQUERIDA (JSON):
-                        {
-                            "mood": "fire" | "ice" | "skull",
-                            "verdict": "Resumen de 3-5 palabras.",
-                            "content": "Análisis fáctico en TERCERA PERSONA."
-                        }
-                `;
-
-                const userPromptText = `
-                        OBJETIVO:
-                        1. Comparar sesión actual vs anterior.
-                        2. Determinar el enfoque fisiológico (Fuerza vs Hipertrofia) basado en datos.
-                        3. **MEMORIA SINTETIZADA:** Analiza el "past_user_notes" (Historial de 30 sesiones).
-                           - Si ${userName} dijo "tomé pre entreno" hace 5 sesiones y hoy rompe récord, di: "Consistente con uso de ayudas ergogénicas reportadas".
-                           - CONCLUYE SOBRE SU PLAN: Basado en las 30 notas, ¿cuál parece ser su objetivo real? (Fuerza, Estética, Salud).
-                           - Construye una narrativa continua sobre la evolución de ${userName}.
-
-                        DATOS DE ENTRADA:
-                        ${JSON.stringify(context, null, 2)}
+                    [USER REQUEST]
+                    OBJETIVO:
+                    1. Comparar sesión actual vs anterior.
+                    2. Determinar enfoque fisiológico.
+                    3. Analizar historial y notas (Memoria Sintetizada).
+                    
+                    DATOS DE ENTRADA:
+                    ${JSON.stringify(context, null, 2)}
+                    
+                    SALIDA REQUERIDA (JSON):
+                    {
+                        "mood": "fire" | "ice" | "skull",
+                        "verdict": "Resumen de 3-5 palabras.",
+                        "content": "Análisis fáctico en TERCERA PERSONA. Cita notas históricas si son relevantes."
+                    }
                 `;
 
                 for (const modelName of modelsToTry) {
                     if (analyzed) break;
                     try {
+                        // Use SIMPLEST config: Model name only (no systemInstruction param)
                         const model = genAI.getGenerativeModel({
                             model: modelName,
-                            systemInstruction: systemInstructionText,
-                            generationConfig: { responseMimeType: "application/json" }
+                            generationConfig: { responseMimeType: "application/json" } // Keep JSON safeguard
                         });
 
-                        const result = await model.generateContent(userPromptText);
+                        const result = await model.generateContent(combinedPrompt);
                         const responseText = result.response.text();
                         const cleanJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
                         const parsed = JSON.parse(cleanJson);
@@ -358,15 +355,12 @@ class JournalService {
 
                     } catch (apiError: any) {
                         console.warn(`⚠️ Gemini Model ${modelName} Failed.`);
-                        // console.error(apiError);
 
-                        // Specific diagnostic for 404 (Service Not Enabled)
                         if (apiError.toString().includes('404')) {
                             console.error("🔴 ERROR 404: API no habilitada o Modelo no encontrado.");
                         }
-                        // Specific diagnostic for 400 (Bad Request)
                         if (apiError.toString().includes('400')) {
-                            console.error("🔴 ERROR 400: Solicitud inválida. Revisa el formato JSON o la clave API.");
+                            console.error("🔴 ERROR 400: Solicitud inválida.");
                         }
                     }
                 }
@@ -383,7 +377,6 @@ class JournalService {
                         aiMood = 'ice';
                         aiContent = this.getRandomFallback('ice');
                     }
-                    // Simple replacement for fallback genericness
                     if (trainedMuscles.size > 0) {
                         aiContent += ` El enfoque principal fue: ${Array.from(trainedMuscles).join(', ')}.`;
                     }
@@ -398,7 +391,7 @@ class JournalService {
                 }
 
                 aiContent = aiContent
-                    .replace(/{userName}/g, finalUserName) // Replace ALL occurrences
+                    .replace(/{userName}/g, finalUserName)
                     .replace('{volume}', totalVolume.toLocaleString())
                     .replace('{diff}', volumeDiffPercent > 0 ? `+${volumeDiffPercent}` : `${volumeDiffPercent}`)
                     .replace('{skipped}', skippedDays.toString());
@@ -409,7 +402,7 @@ class JournalService {
                 total_volume: totalVolume,
                 volume_diff_percent: volumeDiffPercent,
                 workouts_count: workoutsCount,
-                prs_count: 0, // Need deeper logic for real PRs
+                prs_count: 0,
                 skipped_days: skippedDays,
                 avg_weekly_sessions: avgSessionsPerWeek,
                 muscles: Array.from(trainedMuscles)
