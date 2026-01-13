@@ -87,24 +87,11 @@ class JournalService {
      * GENERATE DAILY ANALYSIS (GEMINI POWERED - PROFESSIONAL MODE)
      * @param force If true, ignores existing entry and regenerates.
      */
-    async generateEntry(userId: string, force: boolean = false, userContext?: string): Promise<JournalEntry | null> {
+    async generateEntry(userId: string, userName: string, force: boolean = false, userContext?: string): Promise<JournalEntry | null> {
         const today = new Date().toISOString().split('T')[0];
 
-        // 0a. FETCH USER PROFILE (For 3rd Person Personalization)
-        let userName = "Usuario";
-        try {
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('full_name,username') // Removed space to prevent URL encoding issues
-                .eq('id', userId)
-                .maybeSingle(); // Safer than single()
-
-            if (profile) {
-                userName = profile.full_name || profile.username || "Usuario";
-            }
-        } catch (e) {
-            console.warn("Could not fetch user profile for name, using default.", e);
-        }
+        // 0. Use Provided Name (Safe Fallback)
+        const finalUserName = userName || "Usuario";
 
         try {
             // 0. CHECK FOR STALE DATA (Smart Refresh)
@@ -126,7 +113,7 @@ class JournalService {
                         // If DB has data but Entry says 0 -> FORCE REFRESH
                         if (count && count > 0) {
                             console.log("🔄 Smart Refresh: Validating Stale Entry (DB has workouts, Entry has 0)");
-                            return this.generateEntry(userId, true, userContext);
+                            return this.generateEntry(userId, finalUserName, true, userContext);
                         }
                     }
                     // Otherwise return cached

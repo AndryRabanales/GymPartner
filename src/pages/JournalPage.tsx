@@ -4,6 +4,8 @@ import { ArrowLeft, BrainCircuit, Calendar, Save, Terminal, Flame, Snowflake, Sk
 import { useAuth } from '../context/AuthContext';
 import { journalService, type JournalEntry } from '../services/JournalService';
 
+import { supabase } from '../lib/supabase';
+
 export const JournalPage = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
@@ -37,9 +39,6 @@ export const JournalPage = () => {
                     setUserNote(todayRecord.user_note || '');
 
                     // SMART REFRESH CHECK:
-                    // If today's entry says "0 workouts" (skull/neutral/metrics=0), 
-                    // we might have finished a workout AFTER this entry was created.
-                    // Let's ask the service to check.
                     if (todayRecord.metrics_snapshot.workouts_count === 0) {
                         console.log("🧐 Found weak entry for today. Attempting Smart Refresh...");
                         generateReport(false); // force=false lets the service decide based on DB count
@@ -61,9 +60,25 @@ export const JournalPage = () => {
         try {
             // Artificial delay for "Thinking" effect
             await new Promise(r => setTimeout(r, 1500));
+
+            // FETCH NAME (Safe Strategy: Metadata -> Profile -> Default)
+            let userName = user?.user_metadata?.full_name || "Usuario";
+            try {
+                // Try to get "Agent Name" (Username) from profiles if set
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('username') // Select ONLY username (full_name doesn't exist)
+                    .eq('id', user!.id)
+                    .maybeSingle();
+
+                if (profile?.username) userName = profile.username;
+            } catch (e) {
+                console.warn("Name fetch fallback used", e);
+            }
+
             // Pass the current userNote as context if we are forcing a refresh (Re-diagnose)
             // If it's an auto-refresh (force=false), userNote might be empty which is fine.
-            const entry = await journalService.generateEntry(user!.id, force, userNote);
+            const entry = await journalService.generateEntry(user!.id, userName, force, userNote);
             if (entry) {
                 setTodayEntry(entry);
                 setUserNote(entry.user_note || '');
