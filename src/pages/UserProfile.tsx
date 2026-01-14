@@ -21,7 +21,7 @@ import { StreakFlame } from '../components/gamification/StreakFlame';
 import { alphaService } from '../services/AlphaService';
 import { useBottomNav } from '../context/BottomNavContext';
 import { TierService } from '../services/TierService';
-import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
+
 
 
 interface ProfileData {
@@ -72,7 +72,7 @@ export const UserProfile = () => {
     const [alphaHistory, setAlphaHistory] = useState<any[]>([]);
 
     // TUTORIAL STATE
-    const [tutorialStep, setTutorialStep] = useState(0);
+
 
     // NEW: Base Creation Modal State
     const [startConfirmationModal, setStartConfirmationModal] = useState<{
@@ -85,51 +85,6 @@ export const UserProfile = () => {
     // NEW: Auto-Start Overlay State
     const [autoStartGymName, setAutoStartGymName] = useState<string | null>(null);
     const [startLoading, setStartLoading] = useState(false);
-
-    useEffect(() => {
-        console.log('[TUTORIAL] Current Step State:', tutorialStep);
-        if (tutorialStep === 5) {
-            setTimeout(() => {
-                const el = document.getElementById('tut-find-gyms-btn');
-                console.log('[TUTORIAL] Step 5 Target found?', !!el);
-            }, 500);
-        }
-    }, [tutorialStep]);
-
-    useEffect(() => {
-        // Check URL for tutorial override (from redirect)
-        const params = new URLSearchParams(window.location.search);
-        const urlTutorialStep = params.get('tutorial');
-
-        if (urlTutorialStep) {
-            const step = parseInt(urlTutorialStep);
-            console.log('[TUTORIAL] Loading from URL param:', step);
-            setTutorialStep(step);
-            localStorage.setItem('tutorial_step', step.toString());
-            // Clean URL
-            window.history.replaceState({}, '', '/');
-            return;
-        }
-
-        // Resume tutorial if active
-        const savedStep = localStorage.getItem('tutorial_step');
-        if (savedStep) {
-            const step = parseInt(savedStep);
-            console.log('[TUTORIAL] Resuming from localStorage:', step);
-            setTutorialStep(step);
-        } else {
-            // START TUTORIAL AUTOMATICALLY IF NEW USER (First time)
-            const hasSeen = localStorage.getItem('hasSeenGlobalTutorial');
-            if (!hasSeen) {
-                console.log('[TUTORIAL] New user detected, starting tutorial');
-                setTimeout(() => {
-                    setTutorialStep(1);
-                    localStorage.setItem('tutorial_step', '1');
-                    localStorage.setItem('hasSeenGlobalTutorial', 'true');
-                }, 1000);
-            }
-        }
-    }, [navigate]);
 
     useEffect(() => {
         if (user) {
@@ -732,7 +687,7 @@ export const UserProfile = () => {
                     </div>
                 </button>
 
-                <Link id="tut-global-arsenal-btn" to="/arsenal" onClick={() => { if (tutorialStep === 1) localStorage.setItem('tutorial_step', '2'); }} className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-blue-500/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md">
+                <Link to="/arsenal" className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-blue-500/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md">
                     <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-blue-500/5 flex items-center justify-center group-hover:scale-110 transition-transform border border-blue-500/10">
                         <Dumbbell className="text-blue-500 w-4 h-4 md:w-6 md:h-6" />
                     </div>
@@ -769,7 +724,7 @@ export const UserProfile = () => {
                         Mis Ubicaciones
                     </h2>
                     <button
-                        id="tut-find-gyms-btn"
+
                         onClick={() => navigate('/map')}
                         className="flex items-center gap-2 px-4 py-2 rounded-full bg-gym-primary/10 border border-gym-primary/30 text-gym-primary text-xs font-black uppercase tracking-widest hover:bg-gym-primary hover:text-black transition-all hover:scale-105 hover:shadow-[0_0_15px_rgba(229,255,0,0.3)]"
                     >
@@ -784,12 +739,7 @@ export const UserProfile = () => {
 
                         return (
                             <div
-                                id={`tut-gym-card-${index}`}
                                 key={gym.gym_id}
-                                onClick={() => {
-                                    if (localStorage.getItem('tutorial_step') === '3') localStorage.setItem('tutorial_step', '4');
-                                    if (localStorage.getItem('tutorial_step') === '5') localStorage.setItem('tutorial_step', '6');
-                                }}
                                 className={`bg-neutral-900 border ${gym.is_home_base ? 'border-yellow-500/50' : 'border-neutral-800'} p-3 md:p-6 rounded-xl md:rounded-2xl flex items-center justify-between group hover:border-gym-primary/30 transition-all shadow-sm relative overflow-hidden h-24 md:h-32`}
                                 style={{
                                     backgroundImage: gym.custom_bg_url ? `url(${gym.custom_bg_url})` : undefined,
@@ -943,77 +893,6 @@ export const UserProfile = () => {
 
 
 
-            {/* TUTORIAL STEP 1: Global Arsenal (Create Routine) */}
-            {
-                tutorialStep === 1 && (
-                    <InteractiveOverlay
-                        targetId="tut-global-arsenal-btn"
-                        title="PASO 1: CREAR MIS RUTINAS"
-                        message="Haz clic en 'Crear mis Rutinas' para crear tu primer plan de entrenamiento."
-                        step={1}
-                        totalSteps={7}
-                        onNext={() => { }}
-                        onClose={() => {
-                            setTutorialStep(0);
-                            localStorage.setItem('tutorial_step', '0');
-                            localStorage.setItem('hasSeenGlobalTutorial', 'true'); // Pivot point: Mark GLOBAL as seen
-                            localStorage.setItem('hasSeenImportTutorial', 'true');
-                        }}
-                        placement="top"
-                        disableNext={true}
-                    />
-                )
-            }
-
-            {/* TUTORIAL STEP 5: Find Gym on Map */}
-            {
-                tutorialStep === 5 && (
-                    <InteractiveOverlay
-                        targetId="tut-find-gyms-btn"
-                        title="PASO 5: BUSCA TU GIMNASIO"
-                        message="Haz clic en 'Encontrar Gimnasios' para ir al mapa. Luego, usa el buscador para encontrar tu gimnasio (ej: 'Spartanos') y selecciónalo para agregarlo a tu mapa."
-                        step={5}
-                        totalSteps={7}
-                        onNext={() => { }}
-                        onClose={() => {
-                            setTutorialStep(0);
-                            localStorage.setItem('tutorial_step', '0');
-                        }}
-                        placement="bottom"
-                        disableNext={true}
-                    />
-                )
-            }
-
-            {/* TUTORIAL STEP 7: Start Workout (Final) */}
-            {
-                tutorialStep === 7 && !locationError.isOpen && (
-                    <InteractiveOverlay
-                        targetId="tut-start-workout-btn-0"
-                        title="PASO FINAL: INICIAR ENTRENAMIENTO"
-                        message="¡Todo listo! Inicia tu entrenamiento (Verificación GPS requerida)."
-                        step={7}
-                        totalSteps={7}
-                        onNext={() => {
-                            setTutorialStep(0);
-                            localStorage.setItem('tutorial_step', '0'); // Fixes persistence loop
-                            localStorage.setItem('hasSeenImportTutorial', 'true');
-                        }}
-                        onClose={() => {
-                            setTutorialStep(0);
-                            localStorage.setItem('tutorial_step', '0'); // Fixes persistence loop
-                            localStorage.setItem('hasSeenImportTutorial', 'true');
-                        }}
-                        placement="top"
-                        disableNext={false}
-                        nextLabel="ENTENDIDO"
-                    />
-                )
-            }
-
-
-
-
 
             {/* MODALS */}
             <ReferralModal
@@ -1031,46 +910,7 @@ export const UserProfile = () => {
 
             />
 
-            {/* TUTORIAL STEP 6 Overlay (Configuration) */}
-            {
-                tutorialStep === 6 && userGyms.length > 0 && (
-                    <InteractiveOverlay
-                        targetId={`tut-config-gym-btn-${userGyms.length - 1}`}
-                        title="PASO 6: PREPARATIVOS"
-                        message="¡Base establecida! Ahora entra a configurar el equipo de tu gimnasio."
-                        step={6}
-                        totalSteps={8}
-                        onClose={() => { }}
-                        placement="top"
-                        nonBlocking={true}
-                        disableNext={true}
-                    />
-                )
-            }
 
-            {/* TUTORIAL STEP 8 Overlay (Start Training) */}
-            {
-                tutorialStep === 8 && userGyms.length > 0 && (
-                    <InteractiveOverlay
-                        targetId={`tut-start-workout-btn-${userGyms.length - 1}`}
-                        title="PASO 8: ¡A ENTRENAR!"
-                        message="Tu gimnasio está listo. Inicia tu entrenamiento y comienza a ganar experiencia."
-                        step={8}
-                        totalSteps={8}
-                        nextLabel="¡EMPEZAR!"
-                        onNext={() => {
-                            setTutorialStep(0);
-                            localStorage.setItem('tutorial_step', '0');
-                        }}
-                        onClose={() => {
-                            setTutorialStep(0);
-                            localStorage.setItem('tutorial_step', '0');
-                        }}
-                        placement="top"
-                        nonBlocking={true}
-                    />
-                )
-            }
 
             {/* NEW: STRATEGIC BASE CREATION MODAL */}
             {/* NEW: SMART START CONFIRMATION MODAL */}

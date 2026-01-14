@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Search, ChevronRight, Check, Swords, Loader, Trash2, Dumbbell, Save, Edit2, X } from 'lucide-react';
 import { userService } from '../services/UserService';
-import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
+
 import type { Equipment } from '../services/GymEquipmentService';
 import { equipmentService, COMMON_EQUIPMENT_SEEDS, EQUIPMENT_CATEGORIES } from '../services/GymEquipmentService';
 import type { CustomSettings } from '../services/GymEquipmentService';
@@ -53,12 +53,7 @@ export const MyArsenal = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
 
-    // TUTORIAL STATE
-    const [tutorialStep, setTutorialStep] = useState(0);
-    useEffect(() => {
-        const step = localStorage.getItem('tutorial_step');
-        if (step) setTutorialStep(parseInt(step));
-    }, []);
+
 
     // Custom Exercise State
     // Custom Exercise State (Simplified for EquipmentForm)
@@ -195,17 +190,6 @@ export const MyArsenal = () => {
         try {
             await workoutService.importRoutine(user.id, sourceRoutine.id, routeGymId);
             await initialize(); // Refresh
-            setImportingMode(false);
-
-            // TUTORIAL ADVANCE: Step 7 -> 8 (Go to Training)
-            if (localStorage.getItem('tutorial_step') === '7') {
-                localStorage.setItem('tutorial_step', '8');
-                setTutorialStep(8);
-                alert("¡Inventario Listo!\n\nRegresando al inicio para iniciar el entrenamiento.");
-                navigate(-1); // Go back immediately to WorkoutSession/Profile
-            } else {
-                alert("¡Rutina Importada con éxito!");
-            }
         } catch (error) {
             console.error(error);
             alert("Error al importar rutina.");
@@ -355,12 +339,6 @@ export const MyArsenal = () => {
         setRoutineConfigs(new Map());
         setViewMode('MACHINES');
         setSearchTerm('');
-
-        // TUTORIAL ADVANCE: Step 2 -> 3
-        if (tutorialStep === 2) {
-            setTutorialStep(3);
-            localStorage.setItem('tutorial_step', '3');
-        }
     };
 
     const handleDeleteRoutine = async (routineId: string, routineName: string) => {
@@ -619,32 +597,6 @@ export const MyArsenal = () => {
                     if (updateError) throw updateError;
                 }
                 alert("¡Nueva rutina guardada!");
-
-                // TUTORIAL LOGIC:
-                // Step 4 (Creation Save) -> Step 5 (Profile Select Gym)
-                // Step 6 (Import Save) -> Step 7 (Profile Start)
-                const currentStep = localStorage.getItem('tutorial_step');
-                console.log('[TUTORIAL] Saving routine, current step:', currentStep);
-
-                // Allow 2, 3, 4, 5
-                if (currentStep && ['2', '3', '4', '5'].includes(currentStep)) {
-                    console.log('[TUTORIAL] Transitioning to step 5 and redirecting to home');
-                    localStorage.setItem('tutorial_step', '5');
-                    setTutorialStep(5);
-
-                    // Force full page reload to UserProfile with explicit tutorial param
-                    window.location.href = '/?tutorial=5';
-                    return; // Exit early
-                }
-                // Note: Import logic handles Step 6 elsewhere usually, or if Save handles imports too:
-                if (currentStep === '6' && routeGymId) {
-                    console.log('[TUTORIAL] Import completed, transitioning to step 7');
-                    localStorage.setItem('tutorial_step', '7');
-                    setTutorialStep(7);
-                    alert("¡Rutina importada con éxito!\n\nRegresa al INICIO para comenzar el entrenamiento.");
-                    navigate(-1); // Go back to UserProfile
-                    return;
-                }
             }
 
             // Reset
@@ -671,7 +623,7 @@ export const MyArsenal = () => {
                     {/* Header - Compact */}
                     <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6 md:mb-12">
                         <div className="flex items-center gap-3">
-                            <Link id="tut-arsenal-back-btn" to="/" className="w-8 h-8 md:w-12 md:h-12 flex items-center justify-center bg-neutral-900 rounded-full hover:bg-neutral-800 hover:text-gym-primary transition-all border border-neutral-800 shrink-0">
+                            <Link to="/" className="w-8 h-8 md:w-12 md:h-12 flex items-center justify-center bg-neutral-900 rounded-full hover:bg-neutral-800 hover:text-gym-primary transition-all border border-neutral-800 shrink-0">
                                 <ArrowLeft size={16} className="md:w-6 md:h-6" />
                             </Link>
                             <div>
@@ -688,7 +640,6 @@ export const MyArsenal = () => {
                         {!routeGymId ? (
                             // GLOBAL: Create New Master
                             <button
-                                id="tut-new-routine-btn"
                                 onClick={handleCreateNew}
                                 className="bg-neutral-900 border border-neutral-800 hover:border-gym-primary/50 hover:bg-neutral-800 p-6 rounded-2xl flex flex-col items-center justify-center gap-4 group transition-all h-[200px]"
                             >
@@ -701,7 +652,6 @@ export const MyArsenal = () => {
                             // GYM: Create OR Import
                             <div className="flex gap-2 h-[200px]">
                                 <button
-                                    id="tut-new-routine-btn"
                                     onClick={handleCreateNew}
                                     className="flex-1 bg-neutral-900 border border-neutral-800 hover:border-gym-primary/50 hover:bg-neutral-800 p-4 rounded-2xl flex flex-col items-center justify-center gap-2 group transition-all"
                                 >
@@ -711,7 +661,6 @@ export const MyArsenal = () => {
                                     <span className="font-bold text-xs uppercase text-neutral-400 group-hover:text-white">Crear</span>
                                 </button>
                                 <button
-                                    id="tut-import-routine-btn"
                                     onClick={() => setImportingMode(true)}
                                     className="flex-1 bg-neutral-900 border border-neutral-800 hover:border-blue-500/50 hover:bg-neutral-800 p-4 rounded-2xl flex flex-col items-center justify-center gap-2 group transition-all"
                                 >
