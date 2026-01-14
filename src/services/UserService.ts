@@ -63,6 +63,30 @@ class UserService {
         }
     }
 
+    // Upload Gym Card Background
+    async uploadGymBackground(userId: string, gymId: string, file: File): Promise<{ url?: string; error?: any }> {
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${userId}-${gymId}-${Math.random()}.${fileExt}`;
+            const filePath = `backgrounds/${fileName}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('gym-assets')
+                .upload(filePath, file);
+
+            if (uploadError) throw uploadError;
+
+            const { data } = supabase.storage
+                .from('gym-assets')
+                .getPublicUrl(filePath);
+
+            return { url: data.publicUrl };
+        } catch (error) {
+            console.error('Error uploading background:', error);
+            return { error };
+        }
+    }
+
     // Update User Gym Customization (Background & Color)
     async updateUserGymCustomization(userId: string, gymId: string, styles: { custom_bg_url?: string, custom_color?: string }) {
         try {

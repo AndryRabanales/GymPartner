@@ -820,16 +820,31 @@ export const UserProfile = () => {
                                 {/* Customization Controls (Visible on Hover/Focus) */}
                                 <div className="relative z-10 flex gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
                                     <button
-                                        className="p-2 bg-black/50 hover:bg-black/80 backdrop-blur-sm rounded-full text-white border border-white/10 hover:border-gym-primary/50 transition-all"
+                                        className="p-2 bg-black/50 hover:bg-black/80 backdrop-blur-sm rounded-full text-white border border-white/10 hover:border-gym-primary/50 transition-all relative overflow-hidden"
                                         title="Cambiar Fondo"
-                                        onClick={() => {
-                                            const url = prompt("Ingresa URL de la imagen de fondo:");
-                                            if (url) {
-                                                userService.updateUserGymCustomization(user!.id, gym.gym_id, { custom_bg_url: url }).then(() => loadUserData());
-                                            }
-                                        }}
                                     >
                                         <ImageIcon size={16} />
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="absolute inset-0 opacity-0 cursor-pointer"
+                                            onChange={async (e) => {
+                                                const file = e.target.files?.[0];
+                                                if (file) {
+                                                    // 1. Upload
+                                                    const { url, error } = await userService.uploadGymBackground(user!.id, gym.gym_id, file);
+
+                                                    if (url) {
+                                                        // 2. Save URL to DB & Reload
+                                                        await userService.updateUserGymCustomization(user!.id, gym.gym_id, { custom_bg_url: url });
+                                                        loadUserData();
+                                                    } else {
+                                                        alert("Error al subir la imagen. Verifica tu conexión.");
+                                                        console.error(error);
+                                                    }
+                                                }
+                                            }}
+                                        />
                                     </button>
                                     <button
                                         className="p-2 bg-black/50 hover:bg-black/80 backdrop-blur-sm rounded-full text-white border border-white/10 hover:border-gym-primary/50 transition-all relative overflow-hidden"
