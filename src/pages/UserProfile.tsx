@@ -839,8 +839,19 @@ export const UserProfile = () => {
                                         <input
                                             type="color"
                                             className="absolute inset-0 opacity-0 cursor-pointer"
+                                            value={gym.custom_color || '#171717'} // Ensure controlled input for sync
+                                            onInput={(e) => {
+                                                // Optimistic update for Live Preview
+                                                const newColor = (e.target as HTMLInputElement).value;
+                                                setUserGyms(prev => prev.map(g => g.gym_id === gym.gym_id ? { ...g, custom_color: newColor } : g));
+                                            }}
                                             onChange={(e) => {
-                                                userService.updateUserGymCustomization(user!.id, gym.gym_id, { custom_color: e.target.value }).then(() => loadUserData());
+                                                // Final commit to DB on release/close
+                                                const newColor = e.target.value;
+                                                userService.updateUserGymCustomization(user!.id, gym.gym_id, { custom_color: newColor }).then(() => {
+                                                    // Optional: Reload purely to sync precise state if needed, but optimistic was likely accurate
+                                                    // loadUserData(); 
+                                                });
                                             }}
                                         />
                                     </button>
