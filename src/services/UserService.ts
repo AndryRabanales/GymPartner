@@ -67,17 +67,17 @@ class UserService {
     async uploadGymBackground(userId: string, gymId: string, file: File): Promise<{ url?: string; error?: any }> {
         try {
             const fileExt = file.name.split('.').pop();
-            const fileName = `${userId}-${gymId}-${Math.random()}.${fileExt}`;
+            const fileName = `gym-bg-${userId}-${gymId}-${Math.random()}.${fileExt}`;
             const filePath = `backgrounds/${fileName}`;
 
             const { error: uploadError } = await supabase.storage
-                .from('gym-assets')
+                .from('avatars') // ✅ Using existing bucket
                 .upload(filePath, file);
 
             if (uploadError) throw uploadError;
 
             const { data } = supabase.storage
-                .from('gym-assets')
+                .from('avatars')
                 .getPublicUrl(filePath);
 
             return { url: data.publicUrl };
