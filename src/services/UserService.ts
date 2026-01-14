@@ -63,6 +63,22 @@ class UserService {
         }
     }
 
+    // Update User Gym Customization (Background & Color)
+    async updateUserGymCustomization(userId: string, gymId: string, styles: { custom_bg_url?: string, custom_color?: string }) {
+        try {
+            const { error } = await supabase
+                .from('user_gyms')
+                .update(styles)
+                .match({ user_id: userId, gym_id: gymId });
+
+            if (error) throw error;
+            return { success: true };
+        } catch (error) {
+            console.error('Error updating gym customization:', error);
+            return { success: false, error };
+        }
+    }
+
     // Add a gym to the user's passport
     async addGymToPassport(userId: string, gymPlace: GymPlace): Promise<{ success: boolean; error?: string; gym_id?: string; xp_gained?: number }> {
         try {

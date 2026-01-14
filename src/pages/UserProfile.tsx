@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { MapPin, Edit2, LogIn, Loader, Swords, Dumbbell, LineChart, History, Star, Search, ArrowLeft, ArrowRight, Crown, BrainCircuit, Map as MapIcon } from 'lucide-react';
+import { MapPin, Edit2, LogIn, Loader, Swords, Dumbbell, LineChart, History, Star, Search, ArrowLeft, ArrowRight, Crown, BrainCircuit, Map as MapIcon, Image as ImageIcon, Palette } from 'lucide-react'; // Added ImageIcon, Palette
 // import { UserPlus, Grid } from 'lucide-react'; // UNUSED: Hidden Community Features
 // import { Grid } from 'lucide-react'; // UNUSED: Hidden Community Features
 import { Link, useNavigate } from 'react-router-dom';
@@ -783,11 +783,25 @@ export const UserProfile = () => {
 
 
                         return (
-                            <div id={`tut-gym-card-${index}`} key={gym.gym_id} onClick={() => {
-                                if (localStorage.getItem('tutorial_step') === '3') localStorage.setItem('tutorial_step', '4');
-                                if (localStorage.getItem('tutorial_step') === '5') localStorage.setItem('tutorial_step', '6');
-                            }} className={`bg-neutral-900 border ${gym.is_home_base ? 'border-yellow-500/50 shadow-[0_0_20px_rgba(234,179,8,0.1)]' : 'border-neutral-800'} p-3 md:p-6 rounded-xl md:rounded-2xl flex items-center justify-between group hover:border-gym-primary/30 transition-colors shadow-sm relative overflow-hidden`}>
-                                <div className="flex-1 min-w-0 mr-3">
+                            <div
+                                id={`tut-gym-card-${index}`}
+                                key={gym.gym_id}
+                                onClick={() => {
+                                    if (localStorage.getItem('tutorial_step') === '3') localStorage.setItem('tutorial_step', '4');
+                                    if (localStorage.getItem('tutorial_step') === '5') localStorage.setItem('tutorial_step', '6');
+                                }}
+                                className={`bg-neutral-900 border ${gym.is_home_base ? 'border-yellow-500/50' : 'border-neutral-800'} p-3 md:p-6 rounded-xl md:rounded-2xl flex items-center justify-between group hover:border-gym-primary/30 transition-all shadow-sm relative overflow-hidden h-24 md:h-32`}
+                                style={{
+                                    backgroundImage: gym.custom_bg_url ? `url(${gym.custom_bg_url})` : undefined,
+                                    backgroundSize: 'cover',
+                                    backgroundPosition: 'center',
+                                    backgroundColor: gym.custom_color || '#171717' // Default neutral-900
+                                }}
+                            >
+                                {/* Overlay for readability if BG exists */}
+                                <div className={`absolute inset-0 bg-black/60 transition-opacity ${gym.custom_bg_url ? 'opacity-70 group-hover:opacity-80' : 'opacity-0'}`} />
+
+                                <div className="flex-1 min-w-0 mr-3 relative z-10">
                                     <h3 className={`font-bold text-sm md:text-lg mb-0.5 md:mb-1 transition-colors truncate max-w-[200px] md:max-w-none flex items-center gap-2 ${gym.is_home_base ? 'text-yellow-400' : 'text-white'}`}>
                                         {gym.gym_name}
                                         {gym.is_home_base && <Star size={14} fill="currentColor" className="text-yellow-500" />}
@@ -799,11 +813,38 @@ export const UserProfile = () => {
                                                 SEDE PRINCIPAL
                                             </span>
                                         )}
-                                        <span>Items: {gym.equipment_count || 0}</span>
+                                        <span className="text-neutral-300">Items: {gym.equipment_count || 0}</span>
                                     </div>
                                 </div>
 
-
+                                {/* Customization Controls (Visible on Hover/Focus) */}
+                                <div className="relative z-10 flex gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                                    <button
+                                        className="p-2 bg-black/50 hover:bg-black/80 backdrop-blur-sm rounded-full text-white border border-white/10 hover:border-gym-primary/50 transition-all"
+                                        title="Cambiar Fondo"
+                                        onClick={() => {
+                                            const url = prompt("Ingresa URL de la imagen de fondo:");
+                                            if (url) {
+                                                userService.updateUserGymCustomization(user!.id, gym.gym_id, { custom_bg_url: url }).then(() => loadUserData());
+                                            }
+                                        }}
+                                    >
+                                        <ImageIcon size={16} />
+                                    </button>
+                                    <button
+                                        className="p-2 bg-black/50 hover:bg-black/80 backdrop-blur-sm rounded-full text-white border border-white/10 hover:border-gym-primary/50 transition-all relative overflow-hidden"
+                                        title="Cambiar Color"
+                                    >
+                                        <Palette size={16} />
+                                        <input
+                                            type="color"
+                                            className="absolute inset-0 opacity-0 cursor-pointer"
+                                            onChange={(e) => {
+                                                userService.updateUserGymCustomization(user!.id, gym.gym_id, { custom_color: e.target.value }).then(() => loadUserData());
+                                            }}
+                                        />
+                                    </button>
+                                </div>
                             </div>
                         );
                     })}
