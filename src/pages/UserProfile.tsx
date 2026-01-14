@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { MapPin, Edit2, LogIn, Loader, Swords, Dumbbell, LineChart, History, Star, Search, ArrowLeft, ArrowRight, Crown, BrainCircuit, Map as MapIcon, Image as ImageIcon, Palette } from 'lucide-react'; // Added ImageIcon, Palette
+import { MapPin, Edit2, LogIn, Loader, Swords, Dumbbell, LineChart, History, Star, Search, ArrowLeft, ArrowRight, Crown, BrainCircuit, Map as MapIcon, Image as ImageIcon, Palette, Dices } from 'lucide-react'; // Added Dices
 // import { UserPlus, Grid } from 'lucide-react'; // UNUSED: Hidden Community Features
 // import { Grid } from 'lucide-react'; // UNUSED: Hidden Community Features
 import { Link, useNavigate } from 'react-router-dom';
@@ -850,10 +850,27 @@ export const UserProfile = () => {
                                                 const newColor = e.target.value;
                                                 userService.updateUserGymCustomization(user!.id, gym.gym_id, { custom_color: newColor }).then(() => {
                                                     // Optional: Reload purely to sync precise state if needed, but optimistic was likely accurate
-                                                    // loadUserData(); 
+                                                    // loadUserData();
                                                 });
                                             }}
                                         />
+                                    </button>
+                                    <button
+                                        className="p-2 bg-black/50 hover:bg-black/80 backdrop-blur-sm rounded-full text-white border border-white/10 hover:border-gym-primary/50 transition-all transform active:scale-95 active:rotate-180 duration-500"
+                                        title="Color Aleatorio"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            // 1. Generate Random Color
+                                            const randomColor = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+
+                                            // 2. Optimistic Update (Immediate Feedback)
+                                            setUserGyms(prev => prev.map(g => g.gym_id === gym.gym_id ? { ...g, custom_color: randomColor } : g));
+
+                                            // 3. Save to DB
+                                            userService.updateUserGymCustomization(user!.id, gym.gym_id, { custom_color: randomColor });
+                                        }}
+                                    >
+                                        <Dices size={16} />
                                     </button>
                                 </div>
                             </div>
