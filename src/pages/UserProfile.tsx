@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { MapPin, Edit2, LogIn, Loader, Swords, Dumbbell, LineChart, History, Star, Search, ArrowLeft, ArrowRight, Crown, BrainCircuit } from 'lucide-react';
+import { MapPin, Edit2, LogIn, Loader, Swords, Dumbbell, LineChart, History, Star, Search, ArrowLeft, ArrowRight, Crown, BrainCircuit, Map as MapIcon } from 'lucide-react';
 // import { UserPlus, Grid } from 'lucide-react'; // UNUSED: Hidden Community Features
 // import { Grid } from 'lucide-react'; // UNUSED: Hidden Community Features
 import { Link, useNavigate } from 'react-router-dom';
@@ -53,7 +53,7 @@ export const UserProfile = () => {
     const hasSeededRef = useRef(false); // Track if we've run the seeder
 
     const navigate = useNavigate();
-    const [verifyingLocation, setVerifyingLocation] = useState<string | null>(null); // Gym ID being verified
+
 
     // Modal State
     const [showReferralModal, setShowReferralModal] = useState(false);
@@ -166,115 +166,7 @@ export const UserProfile = () => {
      * GEOLOCATION SECURITY CHECK
      * Users must be within range (e.g. 200m) of the gym to start a workout.
      */
-    const handleStartWorkout = async (gym: UserPrimaryGym) => {
-        console.log("📍 Verificando Ubicación para:", gym.gym_name, { lat: gym.lat, lng: gym.lng });
 
-        // 1. SPECIAL CASE: PERSONAL GYM (Intentionally 0,0) -> ALLOW
-        if (gym.lat === 0 && gym.lng === 0) {
-            console.log("🏠 Personal Gym Detected - Bypassing Location Check");
-            navigate(`/territory/${gym.gym_id}/workout`);
-            return;
-        }
-
-        // 2. ERROR CASE: MISSING COORDINATES -> BLOCK
-        if (!gym.lat || !gym.lng) {
-            setLocationError({
-                isOpen: true,
-                gymName: gym.gym_name,
-                distanceMeters: null,
-                errorType: 'NO_COORDS'
-            });
-            return;
-        }
-
-        setVerifyingLocation(gym.gym_id);
-
-        if (!navigator.geolocation) {
-            setLocationError({
-                isOpen: true,
-                gymName: gym.gym_name,
-                distanceMeters: null,
-                errorType: 'GPS_ERROR'
-            });
-            setVerifyingLocation(null);
-            return;
-        }
-
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const userLat = position.coords.latitude;
-                const userLng = position.coords.longitude;
-
-                // Calculate Distance
-                const distanceKm = getDistanceFromLatLonInKm(userLat, userLng, gym.lat!, gym.lng!);
-                const distanceMeters = distanceKm * 1000;
-
-                console.log(`[Location Check] Gym: ${gym.gym_name}, Dist: ${distanceMeters.toFixed(2)}m`);
-
-                // Threshold: 100m (Strict Gym Perimiter)
-                const ALLOWED_RADIUS_METERS = 100; // 0.1km
-
-                if (distanceMeters <= ALLOWED_RADIUS_METERS) {
-                    // SUCCESS - VERIFIED LOCATION
-
-                    // CHECK: First Verification Reward?
-                    const checkFirstVisit = async () => {
-                        try {
-                            // Check if any sessions exist for this user at this gym
-                            const { count } = await supabase
-                                .from('workout_sessions')
-                                .select('*', { count: 'exact', head: true })
-                                .eq('user_id', user!.id)
-                                .eq('gym_id', gym.gym_id);
-
-                            if (count === 0) {
-                                // FIRST DEPLOYMENT!
-                                console.log("🎉 FIRST DEPLOYMENT DETECTED! Awarding XP...");
-                                const xpResult = await userService.addXP(user!.id, 500);
-                                if (xpResult.success) {
-                                    alert(`🎖️ GIMNASIO REGISTRADO: +500 XP\n\nBienvenido a ${gym.gym_name}. Tu primera visita ha sido recompensada.`);
-                                }
-                            }
-                        } catch (err) {
-                            console.error("Error checking first visit:", err);
-                        }
-
-                        // COMPLETE TUTORIAL if active (Step 7 -> Done)
-                        if (localStorage.getItem('tutorial_step') === '7') {
-                            localStorage.setItem('tutorial_step', '0');
-                            localStorage.setItem('hasSeenImportTutorial', 'true');
-                            setTutorialStep(0);
-                        }
-
-                        // Proceed to workout
-                        navigate(`/territory/${gym.gym_id}/workout`);
-                    };
-
-                    checkFirstVisit();
-                } else {
-                    // FAIL
-                    setLocationError({
-                        isOpen: true,
-                        gymName: gym.gym_name,
-                        distanceMeters: distanceMeters,
-                        errorType: 'DISTANCE'
-                    });
-                }
-                setVerifyingLocation(null);
-            },
-            (error) => {
-                console.error("Geolocation Error:", error);
-                setLocationError({
-                    isOpen: true,
-                    gymName: gym.gym_name,
-                    distanceMeters: null,
-                    errorType: 'GPS_ERROR'
-                });
-                setVerifyingLocation(null);
-            },
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-        );
-    };
 
     const loadUserData = async () => {
         try {
@@ -784,7 +676,7 @@ export const UserProfile = () => {
                                 setAutoStartGymName(nearbyGym.gym_name);
                                 await new Promise(r => setTimeout(r, 2000)); // 2s delay to read the message
 
-                                await handleStartWorkout(nearbyGym);
+                                await navigate(`/territory/${nearbyGym.gym_id}/workout`);
                                 setAutoStartGymName(null); // Reset (though we navigated away)
                             } else {
                                 // 2. No known gym nearby -> Prompt "No Gym Detected" (Hidden: Create Base)
@@ -1159,7 +1051,7 @@ export const UserProfile = () => {
                                         setStartConfirmationModal({ isOpen: false, type: 'NO_GYM' }); // Close first
 
                                         if (type === 'GYM_FOUND' && gymData) {
-                                            handleStartWorkout(gymData);
+                                            navigate(`/territory/${gymData.gym_id}/workout`);
                                         } else if (type === 'NO_GYM' && location) {
                                             // Handle "Strategic Base" creation silently
                                             try {
@@ -1187,7 +1079,7 @@ export const UserProfile = () => {
                                                         lng: location.lng,
                                                         equipment_count: 0
                                                     };
-                                                    handleStartWorkout(newGym);
+                                                    navigate(`/territory/${newGym.gym_id}/workout`);
                                                 } else {
                                                     setLocationError({
                                                         isOpen: true,
@@ -1219,47 +1111,44 @@ export const UserProfile = () => {
 
             {/* NEW: AUTO-START OVERLAY */}
             {autoStartGymName && (
-                <div className="fixed inset-0 z-[110] flex flex-col items-center justify-center bg-black/90 backdrop-blur-xl animate-in fade-in duration-300">
-                    <div className="w-24 h-24 mb-6 rounded-full bg-gym-primary/20 flex items-center justify-center animate-pulse shadow-[0_0_50px_rgba(250,204,21,0.3)]">
-                        <MapPin size={48} className="text-gym-primary animate-bounce" />
-                    </div>
 
-                    <div className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center animate-in fade-in duration-500">
-                        <div className="relative mb-8">
-                            <div className="absolute inset-0 bg-yellow-500/20 rounded-full blur-xl animate-pulse"></div>
-                            <MapIcon className="relative z-10 text-yellow-500 animate-bounce" size={64} />
-                        </div>
-                        <h2 className="text-2xl font-black italic uppercase text-white tracking-widest mb-2 text-center">
-                            INICIANDO ENTRENAMIENTO<br />
-                            <span className="text-yellow-400">EN LUGAR DESCONOCIDO</span>
-                        </h2>
-                        <div className="flex gap-2">
-                            <div className="w-3 h-3 bg-yellow-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                            <div className="w-3 h-3 bg-yellow-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                            <div className="w-3 h-3 bg-yellow-500 rounded-full animate-bounce"></div>
-                        </div>
+
+                <div className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center animate-in fade-in duration-500">
+                    <div className="relative mb-8">
+                        <div className="absolute inset-0 bg-yellow-500/20 rounded-full blur-xl animate-pulse"></div>
+                        <MapIcon className="relative z-10 text-yellow-500 animate-bounce" size={64} />
                     </div>
+                    <h2 className="text-2xl font-black italic uppercase text-white tracking-widest mb-2 text-center">
+                        INICIANDO ENTRENAMIENTO<br />
+                        <span className="text-yellow-400">EN LUGAR DESCONOCIDO</span>
+                    </h2>
+                    <div className="flex gap-2">
+                        <div className="w-3 h-3 bg-yellow-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                        <div className="w-3 h-3 bg-yellow-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                        <div className="w-3 h-3 bg-yellow-500 rounded-full animate-bounce"></div>
+                    </div>
+                </div>
             )}
-                </div >
-            );
+        </div >
+    );
 };
 
-            // --- HELPER FUNCTIONS ---
+// --- HELPER FUNCTIONS ---
 
-            function getDistanceFromLatLonInKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+function getDistanceFromLatLonInKm(lat1: number, lon1: number, lat2: number, lon2: number) {
     const R = 6371; // Radius of the earth in km
-            const dLat = deg2rad(lat2 - lat1);  // deg2rad below
-            const dLon = deg2rad(lon2 - lon1);
-            const a =
-            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-            Math.sin(dLon / 2) * Math.sin(dLon / 2)
-            ;
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            const d = R * c; // Distance in km
-            return d;
+    const dLat = deg2rad(lat2 - lat1);  // deg2rad below
+    const dLon = deg2rad(lon2 - lon1);
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2)
+        ;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const d = R * c; // Distance in km
+    return d;
 }
 
-            function deg2rad(deg: number) {
+function deg2rad(deg: number) {
     return deg * (Math.PI / 180)
 }
