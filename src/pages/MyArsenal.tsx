@@ -672,41 +672,7 @@ export const MyArsenal = () => {
                             </div>
                         )}
 
-                        {/* TUTORIAL OVERLAY STEP 2 (Create Routine) */}
-                        {tutorialStep === 2 && !addingMode && !importingMode && (
-                            <InteractiveOverlay
-                                targetId="tut-new-routine-btn"
-                                title="PASO 2: NUEVA RUTINA"
-                                message="Haz clic aquí para crear una nueva rutina personalizada desde cero."
-                                step={2}
-                                totalSteps={7}
-                                onNext={() => { }}
-                                onClose={() => {
-                                    setTutorialStep(0);
-                                    localStorage.setItem('hasSeenImportTutorial', 'true');
-                                }}
-                                placement="bottom"
-                                disableNext={true}
-                            />
-                        )}
 
-                        {/* TUTORIAL OVERLAY STEP 7 (Import Strategy) */}
-                        {tutorialStep === 7 && !addingMode && !importingMode && (
-                            <InteractiveOverlay
-                                targetId="tut-import-routine-btn"
-                                title="PASO 7: DESPLIEGUE RÁPIDO"
-                                message="Tu base está vacía. Haz clic en 'IMPORTAR MAESTRA' para equiparla con tu estrategia predefinida."
-                                step={7}
-                                totalSteps={8}
-                                onNext={() => { }}
-                                onClose={() => {
-                                    setTutorialStep(0);
-                                    localStorage.setItem('hasSeenImportTutorial', 'true');
-                                }}
-                                placement="top"
-                                disableNext={true}
-                            />
-                        )}
 
                         {/* Existing Routines */}
                         {
@@ -767,7 +733,6 @@ export const MyArsenal = () => {
                                     </button>
                                     {routeGymId && (
                                         <button
-                                            id="tut-import-routine-btn"
                                             onClick={() => setImportingMode(true)}
                                             className="bg-neutral-800 text-white font-bold px-8 py-3 rounded-xl hover:bg-neutral-700 transition-all border border-neutral-700"
                                         >
@@ -779,20 +744,7 @@ export const MyArsenal = () => {
                         )}
                     </div>
 
-                    {/* TUTORIAL STEP 5 FALLBACK: Guide user back to Profile if they land here */}
-                    {tutorialStep === 5 && (
-                        <InteractiveOverlay
-                            step={5}
-                            totalSteps={7}
-                            targetId="tut-arsenal-back-btn"
-                            title="¡ESTRATEGIA FORJADA!"
-                            message="Has creado tu primera rutina maestra. Ahora regresa a tu perfil para desplegarla en un gimnasio real."
-                            placement="bottom"
-                            onNext={() => { navigate('/'); }}
-                            nextLabel="VOLVER AL INICIO"
-                            onClose={() => { }}
-                        />
-                    )}
+
 
                     {/* IMPORT MODAL (Local Mode Only) */}
                     {importingMode && (
@@ -888,17 +840,10 @@ export const MyArsenal = () => {
                         {/* Routine Name Input */}
                         <div className="w-full md:w-1/3">
                             <input
-                                id="tut-routine-name-input"
                                 type="text"
                                 placeholder="Nombre de la Rutina (Obligatorio)..."
                                 value={routineName}
-                                onChange={(e) => {
-                                    setRoutineName(e.target.value);
-                                    if (tutorialStep === 3 && e.target.value.length > 0) {
-                                        setTutorialStep(4);
-                                        localStorage.setItem('tutorial_step', '4');
-                                    }
-                                }}
+                                onChange={(e) => setRoutineName(e.target.value)}
                                 required
                                 className={`w-full bg-white/5 border rounded-xl px-4 py-3 text-base text-white placeholder-white/30 focus:outline-none focus:bg-white/10 transition-all font-medium ${!routineName.trim() ? 'border-red-500/50 focus:border-red-500' : 'border-white/10 focus:border-gym-primary/50'}`}
                             />
@@ -924,45 +869,7 @@ export const MyArsenal = () => {
             {/* MAIN CONTENT AREA */}
             <div className="max-w-7xl mx-auto px-4 md:px-6 pb-32 w-full relative">
 
-                {/* TUTORIAL STEP 3: NAME STRATEGY */}
-                {tutorialStep === 3 && (
-                    <InteractiveOverlay
-                        targetId="tut-routine-name-input"
-                        title="PASO 3: BAUTIZA TU ESTRATEGIA"
-                        message="Toda gran rutina comienza con un nombre. Escribe cómo llamarás a este plan de entrenamiento."
-                        step={3}
-                        totalSteps={7}
-                        placement="bottom"
-                        onClose={() => {
-                            setTutorialStep(0);
-                            localStorage.setItem('tutorial_step', '0');
-                        }}
-                        disableNext={true}
-                    />
-                )}
 
-                {/* TUTORIAL STEP 4: SELECT WEAPONS AND SAVE */}
-                {tutorialStep === 4 && (
-                    <InteractiveOverlay
-                        targetId={selectedItems.size > 0 ? "tut-save-routine-btn-mobile" : "tut-arsenal-grid"}
-                        title={selectedItems.size > 0 ? "PASO 4: GUARDA TU RUTINA" : "PASO 4: ELIGE TUS EJERCICIOS"}
-                        message={selectedItems.size > 0
-                            ? "¡Perfecto! Ahora haz clic en el botón verde ✓ para guardar tu rutina y continuar."
-                            : "Selecciona las máquinas y ejercicios que formarán parte de esta rutina. Solo haz clic en ellas."}
-                        step={4}
-                        totalSteps={7}
-                        placement="top"
-                        onNext={() => {
-                            // Do nothing - tutorial continues to Step 5 after save
-                        }}
-                        nextLabel={selectedItems.size > 0 ? "¡A GUARDAR!" : "¡Entendido!"}
-                        onClose={() => {
-                            setTutorialStep(0);
-                            localStorage.setItem('tutorial_step', '0');
-                        }}
-                        disableNext={true}
-                    />
-                )}
 
 
                 {/* Visual Stats Bar */}
@@ -1008,19 +915,11 @@ export const MyArsenal = () => {
                         <div className="flex-1 max-w-xl relative group">
                             <div className="absolute inset-0 bg-gradient-to-r from-gym-primary/20 to-transparent blur-xl opacity-0 group-hover:opacity-100 transition-opacity rounded-full pointer-events-none"></div>
                             <input
-                                id="tut-routine-name-input"
                                 type="text"
                                 placeholder="Nombre de la Nueva Rutina..."
                                 className="w-full bg-black/50 border-2 border-white/10 rounded-2xl px-6 py-4 text-xl font-bold text-white placeholder-neutral-600 focus:border-gym-primary focus:outline-none focus:ring-4 focus:ring-gym-primary/10 transition-all shadow-inner"
                                 value={routineName}
-                                onChange={(e) => {
-                                    setRoutineName(e.target.value);
-                                    // TUTORIAL ADVANCE: Step 3 -> 4
-                                    if (tutorialStep === 3 && e.target.value.length > 2) {
-                                        setTutorialStep(4);
-                                        localStorage.setItem('tutorial_step', '4');
-                                    }
-                                }}
+                                onChange={(e) => setRoutineName(e.target.value)}
                             />
                             <div className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-600 pointer-events-none">
                                 <Edit2 size={18} />
@@ -1036,7 +935,6 @@ export const MyArsenal = () => {
                             </button>
 
                             <button
-                                id="tut-save-routine-btn"
                                 onClick={handleSaveRoutine}
                                 disabled={!routineName || isSaving || selectedItems.size === 0}
                                 className="bg-gym-primary text-black px-8 py-4 rounded-xl font-black tracking-wide hover:shadow-[0_0_20px_rgba(250,204,21,0.4)] hover:scale-105 transition-all text-sm sm:text-base flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group relative overflow-hidden"
@@ -1056,41 +954,7 @@ export const MyArsenal = () => {
                 </div>
             )}
 
-            {/* TUTORIAL STEP 3 (Routine Name) */}
-            {tutorialStep === 3 && (
-                <InteractiveOverlay
-                    targetId="tut-routine-name-input"
-                    title="PASO 3: PONER NOMBRE OBLIGATORIO"
-                    message="Escribe un nombre épico para tu nueva rutina (ej: 'Pecho Legendario')."
-                    step={3}
-                    totalSteps={7}
-                    onNext={() => { }}
-                    onClose={() => {
-                        setTutorialStep(0);
-                        localStorage.setItem('hasSeenImportTutorial', 'true');
-                    }}
-                    placement="top"
-                    disableNext={true}
-                />
-            )}
 
-            {/* TUTORIAL STEP 4 (Final Creation) */}
-            {tutorialStep === 4 && (
-                <InteractiveOverlay
-                    targetId="tut-save-routine-btn"
-                    title="PASO 4: SELECCIONAR Y GUARDAR"
-                    message="Guarda tu nueva rutina. Esto te mandará al inicio para que vayas al mapa."
-                    step={4}
-                    totalSteps={7}
-                    onNext={() => { }}
-                    onClose={() => {
-                        setTutorialStep(0);
-                        localStorage.setItem('hasSeenImportTutorial', 'true');
-                    }}
-                    placement="top"
-                    disableNext={true}
-                />
-            )}
         </div>
     );
 };
