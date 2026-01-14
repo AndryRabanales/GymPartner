@@ -15,6 +15,7 @@ export const JournalPage = () => {
     const [generating, setGenerating] = useState(false);
     const [userNote, setUserNote] = useState('');
     const [savingNote, setSavingNote] = useState(false);
+    const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null); // NEW: For details modal
 
     useEffect(() => {
         if (user) {
@@ -293,7 +294,10 @@ export const JournalPage = () => {
                                     {/* DOT */}
                                     <div className={`absolute -left-[29px] top-1.5 w-3 h-3 rounded-full border-2 border-[#0a0a0a] ${entryConfig.bg.replace('/5', '')} ${entryConfig.color} shadow-[0_0_10px_rgba(0,0,0,0.5)] z-10`} />
 
-                                    <div className="bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10 rounded-xl p-4 transition-all duration-300 backdrop-blur-md">
+                                    <div
+                                        onClick={() => setSelectedEntry(entry)}
+                                        className="bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10 rounded-xl p-4 transition-all duration-300 backdrop-blur-md cursor-pointer hover:scale-[1.02] active:scale-95"
+                                    >
                                         <div className="flex justify-between items-start mb-2">
                                             <div className="flex items-center gap-2">
                                                 {/* Mini Icon */}
@@ -321,6 +325,79 @@ export const JournalPage = () => {
                     </div>
                 </section>
             </div>
-        </div>
+
+
+            {/* DETAILS MODAL (REUSED DESIGN) */}
+            {
+                selectedEntry && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl animate-in fade-in duration-200" onClick={() => setSelectedEntry(null)}>
+                        <div className="w-full max-w-lg relative" onClick={e => e.stopPropagation()}>
+                            {(() => {
+                                const modalStyle = getMoodConfig(selectedEntry.mood);
+                                return (
+                                    <div className={`relative rounded-3xl p-[1px] bg-gradient-to-b from-white/10 to-transparent shadow-2xl ${modalStyle.glow}`}>
+                                        {/* DYNAMIC BORDER GRADIENT */}
+                                        <div className={`absolute inset-0 rounded-3xl bg-gradient-to-br ${selectedEntry.mood === 'fire' ? 'from-orange-500/20' : selectedEntry.mood === 'ice' ? 'from-blue-500/20' : selectedEntry.mood === 'skull' ? 'from-red-500/20' : 'from-white/5'} to-transparent opacity-50 blur-sm`} />
+
+                                        <div className="relative bg-[#0F0F0F] rounded-[23px] overflow-hidden">
+                                            {/* HEADER */}
+                                            <div className="p-6 border-b border-white/5 flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`p-2 rounded-full bg-white/5 border border-white/10 ${modalStyle.color}`}>
+                                                        {modalStyle.icon}
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-[10px] text-neutral-500 uppercase tracking-widest font-bold">{new Date(selectedEntry.date).toLocaleDateString()}</div>
+                                                        <div className={`text-base font-bold ${modalStyle.color}`}>{modalStyle.label}</div>
+                                                    </div>
+                                                </div>
+                                                <button onClick={() => setSelectedEntry(null)} className="p-2 bg-white/5 rounded-full hover:bg-white/10 text-neutral-400 hover:text-white transition-colors">
+                                                    <Minus size={20} className="rotate-45" />
+                                                </button>
+                                            </div>
+
+                                            {/* CONTENT */}
+                                            <div className="p-6 md:p-8 space-y-6">
+                                                {/* METRICS ROW */}
+                                                <div className="flex gap-4">
+                                                    <div className="flex-1 bg-white/5 rounded-xl p-3 border border-white/5 text-center">
+                                                        <div className="text-[10px] text-neutral-500 uppercase">Volumen</div>
+                                                        <div className="text-xl font-mono font-bold text-white">{selectedEntry.metrics_snapshot.total_volume.toLocaleString()}</div>
+                                                    </div>
+                                                    <div className="flex-1 bg-white/5 rounded-xl p-3 border border-white/5 text-center">
+                                                        <div className="text-[10px] text-neutral-500 uppercase">Sesiones</div>
+                                                        <div className="text-xl font-mono font-bold text-white">{selectedEntry.metrics_snapshot.workouts_count}</div>
+                                                    </div>
+                                                </div>
+
+                                                {/* TEXT */}
+                                                <div>
+                                                    <h3 className="text-xl font-bold text-white mb-2 leading-tight">
+                                                        {selectedEntry.content.match(/^\[(.*?)\]/)?.[1] || "Análisis Histórico"}
+                                                    </h3>
+                                                    <p className="text-base text-neutral-300 font-light leading-relaxed">
+                                                        {selectedEntry.content.replace(/^\[.*?\]\s*/, '')}
+                                                    </p>
+                                                </div>
+
+                                                {/* USER NOTE IF EXISTS */}
+                                                {selectedEntry.user_note && (
+                                                    <div className="bg-neutral-900/50 rounded-xl p-4 border border-white/5">
+                                                        <div className="flex items-center gap-2 text-[10px] font-bold text-neutral-500 uppercase mb-2">
+                                                            <Save size={12} /> Nota de Usuario
+                                                        </div>
+                                                        <p className="text-sm text-neutral-400 italic">"{selectedEntry.user_note}"</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+                        </div>
+                    </div>
+                )
+            }
+        </div >
     );
 };
