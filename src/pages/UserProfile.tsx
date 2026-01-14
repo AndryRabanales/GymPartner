@@ -1012,25 +1012,7 @@ export const UserProfile = () => {
                 )
             }
 
-            <div className="flex flex-col items-center gap-4 mt-12 pb-12 opacity-50 hover:opacity-100 transition-opacity">
-                <button
-                    onClick={() => {
-                        // 1. Force Scroll Top Instantly
-                        window.scrollTo(0, 0);
 
-                        // 2. Restart Unified Flow (Step 1)
-                        localStorage.removeItem('hasSeenImportTutorial');
-                        localStorage.setItem('tutorial_step', '1');
-                        setTutorialStep(0); // Force re-render
-                        setTimeout(() => {
-                            setTutorialStep(1);
-                        }, 50);
-                    }}
-                    className="flex items-center gap-2 px-8 py-3 rounded-full border border-neutral-800 bg-neutral-900/50 text-neutral-400 text-xs font-bold hover:bg-gym-primary/10 hover:text-white hover:border-gym-primary/50 transition-all uppercase tracking-widest"
-                >
-                    <span>INICIAR TUTORIAL</span>
-                </button>
-            </div>
 
 
 
