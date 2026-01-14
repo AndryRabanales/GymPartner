@@ -317,24 +317,11 @@ export const WorkoutSession = () => {
                 setLoading(false);
 
             } else {
-                console.log('✨ No hay sesión activa. Iniciando nueva batalla AUTOMÁTICAMENTE.');
+                console.log('✨ No hay sesión activa. Esperando input del usuario...');
 
-                // AUTO-START LOGIC (Replaces the need for "Battle Order Ready" Confirmation)
-                try {
-                    const { data: newSession, error: startError } = await workoutService.startSession(userId, resolvedGymId || undefined);
-                    if (startError) throw startError;
-
-                    if (newSession) {
-                        setSessionId(newSession.id);
-                        setStartTime(new Date());
-                        setElapsedTime("00:00");
-                        setIsFinished(false);
-                        console.log('🚀 Sessión auto-iniciada:', newSession.id);
-                    }
-                } catch (err) {
-                    console.error("Error auto-starting session:", err);
-                    alert("Error iniciando la sesión. Intenta recargar.");
-                }
+                // DO NOT START SESSION HERE. WAIT FOR USER ACTION.
+                setSessionId(null);
+                setStartTime(null);
 
                 // If no routines exist, auto-open "Add Exercise" modal (All Exercises)
                 // If routines exist, prompt choices (Start Options Modal)
@@ -351,6 +338,26 @@ export const WorkoutSession = () => {
             console.error('❌ Error en initializeBattle:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const startNewSession = async () => {
+        if (!user) return;
+        try {
+            console.log("🚀 Starting NEW Session explicitly...");
+            const { data: newSession, error: startError } = await workoutService.startSession(user.id, resolvedGymId || undefined);
+            if (startError) throw startError;
+
+            if (newSession) {
+                setSessionId(newSession.id);
+                setStartTime(new Date());
+                setElapsedTime("00:00");
+                setIsFinished(false);
+                console.log('✅ Session started:', newSession.id);
+            }
+        } catch (err) {
+            console.error("Error starting session:", err);
+            alert("Error al iniciar sesión. Intenta nuevamente.");
         }
     };
 
@@ -1621,6 +1628,7 @@ export const WorkoutSession = () => {
                                     <button
                                         key={routine.id}
                                         onClick={() => {
+                                            startNewSession(); // START TIMER HERE
                                             loadRoutine(routine);
                                             setCurrentRoutineName(routine.name);
                                             setShowStartOptionsModal(false);
@@ -1648,6 +1656,7 @@ export const WorkoutSession = () => {
                             {/* Quick Start Button */}
                             <button
                                 onClick={() => {
+                                    startNewSession(); // START TIMER HERE
                                     setShowStartOptionsModal(false);
                                     setShowAddModal(true); // Open the exercise picker directly
                                 }}
