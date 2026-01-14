@@ -762,7 +762,7 @@ export const UserProfile = () => {
             </div >
 
             {/* TERRITORIES SECTION (PASSPORT) */}
-            < div className="space-y-4" >
+            <div className="space-y-4">
                 <div className="flex items-center justify-between">
                     <h2 className="text-2xl font-bold text-white flex items-center gap-2 tracking-tight">
                         <MapPin className="text-gym-primary" />
@@ -811,7 +811,7 @@ export const UserProfile = () => {
                     {/* Add New Territory Button */}
 
                 </div>
-            </div >
+            </div>
 
             {/* Add Gym Modal */}
 
@@ -1129,7 +1129,7 @@ export const UserProfile = () => {
                     </div>
                 </div>
             )}
-        </div >
+        </div>
     );
 };
 
