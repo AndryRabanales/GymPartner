@@ -813,7 +813,6 @@ export const UserProfile = () => {
                                                 SEDE PRINCIPAL
                                             </span>
                                         )}
-                                        <span className="text-neutral-300">Items: {gym.equipment_count || 0}</span>
                                     </div>
                                 </div>
 
