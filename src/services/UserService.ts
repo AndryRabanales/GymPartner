@@ -11,6 +11,8 @@ export interface UserPrimaryGym {
     lat?: number;
     lng?: number;
     equipment_count?: number;
+    custom_bg_url?: string;
+    custom_color?: string;
 }
 
 class UserService {
@@ -24,6 +26,8 @@ class UserService {
                     gym_id,
                     since,
                     is_home_base,
+                    custom_bg_url,
+                    custom_color,
                     gyms (
                         id,
                         name,
@@ -48,7 +52,9 @@ class UserService {
                 is_home_base: item.is_home_base,
                 lat: item.gyms.lat,
                 lng: item.gyms.lng,
-                equipment_count: item.gyms.gym_equipment?.[0]?.count || 0
+                equipment_count: item.gyms.gym_equipment?.[0]?.count || 0,
+                custom_bg_url: item.custom_bg_url,
+                custom_color: item.custom_color
             }));
 
         } catch (error) {
