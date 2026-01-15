@@ -11,6 +11,8 @@ export const Radar = () => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [scanComplete, setScanComplete] = useState(false);
     const initialized = useRef(false);
+    const [direction, setDirection] = useState<'left' | 'right' | null>(null);
+    const [isAnimating, setIsAnimating] = useState(false);
 
     // Initial Scan specific logic
     const handleScan = () => {
@@ -70,28 +72,35 @@ export const Radar = () => {
     // Card Actions
     const handleNext = () => {
         // Infinite Loop Logic
-        if (nearbyUsers.length === 0) return;
+        if (nearbyUsers.length === 0 || isAnimating) return;
         setCurrentIndex((prev) => (prev + 1) % nearbyUsers.length);
     };
 
     const handleAction = async (action: 'skip' | 'train') => {
+        if (isAnimating) return;
+
+        // Set animation direction
+        setDirection(action === 'skip' ? 'left' : 'right');
+        setIsAnimating(true);
+
+        // Wait for animation
+        await new Promise(resolve => setTimeout(resolve, 300));
+
         // Here we could add logic to save the "Like/Pass"
         if (action === 'train') {
             console.log(`Reclutando a ${nearbyUsers[currentIndex].username}`);
 
-            // Send Invitation
-            // Note: In a real app we might want to show a success toast here
             if (nearbyUsers[currentIndex].user_id) {
-                // Get current user name for the notification (Mock or Context)
-                // Ideally this comes from AuthContext, but let's assume "Un Aliado" if generic
-                // NotificationService handles sender ID internally via Auth.
                 const success = await notificationService.sendInvitation(nearbyUsers[currentIndex].user_id, "Un Aliado");
                 if (success) {
                     alert("¡Invitación enviada!");
                 }
             }
         }
+
         handleNext();
+        setDirection(null);
+        setIsAnimating(false);
     };
 
     const currentUser = nearbyUsers.length > 0 ? nearbyUsers[currentIndex] : null;
@@ -126,15 +135,35 @@ export const Radar = () => {
 
                 {/* LOADING */}
                 {loading && (
-                    <div className="flex-1 flex flex-col items-center justify-center space-y-4">
-                        <div className="w-12 h-12 border-3 border-gym-primary border-t-transparent rounded-full animate-spin"></div>
-                        <p className="text-gym-primary font-bold animate-pulse tracking-widest text-[10px] uppercase">Escanenado sector...</p>
+                    <div className="flex-1 flex flex-col items-center justify-center space-y-6 p-8">
+                        {/* Skeleton Card */}
+                        <div className="w-full max-w-sm bg-neutral-900 rounded-2xl overflow-hidden animate-pulse">
+                            <div className="h-48 bg-neutral-800"></div>
+                            <div className="p-6 space-y-4">
+                                <div className="w-24 h-24 bg-neutral-800 rounded-full mx-auto -mt-16"></div>
+                                <div className="h-6 bg-neutral-800 rounded w-3/4 mx-auto"></div>
+                                <div className="h-4 bg-neutral-800 rounded w-1/2 mx-auto"></div>
+                                <div className="h-12 bg-neutral-800 rounded"></div>
+                            </div>
+                        </div>
+                        <p className="text-gym-primary font-bold animate-pulse tracking-widest text-xs uppercase">Escaneando sector...</p>
                     </div>
                 )}
 
                 {/* ACTIVE CARD CONTAINER - FLEX STRETCH */}
                 {scanComplete && nearbyUsers.length > 0 && currentUser && !loading && (
-                    <div className="flex-1 flex flex-col relative bg-neutral-900 animate-in fade-in slide-in-from-bottom-8 duration-500 w-full mb-0 rounded-b-none">
+                    <div
+                        className={`flex-1 flex flex-col relative bg-neutral-900 w-full mb-0 rounded-b-none transition-all duration-300 ${direction === 'left' ? 'animate-[slideOutLeft_0.3s_ease-out_forwards]' :
+                                direction === 'right' ? 'animate-[slideOutRight_0.3s_ease-out_forwards]' :
+                                    'animate-in fade-in slide-in-from-bottom-8 duration-500'
+                            }`}
+                        style={{
+                            transform: direction === 'left' ? 'translateX(-100%) rotate(-10deg)' :
+                                direction === 'right' ? 'translateX(100%) rotate(10deg)' :
+                                    'translateX(0) rotate(0)',
+                            opacity: direction ? 0 : 1,
+                        }}
+                    >
 
                         {/* --- BANNER SECTION (Compact 38%) --- */}
                         <div className="basis-[38%] shrink-0 relative w-full bg-neutral-800 overflow-hidden">
@@ -183,9 +212,16 @@ export const Radar = () => {
                                         {currentUser.gym_name}
                                     </span>
                                 </div>
-                                <p className="text-neutral-400 text-[10px] font-medium leading-relaxed line-clamp-2 px-2 max-w-xs text-opacity-80 text-center">
-                                    {currentUser.description || "Sin descripción."}
+                                <p className="text-neutral-300 text-sm font-medium leading-relaxed px-6 max-w-md text-center mt-3 min-h-[60px]">
+                                    {currentUser.description || "✨ Sin descripción aún"}
                                 </p>
+
+                                {/* Card Counter */}
+                                <div className="mt-2 px-3 py-1 bg-neutral-800/50 rounded-full border border-neutral-700/50">
+                                    <span className="text-xs font-bold text-neutral-400">
+                                        {currentIndex + 1} de {nearbyUsers.length}
+                                    </span>
+                                </div>
                             </div>
 
                             {/* Middle Stats Group */}
@@ -209,15 +245,17 @@ export const Radar = () => {
                             {/* REJECT BUTTON - Minimalist Outline */}
                             <button
                                 onClick={() => handleAction('skip')}
-                                className="w-14 h-14 rounded-full border border-neutral-800 bg-neutral-900/50 backdrop-blur-sm text-neutral-500 flex items-center justify-center hover:bg-neutral-800 hover:text-white transition-colors active:scale-95"
+                                disabled={isAnimating}
+                                className="w-14 h-14 rounded-full border-2 border-neutral-700 bg-neutral-900/80 backdrop-blur-sm text-neutral-400 flex items-center justify-center hover:bg-neutral-800 hover:text-white hover:border-neutral-600 hover:scale-110 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                             >
-                                <X size={24} strokeWidth={2} />
+                                <X size={24} strokeWidth={2.5} />
                             </button>
 
                             {/* ACCEPT BUTTON - Solid Capsule "Pro" Style */}
                             <button
                                 onClick={() => handleAction('train')}
-                                className="h-14 px-8 rounded-full bg-gym-primary text-black flex items-center gap-3 shadow-lg shadow-yellow-900/20 hover:bg-yellow-400 hover:scale-105 transition-all active:scale-95"
+                                disabled={isAnimating}
+                                className="h-14 px-8 rounded-full bg-gradient-to-r from-gym-primary to-yellow-400 text-black flex items-center gap-3 shadow-xl shadow-yellow-500/30 hover:shadow-yellow-500/50 hover:scale-105 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <UserPlus size={20} strokeWidth={2.5} />
                                 <span className="text-sm font-black uppercase tracking-widest">Invitar</span>
