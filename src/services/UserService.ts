@@ -525,6 +525,28 @@ class UserService {
         }
     }
 
+    // Update user description (for Radar cards)
+    async updateUserDescription(userId: string, description: string): Promise<{ success: boolean; error?: string }> {
+        try {
+            // Validate description length
+            if (description.length > 150) {
+                return { success: false, error: 'La descripción debe tener máximo 150 caracteres.' };
+            }
+
+            const { error } = await supabase
+                .from('profiles')
+                .update({ description: description.trim() })
+                .eq('id', userId);
+
+            if (error) throw error;
+            return { success: true };
+        } catch (error: any) {
+            console.error('Error updating description:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+
     // Toggle Routine Visibility (Public/Private)
     async updateRoutineVisibility(routineId: string, isPublic: boolean): Promise<{ success: boolean; error?: string }> {
         try {

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { radarService, type RadarUser } from '../services/RadarService';
 import { notificationService } from '../services/NotificationService';
 import { Radar as RadarIcon, Dumbbell, X, UserPlus } from 'lucide-react';
+import { useSwipe } from '../hooks/useSwipe';
 
 export const Radar = () => {
     const [nearbyUsers, setNearbyUsers] = useState<RadarUser[]>([]);
@@ -13,6 +14,13 @@ export const Radar = () => {
     const initialized = useRef(false);
     const [direction, setDirection] = useState<'left' | 'right' | null>(null);
     const [isAnimating, setIsAnimating] = useState(false);
+
+    // Swipe Hook
+    const { swipeState, handlers: swipeHandlers } = useSwipe({
+        onSwipeLeft: () => !isAnimating && handleAction('skip'),
+        onSwipeRight: () => !isAnimating && handleAction('train'),
+        threshold: 100
+    });
 
     // Initial Scan specific logic
     const handleScan = () => {
@@ -153,15 +161,21 @@ export const Radar = () => {
                 {/* ACTIVE CARD CONTAINER - FLEX STRETCH */}
                 {scanComplete && nearbyUsers.length > 0 && currentUser && !loading && (
                     <div
-                        className={`flex-1 flex flex-col relative bg-neutral-900 w-full mb-0 rounded-b-none transition-all duration-300 ${direction === 'left' ? 'animate-[slideOutLeft_0.3s_ease-out_forwards]' :
-                                direction === 'right' ? 'animate-[slideOutRight_0.3s_ease-out_forwards]' :
-                                    'animate-in fade-in slide-in-from-bottom-8 duration-500'
+                        {...swipeHandlers}
+                        className={`flex-1 flex flex-col relative bg-neutral-900 w-full mb-0 rounded-b-none transition-all duration-300 select-none ${direction === 'left' ? 'animate-[slideOutLeft_0.3s_ease-out_forwards]' :
+                            direction === 'right' ? 'animate-[slideOutRight_0.3s_ease-out_forwards]' :
+                                'animate-in fade-in slide-in-from-bottom-8 duration-500'
                             }`}
                         style={{
-                            transform: direction === 'left' ? 'translateX(-100%) rotate(-10deg)' :
-                                direction === 'right' ? 'translateX(100%) rotate(10deg)' :
-                                    'translateX(0) rotate(0)',
-                            opacity: direction ? 0 : 1,
+                            transform: swipeState.isDragging
+                                ? `translateX(${swipeState.deltaX}px) rotate(${swipeState.deltaX * 0.05}deg)`
+                                : direction === 'left' ? 'translateX(-100%) rotate(-10deg)' :
+                                    direction === 'right' ? 'translateX(100%) rotate(10deg)' :
+                                        'translateX(0) rotate(0)',
+                            opacity: swipeState.isDragging
+                                ? Math.max(0.5, 1 - Math.abs(swipeState.deltaX) / 300)
+                                : direction ? 0 : 1,
+                            cursor: swipeState.isDragging ? 'grabbing' : 'grab'
                         }}
                     >
 
