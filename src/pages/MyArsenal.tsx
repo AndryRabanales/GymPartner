@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Link, useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Plus, Search, ChevronRight, Check, Swords, Loader, Trash2, Dumbbell, Save, Edit2, X } from 'lucide-react';
 import { userService } from '../services/UserService';
 
@@ -20,7 +20,7 @@ import { EquipmentForm } from '../components/arsenal/EquipmentForm';
 export const MyArsenal = () => {
     const { user } = useAuth();
     const { gymId: routeGymId } = useParams<{ gymId: string }>();
-    const navigate = useNavigate();
+
 
     if (!user) {
         return (
