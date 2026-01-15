@@ -111,7 +111,7 @@ BEGIN
         COALESCE(p.username, 'Agente Desconocido') as username,
         p.avatar_url,
         (p.custom_settings->>'banner_url')::text as banner_url, -- Extract from JSON
-        p.description,
+        COALESCE(p.custom_settings->>'description', p.description) as description,
         (
             SELECT COUNT(DISTINCT DATE(started_at))::integer 
             FROM public.workout_sessions ws 
