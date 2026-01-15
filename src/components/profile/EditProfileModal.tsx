@@ -10,6 +10,7 @@ interface EditProfileModalProps {
     currentAvatarUrl: string;
     currentBannerUrl?: string;
     currentFeaturedRoutineId?: string;
+    currentDescription?: string;
     onClose: () => void;
     onUpdate: () => void;
 }
@@ -20,10 +21,12 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     currentAvatarUrl,
     currentBannerUrl,
     currentFeaturedRoutineId,
+    currentDescription,
     onClose,
     onUpdate
 }) => {
     const [username, setUsername] = useState(currentUsername);
+    const [description, setDescription] = useState(currentDescription || '');
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState(currentAvatarUrl);
 
@@ -86,13 +89,14 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                 }
             }
 
-            // 3. Update Profile Data
+            // 3. Update Profile Data (including description)
             console.log("Saving Profile with Routine ID:", selectedRoutineId); // DEBUG
             const updateResult = await userService.updateProfile(user.id, {
                 username: username,
                 avatar_url: newAvatarUrl,
                 custom_settings: {
-                    banner_url: newBannerUrl
+                    banner_url: newBannerUrl,
+                    description: description.trim() // Save description here
                 },
                 featured_routine_id: selectedRoutineId // Save selected routine
             });
@@ -210,6 +214,37 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                             className="w-full bg-neutral-950/50 border-2 border-neutral-800 rounded-xl px-5 py-4 text-white font-bold tracking-tight focus:outline-none focus:border-gym-primary/70 focus:bg-neutral-950 transition-all placeholder:text-neutral-700 hover:border-neutral-700"
                             placeholder="Tu nombre público..."
                         />
+                    </div>
+
+                    {/* Description Input */}
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <label className="text-xs font-bold text-neutral-400 uppercase tracking-widest ml-1">
+                                Descripción (Aparecerá en el Radar)
+                            </label>
+                            <span className={`text-xs font-bold transition-colors ${description.length > 150
+                                    ? 'text-red-500'
+                                    : description.length > 130
+                                        ? 'text-yellow-500'
+                                        : 'text-neutral-600'
+                                }`}>
+                                {description.length}/150
+                            </span>
+                        </div>
+                        <textarea
+                            value={description}
+                            onChange={(e) => {
+                                if (e.target.value.length <= 150) {
+                                    setDescription(e.target.value);
+                                }
+                            }}
+                            rows={3}
+                            className="w-full bg-neutral-950/50 border-2 border-neutral-800 rounded-xl px-5 py-4 text-white font-medium tracking-tight focus:outline-none focus:border-gym-primary/70 focus:bg-neutral-950 transition-all placeholder:text-neutral-700 hover:border-neutral-700 resize-none"
+                            placeholder="Ej: Levantador de pesas | Entrenando para ultramaratón 🏃..."
+                        />
+                        <p className="text-[10px] text-neutral-600 ml-1 leading-relaxed">
+                            💡 Otros usuarios verán esto en el Radar cuando busquen compañeros de gimnasio.
+                        </p>
                     </div>
 
                     {/* BATTLE DECK SELECTOR (With Privacy Toggle) */}
