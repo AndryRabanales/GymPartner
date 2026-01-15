@@ -858,7 +858,7 @@ export const UserProfile = () => {
                         currentAvatarUrl={profile.avatar_url || user.user_metadata.avatar_url}
                         currentBannerUrl={profile.custom_settings?.banner_url}
                         currentFeaturedRoutineId={profile.featured_routine_id}
-                        currentDescription={profile.custom_settings?.description || ''}
+                        currentDescription={(profile.custom_settings as any)?.description || ''}
                         onClose={() => {
                             setShowEditProfile(false);
                             showBottomNav();
