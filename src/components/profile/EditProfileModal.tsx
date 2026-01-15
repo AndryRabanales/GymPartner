@@ -223,69 +223,117 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                             </Link>
                         </div>
 
-                        <div className="space-y-2 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
-                            {routines.map((routine, index) => (
-                                <div key={routine.id} className="flex gap-2 animate-in slide-in-from-left duration-300" style={{ animationDelay: `${index * 50}ms` }}>
-                                    {/* Selection Button (Featured) */}
-                                    <button
-                                        onClick={() => setSelectedRoutineId(routine.id === selectedRoutineId ? null : routine.id)}
-                                        className={`flex-1 text-left p-4 rounded-xl border-2 transition-all flex items-center justify-between group relative overflow-hidden ${selectedRoutineId === routine.id
+
+                        {/* Scrollable Container with Fade Effects */}
+                        <div className="relative">
+                            {/* Top Fade Gradient - Only show if there are enough items */}
+                            {routines.length > 3 && (
+                                <div className="absolute top-0 left-0 right-0 h-6 bg-gradient-to-b from-neutral-900 via-neutral-900/80 to-transparent z-10 pointer-events-none"></div>
+                            )}
+
+                            {/* Scrollable List */}
+                            <div
+                                className="space-y-2 max-h-64 overflow-y-auto pr-2 scroll-smooth arsenal-scrollbar"
+                            >
+                                <style>{`
+                                    /* Custom Scrollbar */
+                                    .arsenal-scrollbar::-webkit-scrollbar {
+                                        width: 8px;
+                                    }
+                                    .arsenal-scrollbar::-webkit-scrollbar-track {
+                                        background: #171717;
+                                        border-radius: 12px;
+                                        margin: 4px 0;
+                                    }
+                                    .arsenal-scrollbar::-webkit-scrollbar-thumb {
+                                        background: linear-gradient(180deg, #facc15 0%, #ea580c 100%);
+                                        border-radius: 12px;
+                                        border: 2px solid #171717;
+                                        transition: all 0.2s ease;
+                                    }
+                                    .arsenal-scrollbar::-webkit-scrollbar-thumb:hover {
+                                        background: linear-gradient(180deg, #fbbf24 0%, #f97316 100%);
+                                        border: 2px solid #262626;
+                                    }
+                                    .arsenal-scrollbar::-webkit-scrollbar-thumb:active {
+                                        background: #facc15;
+                                    }
+                                    
+                                    /* Firefox */
+                                    .arsenal-scrollbar {
+                                        scrollbar-width: thin;
+                                        scrollbar-color: #facc15 #171717;
+                                    }
+                                `}</style>
+
+                                {routines.map((routine, index) => (
+                                    <div key={routine.id} className="flex gap-2 animate-in slide-in-from-left duration-300" style={{ animationDelay: `${index * 50}ms` }}>
+                                        {/* Selection Button (Featured) */}
+                                        <button
+                                            onClick={() => setSelectedRoutineId(routine.id === selectedRoutineId ? null : routine.id)}
+                                            className={`flex-1 text-left p-4 rounded-xl border-2 transition-all flex items-center justify-between group relative overflow-hidden ${selectedRoutineId === routine.id
                                                 ? 'bg-gym-primary/10 border-gym-primary text-white shadow-lg shadow-gym-primary/10'
                                                 : 'bg-neutral-950/50 border-neutral-800 text-neutral-400 hover:border-neutral-700 hover:bg-neutral-950'
-                                            }`}
-                                    >
-                                        <div className="flex flex-col gap-1 relative z-10">
-                                            <span className="font-black text-sm truncate">{routine.name}</span>
-                                            <span className="text-[10px] opacity-60 uppercase tracking-wider font-bold">
-                                                {selectedRoutineId === routine.id ? '⭐ DESTACADA' : 'Normal'}
-                                            </span>
-                                        </div>
-                                        {selectedRoutineId === routine.id && (
-                                            <div className="relative z-10 flex items-center gap-2">
-                                                <div className="w-2 h-2 rounded-full bg-gym-primary animate-pulse"></div>
+                                                }`}
+                                        >
+                                            <div className="flex flex-col gap-1 relative z-10">
+                                                <span className="font-black text-sm truncate">{routine.name}</span>
+                                                <span className="text-[10px] opacity-60 uppercase tracking-wider font-bold">
+                                                    {selectedRoutineId === routine.id ? '⭐ DESTACADA' : 'Normal'}
+                                                </span>
                                             </div>
-                                        )}
-                                        {selectedRoutineId === routine.id && (
-                                            <div className="absolute inset-0 bg-gradient-to-r from-gym-primary/5 to-transparent"></div>
-                                        )}
-                                    </button>
+                                            {selectedRoutineId === routine.id && (
+                                                <div className="relative z-10 flex items-center gap-2">
+                                                    <div className="w-2 h-2 rounded-full bg-gym-primary animate-pulse"></div>
+                                                </div>
+                                            )}
+                                            {selectedRoutineId === routine.id && (
+                                                <div className="absolute inset-0 bg-gradient-to-r from-gym-primary/5 to-transparent"></div>
+                                            )}
+                                        </button>
 
-                                    {/* Visibility Toggle */}
-                                    <button
-                                        onClick={async (e) => {
-                                            e.stopPropagation();
-                                            const newStatus = !routine.is_public;
+                                        {/* Visibility Toggle */}
+                                        <button
+                                            onClick={async (e) => {
+                                                e.stopPropagation();
+                                                const newStatus = !routine.is_public;
 
-                                            // 🛡️ LIMIT CHECK: Max 5 Public Routines
-                                            if (newStatus) {
-                                                const publicCount = routines.filter(r => r.is_public).length;
-                                                if (publicCount >= 5) {
-                                                    alert("⚠️ Límite Alcanzado: Solo puedes tener 5 rutinas públicas visibles en el Ranking. Oculta otra para activar esta.");
-                                                    return;
+                                                // 🛡️ LIMIT CHECK: Max 5 Public Routines
+                                                if (newStatus) {
+                                                    const publicCount = routines.filter(r => r.is_public).length;
+                                                    if (publicCount >= 5) {
+                                                        alert("⚠️ Límite Alcanzado: Solo puedes tener 5 rutinas públicas visibles en el Ranking. Oculta otra para activar esta.");
+                                                        return;
+                                                    }
                                                 }
-                                            }
 
-                                            // Optimistic Update
-                                            setRoutines(prev => prev.map(r => r.id === routine.id ? { ...r, is_public: newStatus } : r));
+                                                // Optimistic Update
+                                                setRoutines(prev => prev.map(r => r.id === routine.id ? { ...r, is_public: newStatus } : r));
 
-                                            await userService.updateRoutineVisibility(routine.id, newStatus);
-                                        }}
-                                        className={`w-14 flex items-center justify-center rounded-xl border-2 transition-all hover:scale-105 active:scale-95 ${routine.is_public
+                                                await userService.updateRoutineVisibility(routine.id, newStatus);
+                                            }}
+                                            className={`w-14 flex items-center justify-center rounded-xl border-2 transition-all hover:scale-105 active:scale-95 ${routine.is_public
                                                 ? 'bg-green-500/10 border-green-500 text-green-500 hover:bg-green-500/20'
                                                 : 'bg-red-500/10 border-red-500/50 text-red-500 hover:bg-red-500/20'
-                                            }`}
-                                        title={routine.is_public ? "Pública (Visible en Ranking)" : "Privada (Solo tú)"}
-                                    >
-                                        {routine.is_public ? <Eye size={20} /> : <EyeOff size={20} />}
-                                    </button>
-                                </div>
-                            ))}
-                            {routines.length === 0 && (
-                                <div className="text-center p-6 border-2 border-dashed border-neutral-800 rounded-xl bg-neutral-950/30">
-                                    <Swords size={32} className="mx-auto mb-2 text-neutral-700" />
-                                    <p className="text-sm text-neutral-600 font-bold">No tienes rutinas creadas.</p>
-                                    <p className="text-xs text-neutral-700 mt-1">Crea tu primera estrategia</p>
-                                </div>
+                                                }`}
+                                            title={routine.is_public ? "Pública (Visible en Ranking)" : "Privada (Solo tú)"}
+                                        >
+                                            {routine.is_public ? <Eye size={20} /> : <EyeOff size={20} />}
+                                        </button>
+                                    </div>
+                                ))}
+                                {routines.length === 0 && (
+                                    <div className="text-center p-6 border-2 border-dashed border-neutral-800 rounded-xl bg-neutral-950/30">
+                                        <Swords size={32} className="mx-auto mb-2 text-neutral-700" />
+                                        <p className="text-sm text-neutral-600 font-bold">No tienes rutinas creadas.</p>
+                                        <p className="text-xs text-neutral-700 mt-1">Crea tu primera estrategia</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Bottom Fade Gradient - Only show if there are enough items */}
+                            {routines.length > 3 && (
+                                <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-neutral-900 via-neutral-900/80 to-transparent pointer-events-none"></div>
                             )}
                         </div>
                         <div className="bg-neutral-950/50 border border-neutral-800/50 rounded-xl p-3">
