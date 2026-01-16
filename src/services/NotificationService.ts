@@ -35,12 +35,18 @@ export const notificationService = {
      * Obtener conteo de no leídas
      */
     async getUnreadCount(): Promise<number> {
+        if (!navigator.onLine) return 0; // Skip if offline
+
         const { count, error } = await supabase
             .from('notifications')
             .select('id', { count: 'exact' })
             .eq('is_read', false);
 
         if (error) {
+            // Suppress network errors to avoid console spam
+            if (error.message?.includes('fetch') || error.message?.includes('network')) {
+                return 0;
+            }
             console.error('Error getting unread count:', error);
             return 0;
         }
