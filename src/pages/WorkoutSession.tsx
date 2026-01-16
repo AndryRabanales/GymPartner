@@ -88,6 +88,60 @@ export const WorkoutSession = () => {
     const [isCreatingExercise, setIsCreatingExercise] = useState(false);
     const [editingItem, setEditingItem] = useState<Equipment | null>(null);
 
+    // NEW: Batch Selection State
+    const [selectedCatalogItems, setSelectedCatalogItems] = useState<Set<string>>(new Set());
+
+    // NEW: Handle Batch Add
+    const handleBatchAdd = async () => {
+        if (selectedCatalogItems.size === 0) return;
+
+        // 1. Start Session if needed (Delayed Start)
+        if (!sessionId) {
+            console.log("🚀 Auto-starting session on first exercise add...");
+            await startNewSession();
+        }
+
+        // 2. Add All Selected Items
+        const itemsToAdd: Equipment[] = [];
+        selectedCatalogItems.forEach(id => {
+            const item = effectiveInventory.find(i => i.id === id);
+            if (item) itemsToAdd.push(item);
+        });
+
+        // Batch update to avoid multiple re-renders
+        const newExercises = itemsToAdd.map(equipment => {
+            const defaultMetrics = { weight: true, reps: true, time: false, distance: false, rpe: false };
+            return {
+                id: Math.random().toString(), // UI Key
+                equipmentId: equipment.id,
+                equipmentName: equipment.name,
+                metrics: (equipment.metrics || defaultMetrics) as any,
+                sets: [
+                    { id: Math.random().toString(), weight: 0, reps: 0, completed: false }
+                ],
+                category: equipment.target_muscle_group || equipment.category || 'Custom'
+            } as WorkoutExercise;
+        });
+
+        setActiveExercises(prev => [...prev, ...newExercises]);
+
+        // 3. Cleanup
+        setSelectedCatalogItems(new Set());
+        setShowAddModal(false);
+        setSearchTerm('');
+    };
+
+    // Toggle Selection Helper
+    const toggleCatalogItem = (id: string) => {
+        const newSet = new Set(selectedCatalogItems);
+        if (newSet.has(id)) {
+            newSet.delete(id);
+        } else {
+            newSet.add(id);
+        }
+        setSelectedCatalogItems(newSet);
+    };
+
     // Computed: Merge Seeds (Virtual) only if not already present by NAME in the real/global list
     const effectiveInventory = [...arsenal];
     COMMON_EQUIPMENT_SEEDS.forEach(seed => {
@@ -1425,22 +1479,17 @@ export const WorkoutSession = () => {
                             )}
                         </div>
 
-                        <div className="flex-1 overflow-y-auto min-h-0 px-2 sm:px-4 pb-4 bg-black">
+                        <div className="flex-1 overflow-y-auto min-h-0 px-2 sm:px-4 pb-32 bg-black">
                             {/* Content Switch */}
                             {!isCreatingExercise ? (
                                 <div className="pt-4">
                                     <ArsenalGrid
                                         inventory={effectiveInventory}
-                                        selectedItems={new Set()}
+                                        selectedItems={selectedCatalogItems}
                                         userSettings={userSettings}
                                         searchTerm={searchTerm}
                                         onToggleSelection={(id) => {
-                                            const item = effectiveInventory.find(i => i.id === id);
-                                            if (item) {
-                                                addExercise(item);
-                                                setShowAddModal(false);
-                                                setSearchTerm('');
-                                            }
+                                            toggleCatalogItem(id);
                                         }}
                                         onOpenCatalog={(section) => {
                                             setActiveSection(section);
@@ -1499,6 +1548,19 @@ export const WorkoutSession = () => {
                                         setIsCreatingExercise(false);
                                     }}
                                 />
+                            )}
+
+                            {/* Floating "Add" Button for Batch Selection */}
+                            {!isCreatingExercise && selectedCatalogItems.size > 0 && (
+                                <div className="fixed bottom-6 left-0 w-full px-4 z-[100] flex justify-center pointer-events-none">
+                                    <button
+                                        onClick={handleBatchAdd}
+                                        className="pointer-events-auto bg-gym-primary text-black font-black uppercase py-4 px-12 rounded-2xl shadow-[0_10px_40px_rgba(250,204,21,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center gap-3 text-lg animate-in slide-in-from-bottom-4 border-2 border-yellow-400"
+                                    >
+                                        <Plus size={24} strokeWidth={3} />
+                                        AGREGAR ({selectedCatalogItems.size})
+                                    </button>
+                                </div>
                             )}
                         </div>
                     </div>
@@ -1656,7 +1718,7 @@ export const WorkoutSession = () => {
                             {/* Quick Start Button */}
                             <button
                                 onClick={() => {
-                                    startNewSession(); // START TIMER HERE
+                                    // startNewSession(); // REMOVED: Delayed Start logic
                                     setShowStartOptionsModal(false);
                                     setShowAddModal(true); // Open the exercise picker directly
                                 }}
