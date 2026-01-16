@@ -1517,15 +1517,33 @@ export const WorkoutSession = () => {
                                             return [...prev, newItem];
                                         });
 
-                                        // If it's a NEW item created specifically here, assume User wants to USE it immediately.
-                                        if (!isEdit) {
-                                            addExercise(newItem);
-                                            setShowAddModal(false);
-                                            setSearchTerm('');
-                                        } else {
-                                            // If executed Edit, just go back to grid
+                                        if (isEdit) {
+                                            // If Editing: Just update the visual state, DO NOT start session.
+                                            // Ensure it is selected so the user can see it's ready.
+                                            setSelectedCatalogItems(prev => {
+                                                const newSet = new Set(prev);
+                                                newSet.add(newItem.id);
+                                                return newSet;
+                                            });
+                                            // Close the form to return to grid
                                             setIsCreatingExercise(false);
                                             setEditingItem(null);
+                                        } else {
+                                            // If New Creation: Select it and return to grid (User might want to add more)
+                                            // PREVIOUSLY: addExercise(newItem) -> Auto-start.
+                                            // NEW BEHAVIOR: Just Select it.
+                                            setSelectedCatalogItems(prev => {
+                                                const newSet = new Set(prev);
+                                                newSet.add(newItem.id);
+                                                return newSet;
+                                            });
+                                            setShowAddModal(false); // Optionally close modal, or keep open?
+                                            // User said "haz que el boton de guardar... te siga manteniendo en el mismo lugar". 
+                                            // So for NEW items, maybe we should also stay in grid?
+                                            // Let's stick to staying in grid for consistency.
+                                            setIsCreatingExercise(false);
+                                            setEditingItem(null);
+                                            setSearchTerm('');
                                         }
                                     }}
                                     activeSection={activeSection || 'CHEST'}

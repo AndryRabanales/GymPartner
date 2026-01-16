@@ -56,11 +56,21 @@ export const EquipmentForm = ({
         if (editingItem) {
             setMode('CUSTOM');
             setCustomName(editingItem.name);
-            setCustomCategory(editingItem.category);
+            setCustomCategory(editingItem.category || 'STRENGTH_MACHINE'); // Fallback
+
+            // CRITICAL: Ensure we preserve ALL existing metrics from the item
             setCustomMetrics({
-                weight: true, reps: true, time: false, distance: false, rpe: false, // defaults
-                ...editingItem.metrics
+                weight: true, reps: true, time: false, distance: false, rpe: false, // Baseline defaults
+                ...(editingItem.metrics || {}) // Overlay saved state
             });
+            console.log("📝 Editing Item Loaded:", editingItem.name, editingItem.metrics);
+        } else {
+            // Reset for New
+            setCustomMetrics({
+                weight: true, reps: true, time: false, distance: false, rpe: false
+            });
+            setCustomName('');
+            setCustomCategory(initialCategory);
         }
     }, [editingItem]);
 
