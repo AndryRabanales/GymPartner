@@ -1537,10 +1537,9 @@ export const WorkoutSession = () => {
                                                 newSet.add(newItem.id);
                                                 return newSet;
                                             });
-                                            setShowAddModal(false); // Optionally close modal, or keep open?
+                                            // setShowAddModal(false); // REMOVED: Keep user in Catalog
                                             // User said "haz que el boton de guardar... te siga manteniendo en el mismo lugar". 
-                                            // So for NEW items, maybe we should also stay in grid?
-                                            // Let's stick to staying in grid for consistency.
+                                            // Return to Grid View
                                             setIsCreatingExercise(false);
                                             setEditingItem(null);
                                             setSearchTerm('');
