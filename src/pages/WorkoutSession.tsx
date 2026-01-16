@@ -1084,108 +1084,22 @@ export const WorkoutSession = () => {
 
             <div className="p-4 relative z-10">
                 {/* Empty State / Routine Selection */}
-                {activeExercises.length === 0 && (
-                    <div className="flex flex-col min-h-[60vh]">
-                        <div className="mb-6 px-4">
-                            <button
-                                onClick={() => navigate(-1)}
-                                className="mb-4 p-2 bg-neutral-900 rounded-full text-neutral-400 hover:text-white transition-colors"
-                            >
-                                <ArrowLeft size={24} />
-                            </button>
-                            <h2 className="text-3xl font-black italic uppercase text-white mb-2 tracking-tighter">Rutina</h2>
-                            <p className="text-neutral-400 text-sm">Selecciona un plan de entrenamiento.</p>
+                {/* Empty State / Fallback if Modal is Closed */}
+                {activeExercises.length === 0 && !showAddModal && !loading && (
+                    <div className="h-[80vh] flex flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in duration-300">
+                        <div className="bg-neutral-900/50 p-8 rounded-full border border-neutral-800 mb-8 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+                            <Swords size={80} className="text-neutral-600" strokeWidth={1} />
                         </div>
+                        <h2 className="text-3xl font-black italic uppercase text-white mb-4 tracking-tighter">¿Listo para entrenar?</h2>
+                        <p className="text-neutral-500 font-bold mb-8 max-w-xs mx-auto">Selecciona tus ejercicios para comenzar la batalla.</p>
 
-                        {routines.length === 0 ? (
-                            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center animate-in fade-in slide-in-from-bottom-5">
-                                <div className="bg-neutral-900/50 p-6 rounded-full border border-neutral-800 mb-6 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
-                                    <Swords size={64} className="text-neutral-600" strokeWidth={1} />
-                                </div>
-                                <h3 className="text-xl font-bold text-white mb-2">No hay rutinas</h3>
-                                <p className="text-neutral-500 text-sm max-w-xs mx-auto mb-8">Este gimnasio no tiene rutinas asignadas aún.</p>
-
-                                <Link
-                                    to={`/territory/${resolvedGymId}/arsenal`}
-                                    className="w-full bg-gym-primary hover:bg-yellow-400 text-black font-black uppercase tracking-widest py-4 rounded-xl shadow-[0_0_20px_rgba(250,204,21,0.3)] flex items-center justify-center gap-3 text-lg"
-                                >
-                                    <Plus size={20} strokeWidth={3} />
-                                    CREAR RUTINA
-                                </Link>
-                            </div>
-                        ) : (
-                            <div className="flex-1 px-4 space-y-4 pb-32">
-                                {routines.map((routine, index) => (
-                                    <button
-                                        key={routine.id}
-                                        id={index === 0 ? 'tut-routine-first' : undefined}
-                                        onClick={() => {
-                                            if (tutorialStep === 6) {
-                                                setTutorialStep(0);
-                                                localStorage.setItem('tutorial_step', '0');
-                                                localStorage.setItem('hasSeenImportTutorial', 'true');
-                                            }
-                                            loadRoutine(routine);
-                                            setCurrentRoutineName(routine.name);
-                                        }}
-                                        className="w-full bg-neutral-900 border border-neutral-800 hover:border-gym-primary p-6 rounded-2xl flex items-center justify-between group transition-all"
-                                    >
-                                        <div className="text-left">
-                                            <h3 className="font-black text-xl text-white group-hover:text-gym-primary uppercase italic">{routine.name}</h3>
-                                            <span className="text-neutral-500 text-xs font-bold">{routine.equipment_ids?.length || 0} Ejercicios</span>
-                                        </div>
-                                        <div className="bg-neutral-800 p-3 rounded-full group-hover:bg-gym-primary group-hover:text-black transition-colors">
-                                            <Check size={20} strokeWidth={3} />
-                                        </div>
-                                    </button>
-                                ))}
-
-                                <div className="pt-8 space-y-4">
-                                    <Link
-                                        to={`/territory/${resolvedGymId}/arsenal`}
-                                        className="w-full bg-neutral-900 border border-dashed border-neutral-700 hover:border-gym-primary text-neutral-400 hover:text-white font-bold uppercase tracking-widest py-4 rounded-xl flex items-center justify-center gap-2 transition-all"
-                                    >
-                                        <Plus size={16} /> Crear Nueva Rutina
-                                    </Link>
-
-                                    {/* Freestyle Removed */}
-                                </div>
-                            </div>
-                        )}
-
-                        {tutorialStep === 6 && (
-                            <InteractiveOverlay
-                                targetId="tut-routine-first"
-                                title="PASO 2: IMPORTAR RUTINA"
-                                message="Aquí está tu rutina creada. Selecciónala para cargar tu plan de entrenamiento en este gimnasio."
-                                step={2}
-                                totalSteps={2}
-                                onNext={() => { }}
-                                onClose={() => {
-                                    setTutorialStep(0);
-                                    localStorage.setItem('hasSeenImportTutorial', 'true');
-                                }}
-                                placement="top"
-                                disableNext={true}
-                            />
-                        )}
-
-                        {/* STEP 7 Pre-Step: Select Routine if not loaded */}
-                        {tutorialStep === 7 && (
-                            <InteractiveOverlay
-                                targetId="tut-routine-first"
-                                title="PASO 3: COMENZAR"
-                                message="Rutina cargada. Selecciónala para iniciar el entrenamiento."
-                                step={3}
-                                totalSteps={3}
-                                onNext={() => { }}
-                                onClose={() => {
-                                    setTutorialStep(0); // If they close here, they lose flow, but okay.
-                                }}
-                                placement="top"
-                                disableNext={true}
-                            />
-                        )}
+                        <button
+                            onClick={() => setShowAddModal(true)}
+                            className="w-full max-w-xs bg-gym-primary hover:bg-yellow-400 text-black font-black uppercase tracking-widest py-5 rounded-2xl shadow-[0_0_30px_rgba(250,204,21,0.3)] hover:scale-105 transition-all text-xl flex items-center justify-center gap-3"
+                        >
+                            <Plus size={24} strokeWidth={3} />
+                            ABRIR CATÁLOGO
+                        </button>
                     </div>
                 )}
 
@@ -1560,8 +1474,18 @@ export const WorkoutSession = () => {
                                             condition: 'GOOD'
                                         };
 
-                                        addExercise(virtualItem);
-                                        setShowAddModal(false);
+                                        // addExercise(virtualItem); // REMOVED: Auto-start legacy
+                                        // setShowAddModal(false);   // REMOVED: Close legacy
+
+                                        // NEW: Select it and keep in catalog
+                                        setSelectedCatalogItems(prev => {
+                                            const newSet = new Set(prev);
+                                            newSet.add(virtualItem.id);
+                                            return newSet;
+                                        });
+                                        // Add to inventory so it renders as selected
+                                        setArsenal(prev => [...prev, virtualItem]);
+
                                         setIsCreatingExercise(false);
                                     }}
                                 />
