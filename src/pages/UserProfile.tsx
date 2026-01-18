@@ -617,7 +617,7 @@ export const UserProfile = () => {
                             const userLng = position.coords.longitude;
 
                             // 1. Check existing gyms (Proximity < 100m)
-                            const ALLOWED_RADIUS = 0.1; // km
+                            const ALLOWED_RADIUS = 0.12; // km
                             const nearbyGym = userGyms.find(gym => {
                                 if (!gym.lat || !gym.lng) return false;
                                 const dist = getDistanceFromLatLonInKm(userLat, userLng, gym.lat, gym.lng);
@@ -1026,7 +1026,7 @@ export const UserProfile = () => {
                     </div>
                     <h2 className="text-2xl font-black italic uppercase text-white tracking-widest mb-2 text-center">
                         INICIANDO ENTRENAMIENTO<br />
-                        <span className="text-yellow-400">EN LUGAR DESCONOCIDO</span>
+                        <span className="text-yellow-400">{autoStartGymName || 'EN LUGAR DESCONOCIDO'}</span>
                     </h2>
                     <div className="flex gap-2">
                         <div className="w-3 h-3 bg-yellow-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
