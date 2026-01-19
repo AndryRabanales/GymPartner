@@ -1260,11 +1260,19 @@ export const WorkoutSession = () => {
                                                 return (
                                                     <Fragment key={set.id}>
                                                         <div
-                                                            className={`flex flex-wrap gap-2 p-3 rounded-xl transition-all duration-300 items-center ${isCompleted
+                                                            className={`relative flex flex-wrap gap-2 p-3 rounded-xl transition-all duration-300 items-center ${isCompleted
                                                                 ? 'bg-neutral-900/80 border border-green-500/20'
                                                                 : 'bg-black/20 border border-transparent'
                                                                 }`}
                                                         >
+                                                            {/* [MOVED] Delete Set Button - Top Left */}
+                                                            <button
+                                                                onClick={() => removeSet(mapIndex, setIndex)}
+                                                                className="absolute -top-2 -left-2 bg-neutral-900 border border-neutral-800 text-neutral-500 hover:text-red-500 rounded-full p-1.5 shadow-lg z-10 scale-75 hover:scale-100 transition-all"
+                                                                title="Eliminar Serie"
+                                                            >
+                                                                <Trash2 size={14} />
+                                                            </button>
                                                             {/* Set Number */}
                                                             <div className="w-8 flex justify-center shrink-0 self-center">
                                                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${isCompleted ? 'bg-green-500/20 text-green-500' : 'bg-neutral-800 text-neutral-400'
@@ -1360,16 +1368,7 @@ export const WorkoutSession = () => {
                                                                     )
                                                                 })}
 
-                                                                {/* [NEW] Delete Set Button */}
-                                                                <div className="flex items-center justify-center self-center h-full pt-4 pl-0">
-                                                                    <button
-                                                                        onClick={() => removeSet(mapIndex, setIndex)}
-                                                                        className="text-neutral-600 hover:text-red-500 transition-colors p-2"
-                                                                        title="Eliminar Serie"
-                                                                    >
-                                                                        <Trash2 size={18} />
-                                                                    </button>
-                                                                </div>
+
 
                                                                 {/* [NEW] Toggle Complete Button */}
                                                                 <div className="flex flex-col items-center justify-center self-center h-full pt-1 pl-1">
