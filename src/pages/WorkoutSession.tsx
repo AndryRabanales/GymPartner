@@ -1438,17 +1438,6 @@ export const WorkoutSession = () => {
                                                                 {/* [NEW] Toggle Complete Button & Lock */}
                                                                 <div className="flex flex-col items-center justify-center self-center h-full pt-1 pl-1 gap-1">
                                                                     <div className="flex items-center gap-1">
-                                                                        {/* Lock Icon (Only if completed) */}
-                                                                        {isCompleted && (
-                                                                            <button
-                                                                                onClick={() => toggleLock(mapIndex, setIndex)}
-                                                                                className={`p-1 rounded-full transition-colors ${set.locked ? 'text-red-500 bg-red-500/10' : 'text-neutral-500 hover:text-white'}`}
-                                                                                title={set.locked ? "Desbloquear para editar" : "Bloquear"}
-                                                                            >
-                                                                                {set.locked ? <Lock size={14} /> : <LockOpen size={14} />}
-                                                                            </button>
-                                                                        )}
-
                                                                         <button
                                                                             onClick={() => toggleComplete(mapIndex, setIndex)}
                                                                             disabled={set.locked}
@@ -1462,6 +1451,17 @@ export const WorkoutSession = () => {
                                                                         >
                                                                             <Check size={20} strokeWidth={3} />
                                                                         </button>
+
+                                                                        {/* Lock Icon (Only if completed) - Moved to Right */}
+                                                                        {isCompleted && (
+                                                                            <button
+                                                                                onClick={() => toggleLock(mapIndex, setIndex)}
+                                                                                className={`p-1 rounded-full transition-colors ${set.locked ? 'text-red-500 bg-red-500/10' : 'text-neutral-500 hover:text-white'}`}
+                                                                                title={set.locked ? "Desbloquear para editar" : "Bloquear"}
+                                                                            >
+                                                                                {set.locked ? <Lock size={15} /> : <LockOpen size={15} />}
+                                                                            </button>
+                                                                        )}
                                                                     </div>
                                                                     {/* Timestamp */}
                                                                     {/* @ts-ignore */}
