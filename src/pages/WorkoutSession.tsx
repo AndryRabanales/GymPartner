@@ -727,11 +727,17 @@ export const WorkoutSession = () => {
             set.completed = false;
             // @ts-ignore
             set.completedAt = undefined;
+            // Clear timer if unchecking
+            setRestTimerStart(null);
+            setRestTimerSetKey(null);
         } else {
             set.completed = true;
             // @ts-ignore
             set.completedAt = elapsedTime;
-            // TODO: Start Rest Timer here in next step
+
+            // START REST TIMER
+            setRestTimerStart(Date.now());
+            setRestTimerSetKey(`${exerciseIndex}-${setIndex}`);
         }
         setActiveExercises(updated);
     };
