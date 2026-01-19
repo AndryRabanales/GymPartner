@@ -249,7 +249,24 @@ export const WorkoutSession = () => {
                 equipmentService.getUserSettings(userId)
             ]);
 
-            setArsenal(items);
+            // [FIX] ALWAYS Fetch Personal Inventory Logic (Global Custom Exercises)
+            let finalInventory = [...items];
+            try {
+                const personalGymId = await userService.ensurePersonalGym(userId);
+                if (personalGymId && personalGymId !== targetGymId) {
+                    const personalItems = await equipmentService.getInventory(personalGymId);
+                    console.log('🔗 Merged Personal Inventory into Session:', personalItems.length, 'items');
+
+                    // Merge avoiding duplicates by ID
+                    const existingIds = new Set(items.map(i => i.id));
+                    const newItems = personalItems.filter(i => !existingIds.has(i.id));
+                    finalInventory = [...finalInventory, ...newItems];
+                }
+            } catch (e) {
+                console.warn('Could not fetch personal inventory linkage', e);
+            }
+
+            setArsenal(finalInventory);
             setRoutines(localRoutines);
             setUserSettings(settings);
 

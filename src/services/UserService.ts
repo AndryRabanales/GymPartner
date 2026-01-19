@@ -688,6 +688,7 @@ class UserService {
     // Ensure a "Personal Gym" exists for this user (Workaround for DB Not Null constraint)
     async ensurePersonalGym(userId: string): Promise<string> {
         const personalPlaceId = `personal_arsenal_${userId}`;
+        let gymId: string;
 
         // 1. Check if it exists
         const { data: existing } = await supabase
@@ -696,29 +697,48 @@ class UserService {
             .eq('place_id', personalPlaceId)
             .maybeSingle();
 
-        if (existing) return existing.id;
+        if (existing) {
+            gymId = existing.id;
+        } else {
+            // 2. Create it if not
+            const { data: newGym, error } = await supabase
+                .from('gyms')
+                .insert({
+                    name: 'Tu Arsenal Personal 🏠',
+                    address: 'Base de Operaciones',
+                    lat: 0,
+                    lng: 0,
+                    place_id: personalPlaceId,
+                    vibe: 'Personal',
+                    crowd_level: 'Low'
+                })
+                .select('id')
+                .single();
 
-        // 2. Create it if not
-        const { data: newGym, error } = await supabase
-            .from('gyms')
-            .insert({
-                name: 'Tu Arsenal Personal 🏠',
-                address: 'Base de Operaciones',
-                lat: 0,
-                lng: 0,
-                place_id: personalPlaceId,
-                vibe: 'Personal',
-                crowd_level: 'Low'
-            })
-            .select('id')
-            .single();
-
-        if (error) {
-            console.error('Error creating personal gym:', error);
-            throw new Error('Could not create personal workspace');
+            if (error) {
+                console.error('Error creating personal gym:', error);
+                throw new Error('Could not create personal workspace');
+            }
+            gymId = newGym.id;
         }
 
-        return newGym.id;
+        // 3. [FIX] ALWAYS LINK USER (RLS Requirement)
+        // Ensure the user is a member so RLS policies allow insertion/selection
+        // We use ignoreDuplicates to avoid resetting 'since' or overwriting customizations if already linked
+        const { error: linkError } = await supabase
+            .from('user_gyms')
+            .upsert({
+                user_id: userId,
+                gym_id: gymId,
+                since: new Date().toISOString(),
+                is_home_base: false
+            }, { onConflict: 'user_id, gym_id', ignoreDuplicates: true });
+
+        if (linkError) {
+            console.warn('Warning linking personal gym (RLS might fail):', linkError);
+        }
+
+        return gymId;
     }
 }
 
