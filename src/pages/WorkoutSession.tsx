@@ -13,7 +13,7 @@ import { normalizeText, getMuscleGroup } from '../utils/inventoryUtils';
 
 // Interface NumpadTarget removed
 // BattleTimer removed
-import { Plus, Swords, Trash2, Check, ArrowLeft, MoreVertical, X, RotateCcw, Search, Loader, Map as MapIcon, BrainCircuit } from 'lucide-react';
+import { Plus, Swords, Trash2, Check, ArrowLeft, MoreVertical, X, RotateCcw, Search, Loader, Map as MapIcon, BrainCircuit, Lock, LockOpen } from 'lucide-react';
 import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
@@ -26,6 +26,9 @@ interface WorkoutSet {
     rpe?: number;      // 1-10
     custom?: Record<string, number>; // Dynamic metrics (jumps, cadence, etc.)
     completed: boolean;
+    locked?: boolean; // Protects completed status
+    restStartTime?: number; // Per-set rest timer
+    restEndTime?: number; // Stopped rest timer
     db_id?: string; // Real DB ID if saved
 }
 
@@ -46,15 +49,23 @@ interface WorkoutExercise {
 }
 
 // Helper Component for Rest Timer
-const RestTimerDisplay = ({ startTime }: { startTime: number }) => {
+const RestTimerDisplay = ({ startTime, endTime }: { startTime: number, endTime?: number }) => {
     const [elapsed, setElapsed] = useState(0);
 
     useEffect(() => {
+        if (endTime) {
+            setElapsed(Math.floor((endTime - startTime) / 1000));
+            return;
+        }
+
+        // Initial calc
+        setElapsed(Math.floor((Date.now() - startTime) / 1000));
+
         const interval = setInterval(() => {
             setElapsed(Math.floor((Date.now() - startTime) / 1000));
         }, 1000);
         return () => clearInterval(interval);
-    }, [startTime]);
+    }, [startTime, endTime]);
 
     const formatTime = (secs: number) => {
         const m = Math.floor(secs / 60);
@@ -718,29 +729,77 @@ export const WorkoutSession = () => {
         setActiveExercises(updatedExercises);
     };
 
-    // [NEW] Toggle Completion with Timestamp
+    // [NEW] Toggle Completion with Timestamp & Lock Logic
     const toggleComplete = (exerciseIndex: number, setIndex: number) => {
         const updated = [...activeExercises];
         const set = updated[exerciseIndex].sets[setIndex];
 
+        // 1. If Locked, Block Interaction
+        if (set.locked && set.completed) {
+            return;
+        }
+
         if (set.completed) {
+            // UNMARKING
             set.completed = false;
             // @ts-ignore
             set.completedAt = undefined;
-            // Clear timer if unchecking
-            setRestTimerStart(null);
-            setRestTimerSetKey(null);
+            set.restStartTime = undefined;
+            set.restEndTime = undefined;
+
+            set.locked = false;
+
+            // Clear legacy global timer
+            if (restTimerSetKey === `${exerciseIndex}-${setIndex}`) {
+                setRestTimerStart(null);
+                setRestTimerSetKey(null);
+            }
+
         } else {
+            // MARKING COMPLETE
             set.completed = true;
+            set.locked = true; // Auto-lock
             // @ts-ignore
             set.completedAt = elapsedTime;
 
-            // START REST TIMER
-            setRestTimerStart(Date.now());
+            // Start Rest Timer for THIS set
+            const now = Date.now();
+            set.restStartTime = now;
+            set.restEndTime = undefined;
+
+            // Set Legacy Global Timer
+            setRestTimerStart(now);
             setRestTimerSetKey(`${exerciseIndex}-${setIndex}`);
+
+            // FREEZE PREVIOUS TIMER
+            let prevSetFound = false;
+            for (let i = exerciseIndex; i >= 0; i--) {
+                const startJ = i === exerciseIndex ? setIndex - 1 : updated[i].sets.length - 1;
+                for (let j = startJ; j >= 0; j--) {
+                    const prevSet = updated[i].sets[j];
+                    if (prevSet.completed && prevSet.restStartTime && !prevSet.restEndTime) {
+                        prevSet.restEndTime = now; // Freeze it
+                        prevSetFound = true;
+                        break;
+                    }
+                }
+                if (prevSetFound) break;
+            }
         }
         setActiveExercises(updated);
     };
+
+    const toggleLock = (exerciseIndex: number, setIndex: number) => {
+        const updated = [...activeExercises];
+        const set = updated[exerciseIndex].sets[setIndex];
+
+        // Only toggle lock if completed
+        if (set.completed) {
+            set.locked = !set.locked;
+            setActiveExercises(updated);
+        }
+    };
+
 
     const addSet = (exerciseIndex: number) => {
         const updated = [...activeExercises];
@@ -1376,22 +1435,38 @@ export const WorkoutSession = () => {
 
 
 
-                                                                {/* [NEW] Toggle Complete Button */}
-                                                                <div className="flex flex-col items-center justify-center self-center h-full pt-1 pl-1">
-                                                                    <button
-                                                                        onClick={() => toggleComplete(mapIndex, setIndex)}
-                                                                        className={`p-2 rounded-full border-2 transition-all ${isCompleted
-                                                                            ? 'bg-green-500 border-green-500 text-black shadow-[0_0_15px_rgba(34,197,94,0.6)]'
-                                                                            : 'bg-transparent border-neutral-700 text-neutral-600 hover:border-neutral-500'
-                                                                            }`}
-                                                                        title={isCompleted ? "Marcar incompleto" : "Marcar listo"}
-                                                                    >
-                                                                        <Check size={20} strokeWidth={3} />
-                                                                    </button>
+                                                                {/* [NEW] Toggle Complete Button & Lock */}
+                                                                <div className="flex flex-col items-center justify-center self-center h-full pt-1 pl-1 gap-1">
+                                                                    <div className="flex items-center gap-1">
+                                                                        {/* Lock Icon (Only if completed) */}
+                                                                        {isCompleted && (
+                                                                            <button
+                                                                                onClick={() => toggleLock(mapIndex, setIndex)}
+                                                                                className={`p-1 rounded-full transition-colors ${set.locked ? 'text-red-500 bg-red-500/10' : 'text-neutral-500 hover:text-white'}`}
+                                                                                title={set.locked ? "Desbloquear para editar" : "Bloquear"}
+                                                                            >
+                                                                                {set.locked ? <Lock size={14} /> : <LockOpen size={14} />}
+                                                                            </button>
+                                                                        )}
+
+                                                                        <button
+                                                                            onClick={() => toggleComplete(mapIndex, setIndex)}
+                                                                            disabled={set.locked}
+                                                                            className={`p-2 rounded-full border-2 transition-all ${isCompleted
+                                                                                ? set.locked
+                                                                                    ? 'bg-neutral-800 border-neutral-700 text-neutral-500 cursor-not-allowed opacity-80' // Locked State
+                                                                                    : 'bg-green-500 border-green-500 text-black shadow-[0_0_15px_rgba(34,197,94,0.6)]' // Unlocked Complete
+                                                                                : 'bg-transparent border-neutral-700 text-neutral-600 hover:border-neutral-500' // Incomplete
+                                                                                }`}
+                                                                            title={set.locked ? "Desbloquea primero" : (isCompleted ? "Marcar incompleto" : "Marcar listo")}
+                                                                        >
+                                                                            <Check size={20} strokeWidth={3} />
+                                                                        </button>
+                                                                    </div>
                                                                     {/* Timestamp */}
                                                                     {/* @ts-ignore */}
                                                                     {isCompleted && set.completedAt && (
-                                                                        <span className="text-[10px] font-bold text-green-500 mt-1 tabular-nums tracking-tighter">
+                                                                        <span className="text-[10px] font-bold text-green-500 mt-0 tabular-nums tracking-tighter">
                                                                             {/* @ts-ignore */}
                                                                             {set.completedAt}
                                                                         </span>
@@ -1400,9 +1475,9 @@ export const WorkoutSession = () => {
                                                             </div>
                                                         </div>
 
-                                                        {/* Rest Timer Display */}
-                                                        {restTimerSetKey === `${mapIndex}-${setIndex}` && restTimerStart && isCompleted && (
-                                                            <RestTimerDisplay startTime={restTimerStart as number} />
+                                                        {/* Rest Timer Display (Per Set) */}
+                                                        {isCompleted && set.restStartTime && (
+                                                            <RestTimerDisplay startTime={set.restStartTime} endTime={set.restEndTime} />
                                                         )}
                                                     </Fragment>
                                                 );
