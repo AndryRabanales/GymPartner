@@ -79,10 +79,45 @@ export const EquipmentForm = ({
         setSubmitting(true);
 
         try {
+            // 0. AUTO-SAVE PENDING METRICS/CATEGORIES (UX Safety Net)
+            let currentSettings = { ...userSettings };
+            let updatedSettings = false;
+
+            // Check Pending Category
+            if (isCreatingCategory && newCategoryName.trim()) {
+                const newCatId = newCategoryName.toUpperCase().replace(/\s+/g, '_');
+                // Avoid duplicates
+                if (!currentSettings.categories.some(c => c.id === newCatId)) {
+                    const newCat: CustomCategory = { id: newCatId, label: newCategoryName, icon: newCategoryIcon };
+                    currentSettings.categories = [...currentSettings.categories, newCat];
+                    setCustomCategory(newCat.id); // Auto-select
+                    updatedSettings = true;
+                }
+            }
+
+            // Check Pending Metric
+            if (isCreatingMetric && newMetricName.trim()) {
+                const newMetId = newMetricName.toLowerCase().replace(/\s+/g, '_');
+                // Avoid duplicates
+                if (!currentSettings.metrics.some(m => m.id === newMetId)) {
+                    const newMet: CustomMetric = { id: newMetId, label: newMetricName, icon: newMetricIcon, default_active: true };
+                    currentSettings.metrics = [...currentSettings.metrics, newMet];
+                    // Auto-enable for this item
+                    setCustomMetrics(prev => ({ ...prev, [newMetId]: true }));
+                    updatedSettings = true;
+                }
+            }
+
+            // Force Save Settings if changed
+            if (updatedSettings) {
+                await equipmentService.updateUserSettings(user.id, currentSettings);
+                onUpdateSettings(currentSettings); // Sync Parent
+            }
+
             // Resolve Icon
             let resolvedIcon = '⚡';
             const standardCat = EQUIPMENT_CATEGORIES[customCategory as keyof typeof EQUIPMENT_CATEGORIES];
-            const customCat = userSettings.categories.find(c => c.id === customCategory);
+            const customCat = currentSettings.categories.find(c => c.id === customCategory); // Use Latest
             // @ts-ignore
             if (standardCat) resolvedIcon = standardCat.icon;
             if (customCat) resolvedIcon = customCat.icon;
