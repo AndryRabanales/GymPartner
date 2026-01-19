@@ -45,6 +45,31 @@ interface WorkoutExercise {
     category?: string; // SNAPSHOT: For history persistence
 }
 
+// Helper Component for Rest Timer
+const RestTimerDisplay = ({ startTime }: { startTime: number }) => {
+    const [elapsed, setElapsed] = useState(0);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setElapsed(Math.floor((Date.now() - startTime) / 1000));
+        }, 1000);
+        return () => clearInterval(interval);
+    }, [startTime]);
+
+    const formatTime = (secs: number) => {
+        const m = Math.floor(secs / 60);
+        const s = secs % 60;
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    };
+
+    return (
+        <div className="w-full bg-neutral-900/50 border border-neutral-800 rounded-lg p-2 mt-1 flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-2">
+            <span className="text-xs text-neutral-500 font-bold uppercase tracking-wider">Descanso</span>
+            <span className="text-sm font-black text-gym-primary tabular-nums">{formatTime(elapsed)}</span>
+        </div>
+    );
+};
+
 export const WorkoutSession = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
@@ -90,6 +115,11 @@ export const WorkoutSession = () => {
 
     // NEW: Batch Selection State
     const [selectedCatalogItems, setSelectedCatalogItems] = useState<Set<string>>(new Set());
+
+    // NEW: Rest Timer State
+    const [restTimerStart, setRestTimerStart] = useState<number | null>(null); // Timestamp in ms
+    const [restTimerSetKey, setRestTimerSetKey] = useState<string | null>(null); // "exerciseIdx-setIdx" to show only under specific set
+
 
     // NEW: Handle Batch Add
     const handleBatchAdd = async () => {
@@ -681,6 +711,31 @@ export const WorkoutSession = () => {
         setActiveExercises(updated);
     };
 
+    // [NEW] Remove Single Set
+    const removeSet = (exerciseIndex: number, setIndex: number) => {
+        const updatedExercises = [...activeExercises];
+        updatedExercises[exerciseIndex].sets.splice(setIndex, 1);
+        setActiveExercises(updatedExercises);
+    };
+
+    // [NEW] Toggle Completion with Timestamp
+    const toggleComplete = (exerciseIndex: number, setIndex: number) => {
+        const updated = [...activeExercises];
+        const set = updated[exerciseIndex].sets[setIndex];
+
+        if (set.completed) {
+            set.completed = false;
+            // @ts-ignore
+            set.completedAt = undefined;
+        } else {
+            set.completed = true;
+            // @ts-ignore
+            set.completedAt = elapsedTime;
+            // TODO: Start Rest Timer here in next step
+        }
+        setActiveExercises(updated);
+    };
+
     const addSet = (exerciseIndex: number) => {
         const updated = [...activeExercises];
         const previousSet = updated[exerciseIndex].sets[updated[exerciseIndex].sets.length - 1];
@@ -1203,109 +1258,149 @@ export const WorkoutSession = () => {
                                             {exercise.sets.map((set, setIndex) => {
                                                 const isCompleted = set.completed;
                                                 return (
-                                                    <div
-                                                        key={set.id}
-                                                        className={`flex flex-wrap gap-2 p-3 rounded-xl transition-all duration-300 items-center ${isCompleted
-                                                            ? 'bg-neutral-900/80 border border-green-500/20'
-                                                            : 'bg-black/20 border border-transparent'
-                                                            }`}
-                                                    >
-                                                        {/* Set Number */}
-                                                        <div className="w-8 flex justify-center shrink-0 self-center">
-                                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${isCompleted ? 'bg-green-500/20 text-green-500' : 'bg-neutral-800 text-neutral-400'
-                                                                }`}>
-                                                                {setIndex + 1}
+                                                    <>
+                                                        <div
+                                                            key={set.id}
+                                                            className={`flex flex-wrap gap-2 p-3 rounded-xl transition-all duration-300 items-center ${isCompleted
+                                                                ? 'bg-neutral-900/80 border border-green-500/20'
+                                                                : 'bg-black/20 border border-transparent'
+                                                                }`}
+                                                        >
+                                                            {/* Set Number */}
+                                                            <div className="w-8 flex justify-center shrink-0 self-center">
+                                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${isCompleted ? 'bg-green-500/20 text-green-500' : 'bg-neutral-800 text-neutral-400'
+                                                                    }`}>
+                                                                    {setIndex + 1}
+                                                                </div>
                                                             </div>
-                                                        </div>
 
-                                                        {/* Inputs Container - Wraps on small screens */}
-                                                        <div className="flex-1 flex flex-wrap gap-2 items-start min-w-0">
+                                                            {/* Inputs Container - Wraps on small screens */}
+                                                            <div className="flex-1 flex flex-wrap gap-2 items-start min-w-0">
 
-                                                            {exercise.metrics.weight && (
-                                                                <div className="min-w-[75px] w-[75px]">
-                                                                    <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1">PESO</label>
-                                                                    <input
-                                                                        type="number"
-                                                                        inputMode="decimal"
-                                                                        value={set.weight === 0 ? '' : set.weight}
-                                                                        onChange={(e) => updateSet(mapIndex, setIndex, 'weight', e.target.value)}
-                                                                        className={`w-full bg-neutral-800 text-center font-black text-xl rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${isCompleted ? 'text-neutral-500' : 'text-white'}`}
-                                                                        placeholder="0"
-                                                                    />
-                                                                </div>
-                                                            )}
-                                                            {exercise.metrics.reps && (
-                                                                <div className="min-w-[75px] w-[75px]">
-                                                                    <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1">REPS</label>
-                                                                    <input
-                                                                        type="number"
-                                                                        inputMode="numeric"
-                                                                        value={set.reps === 0 ? '' : set.reps}
-                                                                        onChange={(e) => updateSet(mapIndex, setIndex, 'reps', e.target.value)}
-                                                                        className={`w-full bg-neutral-800 text-center font-black text-xl rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${isCompleted ? 'text-neutral-500' : 'text-white'}`}
-                                                                        placeholder="0"
-                                                                    />
-                                                                </div>
-                                                            )}
-                                                            {exercise.metrics.time && (
-                                                                <div className="min-w-[75px] w-[75px]">
-                                                                    <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1">TIEMPO (s)</label>
-                                                                    <input
-                                                                        type="number"
-                                                                        inputMode="numeric"
-                                                                        value={set.time || ''}
-                                                                        onChange={(e) => updateSet(mapIndex, setIndex, 'time', e.target.value)}
-                                                                        className="w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none"
-                                                                        placeholder="0s"
-                                                                    />
-                                                                </div>
-                                                            )}
-                                                            {exercise.metrics.distance && (
-                                                                <div className="min-w-[75px] w-[75px]">
-                                                                    <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1">DIST (m)</label>
-                                                                    <input
-                                                                        type="number"
-                                                                        inputMode="decimal"
-                                                                        value={set.distance === 0 ? '' : set.distance}
-                                                                        onChange={(e) => updateSet(mapIndex, setIndex, 'distance', e.target.value)}
-                                                                        className="w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none"
-                                                                        placeholder="0m"
-                                                                    />
-                                                                </div>
-                                                            )}
-                                                            {exercise.metrics.rpe && (
-                                                                <div className="min-w-[60px] w-[60px]">
-                                                                    <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1">RPE</label>
-                                                                    <input
-                                                                        type="number"
-                                                                        inputMode="numeric"
-                                                                        max={10}
-                                                                        value={set.rpe || ''}
-                                                                        onChange={(e) => updateSet(mapIndex, setIndex, 'rpe', e.target.value)}
-                                                                        className="w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none"
-                                                                        placeholder="-"
-                                                                    />
-                                                                </div>
-                                                            )}
-                                                            {/* Custom Metrics inputs */}
-                                                            {Object.keys(exercise.metrics).map(key => {
-                                                                if (['weight', 'reps', 'time', 'distance', 'rpe'].includes(key)) return null;
-                                                                if (!exercise.metrics[key as keyof typeof exercise.metrics]) return null;
-                                                                return (
-                                                                    <div key={key} className="min-w-[75px] w-[75px]">
-                                                                        <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1 uppercase truncate">{key}</label>
+                                                                {exercise.metrics.weight && (
+                                                                    <div className="min-w-[75px] w-[75px]">
+                                                                        <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1">PESO</label>
                                                                         <input
                                                                             type="number"
                                                                             inputMode="decimal"
-                                                                            value={set.custom?.[key] || ''}
-                                                                            onChange={(e) => updateSet(mapIndex, setIndex, key, e.target.value, true)} // isCustom=true
-                                                                            className="w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white focus:ring-2 focus:ring-gym-primary outline-none"
+                                                                            value={set.weight === 0 ? '' : set.weight}
+                                                                            onChange={(e) => updateSet(mapIndex, setIndex, 'weight', e.target.value)}
+                                                                            className={`w-full bg-neutral-800 text-center font-black text-xl rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${isCompleted ? 'text-neutral-500' : 'text-white'}`}
+                                                                            placeholder="0"
                                                                         />
                                                                     </div>
-                                                                )
-                                                            })}
+                                                                )}
+                                                                {exercise.metrics.reps && (
+                                                                    <div className="min-w-[75px] w-[75px]">
+                                                                        <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1">REPS</label>
+                                                                        <input
+                                                                            type="number"
+                                                                            inputMode="numeric"
+                                                                            value={set.reps === 0 ? '' : set.reps}
+                                                                            onChange={(e) => updateSet(mapIndex, setIndex, 'reps', e.target.value)}
+                                                                            className={`w-full bg-neutral-800 text-center font-black text-xl rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${isCompleted ? 'text-neutral-500' : 'text-white'}`}
+                                                                            placeholder="0"
+                                                                        />
+                                                                    </div>
+                                                                )}
+                                                                {exercise.metrics.time && (
+                                                                    <div className="min-w-[75px] w-[75px]">
+                                                                        <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1">TIEMPO (s)</label>
+                                                                        <input
+                                                                            type="number"
+                                                                            inputMode="numeric"
+                                                                            value={set.time || ''}
+                                                                            onChange={(e) => updateSet(mapIndex, setIndex, 'time', e.target.value)}
+                                                                            className="w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none"
+                                                                            placeholder="0s"
+                                                                        />
+                                                                    </div>
+                                                                )}
+                                                                {exercise.metrics.distance && (
+                                                                    <div className="min-w-[75px] w-[75px]">
+                                                                        <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1">DIST (m)</label>
+                                                                        <input
+                                                                            type="number"
+                                                                            inputMode="decimal"
+                                                                            value={set.distance === 0 ? '' : set.distance}
+                                                                            onChange={(e) => updateSet(mapIndex, setIndex, 'distance', e.target.value)}
+                                                                            className="w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none"
+                                                                            placeholder="0m"
+                                                                        />
+                                                                    </div>
+                                                                )}
+                                                                {exercise.metrics.rpe && (
+                                                                    <div className="min-w-[60px] w-[60px]">
+                                                                        <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1">RPE</label>
+                                                                        <input
+                                                                            type="number"
+                                                                            inputMode="numeric"
+                                                                            max={10}
+                                                                            value={set.rpe || ''}
+                                                                            onChange={(e) => updateSet(mapIndex, setIndex, 'rpe', e.target.value)}
+                                                                            className="w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none"
+                                                                            placeholder="-"
+                                                                        />
+                                                                    </div>
+                                                                )}
+                                                                {/* Custom Metrics inputs */}
+                                                                {Object.keys(exercise.metrics).map(key => {
+                                                                    if (['weight', 'reps', 'time', 'distance', 'rpe'].includes(key)) return null;
+                                                                    if (!exercise.metrics[key as keyof typeof exercise.metrics]) return null;
+                                                                    return (
+                                                                        <div key={key} className="min-w-[75px] w-[75px]">
+                                                                            <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1 uppercase truncate">{key}</label>
+                                                                            <input
+                                                                                type="number"
+                                                                                inputMode="decimal"
+                                                                                value={set.custom?.[key] || ''}
+                                                                                onChange={(e) => updateSet(mapIndex, setIndex, key, e.target.value, true)} // isCustom=true
+                                                                                className="w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white focus:ring-2 focus:ring-gym-primary outline-none"
+                                                                            />
+                                                                        </div>
+                                                                    )
+                                                                })}
+
+                                                                {/* [NEW] Delete Set Button */}
+                                                                <div className="flex items-center justify-center self-center h-full pt-4 pl-0">
+                                                                    <button
+                                                                        onClick={() => removeSet(mapIndex, setIndex)}
+                                                                        className="text-neutral-600 hover:text-red-500 transition-colors p-2"
+                                                                        title="Eliminar Serie"
+                                                                    >
+                                                                        <Trash2 size={18} />
+                                                                    </button>
+                                                                </div>
+
+                                                                {/* [NEW] Toggle Complete Button */}
+                                                                <div className="flex flex-col items-center justify-center self-center h-full pt-1 pl-1">
+                                                                    <button
+                                                                        onClick={() => toggleComplete(mapIndex, setIndex)}
+                                                                        className={`p-2 rounded-full border-2 transition-all ${isCompleted
+                                                                            ? 'bg-green-500 border-green-500 text-black shadow-[0_0_15px_rgba(34,197,94,0.6)]'
+                                                                            : 'bg-transparent border-neutral-700 text-neutral-600 hover:border-neutral-500'
+                                                                            }`}
+                                                                        title={isCompleted ? "Marcar incompleto" : "Marcar listo"}
+                                                                    >
+                                                                        <Check size={20} strokeWidth={3} />
+                                                                    </button>
+                                                                    {/* Timestamp */}
+                                                                    {/* @ts-ignore */}
+                                                                    {isCompleted && set.completedAt && (
+                                                                        <span className="text-[10px] font-bold text-green-500 mt-1 tabular-nums tracking-tighter">
+                                                                            {/* @ts-ignore */}
+                                                                            {set.completedAt}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
                                                         </div>
-                                                    </div>
+
+                                                        {/* Rest Timer Display */}
+                                                        {restTimerSetKey === `${mapIndex}-${setIndex}` && restTimerStart && isCompleted && (
+                                                            <RestTimerDisplay startTime={restTimerStart as number} />
+                                                        )}
+                                                    </>
                                                 );
                                             })}
 
@@ -1337,7 +1432,8 @@ export const WorkoutSession = () => {
                             ))}
                         </WorkoutCarousel>
                     </div>
-                )}
+                )
+                }
 
                 {/* Legacy Finish Button (Now hidden inside the last card for cleaner UI, or we can keep it?) 
                     The previous code had it outside. I moved it inside the last card for "Focus Mode".
@@ -1347,7 +1443,7 @@ export const WorkoutSession = () => {
                     Actually, let's keep it simple: "Finish" is on the last card. 
                 */}
                 {/* REMOVED: Battle Order Ready Overlay - Auto-start logic implemented instead */}
-            </div>
+            </div >
 
 
             {/* Fab Add Button (Only if exercises exist) */}
