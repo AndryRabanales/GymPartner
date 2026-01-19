@@ -725,6 +725,23 @@ export const WorkoutSession = () => {
     // [NEW] Remove Single Set
     const removeSet = (exerciseIndex: number, setIndex: number) => {
         const updatedExercises = [...activeExercises];
+
+        // 1. Check if we need to resume the PREVIOUS set's timer
+        // Only if we are removing the LAST set or a specific set that was blocking the previous one?
+        // User scenario: "Si se agrega la serie #3... y si la serie #3 se vuelve a eliminar"
+        // This usually implies removing the set that was just added (at the end).
+        // But let's handle generic removal of index `setIndex`.
+        // If we remove setIndex, setIndex-1 becomes the new "latest" (if setIndex was last).
+
+        if (setIndex > 0) {
+            const prevSet = updatedExercises[exerciseIndex].sets[setIndex - 1];
+            // If prev set was completed and has a timer that was STOPPED (has restEndTime)
+            if (prevSet && prevSet.completed && prevSet.restEndTime) {
+                // Resume it! (Make it live again)
+                prevSet.restEndTime = undefined;
+            }
+        }
+
         updatedExercises[exerciseIndex].sets.splice(setIndex, 1);
         setActiveExercises(updatedExercises);
     };
@@ -804,6 +821,11 @@ export const WorkoutSession = () => {
     const addSet = (exerciseIndex: number) => {
         const updated = [...activeExercises];
         const previousSet = updated[exerciseIndex].sets[updated[exerciseIndex].sets.length - 1];
+
+        // [NEW] Stop the timer of the previous set when adding a new one
+        if (previousSet && previousSet.completed && previousSet.restStartTime && !previousSet.restEndTime) {
+            previousSet.restEndTime = Date.now();
+        }
 
         // Initialize custom metrics based on what's active in the settings
         const customMetrics: Record<string, number> = {};
