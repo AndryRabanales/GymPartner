@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import type { Equipment, CustomSettings } from '../services/GymEquipmentService';
@@ -1258,9 +1258,8 @@ export const WorkoutSession = () => {
                                             {exercise.sets.map((set, setIndex) => {
                                                 const isCompleted = set.completed;
                                                 return (
-                                                    <>
+                                                    <Fragment key={set.id}>
                                                         <div
-                                                            key={set.id}
                                                             className={`flex flex-wrap gap-2 p-3 rounded-xl transition-all duration-300 items-center ${isCompleted
                                                                 ? 'bg-neutral-900/80 border border-green-500/20'
                                                                 : 'bg-black/20 border border-transparent'
@@ -1400,7 +1399,7 @@ export const WorkoutSession = () => {
                                                         {restTimerSetKey === `${mapIndex}-${setIndex}` && restTimerStart && isCompleted && (
                                                             <RestTimerDisplay startTime={restTimerStart as number} />
                                                         )}
-                                                    </>
+                                                    </Fragment>
                                                 );
                                             })}
 
