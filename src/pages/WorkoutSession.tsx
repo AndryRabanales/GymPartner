@@ -26,6 +26,7 @@ interface WorkoutSet {
     rpe?: number;      // 1-10
     custom?: Record<string, number>; // Dynamic metrics (jumps, cadence, etc.)
     completed: boolean;
+    completedAt?: number; // Timestamp of completion
     locked?: boolean;
     // Enhanced Timer Props
     restStatus?: 'running' | 'paused' | 'completed';
@@ -1202,36 +1203,55 @@ export const WorkoutSession = () => {
             for (let j = 0; j < exercise.sets.length; j++) {
                 const set = exercise.sets[j];
 
-                // If not completed but has data, SAVE IT!
-                if (!set.completed && (set.weight > 0 || set.reps > 0 || (set.time || 0) > 0 || (set.distance || 0) > 0)) {
-                    // We need the ID now
-                    const targetId = await getExId();
+                for (let j = 0; j < exercise.sets.length; j++) {
+                    const set = exercise.sets[j];
 
-                    if (targetId) {
-                        console.log(`💾 Auto-saving set ${j + 1} for ${exercise.equipmentName} (ExID: ${targetId})...`);
-                        // Ensure we have valid numbers
-                        const weightToSave = Number(set.weight) || 0;
-                        const repsToSave = Number(set.reps) || 0;
-                        const timeToSave = Number(set.time) || 0;
-                        const distanceToSave = Number(set.distance) || 0;
+                    // SAVE LOGIC:
+                    // 1. If it has no DB ID (not saved yet)
+                    // 2. AND (It is completed OR has some data)
+                    if (!set.db_id && (set.completed || set.weight > 0 || set.reps > 0 || (set.time || 0) > 0 || (set.distance || 0) > 0)) {
+                        // We need the ID now
+                        const targetId = await getExId();
 
-                        savePromises.push(workoutService.logSet({
-                            session_id: sessionId,
-                            exercise_id: targetId, // Use the resolved ID
-                            set_number: j + 1,
-                            sets: 1,
-                            weight_kg: weightToSave,
-                            reps: repsToSave,
-                            time: timeToSave,
-                            distance: distanceToSave,
-                            rpe: Number(set.rpe) || undefined,
-                            metrics_data: set.custom || {}, // Save custom metrics
-                            category_snapshot: exercise.category || 'Custom', // SNAPSHOT: Current Category
-                            is_pr: false
-                        }));
-                        savedCount++;
-                    } else {
-                        console.error(`❌ Failed to resolve ID for ${exercise.equipmentName}, skipping auto-save.`);
+                        if (targetId) {
+                            console.log(`💾 Saving set ${j + 1} for ${exercise.equipmentName}...`);
+                            // Ensure we have valid numbers
+                            const weightToSave = Number(set.weight) || 0;
+                            const repsToSave = Number(set.reps) || 0;
+                            const timeToSave = Number(set.time) || 0;
+                            const distanceToSave = Number(set.distance) || 0;
+
+                            // Point 4: Add Timestamps to Metrics
+                            const extendedMetrics = {
+                                ...(set.custom || {}),
+                                _checklist_timestamp: set.completed ? (set.completedAt || Date.now()) : null,
+                                _rest_duration_ms: set.restAccumulated || 0,
+                                _rest_status: set.restStatus
+                            };
+
+                            savePromises.push(workoutService.logSet({
+                                session_id: sessionId,
+                                exercise_id: targetId, // Use the resolved ID
+                                set_number: j + 1,
+                                sets: 1,
+                                weight_kg: weightToSave,
+                                reps: repsToSave,
+                                time: timeToSave,
+                                distance: distanceToSave,
+                                rpe: Number(set.rpe) || undefined,
+                                metrics_data: extendedMetrics, // Save custom metrics + timestamps
+                                category_snapshot: exercise.category || 'Custom', // SNAPSHOT: Current Category
+                                is_pr: false
+                            }).then(res => {
+                                if (res.data) {
+                                    // Mark as saved in local state to avoid dupes if we were to stay on screen
+                                    set.db_id = res.data.id;
+                                }
+                            }));
+                            savedCount++;
+                        } else {
+                            console.error(`❌ Failed to resolve ID for ${exercise.equipmentName}, skipping save.`);
+                        }
                     }
                 }
             }
