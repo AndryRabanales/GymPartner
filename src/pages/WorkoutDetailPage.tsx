@@ -16,6 +16,10 @@ interface ExerciseDetail {
         distance?: number;
         metrics_data?: Record<string, number>;
         is_pr: boolean;
+        completedAt?: number;
+        restDuration?: number;
+        restStatus?: string;
+        weightUnit?: 'kg' | 'lb';
     }[];
     metrics?: {
         hasWeight: boolean;
@@ -23,9 +27,12 @@ interface ExerciseDetail {
         hasTime: boolean;
         hasDistance: boolean;
         hasRpe: boolean;
+        hasCompletedAt: boolean;
+        hasRestDuration: boolean;
         customKeys: string[];
     };
 }
+
 
 interface WorkoutDetail {
     id: string;
@@ -112,7 +119,11 @@ export default function WorkoutDetailPage() {
                     time: log.time,
                     distance: log.distance,
                     metrics_data: log.metrics_data || {},
-                    is_pr: log.is_pr || false
+                    is_pr: log.is_pr || false,
+                    completedAt: log.metrics_data?._checklist_timestamp,
+                    restDuration: log.metrics_data?._rest_duration_ms,
+                    restStatus: log.metrics_data?._rest_status,
+                    weightUnit: log.metrics_data?._weight_unit || 'kg' // Extract unit
                 });
 
                 totalVol += (log.weight_kg || 0) * (log.reps || 0);
@@ -121,9 +132,15 @@ export default function WorkoutDetailPage() {
             // Calculate metrics flags for each exercise
             exerciseMap.forEach((ex) => {
                 const allCustomKeys = new Set<string>();
+                const internalKeys = ['_checklist_timestamp', '_rest_duration_ms', '_rest_status'];
+
                 ex.sets.forEach(s => {
                     if (s.metrics_data) {
-                        Object.keys(s.metrics_data).forEach(k => allCustomKeys.add(k));
+                        Object.keys(s.metrics_data).forEach(k => {
+                            if (!internalKeys.includes(k)) {
+                                allCustomKeys.add(k);
+                            }
+                        });
                     }
                 });
 
@@ -133,6 +150,8 @@ export default function WorkoutDetailPage() {
                     hasTime: ex.sets.some(s => (s.time || 0) > 0),
                     hasDistance: ex.sets.some(s => (s.distance || 0) > 0),
                     hasRpe: ex.sets.some(s => (s.rpe || 0) > 0),
+                    hasCompletedAt: ex.sets.some(s => !!s.completedAt),
+                    hasRestDuration: ex.sets.some(s => (s.restDuration || 0) > 0),
                     customKeys: Array.from(allCustomKeys)
                 };
             });
@@ -300,6 +319,8 @@ export default function WorkoutDetailPage() {
                                             {exercise.metrics?.hasTime && <div className="flex-1 min-w-[50px]">Tie</div>}
                                             {exercise.metrics?.hasDistance && <div className="flex-1 min-w-[50px]">Dist</div>}
                                             {exercise.metrics?.hasRpe && <div className="flex-1 min-w-[40px]">RPE</div>}
+                                            {exercise.metrics?.hasCompletedAt && <div className="flex-1 min-w-[50px]">Fin</div>}
+                                            {exercise.metrics?.hasRestDuration && <div className="flex-1 min-w-[50px]">Desc</div>}
                                             {/* Dynamic Custom Headers */}
                                             {exercise.metrics?.customKeys?.map(key => (
                                                 <div key={key} className="flex-1 min-w-[50px] truncate" title={key}>
@@ -330,7 +351,10 @@ export default function WorkoutDetailPage() {
                                                     {/* Weight */}
                                                     {exercise.metrics?.hasWeight && (
                                                         <div className="flex-1 min-w-[50px] font-mono font-bold text-white text-sm">
-                                                            {set.weight_kg > 0 ? set.weight_kg : <span className="text-neutral-700">-</span>}
+                                                            {set.weightUnit === 'lb'
+                                                                ? `${(set.weight_kg * 2.20462).toFixed(1).replace(/\.0$/, '')} lb`
+                                                                : `${set.weight_kg} kg`
+                                                            }
                                                         </div>
                                                     )}
 
@@ -359,6 +383,31 @@ export default function WorkoutDetailPage() {
                                                     {exercise.metrics?.hasRpe && (
                                                         <div className="flex-1 min-w-[40px] font-mono font-bold text-gym-primary/80 text-xs">
                                                             {set.rpe || <span className="text-neutral-700">-</span>}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Completed At (Elapsed) */}
+                                                    {exercise.metrics?.hasCompletedAt && (
+                                                        <div className="flex-1 min-w-[50px] font-mono font-bold text-white text-xs">
+                                                            {set.completedAt ? (() => {
+                                                                const start = new Date(workout.started_at).getTime();
+                                                                const diff = set.completedAt - start;
+                                                                if (diff < 0) return '-';
+                                                                const mins = Math.floor(diff / 60000);
+                                                                return `T+${mins}m`;
+                                                            })() : <span className="text-neutral-700">-</span>}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Rest Duration */}
+                                                    {exercise.metrics?.hasRestDuration && (
+                                                        <div className="flex-1 min-w-[50px] font-mono font-bold text-blue-400 text-xs">
+                                                            {set.restDuration ? (() => {
+                                                                const secs = Math.floor(set.restDuration / 1000);
+                                                                const m = Math.floor(secs / 60);
+                                                                const s = secs % 60;
+                                                                return `${m}:${s.toString().padStart(2, '0')}`;
+                                                            })() : <span className="text-neutral-700">-</span>}
                                                         </div>
                                                     )}
 

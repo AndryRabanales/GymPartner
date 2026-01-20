@@ -36,6 +36,8 @@ interface WorkoutSet {
     db_id?: string;
 }
 
+const STORAGE_KEY = 'gympartner_active_session';
+
 interface WorkoutExercise {
     id: string; // Temp UI ID
     equipmentId: string;
@@ -49,6 +51,8 @@ interface WorkoutExercise {
         [key: string]: boolean; // Allow custom metrics (cadencia, altura, watts, etc.)
     };
     sets: WorkoutSet[];
+    // NEW: Per-exercise Weight Unit
+    weightUnit?: 'kg' | 'lb';
     category?: string; // SNAPSHOT: For history persistence
 }
 
@@ -95,6 +99,7 @@ export const WorkoutSession = () => {
     // State
     const [loading, setLoading] = useState(true);
     const [sessionId, setSessionId] = useState<string | null>(null);
+    const [startTime, setStartTime] = useState<Date | null>(null);
     const [activeExercises, setActiveExercises] = useState<WorkoutExercise[]>([]);
     const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
     const [arsenal, setArsenal] = useState<Equipment[]>([]);
@@ -137,8 +142,111 @@ export const WorkoutSession = () => {
     const [restTimerStart, setRestTimerStart] = useState<number | null>(null); // Timestamp in ms
     const [restTimerSetKey, setRestTimerSetKey] = useState<string | null>(null); // "exerciseIdx-setIdx" to show only under specific set
 
+    // NEW: Weight Unit State (Global Default Only)
+    // We only use this to initialize new exercises. Exercises themselves hold their state.
+    const [defaultWeightUnit, setDefaultWeightUnit] = useState<'kg' | 'lb'>('kg');
+
+    // Load Default Weight Unit on Mount
+    useEffect(() => {
+        const savedUnit = localStorage.getItem('gympartner_weight_unit');
+        if (savedUnit === 'lb') setDefaultWeightUnit('lb');
+    }, []);
+
+    // Helpers for Unit Conversion
+    const toDisplayWeight = (kgVal: number, unit: 'kg' | 'lb' = 'kg'): string => {
+        if (!kgVal) return '';
+        if (unit === 'kg') return kgVal.toString();
+        // kg -> lb (1 kg = 2.20462 lb)
+        const lb = (kgVal * 2.20462);
+        // Round to 1 decimal like "45.5" but if it's "100.0" show "100"
+        return parseFloat(lb.toFixed(1)).toString();
+    };
+
+    const toInternalWeight = (inputVal: string, unit: 'kg' | 'lb' = 'kg'): number => {
+        const num = parseFloat(inputVal);
+        if (isNaN(num)) return 0;
+        if (unit === 'kg') return num;
+        // lb -> kg (1 lb = 0.453592 kg)
+        // Store precisely
+        return num / 2.20462;
+    };
+
+    // Toggle Unit for Specific Exercise
+    const toggleExerciseUnit = (exerciseIndex: number) => {
+        const updated = [...activeExercises];
+        const currentUnit = updated[exerciseIndex].weightUnit || 'kg';
+        updated[exerciseIndex].weightUnit = currentUnit === 'kg' ? 'lb' : 'kg';
+        setActiveExercises(updated);
+        // Save as new default preference for future added exercises
+        localStorage.setItem('gympartner_weight_unit', updated[exerciseIndex].weightUnit!);
+        setDefaultWeightUnit(updated[exerciseIndex].weightUnit!);
+    };
+
 
     // NEW: Handle Batch Add
+    // --- Local Backup / Restore Logic ---
+    useEffect(() => {
+        const loadSavedSession = () => {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    // Check if data is fresh (< 24 hours)
+                    const now = Date.now();
+                    if (now - parsed.savedAt < 24 * 60 * 60 * 1000) {
+                        const data = parsed.data;
+                        if (data.exercises && data.exercises.length > 0) {
+                            // Restore state
+                            setActiveExercises(data.exercises);
+                            setStartTime(data.startTime ? new Date(data.startTime) : null); // Expects Date object or string?
+                            if (data.routineName) setCurrentRoutineName(data.routineName);
+                            // if (data.locationName) setLocationName(data.locationName); // No locationName state
+                            if (data.gymId) setResolvedGymId(data.gymId); // Assume setGymId exists or need to handle
+
+                            // Visual feedback
+                            // alert("Sesión restaurada"); // Too intrusive? Just restore silently or use toast if available.
+                            console.log('Session restored from backup', parsed.savedAt);
+                        }
+                    } else {
+                        localStorage.removeItem(STORAGE_KEY);
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to restore session", e);
+            }
+        };
+
+        // Only load if explicit "fresh" start?
+        // Or if exercises are empty?
+        // We generally want to load on mount.
+        loadSavedSession();
+    }, []);
+
+    // Save state on change
+    useEffect(() => {
+        if (activeExercises.length === 0 && !currentRoutineName) return;
+        if (!user) return; // Only save if user is logged in
+
+        const saveSession = () => {
+            const sessionData = {
+                savedAt: Date.now(),
+                data: {
+                    exercises: activeExercises,
+                    startTime: startTime?.toISOString(), // Convert Date to string for storage
+                    routineName: currentRoutineName,
+                    // locationName: '', // No locationName state
+                    gymId: resolvedGymId
+                }
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(sessionData));
+        };
+
+        const timeoutId = setTimeout(saveSession, 1000); // Debounce 1s
+        return () => clearTimeout(timeoutId);
+    }, [activeExercises, startTime, currentRoutineName, resolvedGymId, user]);
+
+    // --- End Local Backup ---
+
     const handleBatchAdd = async () => {
         if (selectedCatalogItems.size === 0) return;
 
@@ -166,7 +274,8 @@ export const WorkoutSession = () => {
                 sets: [
                     { id: Math.random().toString(), weight: 0, reps: 0, completed: false }
                 ],
-                category: equipment.target_muscle_group || equipment.category || 'Custom'
+                category: equipment.target_muscle_group || equipment.category || 'Custom',
+                weightUnit: defaultWeightUnit
             } as WorkoutExercise;
         });
 
@@ -213,7 +322,6 @@ export const WorkoutSession = () => {
     });
 
     // Timer State (RESTORED)
-    const [startTime, setStartTime] = useState<Date | null>(null);
     const [elapsedTime, setElapsedTime] = useState("00:00");
     const [isFinished, setIsFinished] = useState(false);
 
@@ -413,7 +521,7 @@ export const WorkoutSession = () => {
                             rpe: log.rpe || 0,
                             custom: log.metrics_data || {},
                             completed: true // Logged means completed/saved? Usually yes.
-                            // Actually, restore as uncompleted if we want them editable readily? 
+                            // Actually, restore as uncompleted if we want them editable readily?
                             // User wants "datos donde escribes ... mantenerse". If allowed to edit old sets, keep incomplete?
                             // But logs are usually final. Let's mark as completed but editable.
                         });
@@ -465,6 +573,9 @@ export const WorkoutSession = () => {
             console.log("🚀 Starting NEW Session explicitly...");
             const { data: newSession, error: startError } = await workoutService.startSession(user.id, resolvedGymId || undefined);
             if (startError) throw startError;
+
+            // Clear local backup on success
+            localStorage.removeItem(STORAGE_KEY);
 
             if (newSession) {
                 setSessionId(newSession.id);
@@ -711,9 +822,9 @@ export const WorkoutSession = () => {
         setActiveExercises(prev => prev.filter(e => e.id !== id));
     };
 
-    const updateSet = (exerciseIndex: number, setIndex: number, field: string, value: string, isCustom: boolean = false) => {
+    const updateSet = (exerciseIndex: number, setIndex: number, field: string, value: string | number, isCustom: boolean = false) => {
         const updated = [...activeExercises];
-        const val = parseFloat(value);
+        const val = typeof value === 'string' ? parseFloat(value) : value;
 
         if (isCustom) {
             if (!updated[exerciseIndex].sets[setIndex].custom) {
@@ -1224,10 +1335,12 @@ export const WorkoutSession = () => {
                             // Point 4: Add Timestamps to Metrics
                             const extendedMetrics = {
                                 ...(set.custom || {}),
-                                _checklist_timestamp: set.completed ? (set.completedAt || Date.now()) : null,
+                                ...(set.completed ? { _checklist_timestamp: set.completedAt || Date.now() } : {}),
+                                ...(exercise.weightUnit === 'lb' ? { _weight_unit: 'lb' } : {}),
                                 _rest_duration_ms: set.restAccumulated || 0,
+                                // _rest_status is string, might need cast if DB expects number map, but usually metrics_data is JSONB
                                 _rest_status: set.restStatus
-                            };
+                            } as any;
 
                             savePromises.push(workoutService.logSet({
                                 session_id: sessionId,
@@ -1447,12 +1560,17 @@ export const WorkoutSession = () => {
 
                                                                 {exercise.metrics.weight && (
                                                                     <div className="min-w-[75px] w-[75px]">
-                                                                        <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1">PESO</label>
+                                                                        <label
+                                                                            onClick={() => toggleExerciseUnit(mapIndex)}
+                                                                            className="text-[9px] font-bold text-neutral-500 block text-center mb-1 cursor-pointer hover:text-gym-primary transition-colors select-none"
+                                                                        >
+                                                                            PESO ({(exercise.weightUnit || 'kg').toUpperCase()})
+                                                                        </label>
                                                                         <input
                                                                             type="number"
                                                                             inputMode="decimal"
-                                                                            value={set.weight === 0 ? '' : set.weight}
-                                                                            onChange={(e) => updateSet(mapIndex, setIndex, 'weight', e.target.value)}
+                                                                            value={set.weight === 0 ? '' : toDisplayWeight(set.weight, exercise.weightUnit || 'kg')}
+                                                                            onChange={(e) => updateSet(mapIndex, setIndex, 'weight', toInternalWeight(e.target.value, exercise.weightUnit || 'kg'))}
                                                                             className={`w-full bg-neutral-800 text-center font-black text-xl rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${isCompleted ? 'text-neutral-500' : 'text-white'}`}
                                                                             placeholder="0"
                                                                         />
@@ -1571,461 +1689,459 @@ export const WorkoutSession = () => {
                                                             </div>
                                                         </div>
 
-                                                    </div>
-                                                            </div>
-                                    </div>
+                                                        {/* Rest Timer Display (Per Set) */}
+                                                        {
+                                                            isCompleted && (set.restStatus === 'running' || set.restStatus === 'paused' || set.restStatus === 'completed') && (
+                                                                <div className="w-full bg-neutral-900/50 border border-neutral-800 rounded-lg p-2 mt-1 flex items-center justify-between animate-in fade-in slide-in-from-top-2">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-xs text-neutral-500 font-bold uppercase tracking-wider">Descanso</span>
+                                                                        <RestTimerDisplay
+                                                                            status={set.restStatus}
+                                                                            accumulated={set.restAccumulated || 0}
+                                                                            lastStartTime={set.restLastStartTime}
+                                                                        />
+                                                                    </div>
 
-                                    {/* Rest Timer Display (Per Set) */}
-                                    {isCompleted && (set.restStatus === 'running' || set.restStatus === 'paused' || set.restStatus === 'completed') && (
-                                        <div className="w-full bg-neutral-900/50 border border-neutral-800 rounded-lg p-2 mt-1 flex items-center justify-between animate-in fade-in slide-in-from-top-2">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-xs text-neutral-500 font-bold uppercase tracking-wider">Descanso</span>
-                                                <RestTimerDisplay
-                                                    status={set.restStatus}
-                                                    accumulated={set.restAccumulated || 0}
-                                                    lastStartTime={set.restLastStartTime}
-                                                />
-                                            </div>
-
-                                            {/* Pause/Resume Button (Only if not completed/stopped by next set) */}
-                                            {set.restStatus !== 'completed' && (
-                                                <button
-                                                    onClick={() => toggleTimerPause(mapIndex, setIndex)}
-                                                    className={`p-1.5 rounded-full transition-colors ${set.restStatus === 'paused' ? 'bg-yellow-500/10 text-yellow-500' : 'text-neutral-500 hover:text-white'}`}
-                                                    title={set.restStatus === 'paused' ? "Reanudar" : "Pausar"}
-                                                >
-                                                    {set.restStatus === 'paused' ? <Play size={14} fill="currentColor" /> : <Pause size={14} fill="currentColor" />}
-                                                </button>
-                                            )}
-                                        </div>
-                                    )}
-                                </Fragment>
-                            );
+                                                                    {/* Pause/Resume Button (Only if not completed/stopped by next set) */}
+                                                                    {set.restStatus !== 'completed' && (
+                                                                        <button
+                                                                            onClick={() => toggleTimerPause(mapIndex, setIndex)}
+                                                                            className={`p-1.5 rounded-full transition-colors ${set.restStatus === 'paused' ? 'bg-yellow-500/10 text-yellow-500' : 'text-neutral-500 hover:text-white'}`}
+                                                                            title={set.restStatus === 'paused' ? "Reanudar" : "Pausar"}
+                                                                        >
+                                                                            {set.restStatus === 'paused' ? <Play size={14} fill="currentColor" /> : <Pause size={14} fill="currentColor" />}
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            )
+                                                        }
+                                                    </Fragment>
+                                                );
                                             })}
 
-                            {/* Add Set Button */}
-                            <button
-                                onClick={() => addSet(mapIndex)}
-                                className="w-full py-4 mt-4 rounded-xl border-2 border-dashed border-neutral-800 text-neutral-500 hover:text-white hover:border-gym-primary/50 hover:bg-neutral-800/30 font-black text-sm uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95"
-                            >
-                                <Plus size={18} /> Añadir Serie
-                            </button>
+                                            {/* Add Set Button */}
+                                            <button
+                                                onClick={() => addSet(mapIndex)}
+                                                className="w-full py-4 mt-4 rounded-xl border-2 border-dashed border-neutral-800 text-neutral-500 hover:text-white hover:border-gym-primary/50 hover:bg-neutral-800/30 font-black text-sm uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95"
+                                            >
+                                                <Plus size={18} /> Añadir Serie
+                                            </button>
 
-                            {/* Finish/Next Actions specific to this card if needed, or keeping the global button? 
+                                            {/* Finish/Next Actions specific to this card if needed, or keeping the global button? 
                                                 The user can just swipe. But if it's the last card, maybe show Finish? 
                                             */}
-                            {mapIndex === activeExercises.length - 1 && (
-                                <div className="pt-8 pb-4">
-                                    <button
-                                        onClick={handleFinishRequest}
-                                        className="w-full bg-gradient-to-br from-yellow-400 to-orange-500 text-black font-black uppercase tracking-[0.2em] py-5 rounded-xl shadow-[0_0_30px_rgba(250,204,21,0.5)] hover:shadow-[0_0_50px_rgba(250,204,21,0.7)] text-lg hover:-translate-y-1 active:scale-95 transition-all duration-300 relative overflow-hidden group border border-yellow-300/50"
-                                    >
-                                        <span className="relative z-10">Finalizar Entrenamiento</span>
-                                        <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 blur-md" />
-                                    </button>
-                                </div>
-                            )}
-                    </div>
+                                            {mapIndex === activeExercises.length - 1 && (
+                                                <div className="pt-8 pb-4">
+                                                    <button
+                                                        onClick={handleFinishRequest}
+                                                        className="w-full bg-gradient-to-br from-yellow-400 to-orange-500 text-black font-black uppercase tracking-[0.2em] py-5 rounded-xl shadow-[0_0_30px_rgba(250,204,21,0.5)] hover:shadow-[0_0_50px_rgba(250,204,21,0.7)] text-lg hover:-translate-y-1 active:scale-95 transition-all duration-300 relative overflow-hidden group border border-yellow-300/50"
+                                                    >
+                                                        <span className="relative z-10">Finalizar Entrenamiento</span>
+                                                        <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 blur-md" />
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
-        </div>
-    ))
-}
-                        </WorkoutCarousel >
-                    </div >
+                                </div>
+                            ))
+                            }
+                        </WorkoutCarousel>
+                    </div>
                 )
                 }
 
-{/* Legacy Finish Button (Now hidden inside the last card for cleaner UI, or we can keep it?) 
+                {/* Legacy Finish Button (Now hidden inside the last card for cleaner UI, or we can keep it?) 
                     The previous code had it outside. I moved it inside the last card for "Focus Mode".
                     But wait, what if they want to finish early?
                     Ideally there should be a global menu. 
                     Let's keep the global one HIDDEN if we have the carousel, to enforce focus, BUT standard UX says users might want to bail out early.
                     Actually, let's keep it simple: "Finish" is on the last card. 
                 */}
-{/* REMOVED: Battle Order Ready Overlay - Auto-start logic implemented instead */ }
+                {/* REMOVED: Battle Order Ready Overlay - Auto-start logic implemented instead */}
             </div >
 
 
-    {/* Fab Add Button (Only if exercises exist) */ }
-{
-    activeExercises.length > 0 && (
-        <div className="fixed bottom-24 left-0 w-full px-4 flex justify-center z-50 pointer-events-none">
-            <button
-                onClick={() => setShowAddModal(true)}
-                className="pointer-events-auto bg-red-600 text-white font-black py-4 px-10 rounded-2xl shadow-[0_10px_40px_rgba(220,38,38,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center gap-3 text-lg border border-red-500/50 backdrop-blur-md"
-            >
-                <Plus size={24} strokeWidth={3} /> AÑADIR EJERCICIO
-            </button>
-        </div>
-    )
-}
-
-{/* Exercise Selector Modal */ }
-{
-    showAddModal && (
-        <div className="fixed inset-0 bg-black/95 z-50 flex flex-col animate-in fade-in duration-200">
-            {/* Header */}
-            <div className="flex-none p-6 pb-2 border-b border-white/5 bg-neutral-950">
-                <div className="flex justify-between items-start mb-4">
-                    <div>
-                        <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">
-                            {isCreatingExercise ? (editingItem ? 'Editar Ejercicio' : 'Crear Ejercicio') : 'Catálogo'}
-                        </h2>
-                        <p className="text-neutral-500 text-sm">
-                            {isCreatingExercise ? 'Personaliza tu equipo.' : 'Selecciona los ejercicios para hoy.'}
-                        </p>
-                    </div>
-                    <button onClick={() => {
-                        if (isCreatingExercise) { setIsCreatingExercise(false); setEditingItem(null); }
-                        else {
-                            // If closing "Armería" with 0 exercises, go back to Profile (Cancel Session)
-                            if (activeExercises.length === 0) {
-                                navigate('/');
-                            } else {
-                                setShowAddModal(false);
-                            }
-                        }
-                    }} className="bg-neutral-900 p-2 rounded-full text-white hover:bg-neutral-800 transition-colors">
-                        {isCreatingExercise ? <ArrowLeft size={20} /> : <X size={20} />}
-                    </button>
-                </div>
-
-                {/* Search Bar - only show if NOT creating custom */}
-                {!isCreatingExercise && (
-                    <div className="relative">
-                        <Search className="absolute left-3 top-3 text-neutral-500" size={20} />
-                        <input
-                            type="text"
-                            placeholder="Buscar ejercicio o máquina..."
-                            value={searchTerm}
-                            onChange={e => setSearchTerm(e.target.value)}
-                            className="w-full bg-neutral-900 border border-neutral-800 rounded-xl py-3 pl-10 text-white focus:outline-none focus:border-gym-primary transition-all"
-                            autoFocus
-                        />
-                    </div>
-                )}
-            </div>
-
-            <div className="flex-1 overflow-y-auto min-h-0 px-2 sm:px-4 pb-32 bg-black">
-                {/* Content Switch */}
-                {!isCreatingExercise ? (
-                    <div className="pt-4">
-                        <ArsenalGrid
-                            inventory={effectiveInventory}
-                            selectedItems={selectedCatalogItems}
-                            userSettings={userSettings}
-                            searchTerm={searchTerm}
-                            onToggleSelection={(id) => {
-                                toggleCatalogItem(id);
-                            }}
-                            onOpenCatalog={(section) => {
-                                setActiveSection(section);
-                                setIsCreatingExercise(true);
-                            }}
-                            onEditItem={(item) => {
-                                setEditingItem(item);
-                                setIsCreatingExercise(true);
-                            }}
-                            routineConfigs={new Map()}
-                            gridClassName="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2"
-                        />
-                    </div>
-                ) : (
-                    <EquipmentForm
-                        user={user}
-                        userSettings={userSettings}
-                        onUpdateSettings={setUserSettings}
-                        editingItem={editingItem}
-                        onClose={() => { setIsCreatingExercise(false); setEditingItem(null); }}
-                        onSuccess={(newItem, isEdit) => {
-                            // Update Local Inventory State (Optimistic)
-                            setArsenal(prev => {
-                                if (isEdit) return prev.map(i => i.id === newItem.id ? newItem : i);
-                                return [...prev, newItem];
-                            });
-
-                            if (isEdit) {
-                                // If Editing: Just update the visual state, DO NOT start session.
-                                // Ensure it is selected so the user can see it's ready.
-                                setSelectedCatalogItems(prev => {
-                                    const newSet = new Set(prev);
-                                    newSet.add(newItem.id);
-                                    return newSet;
-                                });
-                                // Close the form to return to grid
-                                setIsCreatingExercise(false);
-                                setEditingItem(null);
-                            } else {
-                                // If New Creation: Select it and return to grid (User might want to add more)
-                                // PREVIOUSLY: addExercise(newItem) -> Auto-start.
-                                // NEW BEHAVIOR: Just Select it.
-                                setSelectedCatalogItems(prev => {
-                                    const newSet = new Set(prev);
-                                    newSet.add(newItem.id);
-                                    return newSet;
-                                });
-                                // setShowAddModal(false); // REMOVED: Keep user in Catalog
-                                // User said "haz que el boton de guardar... te siga manteniendo en el mismo lugar". 
-                                // Return to Grid View
-                                setIsCreatingExercise(false);
-                                setEditingItem(null);
-                                setSearchTerm('');
-                            }
-                        }}
-                        activeSection={activeSection || 'CHEST'}
-                        catalogItems={catalogItems}
-                        onQuickAdd={(seed) => {
-                            // Quick Add Seed from Catalog
-                            const tempId = `virtual-${seed.name}`;
-                            // Create virtual item object since it might not be in the list yet
-                            // @ts-ignore
-                            const virtualItem: Equipment = {
-                                ...seed,
-                                id: tempId,
-                                gym_id: 'virtual',
-                                quantity: 1,
-                                condition: 'GOOD'
-                            };
-
-                            // addExercise(virtualItem); // REMOVED: Auto-start legacy
-                            // setShowAddModal(false);   // REMOVED: Close legacy
-
-                            // NEW: Select it and keep in catalog
-                            setSelectedCatalogItems(prev => {
-                                const newSet = new Set(prev);
-                                newSet.add(virtualItem.id);
-                                return newSet;
-                            });
-                            // Add to inventory so it renders as selected
-                            setArsenal(prev => [...prev, virtualItem]);
-
-                            setIsCreatingExercise(false);
-                        }}
-                    />
-                )}
-
-                {/* Floating "Add" Button for Batch Selection */}
-                {!isCreatingExercise && selectedCatalogItems.size > 0 && (
-                    <div className="fixed bottom-6 left-0 w-full px-4 z-[100] flex justify-center pointer-events-none">
+            {/* Fab Add Button (Only if exercises exist) */}
+            {
+                activeExercises.length > 0 && (
+                    <div className="fixed bottom-24 left-0 w-full px-4 flex justify-center z-50 pointer-events-none">
                         <button
-                            onClick={handleBatchAdd}
-                            className="pointer-events-auto bg-gym-primary text-black font-black uppercase py-4 px-12 rounded-2xl shadow-[0_10px_40px_rgba(250,204,21,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center gap-3 text-lg animate-in slide-in-from-bottom-4 border-2 border-yellow-400"
+                            onClick={() => setShowAddModal(true)}
+                            className="pointer-events-auto bg-red-600 text-white font-black py-4 px-10 rounded-2xl shadow-[0_10px_40px_rgba(220,38,38,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center gap-3 text-lg border border-red-500/50 backdrop-blur-md"
                         >
-                            <Plus size={24} strokeWidth={3} />
-                            AGREGAR ({selectedCatalogItems.size})
+                            <Plus size={24} strokeWidth={3} /> AÑADIR EJERCICIO
                         </button>
                     </div>
-                )}
-            </div>
-        </div>
-    )
-}
+                )
+            }
 
-{/* SmartNumpad Removed */ }
-
-
-
-{/* --- MODALS --- */ }
-
-{/* 1. Save Routine Modal */ }
-{
-    showRoutineModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-4">
-            <div className="bg-neutral-900 border border-neutral-800 p-6 rounded-2xl w-full max-w-sm shadow-2xl relative">
-                <h3 className="text-xl font-black italic uppercase text-white mb-2">¿Guardar Rutina?</h3>
-                <p className="text-neutral-400 text-sm mb-6">Puedes guardar esta sesión como una rutina para repetirla en el futuro.</p>
-
-                <div className="space-y-4">
-                    <div>
-                        <label className="text-xs font-bold text-neutral-500 uppercase block mb-2">Nombre de la Rutina</label>
-                        <input
-                            type="text"
-                            autoFocus
-                            placeholder="Ej. Pecho y Tríceps Destructor"
-                            value={routineName}
-                            onChange={(e) => setRoutineName(e.target.value)}
-                            className="w-full bg-black border border-neutral-700 rounded-lg p-3 text-white font-bold focus:border-gym-primary outline-none transition-colors"
-                        />
-                    </div>
-
-                    <button
-                        onClick={() => onSaveRoutine(routineName)}
-                        disabled={isSavingFlow || !routineName.trim()}
-                        className="w-full bg-gym-primary text-black font-black uppercase py-4 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-yellow-400 transition-colors flex items-center justify-center gap-2"
-                    >
-                        {isSavingFlow ? <Loader className="animate-spin" size={20} /> : <Check size={20} strokeWidth={3} />}
-                        GUARDAR RUTINA
-                    </button>
-
-                    <button
-                        onClick={onSkipRoutine}
-                        disabled={isSavingFlow}
-                        className="w-full bg-transparent border border-neutral-800 text-neutral-400 font-bold uppercase py-3 rounded-xl hover:text-white hover:border-white transition-colors"
-                    >
-                        NO GUARDAR
-                    </button>
-                </div>
-            </div>
-        </div>
-    )
-}
-
-{/* 2. Save Location Modal */ }
-{
-    showLocationModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-4">
-            <div className="bg-neutral-900 border border-neutral-800 p-6 rounded-2xl w-full max-w-sm shadow-2xl relative">
-                <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-yellow-500 text-black px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest shadow-[0_0_20px_rgba(234,179,8,0.5)]">
-                    ¡Nueva Ubicación!
-                </div>
-                <h3 className="text-xl font-black italic uppercase text-white mb-2 text-center mt-2">¿Guardar Ubicación?</h3>
-                <p className="text-neutral-400 text-sm mb-6 text-center">Parece que estás en un lugar nuevo. ¿Quieres guardarlo como un gimnasio personalizado?</p>
-
-                <div className="space-y-4">
-                    <div>
-                        <label className="text-xs font-bold text-neutral-500 uppercase block mb-2">Nombre del Lugar</label>
-                        <input
-                            type="text"
-                            autoFocus
-                            placeholder="Ej. Parque de Calistenia Norte"
-                            value={locationName}
-                            onChange={(e) => setLocationName(e.target.value)}
-                            className="w-full bg-black border border-neutral-700 rounded-lg p-3 text-white font-bold focus:border-gym-primary outline-none transition-colors"
-                        />
-                    </div>
-
-                    <button
-                        onClick={() => onSaveLocation(locationName)}
-                        disabled={isSavingFlow || !locationName.trim()}
-                        className="w-full bg-white text-black font-black uppercase py-4 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 transition-transform flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(255,255,255,0.2)]"
-                    >
-                        {isSavingFlow ? <Loader className="animate-spin" size={20} /> : <MapIcon size={20} strokeWidth={3} />}
-                        GUARDAR UBICACIÓN
-                    </button>
-
-                    <button
-                        onClick={onSkipLocation}
-                        disabled={isSavingFlow}
-                        className="w-full bg-transparent border border-neutral-800 text-neutral-400 font-bold uppercase py-3 rounded-xl hover:text-white hover:border-white transition-colors"
-                    >
-                        NO, SOLO FINALIZAR
-                    </button>
-                </div>
-            </div>
-        </div>
-    )
-}
-
-
-{/* 3. NEW: Start Options Modal (Routine vs Quick Start) */ }
-{
-    showStartOptionsModal && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/95 backdrop-blur-md animate-in fade-in duration-300 p-4">
-            <div className="w-full max-w-md bg-neutral-900/50 border border-neutral-800 rounded-3xl p-6 md:p-8 flex flex-col gap-6 relative overflow-hidden">
-                {/* Background FX */}
-                <div className="absolute -top-20 -right-20 w-64 h-64 bg-gym-primary/5 rounded-full blur-3xl pointer-events-none"></div>
-
-                {/* Back Button */}
-                <button
-                    onClick={() => navigate(-1)}
-                    className="absolute top-6 left-6 text-neutral-400 hover:text-white transition-colors p-2 hover:bg-white/5 rounded-full"
-                >
-                    <ArrowLeft size={20} />
-                </button>
-
-                <div className="text-center pt-2">
-                    <h2 className="text-2xl font-black italic uppercase text-white tracking-tighter mb-1">Estrategia de Hoy</h2>
-                    <p className="text-neutral-500 font-bold text-sm">Selecciona una rutina o inicia libre.</p>
-                </div>
-
-                {/* Routine List (Compact) */}
-                <div className="grid grid-cols-1 gap-2 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
-                    {routines.map((routine) => (
-                        <button
-                            key={routine.id}
-                            onClick={() => {
-                                startNewSession(); // START TIMER HERE
-                                loadRoutine(routine);
-                                setCurrentRoutineName(routine.name);
-                                setShowStartOptionsModal(false);
-                            }}
-                            className="flex items-center justify-between p-4 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 hover:border-gym-primary/50 transition-all group"
-                        >
-                            <div className="text-left">
-                                <h3 className="font-bold text-white group-hover:text-gym-primary transition-colors uppercase italic">{routine.name}</h3>
-                                <span className="text-xs text-neutral-500 font-medium">
-                                    {(routine.equipment_ids?.length || routine.routine_exercises?.length || 0)} Ejercicios
-                                </span>
+            {/* Exercise Selector Modal */}
+            {
+                showAddModal && (
+                    <div className="fixed inset-0 bg-black/95 z-50 flex flex-col animate-in fade-in duration-200">
+                        {/* Header */}
+                        <div className="flex-none p-6 pb-2 border-b border-white/5 bg-neutral-950">
+                            <div className="flex justify-between items-start mb-4">
+                                <div>
+                                    <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">
+                                        {isCreatingExercise ? (editingItem ? 'Editar Ejercicio' : 'Crear Ejercicio') : 'Catálogo'}
+                                    </h2>
+                                    <p className="text-neutral-500 text-sm">
+                                        {isCreatingExercise ? 'Personaliza tu equipo.' : 'Selecciona los ejercicios para hoy.'}
+                                    </p>
+                                </div>
+                                <button onClick={() => {
+                                    if (isCreatingExercise) { setIsCreatingExercise(false); setEditingItem(null); }
+                                    else {
+                                        // If closing "Armería" with 0 exercises, go back to Profile (Cancel Session)
+                                        if (activeExercises.length === 0) {
+                                            navigate('/');
+                                        } else {
+                                            setShowAddModal(false);
+                                        }
+                                    }
+                                }} className="bg-neutral-900 p-2 rounded-full text-white hover:bg-neutral-800 transition-colors">
+                                    {isCreatingExercise ? <ArrowLeft size={20} /> : <X size={20} />}
+                                </button>
                             </div>
-                            <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-gym-primary group-hover:text-black transition-colors">
-                                <Swords size={16} />
+
+                            {/* Search Bar - only show if NOT creating custom */}
+                            {!isCreatingExercise && (
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-3 text-neutral-500" size={20} />
+                                    <input
+                                        type="text"
+                                        placeholder="Buscar ejercicio o máquina..."
+                                        value={searchTerm}
+                                        onChange={e => setSearchTerm(e.target.value)}
+                                        className="w-full bg-neutral-900 border border-neutral-800 rounded-xl py-3 pl-10 text-white focus:outline-none focus:border-gym-primary transition-all"
+                                        autoFocus
+                                    />
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto min-h-0 px-2 sm:px-4 pb-32 bg-black">
+                            {/* Content Switch */}
+                            {!isCreatingExercise ? (
+                                <div className="pt-4">
+                                    <ArsenalGrid
+                                        inventory={effectiveInventory}
+                                        selectedItems={selectedCatalogItems}
+                                        userSettings={userSettings}
+                                        searchTerm={searchTerm}
+                                        onToggleSelection={(id) => {
+                                            toggleCatalogItem(id);
+                                        }}
+                                        onOpenCatalog={(section) => {
+                                            setActiveSection(section);
+                                            setIsCreatingExercise(true);
+                                        }}
+                                        onEditItem={(item) => {
+                                            setEditingItem(item);
+                                            setIsCreatingExercise(true);
+                                        }}
+                                        routineConfigs={new Map()}
+                                        gridClassName="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2"
+                                    />
+                                </div>
+                            ) : (
+                                <EquipmentForm
+                                    user={user}
+                                    userSettings={userSettings}
+                                    onUpdateSettings={setUserSettings}
+                                    editingItem={editingItem}
+                                    onClose={() => { setIsCreatingExercise(false); setEditingItem(null); }}
+                                    onSuccess={(newItem, isEdit) => {
+                                        // Update Local Inventory State (Optimistic)
+                                        setArsenal(prev => {
+                                            if (isEdit) return prev.map(i => i.id === newItem.id ? newItem : i);
+                                            return [...prev, newItem];
+                                        });
+
+                                        if (isEdit) {
+                                            // If Editing: Just update the visual state, DO NOT start session.
+                                            // Ensure it is selected so the user can see it's ready.
+                                            setSelectedCatalogItems(prev => {
+                                                const newSet = new Set(prev);
+                                                newSet.add(newItem.id);
+                                                return newSet;
+                                            });
+                                            // Close the form to return to grid
+                                            setIsCreatingExercise(false);
+                                            setEditingItem(null);
+                                        } else {
+                                            // If New Creation: Select it and return to grid (User might want to add more)
+                                            // PREVIOUSLY: addExercise(newItem) -> Auto-start.
+                                            // NEW BEHAVIOR: Just Select it.
+                                            setSelectedCatalogItems(prev => {
+                                                const newSet = new Set(prev);
+                                                newSet.add(newItem.id);
+                                                return newSet;
+                                            });
+                                            // setShowAddModal(false); // REMOVED: Keep user in Catalog
+                                            // User said "haz que el boton de guardar... te siga manteniendo en el mismo lugar". 
+                                            // Return to Grid View
+                                            setIsCreatingExercise(false);
+                                            setEditingItem(null);
+                                            setSearchTerm('');
+                                        }
+                                    }}
+                                    activeSection={activeSection || 'CHEST'}
+                                    catalogItems={catalogItems}
+                                    onQuickAdd={(seed) => {
+                                        // Quick Add Seed from Catalog
+                                        const tempId = `virtual-${seed.name}`;
+                                        // Create virtual item object since it might not be in the list yet
+                                        // @ts-ignore
+                                        const virtualItem: Equipment = {
+                                            ...seed,
+                                            id: tempId,
+                                            gym_id: 'virtual',
+                                            quantity: 1,
+                                            condition: 'GOOD'
+                                        };
+
+                                        // addExercise(virtualItem); // REMOVED: Auto-start legacy
+                                        // setShowAddModal(false);   // REMOVED: Close legacy
+
+                                        // NEW: Select it and keep in catalog
+                                        setSelectedCatalogItems(prev => {
+                                            const newSet = new Set(prev);
+                                            newSet.add(virtualItem.id);
+                                            return newSet;
+                                        });
+                                        // Add to inventory so it renders as selected
+                                        setArsenal(prev => [...prev, virtualItem]);
+
+                                        setIsCreatingExercise(false);
+                                    }}
+                                />
+                            )}
+
+                            {/* Floating "Add" Button for Batch Selection */}
+                            {!isCreatingExercise && selectedCatalogItems.size > 0 && (
+                                <div className="fixed bottom-6 left-0 w-full px-4 z-[100] flex justify-center pointer-events-none">
+                                    <button
+                                        onClick={handleBatchAdd}
+                                        className="pointer-events-auto bg-gym-primary text-black font-black uppercase py-4 px-12 rounded-2xl shadow-[0_10px_40px_rgba(250,204,21,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center gap-3 text-lg animate-in slide-in-from-bottom-4 border-2 border-yellow-400"
+                                    >
+                                        <Plus size={24} strokeWidth={3} />
+                                        AGREGAR ({selectedCatalogItems.size})
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )
+            }
+
+            {/* SmartNumpad Removed */}
+
+
+
+            {/* --- MODALS --- */}
+
+            {/* 1. Save Routine Modal */}
+            {
+                showRoutineModal && (
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-4">
+                        <div className="bg-neutral-900 border border-neutral-800 p-6 rounded-2xl w-full max-w-sm shadow-2xl relative">
+                            <h3 className="text-xl font-black italic uppercase text-white mb-2">¿Guardar Rutina?</h3>
+                            <p className="text-neutral-400 text-sm mb-6">Puedes guardar esta sesión como una rutina para repetirla en el futuro.</p>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-xs font-bold text-neutral-500 uppercase block mb-2">Nombre de la Rutina</label>
+                                    <input
+                                        type="text"
+                                        autoFocus
+                                        placeholder="Ej. Pecho y Tríceps Destructor"
+                                        value={routineName}
+                                        onChange={(e) => setRoutineName(e.target.value)}
+                                        className="w-full bg-black border border-neutral-700 rounded-lg p-3 text-white font-bold focus:border-gym-primary outline-none transition-colors"
+                                    />
+                                </div>
+
+                                <button
+                                    onClick={() => onSaveRoutine(routineName)}
+                                    disabled={isSavingFlow || !routineName.trim()}
+                                    className="w-full bg-gym-primary text-black font-black uppercase py-4 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-yellow-400 transition-colors flex items-center justify-center gap-2"
+                                >
+                                    {isSavingFlow ? <Loader className="animate-spin" size={20} /> : <Check size={20} strokeWidth={3} />}
+                                    GUARDAR RUTINA
+                                </button>
+
+                                <button
+                                    onClick={onSkipRoutine}
+                                    disabled={isSavingFlow}
+                                    className="w-full bg-transparent border border-neutral-800 text-neutral-400 font-bold uppercase py-3 rounded-xl hover:text-white hover:border-white transition-colors"
+                                >
+                                    NO GUARDAR
+                                </button>
                             </div>
-                        </button>
-                    ))}
-                </div>
+                        </div>
+                    </div>
+                )
+            }
 
-                <div className="relative">
-                    <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-neutral-800"></div>
-                    <span className="relative z-10 bg-neutral-900 px-2 text-neutral-500 text-[10px] font-black uppercase tracking-widest mx-auto block w-fit">O inicia libre</span>
-                </div>
+            {/* 2. Save Location Modal */}
+            {
+                showLocationModal && (
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-4">
+                        <div className="bg-neutral-900 border border-neutral-800 p-6 rounded-2xl w-full max-w-sm shadow-2xl relative">
+                            <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-yellow-500 text-black px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest shadow-[0_0_20px_rgba(234,179,8,0.5)]">
+                                ¡Nueva Ubicación!
+                            </div>
+                            <h3 className="text-xl font-black italic uppercase text-white mb-2 text-center mt-2">¿Guardar Ubicación?</h3>
+                            <p className="text-neutral-400 text-sm mb-6 text-center">Parece que estás en un lugar nuevo. ¿Quieres guardarlo como un gimnasio personalizado?</p>
 
-                {/* Quick Start Button */}
-                <button
-                    onClick={() => {
-                        // startNewSession(); // REMOVED: Delayed Start logic
-                        setShowStartOptionsModal(false);
-                        setShowAddModal(true); // Open the exercise picker directly
-                    }}
-                    className="w-full bg-white text-black font-black uppercase py-4 rounded-xl hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(255,255,255,0.1)]"
-                >
-                    <Plus size={20} strokeWidth={3} />
-                    INICIO RÁPIDO
-                </button>
-            </div>
-        </div>
-    )
-}
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-xs font-bold text-neutral-500 uppercase block mb-2">Nombre del Lugar</label>
+                                    <input
+                                        type="text"
+                                        autoFocus
+                                        placeholder="Ej. Parque de Calistenia Norte"
+                                        value={locationName}
+                                        onChange={(e) => setLocationName(e.target.value)}
+                                        className="w-full bg-black border border-neutral-700 rounded-lg p-3 text-white font-bold focus:border-gym-primary outline-none transition-colors"
+                                    />
+                                </div>
 
-{/* 4. NEW: SUMMARY / MISSION COMPLETE MODAL (Correct Position) */ }
-{
-    showSummary && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/95 backdrop-blur-md animate-in fade-in duration-500 p-4">
-            <div className="w-full max-w-sm flex flex-col items-center text-center space-y-8 relative">
-                {/* Confetti/Success FX */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gym-primary/10 rounded-full blur-3xl pointer-events-none animate-pulse"></div>
+                                <button
+                                    onClick={() => onSaveLocation(locationName)}
+                                    disabled={isSavingFlow || !locationName.trim()}
+                                    className="w-full bg-white text-black font-black uppercase py-4 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 transition-transform flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(255,255,255,0.2)]"
+                                >
+                                    {isSavingFlow ? <Loader className="animate-spin" size={20} /> : <MapIcon size={20} strokeWidth={3} />}
+                                    GUARDAR UBICACIÓN
+                                </button>
 
-                <div className="relative">
-                    <Check size={64} className="text-gym-primary animate-bounce" strokeWidth={4} />
-                </div>
+                                <button
+                                    onClick={onSkipLocation}
+                                    disabled={isSavingFlow}
+                                    className="w-full bg-transparent border border-neutral-800 text-neutral-400 font-bold uppercase py-3 rounded-xl hover:text-white hover:border-white transition-colors"
+                                >
+                                    NO, SOLO FINALIZAR
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
 
-                <div className="space-y-2">
-                    <h2 className="text-4xl font-black italic uppercase text-white tracking-tighter">
-                        SESIÓN<br />FINALIZADA
-                    </h2>
-                    <p className="text-neutral-400 font-bold">Sesión registrada exitosamente.</p>
-                </div>
 
-                <div className="w-full space-y-3">
-                    <button
-                        onClick={() => navigate('/')}
-                        className="w-full bg-gym-primary hover:bg-yellow-400 text-black font-black uppercase py-4 rounded-xl shadow-[0_0_30px_rgba(250,204,21,0.3)] transition-all hover:scale-105 flex items-center justify-center gap-2"
-                    >
-                        <ArrowLeft size={24} />
-                        VOLVER AL INICIO
-                    </button>
+            {/* 3. NEW: Start Options Modal (Routine vs Quick Start) */}
+            {
+                showStartOptionsModal && (
+                    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/95 backdrop-blur-md animate-in fade-in duration-300 p-4">
+                        <div className="w-full max-w-md bg-neutral-900/50 border border-neutral-800 rounded-3xl p-6 md:p-8 flex flex-col gap-6 relative overflow-hidden">
+                            {/* Background FX */}
+                            <div className="absolute -top-20 -right-20 w-64 h-64 bg-gym-primary/5 rounded-full blur-3xl pointer-events-none"></div>
 
-                    <button
-                        onClick={() => navigate('/journal')}
-                        className="w-full bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white font-bold uppercase py-4 rounded-xl transition-all flex items-center justify-center gap-2"
-                    >
-                        <BrainCircuit size={20} />
-                        VER JOURNAL
-                    </button>
-                </div>
-            </div>
-        </div>
-    )
-}
+                            {/* Back Button */}
+                            <button
+                                onClick={() => navigate(-1)}
+                                className="absolute top-6 left-6 text-neutral-400 hover:text-white transition-colors p-2 hover:bg-white/5 rounded-full"
+                            >
+                                <ArrowLeft size={20} />
+                            </button>
+
+                            <div className="text-center pt-2">
+                                <h2 className="text-2xl font-black italic uppercase text-white tracking-tighter mb-1">Estrategia de Hoy</h2>
+                                <p className="text-neutral-500 font-bold text-sm">Selecciona una rutina o inicia libre.</p>
+                            </div>
+
+                            {/* Routine List (Compact) */}
+                            <div className="grid grid-cols-1 gap-2 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
+                                {routines.map((routine) => (
+                                    <button
+                                        key={routine.id}
+                                        onClick={() => {
+                                            startNewSession(); // START TIMER HERE
+                                            loadRoutine(routine);
+                                            setCurrentRoutineName(routine.name);
+                                            setShowStartOptionsModal(false);
+                                        }}
+                                        className="flex items-center justify-between p-4 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 hover:border-gym-primary/50 transition-all group"
+                                    >
+                                        <div className="text-left">
+                                            <h3 className="font-bold text-white group-hover:text-gym-primary transition-colors uppercase italic">{routine.name}</h3>
+                                            <span className="text-xs text-neutral-500 font-medium">
+                                                {(routine.equipment_ids?.length || routine.routine_exercises?.length || 0)} Ejercicios
+                                            </span>
+                                        </div>
+                                        <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-gym-primary group-hover:text-black transition-colors">
+                                            <Swords size={16} />
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="relative">
+                                <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-neutral-800"></div>
+                                <span className="relative z-10 bg-neutral-900 px-2 text-neutral-500 text-[10px] font-black uppercase tracking-widest mx-auto block w-fit">O inicia libre</span>
+                            </div>
+
+                            {/* Quick Start Button */}
+                            <button
+                                onClick={() => {
+                                    // startNewSession(); // REMOVED: Delayed Start logic
+                                    setShowStartOptionsModal(false);
+                                    setShowAddModal(true); // Open the exercise picker directly
+                                }}
+                                className="w-full bg-white text-black font-black uppercase py-4 rounded-xl hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(255,255,255,0.1)]"
+                            >
+                                <Plus size={20} strokeWidth={3} />
+                                INICIO RÁPIDO
+                            </button>
+                        </div>
+                    </div>
+                )
+            }
+
+            {/* 4. NEW: SUMMARY / MISSION COMPLETE MODAL (Correct Position) */}
+            {
+                showSummary && (
+                    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/95 backdrop-blur-md animate-in fade-in duration-500 p-4">
+                        <div className="w-full max-w-sm flex flex-col items-center text-center space-y-8 relative">
+                            {/* Confetti/Success FX */}
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gym-primary/10 rounded-full blur-3xl pointer-events-none animate-pulse"></div>
+
+                            <div className="relative">
+                                <Check size={64} className="text-gym-primary animate-bounce" strokeWidth={4} />
+                            </div>
+
+                            <div className="space-y-2">
+                                <h2 className="text-4xl font-black italic uppercase text-white tracking-tighter">
+                                    SESIÓN<br />FINALIZADA
+                                </h2>
+                                <p className="text-neutral-400 font-bold">Sesión registrada exitosamente.</p>
+                            </div>
+
+                            <div className="w-full space-y-3">
+                                <button
+                                    onClick={() => navigate('/')}
+                                    className="w-full bg-gym-primary hover:bg-yellow-400 text-black font-black uppercase py-4 rounded-xl shadow-[0_0_30px_rgba(250,204,21,0.3)] transition-all hover:scale-105 flex items-center justify-center gap-2"
+                                >
+                                    <ArrowLeft size={24} />
+                                    VOLVER AL INICIO
+                                </button>
+
+                                <button
+                                    onClick={() => navigate('/journal')}
+                                    className="w-full bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white font-bold uppercase py-4 rounded-xl transition-all flex items-center justify-center gap-2"
+                                >
+                                    <BrainCircuit size={20} />
+                                    VER JOURNAL
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
         </div >
     );
 }
