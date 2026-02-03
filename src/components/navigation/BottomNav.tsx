@@ -27,7 +27,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ onUploadClick: _ }) => {
         // Optional: Interval or event listener could be added here for realtime updates
         const interval = setInterval(check, 30000); // Check every 30s
         return () => clearInterval(interval);
-    }, []);
+    }, [location.pathname]);
 
     return (
         <div className="md:hidden w-full bg-black/95 backdrop-blur-3xl border-t border-white/10 pb-[env(safe-area-inset-bottom)] shrink-0 relative z-50">

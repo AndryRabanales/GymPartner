@@ -593,7 +593,7 @@ export const GymMap = () => {
                                 <img src={selectedGym.photoUrl} alt={selectedGym.name} className="w-full h-full object-cover" />
                                 <div className="absolute inset-0 bg-gradient-to-t from-neutral-900 via-neutral-900/50 to-transparent"></div>
                                 <div className="absolute bottom-4 left-6">
-                                    <h3 className="text-2xl font-black text-white leading-none tracking-tight uppercase italic dropshadow-lg">{selectedGym.name}</h3>
+                                    <h3 className="text-2xl font-black text-white leading-none tracking-tight uppercase italic dropshadow-lg line-clamp-2">{selectedGym.name}</h3>
                                     {selectedGym.rating && (
                                         <div className="flex items-center gap-1 text-yellow-500 text-xs font-bold mt-1">
                                             <Star size={12} fill="currentColor" />
@@ -605,7 +605,7 @@ export const GymMap = () => {
                         ) : (
                             <div className="h-32 w-full bg-gradient-to-br from-neutral-800 to-black relative flex items-end p-6">
                                 <div>
-                                    <h3 className="text-2xl font-black text-white leading-none tracking-tight uppercase italic">{selectedGym.name}</h3>
+                                    <h3 className="text-2xl font-black text-white leading-none tracking-tight uppercase italic line-clamp-2">{selectedGym.name}</h3>
                                     <p className="text-neutral-500 text-xs font-bold mt-1">Gimnasio Desconocido</p>
                                 </div>
                             </div>
