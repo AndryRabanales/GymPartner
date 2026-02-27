@@ -8,8 +8,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "start": "serve -s dist",
-    "start:railway": "serve -s dist -l tcp://0.0.0.0:$PORT",
+    "start": "node server.js",
+    "start:railway": "node server.js",
     "verify:modules": "node scripts/test-modules-complete.mjs",
     "verify:quick": "node scripts/quick-test.mjs"
   },
@@ -21,6 +21,7 @@
     "cloudinary-core": "^2.14.0",
     "clsx": "^2.1.1",
     "dotenv": "^17.2.3",
+    "express": "^5.2.1",
     "html2canvas": "^1.4.1",
     "lucide-react": "^0.562.0",
     "react": "^19.2.0",
