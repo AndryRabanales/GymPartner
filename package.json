@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "start": "serve -s dist",
+    "start:railway": "serve -s dist -l tcp://0.0.0.0:$PORT",
     "verify:modules": "node scripts/test-modules-complete.mjs",
     "verify:quick": "node scripts/quick-test.mjs"
   },
