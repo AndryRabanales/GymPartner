@@ -230,8 +230,8 @@ export const Radar = () => {
                         }}
                     >
 
-                        {/* --- BANNER SECTION (Compact 25%) --- */}
-                        <div className="basis-[25%] shrink-0 relative w-full bg-neutral-800 overflow-hidden">
+                        {/* --- BANNER SECTION (Fixed Height) --- */}
+                        <div className="h-44 sm:h-52 shrink-0 relative w-full bg-neutral-800 overflow-hidden">
                             {currentUser.banner_url ? (
                                 <FadeInImage
                                     src={currentUser.banner_url}
@@ -248,8 +248,8 @@ export const Radar = () => {
                         </div>
 
 
-                        {/* --- CONTENT SECTION (Flexible) --- */}
-                        <div className="flex-1 flex flex-col items-center justify-start relative z-20 -mt-12 px-4 w-full min-h-0 overflow-y-auto custom-scrollbar">
+                        {/* --- CONTENT SECTION (Scrollable area) --- */}
+                        <div className="flex-1 flex flex-col items-center justify-start relative z-20 -mt-12 px-4 w-full min-h-0 overflow-y-auto custom-scrollbar pb-32">
 
                             {/* Top Info Group */}
                             <div className="flex flex-col items-center w-full">
@@ -305,8 +305,9 @@ export const Radar = () => {
                             </div>
                         </div>
 
-                        {/* --- SAFE FOOTER (Dedicated Area) --- */}
-                        <div className="shrink-0 w-full flex justify-center items-center gap-6 pb-6 pt-2 relative z-30 bg-gradient-to-t from-black via-black/90 to-transparent">
+                        {/* --- FIXED FOOTER (Absolutely Anchored) --- */}
+                        <div className="absolute bottom-0 left-0 w-full flex justify-center items-center gap-6 pb-6 pt-10 z-30 bg-gradient-to-t from-black via-black to-transparent pointer-events-none">
+                            <div className="flex items-center gap-6 pointer-events-auto">
 
                             {/* REJECT BUTTON - Minimalist Outline */}
                             <button
@@ -327,6 +328,7 @@ export const Radar = () => {
                                 <span className="text-sm font-black uppercase tracking-widest">Invitar</span>
                             </button>
                         </div>
+                    </div>
 
                     </div>
                 )}
