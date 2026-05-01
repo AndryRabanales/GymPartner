@@ -94,7 +94,7 @@ export const Radar = () => {
                 else setLocationError("Se perdió la señal del satélite GPS. Muévete a un área despejada.");
                 setLoading(false);
             },
-            { enableHighAccuracy: true, timeout: 15000 }
+            { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
         );
     };
 
