@@ -230,8 +230,8 @@ export const Radar = () => {
                         }}
                     >
 
-                        {/* --- BANNER SECTION (Compact 38%) --- */}
-                        <div className="basis-[38%] shrink-0 relative w-full bg-neutral-800 overflow-hidden">
+                        {/* --- BANNER SECTION (Compact 25%) --- */}
+                        <div className="basis-[25%] shrink-0 relative w-full bg-neutral-800 overflow-hidden">
                             {currentUser.banner_url ? (
                                 <FadeInImage
                                     src={currentUser.banner_url}
@@ -248,8 +248,8 @@ export const Radar = () => {
                         </div>
 
 
-                        {/* --- CONTENT SECTION (Spread to Fill) --- */}
-                        <div className="flex-1 flex flex-col items-center justify-between relative z-20 -mt-14 px-4 w-full">
+                        {/* --- CONTENT SECTION (Flexible) --- */}
+                        <div className="flex-1 flex flex-col items-center justify-start relative z-20 -mt-12 px-4 w-full min-h-0 overflow-y-auto custom-scrollbar">
 
                             {/* Top Info Group */}
                             <div className="flex flex-col items-center w-full">
@@ -278,7 +278,7 @@ export const Radar = () => {
                                         {currentUser.gym_name}
                                     </span>
                                 </div>
-                                <p className="text-neutral-300 text-sm font-medium leading-relaxed px-6 max-w-md text-center mt-3 min-h-[60px]">
+                                <p className="text-neutral-300 text-xs font-medium leading-relaxed px-6 max-w-md text-center mt-2">
                                     {currentUser.description || "✨ Sin descripción aún"}
                                 </p>
 
@@ -291,14 +291,14 @@ export const Radar = () => {
                             </div>
 
                             {/* Middle Stats Group */}
-                            <div className="flex-1 flex items-center justify-center w-full py-2">
+                            <div className="w-full py-3 flex justify-center shrink-0">
                                 <div className="grid grid-cols-2 gap-3 w-full max-w-[200px]">
                                     <div className="flex flex-col items-center p-2 rounded-lg bg-neutral-800/50 border border-neutral-700/50">
-                                        <span className={`text-xl font-black ${currentUser.tier.color}`}>{currentUser.checkins_count}</span>
+                                        <span className={`text-lg font-black ${currentUser.tier.color}`}>{currentUser.checkins_count}</span>
                                         <span className="text-[8px] text-neutral-500 uppercase font-bold tracking-widest">Entrenos</span>
                                     </div>
                                     <div className="flex flex-col items-center p-2 rounded-lg bg-neutral-800/50 border border-neutral-700/50">
-                                        <span className="text-xl font-black text-white">{currentUser.followers_count || 0}</span>
+                                        <span className="text-lg font-black text-white">{currentUser.followers_count || 0}</span>
                                         <span className="text-[8px] text-neutral-500 uppercase font-bold tracking-widest">Seguidores</span>
                                     </div>
                                 </div>
@@ -306,7 +306,7 @@ export const Radar = () => {
                         </div>
 
                         {/* --- SAFE FOOTER (Dedicated Area) --- */}
-                        <div className="shrink-0 w-full flex justify-center items-center gap-6 pb-[calc(env(safe-area-inset-bottom)+5rem)] pt-4 relative z-30 bg-gradient-to-t from-black via-black/80 to-transparent">
+                        <div className="shrink-0 w-full flex justify-center items-center gap-6 pb-6 pt-2 relative z-30 bg-gradient-to-t from-black via-black/90 to-transparent">
 
                             {/* REJECT BUTTON - Minimalist Outline */}
                             <button
