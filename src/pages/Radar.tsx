@@ -4,6 +4,35 @@ import { notificationService } from '../services/NotificationService';
 import { Radar as RadarIcon, Dumbbell, X, UserPlus } from 'lucide-react';
 import { useSwipe } from '../hooks/useSwipe';
 
+// Helper component for fade-in images with skeleton
+const FadeInImage = ({ src, alt, className, imgClassName = "" }: { src: string; alt: string; className?: string; imgClassName?: string }) => {
+    const [loaded, setLoaded] = useState(false);
+    
+    useEffect(() => {
+        setLoaded(false);
+        const img = new Image();
+        img.src = src;
+        img.onload = () => setLoaded(true);
+    }, [src]);
+
+    return (
+        <div className={`relative overflow-hidden ${className}`}>
+            {!loaded && (
+                <div className="absolute inset-0 bg-neutral-800 animate-pulse flex items-center justify-center">
+                    <RadarIcon size={20} className="text-neutral-700 animate-spin-slow" />
+                </div>
+            )}
+            <img
+                src={src}
+                alt={alt}
+                className={`w-full h-full object-cover transition-opacity duration-700 ${imgClassName} ${loaded ? 'opacity-100' : 'opacity-0'}`}
+                onLoad={() => setLoaded(true)}
+            />
+        </div>
+    );
+};
+
+
 export const Radar = () => {
     const [nearbyUsers, setNearbyUsers] = useState<RadarUser[]>([]);
     const [loading, setLoading] = useState(true); // Start loading immediately
@@ -76,6 +105,28 @@ export const Radar = () => {
             handleScan();
         }
     }, []);
+
+    // Preload next images in the background
+    useEffect(() => {
+        if (nearbyUsers.length > 0) {
+            // Preload next 3 users
+            const preloadCount = Math.min(nearbyUsers.length, 3);
+            for (let i = 1; i <= preloadCount; i++) {
+                const nextIndex = (currentIndex + i) % nearbyUsers.length;
+                const nextUser = nearbyUsers[nextIndex];
+                
+                if (nextUser.avatar_url) {
+                    const img = new Image();
+                    img.src = nextUser.avatar_url;
+                }
+                if (nextUser.banner_url) {
+                    const img = new Image();
+                    img.src = nextUser.banner_url;
+                }
+            }
+        }
+    }, [currentIndex, nearbyUsers]);
+
 
     // Card Actions
     const handleNext = () => {
@@ -182,10 +233,11 @@ export const Radar = () => {
                         {/* --- BANNER SECTION (Compact 38%) --- */}
                         <div className="basis-[38%] shrink-0 relative w-full bg-neutral-800 overflow-hidden">
                             {currentUser.banner_url ? (
-                                <img
+                                <FadeInImage
                                     src={currentUser.banner_url}
                                     alt="Banner"
-                                    className="absolute inset-0 w-full h-full object-cover opacity-80"
+                                    className="absolute inset-0 w-full h-full"
+                                    imgClassName="opacity-80"
                                 />
                             ) : (
                                 <div className={`w-full h-full bg-gradient-to-br ${currentUser.tier.gradient} opacity-20 relative`}>
@@ -193,9 +245,8 @@ export const Radar = () => {
                                 </div>
                             )}
                             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/20 to-black"></div>
-
-                            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/20 to-black"></div>
                         </div>
+
 
                         {/* --- CONTENT SECTION (Spread to Fill) --- */}
                         <div className="flex-1 flex flex-col items-center justify-between relative z-20 -mt-14 px-4 w-full">
@@ -206,12 +257,13 @@ export const Radar = () => {
                                 <div className="relative w-28 h-28 shrink-0 mb-3">
                                     <div className={`absolute inset-0 rounded-full blur-2xl transform scale-100 pointer-events-none ${currentUser.tier.color.replace('text-', 'bg-')}/40`}></div>
                                     <div className={`w-full h-full rounded-full overflow-hidden border-4 bg-neutral-900 shadow-2xl relative z-10 ${currentUser.tier.borderColor}`}>
-                                        <img
+                                        <FadeInImage
                                             src={currentUser.avatar_url || `https://ui-avatars.com/api/?name=${currentUser.username}&background=random`}
                                             alt={currentUser.username}
-                                            className="w-full h-full object-cover"
+                                            className="w-full h-full"
                                         />
                                     </div>
+
 
 
                                 </div>

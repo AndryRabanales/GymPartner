@@ -32,13 +32,6 @@ export interface WorkoutSetData {
 class WorkoutService {
     // Start a new empty session (The "Battle" begins)
     async startSession(userId: string, gymId?: string): Promise<{ data?: WorkoutSession; error?: any }> {
-        // 1. Double Check: Ensure no active session exists before creating one
-        const activeRes = await this.getActiveSession(userId);
-        if (activeRes.data) {
-            console.warn("⚠️ Attempted to start session but one is already active. Returning active session.");
-            return { data: activeRes.data };
-        }
-
         const { data, error } = await supabase
             .from('workout_sessions')
             .insert({
@@ -145,20 +138,6 @@ class WorkoutService {
         if (error) {
             console.error("Error getting active session:", error);
             return { data: null, error };
-        }
-
-        // ZOMBIE CHECK: If session is older than 24 hours, auto-close it
-        if (data) {
-            const startedAt = new Date(data.started_at).getTime();
-            const now = Date.now();
-            const hoursDiff = (now - startedAt) / (1000 * 60 * 60);
-
-            if (hoursDiff > 24) {
-                console.warn(`🧟 Zombie session detected (>24h). Auto-closing session ${data.id}`);
-                // Auto-close (Finish) to preserve history but clear active state
-                await this.finishSession(data.id, "Auto-closed by system (Zombie)");
-                return { data: null, error: null };
-            }
         }
 
         return { data, error: null };
