@@ -306,7 +306,7 @@ export const Radar = () => {
                         </div>
 
                         {/* --- SAFE FOOTER (Dedicated Area) --- */}
-                        <div className="shrink-0 w-full flex justify-center items-center gap-6 pb-20 pt-4 relative z-30 bg-gradient-to-t from-black via-black/80 to-transparent">
+                        <div className="shrink-0 w-full flex justify-center items-center gap-6 pb-[calc(env(safe-area-inset-bottom)+5rem)] pt-4 relative z-30 bg-gradient-to-t from-black via-black/80 to-transparent">
 
                             {/* REJECT BUTTON - Minimalist Outline */}
                             <button
