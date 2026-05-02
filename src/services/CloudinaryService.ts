@@ -183,23 +183,35 @@ class CloudinaryService {
 
     /**
      * Get optimized image URL with transformations
+     * Supports Cloudinary, Unsplash, and Supabase Storage
      * @param url Original URL or publicId
      * @param options Transformation options
      */
     getOptimizedImageUrl(url: string, options: { width?: number, height?: number, crop?: string } = {}): string {
         if (!url) return url;
         
-        // If it's not a Cloudinary URL, return as is
-        if (!url.includes('res.cloudinary.com')) return url;
+        const { width = 400, height = 400, crop = 'fill' } = options;
 
-        const { width = 600, height = 600, crop = 'fill' } = options;
-        
-        // Handle both full URLs and public IDs
-        // Basic implementation: find the /upload/ part and insert transformations
-        if (url.includes('/upload/')) {
-            const parts = url.split('/upload/');
-            const transform = `c_${crop},w_${width},h_${height},f_auto,q_auto:good`;
-            return `${parts[0]}/upload/${transform}/${parts[1]}`;
+        // 1. Cloudinary Optimization
+        if (url.includes('res.cloudinary.com')) {
+            if (url.includes('/upload/')) {
+                const parts = url.split('/upload/');
+                const transform = `c_${crop},w_${width},h_${height},f_auto,q_auto:good`;
+                return `${parts[0]}/upload/${transform}/${parts[1]}`;
+            }
+        }
+
+        // 2. Unsplash Optimization (Very common for bots/mock data)
+        if (url.includes('images.unsplash.com')) {
+            const baseUrl = url.split('?')[0];
+            return `${baseUrl}?w=${width}&h=${height}&fit=${crop === 'fill' ? 'crop' : 'max'}&q=80&auto=format`;
+        }
+
+        // 3. Supabase Storage Optimization (if enabled on the project)
+        if (url.includes('.supabase.co/storage/v1/object/public/')) {
+            // Supabase supports image transformations via query params if Pro/paid, 
+            // but even on free it doesn't hurt to add them or use for future compatibility.
+            return `${url}?width=${width}&height=${height}&resize=${crop === 'fill' ? 'cover' : 'contain'}`;
         }
 
         return url;

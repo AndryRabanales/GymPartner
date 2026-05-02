@@ -154,19 +154,20 @@ export const Radar = () => {
     // Preload next images in the background
     useEffect(() => {
         if (nearbyUsers.length > 0) {
-            // Preload next 3 users
-            const preloadCount = Math.min(nearbyUsers.length, 3);
+            // Preload only the NEXT user to save bandwidth and prioritize current view
+            const preloadCount = Math.min(nearbyUsers.length, 1);
             for (let i = 1; i <= preloadCount; i++) {
                 const nextIndex = (currentIndex + i) % nearbyUsers.length;
                 const nextUser = nearbyUsers[nextIndex];
                 
                 if (nextUser.avatar_url) {
                     const img = new Image();
-                    img.src = cloudinaryService.getOptimizedImageUrl(nextUser.avatar_url, { width: 400, height: 400 });
+                    // Preload with small size
+                    img.src = cloudinaryService.getOptimizedImageUrl(nextUser.avatar_url, { width: 200, height: 200 });
                 }
                 if (nextUser.banner_url) {
                     const img = new Image();
-                    img.src = cloudinaryService.getOptimizedImageUrl(nextUser.banner_url, { width: 800, height: 400 });
+                    img.src = cloudinaryService.getOptimizedImageUrl(nextUser.banner_url, { width: 400, height: 200 });
                 }
             }
         }
