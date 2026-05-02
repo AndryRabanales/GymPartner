@@ -196,7 +196,8 @@ class CloudinaryService {
         if (url.includes('res.cloudinary.com')) {
             if (url.includes('/upload/')) {
                 const parts = url.split('/upload/');
-                const transform = `c_${crop},w_${width},h_${height},f_auto,q_auto:good`;
+                // Reduced quality to 60 for ultra-fast loading
+                const transform = `c_${crop},w_${width},h_${height},f_auto,q_60`;
                 return `${parts[0]}/upload/${transform}/${parts[1]}`;
             }
         }
@@ -204,7 +205,7 @@ class CloudinaryService {
         // 2. Unsplash Optimization (Very common for bots/mock data)
         if (url.includes('images.unsplash.com')) {
             const baseUrl = url.split('?')[0];
-            return `${baseUrl}?w=${width}&h=${height}&fit=${crop === 'fill' ? 'crop' : 'max'}&q=80&auto=format`;
+            return `${baseUrl}?w=${width}&h=${height}&fit=${crop === 'fill' ? 'crop' : 'max'}&q=60&auto=format`;
         }
 
         // 3. Supabase Storage Optimization (if enabled on the project)
