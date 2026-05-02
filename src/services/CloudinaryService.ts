@@ -180,6 +180,30 @@ class CloudinaryService {
     getOptimizedVideoUrl(publicId: string): string {
         return `https://res.cloudinary.com/${this.cloudName}/video/upload/q_auto:good,f_mp4,vc_h264,ac_aac/${publicId}`;
     }
+
+    /**
+     * Get optimized image URL with transformations
+     * @param url Original URL or publicId
+     * @param options Transformation options
+     */
+    getOptimizedImageUrl(url: string, options: { width?: number, height?: number, crop?: string } = {}): string {
+        if (!url) return url;
+        
+        // If it's not a Cloudinary URL, return as is
+        if (!url.includes('res.cloudinary.com')) return url;
+
+        const { width = 600, height = 600, crop = 'fill' } = options;
+        
+        // Handle both full URLs and public IDs
+        // Basic implementation: find the /upload/ part and insert transformations
+        if (url.includes('/upload/')) {
+            const parts = url.split('/upload/');
+            const transform = `c_${crop},w_${width},h_${height},f_auto,q_auto:good`;
+            return `${parts[0]}/upload/${transform}/${parts[1]}`;
+        }
+
+        return url;
+    }
 }
 
 export const cloudinaryService = new CloudinaryService();

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { radarService, type RadarUser } from '../services/RadarService';
 import { notificationService } from '../services/NotificationService';
+import { cloudinaryService } from '../services/CloudinaryService';
 import { Radar as RadarIcon, Dumbbell, X, UserPlus } from 'lucide-react';
 import { useSwipe } from '../hooks/useSwipe';
 
@@ -8,12 +9,8 @@ import { useSwipe } from '../hooks/useSwipe';
 const FadeInImage = ({ src, alt, className, imgClassName = "" }: { src: string; alt: string; className?: string; imgClassName?: string }) => {
     const [loaded, setLoaded] = useState(false);
     
-    useEffect(() => {
-        setLoaded(false);
-        const img = new Image();
-        img.src = src;
-        img.onload = () => setLoaded(true);
-    }, [src]);
+    // We remove the redundant useEffect new Image() here because the img tag's 
+    // onLoad is sufficient and more efficient for browser caching.
 
     return (
         <div className={`relative overflow-hidden ${className}`}>
@@ -25,8 +22,9 @@ const FadeInImage = ({ src, alt, className, imgClassName = "" }: { src: string; 
             <img
                 src={src}
                 alt={alt}
-                className={`w-full h-full object-cover transition-opacity duration-700 ${imgClassName} ${loaded ? 'opacity-100' : 'opacity-0'}`}
+                className={`w-full h-full object-cover transition-opacity duration-300 ${imgClassName} ${loaded ? 'opacity-100' : 'opacity-0'}`}
                 onLoad={() => setLoaded(true)}
+                loading="eager"
             />
         </div>
     );
@@ -51,28 +49,49 @@ export const Radar = () => {
         threshold: 100
     });
 
-    // Initial Scan specific logic
-    const handleScan = () => {
+    // Initial Scan logic with Caching
+    const handleScan = async () => {
         setLoading(true);
         setLocationError(null);
         setScanComplete(false);
 
+        // 1. Try to load from Cache first for instant feedback
+        const cachedLocation = localStorage.getItem('gympartner_last_location');
+        if (cachedLocation) {
+            try {
+                const { lat, lng } = JSON.parse(cachedLocation);
+                console.log("⚡ Loading from cache:", lat, lng);
+                const users = await radarService.getNearbyGymRats(lat, lng, radius);
+                if (users.length > 0) {
+                    setNearbyUsers(users);
+                    setScanComplete(true);
+                    setLoading(false); // We show data immediately!
+                }
+            } catch (e) {
+                console.warn("Invalid cache location", e);
+            }
+        }
+
         if (!navigator.geolocation) {
-            setLocationError("Tu dispositivo no soporta geolocalización.");
-            setLoading(false);
+            if (!scanComplete) {
+                setLocationError("Tu dispositivo no soporta geolocalización.");
+                setLoading(false);
+            }
             return;
         }
 
+        // 2. Refresh with real GPS in background or foreground if no cache
         navigator.geolocation.getCurrentPosition(
             async (position) => {
                 try {
                     const { latitude, longitude } = position.coords;
-                    console.log("📍 Scanning from:", latitude, longitude);
+                    
+                    // Save to cache
+                    localStorage.setItem('gympartner_last_location', JSON.stringify({ lat: latitude, lng: longitude }));
 
+                    // Only re-fetch if we didn't have data or if the new position is fresh
+                    // For simplicity, we always fetch if it's the first real GPS hit in this session
                     const users = await radarService.getNearbyGymRats(latitude, longitude, radius);
-
-                    // Shuffle for randomness if desired, or keep distance sort
-                    // users.sort(() => Math.random() - 0.5); 
 
                     setNearbyUsers(users);
                     setCurrentIndex(0);
@@ -83,18 +102,20 @@ export const Radar = () => {
                     }
                 } catch (err) {
                     console.error(err);
-                    setLocationError("Error al calibrar el radar. Reintenta.");
+                    if (!scanComplete) setLocationError("Error al calibrar el radar. Reintenta.");
                 } finally {
                     setLoading(false);
                 }
             },
             (err) => {
                 console.error(err);
-                if (err.code === 1) setLocationError("Permiso de ubicación denegado. Actívalo para usar el Radar.");
-                else setLocationError("Se perdió la señal del satélite GPS. Muévete a un área despejada.");
-                setLoading(false);
+                if (!scanComplete) {
+                    if (err.code === 1) setLocationError("Permiso de ubicación denegado. Actívalo para usar el Radar.");
+                    else setLocationError("Se perdió la señal del satélite GPS. Muévete a un área despejada.");
+                    setLoading(false);
+                }
             },
-            { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
+            { enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 } // 5 min cache
         );
     };
 
@@ -117,11 +138,11 @@ export const Radar = () => {
                 
                 if (nextUser.avatar_url) {
                     const img = new Image();
-                    img.src = nextUser.avatar_url;
+                    img.src = cloudinaryService.getOptimizedImageUrl(nextUser.avatar_url, { width: 400, height: 400 });
                 }
                 if (nextUser.banner_url) {
                     const img = new Image();
-                    img.src = nextUser.banner_url;
+                    img.src = cloudinaryService.getOptimizedImageUrl(nextUser.banner_url, { width: 800, height: 400 });
                 }
             }
         }
@@ -234,7 +255,7 @@ export const Radar = () => {
                         <div className="h-44 sm:h-52 shrink-0 relative w-full bg-neutral-800 overflow-hidden">
                             {currentUser.banner_url ? (
                                 <FadeInImage
-                                    src={currentUser.banner_url}
+                                    src={cloudinaryService.getOptimizedImageUrl(currentUser.banner_url, { width: 800, height: 400 })}
                                     alt="Banner"
                                     className="absolute inset-0 w-full h-full"
                                     imgClassName="opacity-80"
@@ -258,7 +279,7 @@ export const Radar = () => {
                                     <div className={`absolute inset-0 rounded-full blur-2xl transform scale-100 pointer-events-none ${currentUser.tier.color.replace('text-', 'bg-')}/40`}></div>
                                     <div className={`w-full h-full rounded-full overflow-hidden border-4 bg-neutral-900 shadow-2xl relative z-10 ${currentUser.tier.borderColor}`}>
                                         <FadeInImage
-                                            src={currentUser.avatar_url || `https://ui-avatars.com/api/?name=${currentUser.username}&background=random`}
+                                            src={cloudinaryService.getOptimizedImageUrl(currentUser.avatar_url || `https://ui-avatars.com/api/?name=${currentUser.username}&background=random`, { width: 400, height: 400 })}
                                             alt={currentUser.username}
                                             className="w-full h-full"
                                         />
