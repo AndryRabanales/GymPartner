@@ -10,7 +10,6 @@ const FadeInImage = ({ src, alt, className, imgClassName = "" }: { src: string; 
     const [loaded, setLoaded] = useState(false);
     const [error, setError] = useState(false);
     
-    // Reset state when src changes
     useEffect(() => {
         setLoaded(false);
         setError(false);
@@ -18,36 +17,31 @@ const FadeInImage = ({ src, alt, className, imgClassName = "" }: { src: string; 
 
     return (
         <div className={`relative overflow-hidden ${className} bg-neutral-900`}>
-            {/* 
-                PRO-TIP: Instead of opacity-0, we use a blur effect. 
-                This allows the user to see the image's colors immediately, 
-                making it feel "instant" even while loading.
-            */}
+            {/* Minimalist spinner while loading */}
+            {!loaded && !error && (
+                <div className="absolute inset-0 flex items-center justify-center bg-neutral-800">
+                    <div className="w-5 h-5 border-2 border-gym-primary/10 border-t-gym-primary rounded-full animate-spin"></div>
+                </div>
+            )}
             
-            {/* Show fallback icon ONLY if there's an error */}
             {error && (
                 <div className="absolute inset-0 flex items-center justify-center bg-neutral-900 z-10">
-                    <RadarIcon size={24} className="text-neutral-700 opacity-50" />
+                    <RadarIcon size={20} className="text-neutral-700 opacity-50" />
                 </div>
             )}
 
             <img
                 src={src}
                 alt={alt}
-                className={`w-full h-full object-cover transition-all duration-700 ${imgClassName} ${
-                    loaded ? 'blur-0 scale-100 opacity-100' : 'blur-2xl scale-110 opacity-50'
+                // We use opacity-0 until fully loaded to avoid the "pixel-by-pixel" look.
+                // Since images are now tiny, the wait will be negligible.
+                className={`w-full h-full object-cover transition-opacity duration-300 ${imgClassName} ${
+                    loaded ? 'opacity-100' : 'opacity-0'
                 }`}
                 onLoad={() => setLoaded(true)}
                 onError={() => setError(true)}
                 loading="eager"
             />
-            
-            {/* Subtle loading indicator on top if not loaded */}
-            {!loaded && !error && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="w-6 h-6 border-2 border-gym-primary/20 border-t-gym-primary rounded-full animate-spin"></div>
-                </div>
-            )}
         </div>
     );
 };
@@ -271,7 +265,7 @@ export const Radar = () => {
                         <div className="h-44 sm:h-52 shrink-0 relative w-full bg-neutral-800 overflow-hidden">
                             {currentUser.banner_url ? (
                                 <FadeInImage
-                                    src={cloudinaryService.getOptimizedImageUrl(currentUser.banner_url, { width: 600, height: 300 })}
+                                    src={cloudinaryService.getOptimizedImageUrl(currentUser.banner_url, { width: 300, height: 150 })}
                                     alt="Banner"
                                     className="absolute inset-0 w-full h-full"
                                     imgClassName="opacity-80"
@@ -295,7 +289,7 @@ export const Radar = () => {
                                     <div className={`absolute inset-0 rounded-full blur-2xl transform scale-100 pointer-events-none ${currentUser.tier.color.replace('text-', 'bg-')}/40`}></div>
                                     <div className={`w-full h-full rounded-full overflow-hidden border-4 bg-neutral-900 shadow-2xl relative z-10 ${currentUser.tier.borderColor}`}>
                                         <FadeInImage
-                                            src={cloudinaryService.getOptimizedImageUrl(currentUser.avatar_url || `https://ui-avatars.com/api/?name=${currentUser.username}&background=random`, { width: 200, height: 200 })}
+                                            src={cloudinaryService.getOptimizedImageUrl(currentUser.avatar_url || `https://ui-avatars.com/api/?name=${currentUser.username}&background=random`, { width: 80, height: 80 })}
                                             alt={currentUser.username}
                                             className="w-full h-full"
                                         />
