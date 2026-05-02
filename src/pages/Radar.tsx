@@ -8,26 +8,36 @@ import { useSwipe } from '../hooks/useSwipe';
 // Helper component for fade-in images with skeleton
 const FadeInImage = ({ src, alt, className, imgClassName = "" }: { src: string; alt: string; className?: string; imgClassName?: string }) => {
     const [loaded, setLoaded] = useState(false);
+    const [error, setError] = useState(false);
     
-    // CRITICAL: Reset loaded state when src changes to avoid showing old images 
-    // during user swipes.
+    // Reset state when src changes
     useEffect(() => {
         setLoaded(false);
+        setError(false);
     }, [src]);
 
     return (
-        <div className={`relative overflow-hidden ${className}`}>
-            {!loaded && (
-                <div className="absolute inset-0 bg-neutral-800 animate-pulse flex items-center justify-center">
+        <div className={`relative overflow-hidden ${className} bg-neutral-800`}>
+            {/* Show skeleton while loading and NOT in error state */}
+            {!loaded && !error && (
+                <div className="absolute inset-0 animate-pulse flex items-center justify-center">
                     <RadarIcon size={20} className="text-neutral-700 animate-spin-slow" />
                 </div>
             )}
+            
+            {/* Show fallback if error */}
+            {error && (
+                <div className="absolute inset-0 flex items-center justify-center bg-neutral-900">
+                    <RadarIcon size={24} className="text-neutral-700 opacity-50" />
+                </div>
+            )}
+
             <img
                 src={src}
                 alt={alt}
-                key={src} // Force re-render on src change for cleaner transitions
-                className={`w-full h-full object-cover transition-opacity duration-300 ${imgClassName} ${loaded ? 'opacity-100' : 'opacity-0'}`}
+                className={`w-full h-full object-cover transition-opacity duration-500 ${imgClassName} ${loaded ? 'opacity-100' : 'opacity-0'}`}
                 onLoad={() => setLoaded(true)}
+                onError={() => setError(true)}
                 loading="eager"
             />
         </div>
