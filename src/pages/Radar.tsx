@@ -9,8 +9,11 @@ import { useSwipe } from '../hooks/useSwipe';
 const FadeInImage = ({ src, alt, className, imgClassName = "" }: { src: string; alt: string; className?: string; imgClassName?: string }) => {
     const [loaded, setLoaded] = useState(false);
     
-    // We remove the redundant useEffect new Image() here because the img tag's 
-    // onLoad is sufficient and more efficient for browser caching.
+    // CRITICAL: Reset loaded state when src changes to avoid showing old images 
+    // during user swipes.
+    useEffect(() => {
+        setLoaded(false);
+    }, [src]);
 
     return (
         <div className={`relative overflow-hidden ${className}`}>
@@ -22,6 +25,7 @@ const FadeInImage = ({ src, alt, className, imgClassName = "" }: { src: string; 
             <img
                 src={src}
                 alt={alt}
+                key={src} // Force re-render on src change for cleaner transitions
                 className={`w-full h-full object-cover transition-opacity duration-300 ${imgClassName} ${loaded ? 'opacity-100' : 'opacity-0'}`}
                 onLoad={() => setLoaded(true)}
                 loading="eager"
@@ -56,16 +60,22 @@ export const Radar = () => {
         setScanComplete(false);
 
         // 1. Try to load from Cache first for instant feedback
-        const cachedLocation = localStorage.getItem('gympartner_last_location');
-        if (cachedLocation) {
+        const cachedData = localStorage.getItem('gympartner_last_location');
+        let hasInitialData = false;
+
+        if (cachedData) {
             try {
-                const { lat, lng } = JSON.parse(cachedLocation);
-                console.log("⚡ Loading from cache:", lat, lng);
+                const { lat, lng, timestamp } = JSON.parse(cachedData);
+                const ageMinutes = (Date.now() - (timestamp || 0)) / 60000;
+                
+                console.log(`⚡ Found cache (${Math.round(ageMinutes)}m old):`, lat, lng);
+                
                 const users = await radarService.getNearbyGymRats(lat, lng, radius);
                 if (users.length > 0) {
                     setNearbyUsers(users);
                     setScanComplete(true);
-                    setLoading(false); // We show data immediately!
+                    setLoading(false);
+                    hasInitialData = true;
                 }
             } catch (e) {
                 console.warn("Invalid cache location", e);
@@ -73,49 +83,53 @@ export const Radar = () => {
         }
 
         if (!navigator.geolocation) {
-            if (!scanComplete) {
+            if (!hasInitialData) {
                 setLocationError("Tu dispositivo no soporta geolocalización.");
                 setLoading(false);
             }
             return;
         }
 
-        // 2. Refresh with real GPS in background or foreground if no cache
+        // 2. Refresh with real GPS in background
+        // We use a longer timeout (15s) to avoid unnecessary errors on slow fixes
         navigator.geolocation.getCurrentPosition(
             async (position) => {
                 try {
                     const { latitude, longitude } = position.coords;
                     
-                    // Save to cache
-                    localStorage.setItem('gympartner_last_location', JSON.stringify({ lat: latitude, lng: longitude }));
+                    // Save to cache with timestamp
+                    localStorage.setItem('gympartner_last_location', JSON.stringify({ 
+                        lat: latitude, 
+                        lng: longitude,
+                        timestamp: Date.now()
+                    }));
 
-                    // Only re-fetch if we didn't have data or if the new position is fresh
-                    // For simplicity, we always fetch if it's the first real GPS hit in this session
+                    // Fetch fresh data
                     const users = await radarService.getNearbyGymRats(latitude, longitude, radius);
-
-                    setNearbyUsers(users);
-                    setCurrentIndex(0);
-                    setScanComplete(true);
-
-                    if (users.length === 0) {
-                        setLocationError("No detectamos señales de vida GymRat en 100km.");
+                    
+                    if (users.length > 0) {
+                        setNearbyUsers(users);
+                        if (!hasInitialData) setCurrentIndex(0);
+                        setScanComplete(true);
                     }
                 } catch (err) {
-                    console.error(err);
-                    if (!scanComplete) setLocationError("Error al calibrar el radar. Reintenta.");
+                    console.error("GPS Fetch Error:", err);
+                    if (!hasInitialData) setLocationError("Error al calibrar el radar. Reintenta.");
                 } finally {
                     setLoading(false);
                 }
             },
             (err) => {
-                console.error(err);
-                if (!scanComplete) {
-                    if (err.code === 1) setLocationError("Permiso de ubicación denegado. Actívalo para usar el Radar.");
-                    else setLocationError("Se perdió la señal del satélite GPS. Muévete a un área despejada.");
+                console.error("GPS Error:", err);
+                // Only show error if we have NO data at all
+                if (!hasInitialData) {
+                    if (err.code === 1) setLocationError("Permiso de ubicación denegado.");
+                    else if (err.code === 3) setLocationError("Tiempo de espera agotado. Reintenta en área abierta.");
+                    else setLocationError("Se perdió la señal GPS.");
                     setLoading(false);
                 }
             },
-            { enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 } // 5 min cache
+            { enableHighAccuracy: false, timeout: 15000, maximumAge: 600000 } // 10 min cache
         );
     };
 
