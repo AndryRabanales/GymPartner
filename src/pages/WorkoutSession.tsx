@@ -13,7 +13,7 @@ import { normalizeText, getMuscleGroup } from '../utils/inventoryUtils';
 
 // Interface NumpadTarget removed
 // BattleTimer removed
-import { Plus, Swords, Trash2, Check, ArrowLeft, MoreVertical, X, RotateCcw, Search, Loader, Map as MapIcon, BrainCircuit, Lock, LockOpen, Pause, Play } from 'lucide-react';
+import { Plus, Swords, Trash2, Check, ArrowLeft, MoreVertical, X, RotateCcw, Search, Loader, Map as MapIcon, Lock, LockOpen, Pause, Play } from 'lucide-react';
 import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
@@ -2130,13 +2130,7 @@ export const WorkoutSession = () => {
                                     VOLVER AL INICIO
                                 </button>
 
-                                <button
-                                    onClick={() => navigate('/journal')}
-                                    className="w-full bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white font-bold uppercase py-4 rounded-xl transition-all flex items-center justify-center gap-2"
-                                >
-                                    <BrainCircuit size={20} />
-                                    VER JOURNAL
-                                </button>
+
                             </div>
                         </div>
                     </div>
