@@ -12,6 +12,11 @@ export interface Notification {
     created_at: string;
 }
 
+// State for throttling requests
+let cachedUnreadCount = 0;
+let lastFetchTime = 0;
+const THROTTLE_DURATION = 10000; // 10 seconds
+
 export const notificationService = {
     /**
      * Obtener notificaciones del usuario
@@ -35,7 +40,12 @@ export const notificationService = {
      * Obtener conteo de no leídas
      */
     async getUnreadCount(): Promise<number> {
-        if (!navigator.onLine) return 0; // Skip if offline
+        if (!navigator.onLine) return cachedUnreadCount;
+
+        const now = Date.now();
+        if (now - lastFetchTime < THROTTLE_DURATION) {
+            return cachedUnreadCount;
+        }
 
         const { count, error } = await supabase
             .from('notifications')
@@ -45,13 +55,15 @@ export const notificationService = {
         if (error) {
             // Suppress network errors to avoid console spam
             if (error.message?.includes('fetch') || error.message?.includes('network')) {
-                return 0;
+                return cachedUnreadCount;
             }
             console.error('Error getting unread count:', error);
-            return 0;
+            return cachedUnreadCount;
         }
 
-        return count || 0;
+        cachedUnreadCount = count || 0;
+        lastFetchTime = now;
+        return cachedUnreadCount;
     },
 
     /**
@@ -66,6 +78,10 @@ export const notificationService = {
         if (error) {
             console.error('Error marking notification as read:', error);
             throw error;
+        } else {
+            // Invalidate cache
+            lastFetchTime = 0;
+            cachedUnreadCount = Math.max(0, cachedUnreadCount - 1);
         }
     },
 
@@ -89,6 +105,10 @@ export const notificationService = {
         if (error) {
             console.error('Error updating invitation status:', error);
             throw error;
+        } else {
+            // Invalidate cache
+            lastFetchTime = 0;
+            cachedUnreadCount = Math.max(0, cachedUnreadCount - 1);
         }
     },
 
@@ -108,6 +128,10 @@ export const notificationService = {
 
         if (error) {
             console.error('Error marking all as read:', error);
+        } else {
+            // Invalidate cache
+            lastFetchTime = 0;
+            cachedUnreadCount = 0;
         }
     },
 
