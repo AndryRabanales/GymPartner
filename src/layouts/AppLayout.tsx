@@ -155,8 +155,8 @@ export const AppLayout = () => {
             {/* Main Content (Scrollable Area) */}
             <main className="flex-1 overflow-y-auto custom-scrollbar relative flex flex-col">
                 <Outlet />
-                {/* Spacer to prevent BottomNav overlap (Only when BottomNav is visible AND NOT on Reels/Radar) */}
-                {shouldShowBottomNav && !isReelsPage && !isRadarPage && <div className="h-24 shrink-0" />}
+                {/* Spacer to prevent BottomNav overlap (Only when BottomNav is visible AND NOT on Reels/Radar/Chat) */}
+                {shouldShowBottomNav && !isReelsPage && !isRadarPage && !location.pathname.includes('/chat/') && !location.pathname.includes('/inbox') && <div className="h-24 shrink-0" />}
             </main>
 
             {/* Global Modals */}
