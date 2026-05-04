@@ -287,8 +287,7 @@ export const InboxPage = () => {
                                                 </div>
                                             )}
                                         </div>
-                                        {/* Online Status (Mock) */}
-                                        <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-black rounded-full"></div>
+                                        {/* Online Status (Mock) Removed - INCORRECT */}
                                     </div>
 
                                     <div className="flex-1 min-w-0">

@@ -156,7 +156,6 @@ export const ChatPage = () => {
 
                 <div className="flex-1 min-w-0">
                     <h2 className="font-bold text-sm truncate">{otherUser?.username || 'Usuario'}</h2>
-                    <p className="text-xs text-green-500 font-medium">En línea</p>
                 </div>
 
                 <button className="p-2 text-neutral-400 hover:text-white">
