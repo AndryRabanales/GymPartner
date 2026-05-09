@@ -750,25 +750,6 @@ export const UserProfile = () => {
                 </Link>
 
 
-                {!(profile?.boost_until && new Date(profile.boost_until) > new Date()) && (
-                    <button 
-                        onClick={() => setIsBoostModalOpen(true)}
-                        className={`group border p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md 
-                            bg-neutral-900 hover:bg-neutral-800 border-neutral-800 hover:border-yellow-500/50`}
-                    >
-                        <div className={`w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform border 
-                            bg-yellow-500/5 border-yellow-500/10`}>
-                            <img 
-                                src="/Gemini_Generated_Image_bjc7ltbjc7ltbjc7 (2).png" 
-                                alt="G-Points"
-                                className="h-16 md:h-24 w-auto object-contain"
-                            />
-                        </div>
-                        <div className="flex flex-col">
-                            <span className="font-bold text-neutral-200 group-hover:text-white text-xs md:text-base">Boost</span>
-                        </div>
-                    </button>
-                )}
             </div >
 
             {/* TERRITORIES SECTION (PASSPORT) */}
