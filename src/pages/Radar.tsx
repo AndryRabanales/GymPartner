@@ -481,7 +481,7 @@ export const Radar = () => {
 
                             {/* Middle Stats Group */}
                             <div className="w-full py-3 flex justify-center shrink-0">
-                                <div className="grid grid-cols-2 gap-3 w-full max-w-[200px]">
+                                <div className="grid grid-cols-3 gap-2 w-full max-w-[280px]">
                                     <div className="flex flex-col items-center p-2 rounded-lg bg-neutral-800/50 border border-neutral-700/50">
                                         <span className={`text-lg font-black ${currentUser.tier.color}`}>{currentUser.checkins_count}</span>
                                         <span className="text-[8px] text-neutral-500 uppercase font-bold tracking-widest">Entrenos</span>
@@ -489,6 +489,10 @@ export const Radar = () => {
                                     <div className="flex flex-col items-center p-2 rounded-lg bg-neutral-800/50 border border-neutral-700/50">
                                         <span className="text-lg font-black text-white">{currentUser.followers_count || 0}</span>
                                         <span className="text-[8px] text-neutral-500 uppercase font-bold tracking-widest">Seguidores</span>
+                                    </div>
+                                    <div className="flex flex-col items-center p-2 rounded-lg bg-neutral-800/50 border border-neutral-700/50">
+                                        <span className="text-lg font-black text-white">{currentUser.following_count || 0}</span>
+                                        <span className="text-[8px] text-neutral-500 uppercase font-bold tracking-widest">Seguidos</span>
                                     </div>
                                 </div>
                             </div>
