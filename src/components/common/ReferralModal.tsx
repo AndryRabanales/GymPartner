@@ -125,7 +125,7 @@ export const ReferralModal: React.FC<ReferralModalProps> = ({ isOpen, onClose, u
                             <img 
                                 src="/Gemini_Generated_Image_qyk7sjqyk7sjqyk7-removebg-preview.png" 
                                 alt="G-Points"
-                                className="w-16 h-16 mb-1 group-hover:scale-110 transition-transform object-contain"
+                                className="h-20 w-auto mb-1 group-hover:scale-105 transition-transform object-contain"
                             />
                             <div className="text-yellow-400 font-black text-sm leading-none">+100 G-PTS</div>
                             <div className="text-neutral-500 text-[10px] uppercase font-bold tracking-widest mt-1">Moneda</div>

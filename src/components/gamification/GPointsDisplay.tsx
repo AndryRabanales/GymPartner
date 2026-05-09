@@ -65,8 +65,8 @@ export const GPointsDisplay: React.FC = () => {
                     src="/Gemini_Generated_Image_qyk7sjqyk7sjqyk7-removebg-preview.png"
                     alt="G-Points"
                     className={`
-                        w-14 h-14 relative z-10 object-contain drop-shadow-[0_0_10px_rgba(250,204,21,0.3)]
-                        ${isAnimating ? 'scale-125 transition-transform duration-700' : 'group-hover:scale-110 transition-transform'}
+                        h-16 w-auto relative z-10 object-contain drop-shadow-[0_0_15px_rgba(250,204,21,0.4)]
+                        ${isAnimating ? 'scale-110 transition-transform duration-700' : 'group-hover:scale-105 transition-transform'}
                     `} 
                 />
             </div>
