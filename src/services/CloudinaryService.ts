@@ -215,7 +215,9 @@ class CloudinaryService {
             return `${url}?width=${width}&height=${height}&resize=${crop === 'fill' ? 'cover' : 'contain'}`;
         }
 
-        return url;
+        // 4. Universal Proxy (For images from other sources like Google, Facebook, etc.)
+        // This uses Cloudinary as a fast CDN for ANY image URL
+        return `https://res.cloudinary.com/${this.cloudName}/image/fetch/c_${crop},w_${width},h_${height},f_auto,q_50,fl_lossy/${url}`;
     }
 }
 

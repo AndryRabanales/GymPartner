@@ -47,6 +47,7 @@ const FadeInImage = ({ src, alt, className, imgClassName = "" }: { src: string; 
                 onLoad={() => setLoaded(true)}
                 onError={() => setError(true)}
                 loading="eager"
+                fetchPriority="high"
             />
         </div>
     );
