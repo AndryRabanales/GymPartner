@@ -347,7 +347,7 @@ export const Radar = () => {
 
 
     return (
-        <div className="h-[100dvh] w-full flex flex-col relative overflow-hidden bg-black selection:bg-gym-primary selection:text-black">
+        <div className="flex-1 w-full flex flex-col relative overflow-hidden bg-black selection:bg-gym-primary selection:text-black">
 
 
 
@@ -529,8 +529,8 @@ export const Radar = () => {
                             </div>
                         </div>
 
-                        {/* --- FIXED ACTION BUTTONS (Elevated for full visibility) --- */}
-                        <div className="absolute bottom-[100px] left-0 right-0 z-50 pointer-events-none px-4">
+                        {/* --- FIXED ACTION BUTTONS (Standard Position) --- */}
+                        <div className="absolute bottom-6 left-0 right-0 z-50 pointer-events-none px-4">
                             <div className="flex items-center justify-center gap-3 max-w-sm mx-auto pointer-events-auto">
                                 
                                 {/* REJECT BUTTON */}
