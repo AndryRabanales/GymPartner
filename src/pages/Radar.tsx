@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { radarService, type RadarUser } from '../services/RadarService';
 import { notificationService } from '../services/NotificationService';
 import { cloudinaryService } from '../services/CloudinaryService';
-import { Radar as RadarIcon, Dumbbell, X, UserPlus, Zap, Star, ExternalLink, UserCheck, Swords, MapPin } from 'lucide-react';
+import { Radar as RadarIcon, Dumbbell, X, UserPlus, Zap, Star, ExternalLink, UserCheck, Swords, MapPin, ChevronUp, ChevronDown } from 'lucide-react';
 import { useSwipe } from '../hooks/useSwipe';
 import { useAuth } from '../context/AuthContext';
 import { userService } from '../services/UserService';
@@ -99,7 +99,8 @@ export const Radar = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const [nearbyUsers, setNearbyUsers] = useState<RadarUser[]>([]);
-    const [loading, setLoading] = useState(true); // Start loading immediately
+    const [isButtonsVisible, setIsButtonsVisible] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [locationError, setLocationError] = useState<string | null>(null);
     const [radius] = useState(100);
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -528,74 +529,75 @@ export const Radar = () => {
                                 </div>
                             </div>
 
+                        {/* --- SLIDABLE ACTION BAR (Clean UI) --- */}
+                        <div className="absolute bottom-0 left-0 right-0 z-50 pointer-events-none">
+                            
+                            {/* Toggle Arrow Tab */}
+                            <div className="flex justify-center mb-4 pointer-events-auto">
+                                <button
+                                    onClick={() => setIsButtonsVisible(!isButtonsVisible)}
+                                    className={`
+                                        w-12 h-10 flex items-center justify-center rounded-t-2xl 
+                                        bg-black/90 backdrop-blur-2xl border-t border-x border-white/10 
+                                        text-gym-primary shadow-[0_-10px_30px_rgba(0,0,0,0.8)]
+                                        transition-all duration-500 ease-out active:scale-90
+                                        ${isButtonsVisible ? 'translate-y-2 opacity-50' : 'animate-bounce translate-y-0'}
+                                    `}
+                                >
+                                    {isButtonsVisible ? <ChevronDown size={24} strokeWidth={3} /> : <ChevronUp size={24} strokeWidth={3} />}
+                                </button>
+                            </div>
+
+                            {/* Slidable Panel */}
+                            <div className={`
+                                bg-gradient-to-t from-black via-black/98 to-black/90 backdrop-blur-3xl 
+                                border-t border-white/10 px-4 pt-6 pb-12
+                                transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]
+                                pointer-events-auto shadow-[0_-20px_50px_rgba(0,0,0,0.9)]
+                                ${isButtonsVisible ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}
+                            `}>
+                                <div className="flex items-center justify-center gap-4 max-w-sm mx-auto">
+                                    <button
+                                        onClick={() => { handleAction('skip'); setIsButtonsVisible(false); }}
+                                        disabled={isAnimating}
+                                        className="w-14 h-14 rounded-full border-2 border-neutral-800 bg-neutral-900/90 text-neutral-500 flex items-center justify-center active:scale-95 transition-all"
+                                    >
+                                        <X size={24} />
+                                    </button>
+                                    <button
+                                        onClick={handleFollowToggle}
+                                        disabled={isAnimating}
+                                        className={`w-14 h-14 rounded-full border-2 flex items-center justify-center transition-all active:scale-95 shadow-lg ${isFollowing 
+                                            ? 'bg-neutral-800 border-neutral-700 text-neutral-500' 
+                                            : 'bg-white border-white text-black hover:bg-neutral-200'}`}
+                                    >
+                                        {isFollowing ? <UserCheck size={24} /> : <UserPlus size={24} />}
+                                    </button>
+                                    <button
+                                        onClick={() => { handleAction('like'); setIsButtonsVisible(false); }}
+                                        disabled={isAnimating}
+                                        className="w-20 h-20 rounded-full bg-gym-primary text-black flex items-center justify-center hover:scale-110 active:scale-90 transition-all shadow-[0_0_40px_rgba(229,255,0,0.4)] relative group"
+                                    >
+                                        <div className="absolute inset-0 rounded-full bg-gym-primary animate-ping opacity-20"></div>
+                                        <Swords size={32} className="relative z-10" />
+                                    </button>
+                                    <button
+                                        onClick={() => navigate(`/player/${currentUser.username}`)}
+                                        disabled={isAnimating}
+                                        className="w-14 h-14 rounded-full border-2 border-yellow-500/30 bg-yellow-500/10 text-yellow-500 flex items-center justify-center active:scale-95 shadow-lg"
+                                    >
+                                        <ExternalLink size={24} />
+                                    </button>
+                                    <button
+                                        onClick={() => setIsBoostModalOpen(true)}
+                                        disabled={isBoosting}
+                                        className={`w-14 h-14 rounded-full border-2 flex items-center justify-center transition-all active:scale-95 shadow-lg ${isUserBoosted ? 'bg-yellow-500/10 border-yellow-500 shadow-yellow-500/30' : 'bg-neutral-900/90 border-neutral-800 text-yellow-500'}`}
+                                    >
+                                        <Zap size={24} fill={isUserBoosted ? "currentColor" : "none"} />
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-
-                        {/* --- FIXED FOOTER (Anchored to Safe Area) --- */}
-                        <div className="absolute bottom-6 left-0 right-0 px-4 z-40 pointer-events-none pb-safe">
-                            <div className="flex items-center justify-center gap-4 max-w-sm mx-auto pointer-events-auto">
-
-                            {/* REJECT BUTTON - Minimalist Outline */}
-                            <button
-                                onClick={() => handleAction('skip')}
-                                disabled={isAnimating}
-                                className="w-14 h-14 rounded-full border-2 border-neutral-700 bg-neutral-900/80 backdrop-blur-sm text-neutral-400 flex items-center justify-center hover:bg-neutral-800 hover:border-white transition-all active:scale-95 shadow-lg group"
-                            >
-                                <X size={24} className="group-hover:rotate-90 transition-transform" />
-                            </button>
-
-                            {/* FOLLOW BUTTON */}
-                            <button
-                                onClick={handleFollowToggle}
-                                disabled={isAnimating}
-                                className={`w-14 h-14 rounded-full border-2 flex items-center justify-center transition-all active:scale-95 shadow-lg ${isFollowing 
-                                    ? 'bg-neutral-800 border-neutral-600 text-neutral-400' 
-                                    : 'bg-white border-white text-black hover:bg-neutral-200'}`}
-                            >
-                                {isFollowing ? <UserCheck size={24} /> : <UserPlus size={24} />}
-                            </button>
-
-                            {/* LIKE/INVITE BUTTON - Gym Primary Impact */}
-                            <button
-                                onClick={() => handleAction('like')}
-                                disabled={isAnimating}
-                                className="w-20 h-20 rounded-full bg-gym-primary text-black flex items-center justify-center hover:scale-110 active:scale-90 transition-all shadow-[0_0_30px_rgba(229,255,0,0.4)] relative group"
-                            >
-                                <div className="absolute inset-0 rounded-full bg-gym-primary animate-ping opacity-20 group-hover:opacity-40"></div>
-                                <Swords size={32} className="relative z-10" />
-                            </button>
-
-                            {/* VIEW PROFILE BUTTON */}
-                            <button
-                                onClick={() => navigate(`/player/${currentUser.username}`)}
-                                disabled={isAnimating}
-                                className="w-14 h-14 rounded-full border-2 border-yellow-500/30 bg-yellow-500/10 text-yellow-500 flex items-center justify-center hover:bg-yellow-500 hover:text-black transition-all active:scale-95 shadow-lg"
-                            >
-                                <ExternalLink size={24} />
-                            </button>
-
-                            {/* BOOST BUTTON */}
-                            <button
-                                onClick={() => setIsBoostModalOpen(true)}
-                                disabled={isBoosting}
-                                className={`
-                                    w-14 h-14 rounded-full border-2 flex items-center justify-center transition-all active:scale-95 shadow-lg relative overflow-hidden
-                                    ${isUserBoosted 
-                                        ? 'bg-yellow-500/10 border-yellow-500 shadow-yellow-500/30 animate-pulse' 
-                                        : 'bg-neutral-900/80 border-neutral-700 text-yellow-500 hover:bg-neutral-800 hover:border-yellow-500/50 hover:scale-110'}
-                                `}
-                            >
-                                <img 
-                                    src="/Gemini_Generated_Image_bjc7ltbjc7ltbjc7 (2).png" 
-                                    alt="Boost"
-                                    className={`h-12 w-auto object-contain ${isUserBoosted ? 'drop-shadow-[0_0_15px_rgba(168,85,247,0.6)]' : 'opacity-70 group-hover:opacity-100'}`}
-                                />
-                                {isUserBoosted && (
-                                    <div className="absolute top-0 right-0 w-3 h-3 bg-yellow-500 rounded-full border-2 border-black"></div>
-                                )}
-                            </button>
-                        </div>
-                    </div>
-
                     </div>
                 )}
             </div>
