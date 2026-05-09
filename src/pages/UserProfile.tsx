@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { MapPin, Edit2, LogIn, Loader, Swords, Dumbbell, LineChart, History, Star, Search, ArrowLeft, ArrowRight, Crown, Map as MapIcon, Image as ImageIcon, Palette, Dices, Coins } from 'lucide-react'; // Added Dices
+import { MapPin, Edit2, LogIn, Loader, Swords, Dumbbell, LineChart, History, Star, Search, ArrowLeft, ArrowRight, Crown, Map as MapIcon, Image as ImageIcon, Palette, Dices, Coins, Share2 } from 'lucide-react'; // Added Dices, Share2
 // import { UserPlus, Grid } from 'lucide-react'; // UNUSED: Hidden Community Features
 // import { Grid } from 'lucide-react'; // UNUSED: Hidden Community Features
 import { Link, useNavigate } from 'react-router-dom';
@@ -142,6 +142,13 @@ export const UserProfile = () => {
      * Users must be within range (e.g. 200m) of the gym to start a workout.
      */
 
+
+    const handleShareProfile = () => {
+        const username = profile?.username || user?.user_metadata?.full_name || 'gymrat';
+        const profileUrl = `${window.location.origin}/player/${username}`;
+        navigator.clipboard.writeText(profileUrl);
+        alert('🚀 ¡Enlace de tu perfil copiado! Compártelo con el mundo.');
+    };
 
     const loadUserData = async () => {
         try {
@@ -393,6 +400,20 @@ export const UserProfile = () => {
                 {profile?.custom_settings?.banner_url && (
                     <div className="absolute inset-0 bg-black/60 z-0 transition-opacity group-hover:bg-black/50"></div>
                 )}
+
+                {/* Share Button - ELEGANT GLASS ACTION */}
+                <div className="absolute top-4 left-4 z-20">
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleShareProfile();
+                        }}
+                        className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-neutral-400 hover:text-gym-primary hover:bg-white/10 hover:border-gym-primary/30 transition-all backdrop-blur-md shadow-sm group"
+                        title="Compartir Perfil"
+                    >
+                        <Share2 size={18} className="group-hover:scale-110 transition-transform" />
+                    </button>
+                </div>
 
                 {/* Background Texture REMOVED - Clean Dark Gradient instead */}
                 <div className="absolute top-0 right-0 w-full h-full pointer-events-none bg-gradient-to-bl from-neutral-800/10 to-transparent z-0"></div>
