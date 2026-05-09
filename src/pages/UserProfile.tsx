@@ -728,28 +728,39 @@ export const UserProfile = () => {
                     </div>
                 </button>
 
-                <Link to="/arsenal" className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-blue-500/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md">
-                    <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-blue-500/5 flex items-center justify-center group-hover:scale-110 transition-transform border border-blue-500/10">
-                        <Dumbbell className="text-blue-500 w-4 h-4 md:w-6 md:h-6" />
+            {/* Quick Actions Grid - 2x2 Layout */}
+            <div className="grid grid-cols-2 gap-3 md:gap-4">
+                {/* 1. RUTINAS */}
+                <Link to="/arsenal" className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-blue-500/50 p-4 rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-3 text-center no-underline shadow-sm hover:shadow-md">
+                    <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform border border-blue-500/20">
+                        <Dumbbell className="text-blue-500 w-5 h-5" />
                     </div>
-                    <span className="font-bold text-neutral-200 group-hover:text-white text-xs md:text-base">Rutinas</span>
+                    <span className="font-bold text-neutral-200 group-hover:text-white text-xs uppercase tracking-widest">Rutinas</span>
                 </Link>
 
-                <Link to="/stats" className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-green-500/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md">
-                    <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-green-500/5 flex items-center justify-center group-hover:scale-110 transition-transform border border-green-500/10">
-                        <LineChart className="text-green-500 w-4 h-4 md:w-6 md:h-6" />
+                {/* 2. MAPA */}
+                <Link to="/map" className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-gym-primary/50 p-4 rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-3 text-center no-underline shadow-sm hover:shadow-md">
+                    <div className="w-10 h-10 rounded-full bg-gym-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform border border-gym-primary/20">
+                        <MapPin className="text-gym-primary w-5 h-5" />
                     </div>
-                    <span className="font-bold text-neutral-200 group-hover:text-white text-xs md:text-base">Stats</span>
+                    <span className="font-bold text-neutral-200 group-hover:text-white text-xs uppercase tracking-widest">Mapa</span>
                 </Link>
 
-                <Link to="/history" className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-orange-500/50 p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md">
-                    <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-orange-500/5 flex items-center justify-center group-hover:scale-110 transition-transform border border-orange-500/10">
-                        <History className="text-orange-500 w-4 h-4 md:w-6 md:h-6" />
+                {/* 3. STATS */}
+                <Link to="/stats" className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-green-500/50 p-4 rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-3 text-center no-underline shadow-sm hover:shadow-md">
+                    <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center group-hover:scale-110 transition-transform border border-green-500/20">
+                        <LineChart className="text-green-500 w-5 h-5" />
                     </div>
-                    <span className="font-bold text-neutral-200 group-hover:text-white text-xs md:text-base">Historial</span>
+                    <span className="font-bold text-neutral-200 group-hover:text-white text-xs uppercase tracking-widest">Stats</span>
                 </Link>
 
-
+                {/* 4. HISTORIAL */}
+                <Link to="/history" className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-orange-500/50 p-4 rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-3 text-center no-underline shadow-sm hover:shadow-md">
+                    <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center group-hover:scale-110 transition-transform border border-orange-500/20">
+                        <History className="text-orange-500 w-5 h-5" />
+                    </div>
+                    <span className="font-bold text-neutral-200 group-hover:text-white text-xs uppercase tracking-widest">Historial</span>
+                </Link>
             </div >
 
             {/* TERRITORIES SECTION (PASSPORT) */}

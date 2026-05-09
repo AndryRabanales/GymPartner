@@ -78,10 +78,7 @@ export const AppLayout = () => {
 
                             {/* Actions Area */}
                             <div className="flex items-center gap-3">
-                                {/* HEADER ACTIONS: MAP & RANKING (Reduced Size) */}
-                                <Link to="/map" className="flex flex-col w-11 h-11 rounded-full bg-neutral-900 border border-neutral-800 items-center justify-center text-neutral-400 hover:text-gym-primary hover:border-gym-primary/50 transition-all hover:shadow-[0_0_15px_rgba(234,179,8,0.15)] group gap-0.5">
-                                    <MapPin size={18} className="group-hover:scale-110 transition-transform" />
-                                </Link>
+                                {/* HEADER ACTIONS: RANKING & OTHERS REMOVED TO GRID */}
 
                                 {user && <GPointsDisplay />}
 
