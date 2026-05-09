@@ -411,8 +411,8 @@ export const Radar = () => {
                         }}
                     >
 
-                        {/* --- BANNER SECTION (Profile Cover) --- */}
-                        <div className="h-44 sm:h-52 shrink-0 relative w-full bg-neutral-800 overflow-hidden">
+                        {/* --- BANNER SECTION (Compact) --- */}
+                        <div className="h-32 sm:h-44 shrink-0 relative w-full bg-neutral-800 overflow-hidden">
                             {currentUser.banner_url ? (
                                 <FadeInImage
                                     src={cloudinaryService.getOptimizedImageUrl(currentUser.banner_url, { width: 400, height: 200 })}
@@ -425,19 +425,19 @@ export const Radar = () => {
                                     <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-white to-transparent"></div>
                                 </div>
                             )}
-                            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/10 to-black"></div>
+                            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/5 to-black"></div>
                         </div>
 
 
-                        {/* --- CONTENT SECTION (Scrollable area) --- */}
-                        <div className="flex-1 flex flex-col items-center justify-start relative z-20 -mt-12 px-4 w-full min-h-0 overflow-y-auto custom-scrollbar pb-32">
+                        {/* --- CONTENT SECTION (Compact) --- */}
+                        <div className="flex-1 flex flex-col items-center justify-start relative z-20 -mt-16 px-3 w-full min-h-0 overflow-y-auto custom-scrollbar pb-32">
 
                             {/* Top Info Group */}
                             <div className="flex flex-col items-center w-full">
-                                {/* AVATAR */}
-                                <div className="relative w-28 h-28 shrink-0 mb-3">
-                                    <div className={`absolute inset-0 rounded-full blur-2xl transform scale-100 pointer-events-none ${currentUser.tier.color.replace('text-', 'bg-')}/40`}></div>
-                                    <div className={`w-full h-full rounded-full overflow-hidden border-4 bg-neutral-900 shadow-2xl relative z-10 ${currentUser.tier.borderColor}`}>
+                                {/* AVATAR (Compact) */}
+                                <div className="relative w-24 h-24 shrink-0 mb-2">
+                                    <div className={`absolute inset-0 rounded-full blur-xl transform scale-90 pointer-events-none ${currentUser.tier.color.replace('text-', 'bg-')}/30`}></div>
+                                    <div className={`w-full h-full rounded-full overflow-hidden border-[3px] bg-neutral-900 shadow-xl relative z-10 ${currentUser.tier.borderColor}`}>
                                         <FadeInImage
                                             src={cloudinaryService.getOptimizedImageUrl(currentUser.avatar_url || `https://ui-avatars.com/api/?name=${currentUser.username}&background=random`, { width: 80, height: 80 })}
                                             alt={currentUser.username}
@@ -454,45 +454,45 @@ export const Radar = () => {
                                 </div>
 
                                 {/* TEXT INFO */}
-                                <h1 className="text-3xl font-black text-white italic tracking-tighter uppercase drop-shadow-lg mb-1 truncate max-w-full">
+                                <h1 className="text-2xl font-black text-white italic tracking-tighter uppercase mb-0.5 truncate max-w-full">
                                     {currentUser.username}
                                 </h1>
                                 {currentUser.is_boosted && (
-                                    <div className="absolute top-4 right-4 z-20 flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-yellow-500/50 shadow-[0_0_15px_rgba(234,179,8,0.3)] animate-pulse">
+                                    <div className="absolute top-2 right-2 z-20 flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full border border-yellow-500/40">
                                         <img 
                                             src="/Gemini_Generated_Image_bjc7ltbjc7ltbjc7 (2).png" 
                                             alt="Boost"
-                                            className="w-6 h-6 object-contain"
+                                            className="w-5 h-5 object-contain"
                                         />
-                                        <span className="text-yellow-400 font-black text-xs italic tracking-widest uppercase">Boost</span>
+                                        <span className="text-yellow-400 font-black text-[9px] italic tracking-widest uppercase">Boost</span>
                                     </div>
                                 )}
-                                <p className="text-neutral-300 text-xs font-medium leading-relaxed px-6 max-w-md text-center mt-2">
+                                <p className="text-neutral-400 text-[11px] font-medium leading-tight px-4 max-w-md text-center">
                                     {currentUser.description || "✨ Sin descripción aún"}
                                 </p>
                             </div>
 
-                            {/* Middle Stats Group */}
-                            <div className="w-full py-3 flex justify-center shrink-0">
-                                <div className="grid grid-cols-3 gap-2 w-full max-w-[280px]">
-                                    <div className="flex flex-col items-center p-2 rounded-lg bg-neutral-800/50 border border-neutral-700/50">
-                                        <span className={`text-lg font-black ${currentUser.tier.color}`}>{currentUser.checkins_count}</span>
-                                        <span className="text-[8px] text-neutral-500 uppercase font-bold tracking-widest">Entrenos</span>
+                            {/* Middle Stats Group (Ultra Compact) */}
+                            <div className="w-full py-2 flex justify-center shrink-0">
+                                <div className="grid grid-cols-3 gap-1.5 w-full max-w-[300px]">
+                                    <div className="flex flex-col items-center p-1.5 rounded-xl bg-neutral-900/50 border border-white/5">
+                                        <span className={`text-base font-black ${currentUser.tier.color}`}>{currentUser.checkins_count}</span>
+                                        <span className="text-[7px] text-neutral-500 uppercase font-black tracking-widest">Entrenos</span>
                                     </div>
-                                    <div className="flex flex-col items-center p-2 rounded-lg bg-neutral-800/50 border border-neutral-700/50">
-                                        <span className="text-lg font-black text-white">{currentUser.followers_count || 0}</span>
-                                        <span className="text-[8px] text-neutral-500 uppercase font-bold tracking-widest">Seguidores</span>
+                                    <div className="flex flex-col items-center p-1.5 rounded-xl bg-neutral-900/50 border border-white/5">
+                                        <span className="text-base font-black text-white">{currentUser.followers_count || 0}</span>
+                                        <span className="text-[7px] text-neutral-500 uppercase font-black tracking-widest">Seguidores</span>
                                     </div>
-                                    <div className="flex flex-col items-center p-2 rounded-lg bg-neutral-800/50 border border-neutral-700/50">
-                                        <span className="text-lg font-black text-white">{currentUser.following_count || 0}</span>
-                                        <span className="text-[8px] text-neutral-500 uppercase font-bold tracking-widest">Seguidos</span>
+                                    <div className="flex flex-col items-center p-1.5 rounded-xl bg-neutral-900/50 border border-white/5">
+                                        <span className="text-base font-black text-white">{currentUser.following_count || 0}</span>
+                                        <span className="text-[7px] text-neutral-500 uppercase font-black tracking-widest">Seguidos</span>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* NEW: GYM PRINCIPAL SHOWCASE (Optimized for Mobile) */}
-                            <div className="w-full mt-2 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
-                                <div className="relative h-72 md:h-[450px] rounded-[2rem] overflow-hidden shadow-[0_15px_40px_rgba(0,0,0,0.6)] border border-white/10 group/gymcard">
+                            {/* NEW: GYM PRINCIPAL SHOWCASE (Ultra Compact) */}
+                            <div className="w-full mt-1.5 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
+                                <div className="relative h-64 md:h-[400px] rounded-[1.8rem] overflow-hidden shadow-2xl border border-white/5">
                                     {/* Gym Banner/Photo */}
                                     <div 
                                         className="absolute inset-0 bg-neutral-800"
@@ -503,26 +503,24 @@ export const Radar = () => {
                                             backgroundPosition: 'center'
                                         }}
                                     >
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-95" />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-90" />
                                     </div>
 
-                                    {/* Gym Content - Adjusted Padding for Mobile */}
-                                    <div className="absolute inset-0 p-5 md:p-8 flex flex-col justify-end items-start">
-                                        <div className="flex items-center gap-2 mb-2.5 bg-black/60 backdrop-blur-xl px-3 py-1 rounded-full border border-gym-primary/30">
-                                            <div className="w-4 h-4 rounded-full bg-gym-primary flex items-center justify-center">
-                                                <Star size={10} className="text-black" fill="black" />
-                                            </div>
-                                            <span className="text-[9px] md:text-[11px] font-black text-white uppercase tracking-[0.2em] italic">Base Principal</span>
+                                    {/* Gym Content */}
+                                    <div className="absolute inset-0 p-4 flex flex-col justify-end items-start">
+                                        <div className="flex items-center gap-1.5 mb-1.5 bg-black/60 backdrop-blur-md px-2.5 py-0.5 rounded-full border border-gym-primary/20">
+                                            <Star size={9} className="text-gym-primary" fill="currentColor" />
+                                            <span className="text-[8px] font-black text-white uppercase tracking-widest italic">Base Principal</span>
                                         </div>
-                                        <h3 className="text-xl md:text-5xl font-black text-white italic uppercase tracking-tighter leading-none drop-shadow-lg">
+                                        <h3 className="text-lg md:text-4xl font-black text-white italic uppercase tracking-tighter leading-none">
                                             {currentUser.gym_name}
                                         </h3>
                                     </div>
 
-                                    {/* Distance Badge - Adjusted Position */}
-                                    <div className="absolute top-4 right-4">
-                                        <div className="bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/10">
-                                            <span className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">
+                                    {/* Distance Badge */}
+                                    <div className="absolute top-3 right-3">
+                                        <div className="bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-full border border-white/5">
+                                            <span className="text-[8px] font-black text-neutral-500 uppercase tracking-widest">
                                                 {currentUser.distance_km < 1 ? '<1 km' : `${Math.round(currentUser.distance_km)} km`}
                                             </span>
                                         </div>
