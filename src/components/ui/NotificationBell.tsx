@@ -16,8 +16,14 @@ export const NotificationBell = () => {
     useEffect(() => {
         loadUnreadCount();
 
-        // Polling simple cada 60s
-        const interval = setInterval(loadUnreadCount, 60000);
+        // Polling inteligente cada 60s
+        const interval = setInterval(() => {
+            // Solo pedir datos si la pestaña está activa para evitar ERR_NETWORK_IO_SUSPENDED
+            if (document.visibilityState === 'visible') {
+                loadUnreadCount();
+            }
+        }, 60000);
+        
         return () => clearInterval(interval);
     }, []);
 
