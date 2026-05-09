@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { radarService, type RadarUser } from '../services/RadarService';
 import { notificationService } from '../services/NotificationService';
 import { cloudinaryService } from '../services/CloudinaryService';
-import { Radar as RadarIcon, Dumbbell, X, UserPlus, Zap, Star, ExternalLink, UserCheck, Swords, MapPin, ChevronUp, ChevronDown } from 'lucide-react';
+import { Radar as RadarIcon, Dumbbell, X, UserPlus, Zap, Star, ExternalLink, UserCheck, Swords, MapPin } from 'lucide-react';
 import { useSwipe } from '../hooks/useSwipe';
 import { useAuth } from '../context/AuthContext';
 import { userService } from '../services/UserService';
@@ -99,7 +99,6 @@ export const Radar = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const [nearbyUsers, setNearbyUsers] = useState<RadarUser[]>([]);
-    const [isButtonsVisible, setIsButtonsVisible] = useState(false);
     const [loading, setLoading] = useState(true);
     const [locationError, setLocationError] = useState<string | null>(null);
     const [radius] = useState(100);
@@ -430,8 +429,8 @@ export const Radar = () => {
                         </div>
 
 
-                        {/* --- CONTENT SECTION (Scrollable area inside card) --- */}
-                        <div className="flex-1 flex flex-col items-center justify-start relative z-20 -mt-14 px-3 w-full overflow-y-auto overflow-x-hidden custom-scrollbar pb-32">
+                        {/* --- CONTENT SECTION (Extra Bottom Space) --- */}
+                        <div className="flex-1 flex flex-col items-center justify-start relative z-20 -mt-14 px-3 w-full overflow-y-auto overflow-x-hidden custom-scrollbar pb-60">
 
                             {/* Top Info Group */}
                             <div className="flex flex-col items-center w-full">
@@ -530,77 +529,61 @@ export const Radar = () => {
                             </div>
                         </div>
 
-                        {/* --- SLIDABLE ACTION BAR (Clean UI) --- */}
-                        <div className="absolute bottom-0 left-0 right-0 z-50 pointer-events-none">
-                            
-                            {/* Toggle Arrow Tab */}
-                            <div className="flex justify-center mb-4 pointer-events-auto">
+                        {/* --- FIXED ACTION BUTTONS (Elevated for full visibility) --- */}
+                        <div className="absolute bottom-[100px] left-0 right-0 z-50 pointer-events-none px-4">
+                            <div className="flex items-center justify-center gap-3 max-w-sm mx-auto pointer-events-auto">
+                                
+                                {/* REJECT BUTTON */}
                                 <button
-                                    onClick={() => setIsButtonsVisible(!isButtonsVisible)}
-                                    className={`
-                                        w-12 h-10 flex items-center justify-center rounded-t-2xl 
-                                        bg-black/90 backdrop-blur-2xl border-t border-x border-white/10 
-                                        text-gym-primary shadow-[0_-10px_30px_rgba(0,0,0,0.8)]
-                                        transition-all duration-500 ease-out active:scale-90
-                                        ${isButtonsVisible ? 'translate-y-2 opacity-50' : 'animate-bounce translate-y-0'}
-                                    `}
+                                    onClick={() => handleAction('skip')}
+                                    disabled={isAnimating}
+                                    className="w-12 h-12 rounded-full border border-neutral-800 bg-black/60 backdrop-blur-md text-neutral-500 flex items-center justify-center active:scale-90 transition-all shadow-xl"
                                 >
-                                    {isButtonsVisible ? <ChevronDown size={24} strokeWidth={3} /> : <ChevronUp size={24} strokeWidth={3} />}
+                                    <X size={20} />
+                                </button>
+
+                                {/* FOLLOW BUTTON */}
+                                <button
+                                    onClick={handleFollowToggle}
+                                    disabled={isAnimating}
+                                    className={`w-12 h-12 rounded-full border flex items-center justify-center transition-all active:scale-90 shadow-lg ${isFollowing 
+                                        ? 'bg-neutral-800 border-neutral-700 text-neutral-500' 
+                                        : 'bg-white border-white text-black'}`}
+                                >
+                                    {isFollowing ? <UserCheck size={20} /> : <UserPlus size={20} />}
+                                </button>
+
+                                {/* LIKE/INVITE BUTTON (SWORDS) */}
+                                <button
+                                    onClick={() => handleAction('like')}
+                                    disabled={isAnimating}
+                                    className="w-16 h-16 rounded-full bg-gym-primary text-black flex items-center justify-center hover:scale-110 active:scale-90 transition-all shadow-[0_0_40px_rgba(229,255,0,0.4)] relative"
+                                >
+                                    <div className="absolute inset-0 rounded-full bg-gym-primary animate-ping opacity-10"></div>
+                                    <Swords size={28} />
+                                </button>
+
+                                {/* VIEW PROFILE BUTTON */}
+                                <button
+                                    onClick={() => navigate(`/player/${currentUser.username}`)}
+                                    disabled={isAnimating}
+                                    className="w-12 h-12 rounded-full border border-yellow-500/30 bg-yellow-500/10 text-yellow-500 flex items-center justify-center active:scale-90 shadow-lg"
+                                >
+                                    <ExternalLink size={20} />
+                                </button>
+
+                                {/* BOOST BUTTON */}
+                                <button
+                                    onClick={() => setIsBoostModalOpen(true)}
+                                    disabled={isBoosting}
+                                    className={`w-12 h-12 rounded-full border flex items-center justify-center transition-all active:scale-90 shadow-lg ${isUserBoosted ? 'bg-yellow-500/10 border-yellow-500 shadow-yellow-500/30' : 'bg-neutral-900/60 border-neutral-800 text-yellow-500'}`}
+                                >
+                                    <Zap size={20} fill={isUserBoosted ? "currentColor" : "none"} />
                                 </button>
                             </div>
-
-                            {/* Slidable Panel */}
-                            <div className={`
-                                bg-gradient-to-t from-black via-black/98 to-black/90 backdrop-blur-3xl 
-                                border-t border-white/10 px-4 pt-6 pb-12
-                                transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]
-                                pointer-events-auto shadow-[0_-20px_50px_rgba(0,0,0,0.9)]
-                                ${isButtonsVisible ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}
-                            `}>
-                                <div className="flex items-center justify-center gap-4 max-w-sm mx-auto">
-                                    <button
-                                        onClick={() => { handleAction('skip'); setIsButtonsVisible(false); }}
-                                        disabled={isAnimating}
-                                        className="w-14 h-14 rounded-full border-2 border-neutral-800 bg-neutral-900/90 text-neutral-500 flex items-center justify-center active:scale-95 transition-all"
-                                    >
-                                        <X size={24} />
-                                    </button>
-                                    <button
-                                        onClick={handleFollowToggle}
-                                        disabled={isAnimating}
-                                        className={`w-14 h-14 rounded-full border-2 flex items-center justify-center transition-all active:scale-95 shadow-lg ${isFollowing 
-                                            ? 'bg-neutral-800 border-neutral-700 text-neutral-500' 
-                                            : 'bg-white border-white text-black hover:bg-neutral-200'}`}
-                                    >
-                                        {isFollowing ? <UserCheck size={24} /> : <UserPlus size={24} />}
-                                    </button>
-                                    <button
-                                        onClick={() => { handleAction('like'); setIsButtonsVisible(false); }}
-                                        disabled={isAnimating}
-                                        className="w-20 h-20 rounded-full bg-gym-primary text-black flex items-center justify-center hover:scale-110 active:scale-90 transition-all shadow-[0_0_40px_rgba(229,255,0,0.4)] relative group"
-                                    >
-                                        <div className="absolute inset-0 rounded-full bg-gym-primary animate-ping opacity-20"></div>
-                                        <Swords size={32} className="relative z-10" />
-                                    </button>
-                                    <button
-                                        onClick={() => navigate(`/player/${currentUser.username}`)}
-                                        disabled={isAnimating}
-                                        className="w-14 h-14 rounded-full border-2 border-yellow-500/30 bg-yellow-500/10 text-yellow-500 flex items-center justify-center active:scale-95 shadow-lg"
-                                    >
-                                        <ExternalLink size={24} />
-                                    </button>
-                                    <button
-                                        onClick={() => setIsBoostModalOpen(true)}
-                                        disabled={isBoosting}
-                                        className={`w-14 h-14 rounded-full border-2 flex items-center justify-center transition-all active:scale-95 shadow-lg ${isUserBoosted ? 'bg-yellow-500/10 border-yellow-500 shadow-yellow-500/30' : 'bg-neutral-900/90 border-neutral-800 text-yellow-500'}`}
-                                    >
-                                        <Zap size={24} fill={isUserBoosted ? "currentColor" : "none"} />
-                                    </button>
-                                </div>
-                            </div>
-                            </div>
                         </div>
-                    )}
+                    </div>
+                )}
                 </div>
                 {/* BOOST MODAL */}
                 <BoostModal 
