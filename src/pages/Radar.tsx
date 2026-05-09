@@ -7,6 +7,7 @@ import { useSwipe } from '../hooks/useSwipe';
 import { useAuth } from '../context/AuthContext';
 import { userService } from '../services/UserService';
 import { supabase } from '../lib/supabase';
+import { BoostModal } from '../components/profile/BoostModal';
 
 // Helper component for fade-in images with skeleton
 const FadeInImage = ({ src, alt, className, imgClassName = "" }: { src: string; alt: string; className?: string; imgClassName?: string }) => {
@@ -63,6 +64,9 @@ export const Radar = () => {
     const { user } = useAuth();
     const [isUserBoosted, setIsUserBoosted] = useState(false);
     const [isBoosting, setIsBoosting] = useState(false);
+    const [isBoostModalOpen, setIsBoostModalOpen] = useState(false);
+    const [userPoints, setUserPoints] = useState(0);
+    const [boostExpiresAt, setBoostExpiresAt] = useState<string | undefined>(undefined);
 
     // Swipe Hook
     const { swipeState, handlers: swipeHandlers } = useSwipe({
@@ -158,12 +162,16 @@ export const Radar = () => {
         const checkBoost = async () => {
             const { data } = await supabase
                 .from('profiles')
-                .select('boost_until')
+                .select('g_points, boost_until')
                 .eq('id', user.id)
                 .single();
             
-            if (data?.boost_until) {
-                setIsUserBoosted(new Date(data.boost_until) > new Date());
+            if (data) {
+                setUserPoints(data.g_points || 0);
+                if (data.boost_until) {
+                    setIsUserBoosted(new Date(data.boost_until) > new Date());
+                    setBoostExpiresAt(data.boost_until);
+                }
             }
         };
 
@@ -237,28 +245,21 @@ export const Radar = () => {
         setIsAnimating(false);
     };
 
-    const handleBoost = async () => {
+    const handleBoostConfirm = async () => {
         if (!user || isBoosting) return;
-        if (isUserBoosted) {
-            alert("¡Ya tienes un Boost activo!");
-            return;
-        }
-
-        if (confirm('¿Quieres activar un Boost de 24h por 1000 G-Points? Aparecerás al principio del Radar de todos.')) {
-            setIsBoosting(true);
-            try {
-                const success = await userService.spendGPoints(user.id, 1000, 'profile_boost');
-                if (success) {
-                    alert('🚀 ¡BOOST ACTIVADO! Ahora eres prioridad nacional en el Radar.');
-                    setIsUserBoosted(true);
-                } else {
-                    alert('No tienes suficientes G-Points.');
-                }
-            } catch (err) {
-                console.error(err);
-            } finally {
-                setIsBoosting(false);
+        setIsBoosting(true);
+        try {
+            const success = await userService.spendGPoints(user.id, 1000, 'profile_boost');
+            if (success) {
+                setIsBoostModalOpen(false);
+                // Status will update via subscription
+            } else {
+                alert('No tienes suficientes G-Points.');
             }
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setIsBoosting(false);
         }
     };
 
@@ -444,8 +445,8 @@ export const Radar = () => {
 
                             {/* BOOST BUTTON */}
                             <button
-                                onClick={handleBoost}
-                                disabled={isBoosting || isUserBoosted}
+                                onClick={() => setIsBoostModalOpen(true)}
+                                disabled={isBoosting}
                                 className={`
                                     w-14 h-14 rounded-full border-2 flex items-center justify-center transition-all active:scale-95 shadow-lg relative overflow-hidden
                                     ${isUserBoosted 
@@ -469,5 +470,15 @@ export const Radar = () => {
                 )}
             </div>
         </div >
+            {/* BOOST MODAL */}
+            <BoostModal 
+                isOpen={isBoostModalOpen}
+                onClose={() => setIsBoostModalOpen(false)}
+                onConfirm={handleBoostConfirm}
+                isBoosting={isBoosting}
+                isActive={isUserBoosted}
+                expiresAt={boostExpiresAt}
+                currentPoints={userPoints}
+            />
     );
 };
