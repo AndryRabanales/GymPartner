@@ -2,14 +2,13 @@ import { useState, useEffect, useRef } from 'react';
 import { radarService, type RadarUser } from '../services/RadarService';
 import { notificationService } from '../services/NotificationService';
 import { cloudinaryService } from '../services/CloudinaryService';
-import { Radar as RadarIcon, Dumbbell, X, UserPlus, Zap } from 'lucide-react';
+import { Radar as RadarIcon, Dumbbell, X, UserPlus, Zap, Star, ExternalLink, UserCheck, Swords } from 'lucide-react';
 import { useSwipe } from '../hooks/useSwipe';
 import { useAuth } from '../context/AuthContext';
 import { userService } from '../services/UserService';
 import { supabase } from '../lib/supabase';
 import { BoostModal } from '../components/profile/BoostModal';
 import { socialService } from '../services/SocialService';
-import { Star, ExternalLink, UserCheck, UserPlus, Swords } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 // Helper component for fade-in images with skeleton
