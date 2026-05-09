@@ -740,7 +740,7 @@ export const UserProfile = () => {
                         <img 
                             src="/Gemini_Generated_Image_qyk7sjqyk7sjqyk7-removebg-preview.png" 
                             alt="G-Points"
-                            className="w-6 h-6 md:w-8 md:h-8 object-contain"
+                            className="w-10 h-10 md:w-14 md:h-14 object-contain"
                         />
                     </div>
                     <div className="flex flex-col">

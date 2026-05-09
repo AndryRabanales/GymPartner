@@ -65,14 +65,14 @@ export const GPointsDisplay: React.FC = () => {
                     src="/Gemini_Generated_Image_qyk7sjqyk7sjqyk7-removebg-preview.png"
                     alt="G-Points"
                     className={`
-                        w-6 h-6 relative z-10 object-contain
+                        w-10 h-10 relative z-10 object-contain
                         ${isAnimating ? 'scale-125 transition-transform duration-700' : 'group-hover:scale-110 transition-transform'}
                     `} 
                 />
             </div>
             
             <div className="flex flex-col">
-                <span className="text-white font-black text-lg tracking-tighter leading-none italic uppercase">
+                <span className="text-white font-black text-2xl tracking-tighter leading-none italic uppercase">
                     {points.toLocaleString()}
                 </span>
             </div>
