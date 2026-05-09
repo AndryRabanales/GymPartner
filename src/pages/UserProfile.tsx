@@ -738,7 +738,7 @@ export const UserProfile = () => {
                             ? 'bg-yellow-500/20 border-yellow-500/50'
                             : 'bg-yellow-500/5 border-yellow-500/10'}`}>
                         <img 
-                            src="/Gemini_Generated_Image_qyk7sjqyk7sjqyk7-removebg-preview.png" 
+                            src="/Gemini_Generated_Image_bjc7ltbjc7ltbjc7 (2).png" 
                             alt="G-Points"
                             className="h-16 md:h-24 w-auto object-contain"
                         />

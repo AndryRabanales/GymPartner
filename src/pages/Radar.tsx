@@ -376,6 +376,16 @@ export const Radar = () => {
                                 <h1 className="text-3xl font-black text-white italic tracking-tighter uppercase drop-shadow-lg mb-1 truncate max-w-full">
                                     {currentUser.username}
                                 </h1>
+                                {currentUser.is_boosted && (
+                                    <div className="absolute top-4 right-4 z-20 flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-yellow-500/50 shadow-[0_0_15px_rgba(234,179,8,0.3)] animate-pulse">
+                                        <img 
+                                            src="/Gemini_Generated_Image_bjc7ltbjc7ltbjc7 (2).png" 
+                                            alt="Boost"
+                                            className="w-6 h-6 object-contain"
+                                        />
+                                        <span className="text-yellow-400 font-black text-xs italic tracking-widest uppercase">Boost</span>
+                                    </div>
+                                )}
                                 <div className="flex items-center justify-center gap-1.5 text-neutral-400 mb-2">
                                     <Dumbbell size={10} className={currentUser.tier.color} />
                                     <span className="text-[10px] font-bold uppercase tracking-wide truncate max-w-[200px]">
@@ -444,9 +454,9 @@ export const Radar = () => {
                                 `}
                             >
                                 <img 
-                                    src="/Gemini_Generated_Image_qyk7sjqyk7sjqyk7-removebg-preview.png" 
+                                    src="/Gemini_Generated_Image_bjc7ltbjc7ltbjc7 (2).png" 
                                     alt="Boost"
-                                    className={`h-12 w-auto object-contain ${isUserBoosted ? 'drop-shadow-[0_0_5px_rgba(234,179,8,0.8)]' : 'opacity-70 group-hover:opacity-100'}`}
+                                    className={`h-12 w-auto object-contain ${isUserBoosted ? 'drop-shadow-[0_0_15px_rgba(168,85,247,0.6)]' : 'opacity-70 group-hover:opacity-100'}`}
                                 />
                                 {isUserBoosted && (
                                     <div className="absolute top-0 right-0 w-3 h-3 bg-yellow-500 rounded-full border-2 border-black"></div>
