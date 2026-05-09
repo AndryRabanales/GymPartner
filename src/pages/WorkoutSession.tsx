@@ -437,11 +437,18 @@ export const WorkoutSession = () => {
                 if (savedDraft) {
                     try {
                         const parsed = JSON.parse(savedDraft);
-                        if (parsed && Array.isArray(parsed) && parsed.length > 0) {
-                            setActiveExercises(parsed);
-                            console.log('⚡ Draft restored from LocalStorage - Skipping DB Log Fetch');
+                        // Support both legacy array format and new object format
+                        const draftExercises = Array.isArray(parsed) ? parsed : (parsed.exercises || []);
+                        const draftRoutineName = Array.isArray(parsed) ? undefined : parsed.routineName;
+                        const draftOriginalIds = Array.isArray(parsed) ? [] : (parsed.originalIds || []);
+
+                        if (draftExercises.length > 0) {
+                            setActiveExercises(draftExercises);
+                            if (draftRoutineName) setCurrentRoutineName(draftRoutineName);
+                            if (draftOriginalIds.length > 0) setOriginalExerciseIds(draftOriginalIds);
+                            
+                            console.log('⚡ Draft restored with metadata - Skipping DB Log Fetch');
                             setLoading(false);
-                            // Early return to skip DB fetch since we have the latest UI state
                             return;
                         }
                     } catch (e) {
@@ -517,8 +524,11 @@ export const WorkoutSession = () => {
                 // DO NOT START SESSION HERE. WAIT FOR USER ACTION.
                 setSessionId(null);
                 setStartTime(null);
-                setActiveExercises([]); // Reset state
-                setCurrentRoutineName(undefined); // Reset routine
+                if (!sessionId) { // Only reset if we don't have an active session in memory
+                    setActiveExercises([]); 
+                    setCurrentRoutineName(undefined);
+                    setOriginalExerciseIds([]);
+                }
 
                 // If no routines exist, auto-open "Add Exercise" modal (All Exercises)
                 // If routines exist, prompt choices (Start Options Modal)
@@ -996,9 +1006,14 @@ export const WorkoutSession = () => {
     // NEW: Persist Active Exercises to LocalStorage
     useEffect(() => {
         if (sessionId && activeExercises.length > 0) {
-            localStorage.setItem(`workout_draft_${sessionId}`, JSON.stringify(activeExercises));
+            const draftPayload = {
+                exercises: activeExercises,
+                routineName: currentRoutineName,
+                originalIds: originalExerciseIds
+            };
+            localStorage.setItem(`workout_draft_${sessionId}`, JSON.stringify(draftPayload));
         }
-    }, [sessionId, activeExercises]);
+    }, [sessionId, activeExercises, currentRoutineName, originalExerciseIds]);
 
     // NEW: Handle Cancel
     const handleCancelSession = async () => {
@@ -1112,18 +1127,18 @@ export const WorkoutSession = () => {
     const handleFinishRequest = async () => {
         setIsFinished(true); // Stop timer
 
-        // SMART SKIP: If we have a routine name AND the exercises/metrics haven't changed, skip modal
+        // SMART SKIP: If we have a routine name AND the exercises haven't changed, skip modal
         const currentIds = activeExercises.map(ex => ex.equipmentId);
-        const currentMetrics = JSON.stringify(activeExercises.map(ex => ex.metrics));
         
+        // We only care about the LIST of exercises. 
+        // Users can add sets, change weights, etc. - those are DATA changes, not CONFIG changes.
         const hasChanged = currentRoutineName 
             ? currentIds.length !== originalExerciseIds.length || 
-              !currentIds.every((id, idx) => id === originalExerciseIds[idx]) ||
-              currentMetrics !== originalMetricsSnapshot
+              !currentIds.every((id, idx) => id === originalExerciseIds[idx])
             : true; // Always ask for Quick Start sessions
 
         if (currentRoutineName && !hasChanged) {
-            console.log('✨ Routine unchanged. Skipping save modal...');
+            console.log('✨ Routine matches original template. Skipping save modal...');
             checkLocationStep();
         } else {
             setShowRoutineModal(true);
