@@ -601,17 +601,16 @@ export const Radar = () => {
                         </div>
                     )}
                 </div>
+                {/* BOOST MODAL */}
+                <BoostModal 
+                    isOpen={isBoostModalOpen}
+                    onClose={() => setIsBoostModalOpen(false)}
+                    onConfirm={handleBoostConfirm}
+                    isBoosting={isBoosting}
+                    isActive={isUserBoosted}
+                    expiresAt={boostExpiresAt}
+                    currentPoints={userPoints}
+                />
             </div>
-            {/* BOOST MODAL */}
-            <BoostModal 
-                isOpen={isBoostModalOpen}
-                onClose={() => setIsBoostModalOpen(false)}
-                onConfirm={handleBoostConfirm}
-                isBoosting={isBoosting}
-                isActive={isUserBoosted}
-                expiresAt={boostExpiresAt}
-                currentPoints={userPoints}
-            />
-        </div >
-    );
-};
+        );
+    };
