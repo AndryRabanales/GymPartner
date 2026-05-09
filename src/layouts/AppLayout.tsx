@@ -153,7 +153,12 @@ export const AppLayout = () => {
 
             {/* Main Content (Scrollable Area) */}
             <main className="flex-1 overflow-y-auto custom-scrollbar relative flex flex-col">
-                <Outlet />
+                <div className="flex-1">
+                    <Outlet />
+                </div>
+                
+                {/* MOBILE BOTTOM NAVIGATION (Inside Scroll Flow) */}
+                {shouldShowBottomNav && <BottomNav onUploadClick={() => setIsUploadModalOpen(true)} />}
             </main>
 
             {/* Global Modals */}
@@ -162,10 +167,6 @@ export const AppLayout = () => {
 
             {/* Active Session Bubble Check */}
             <ActiveWorkoutBubble />
-
-            {/* MOBILE BOTTOM NAVIGATION (Static Block at Bottom) */}
-            {/* Hidden when: logged out, in workout session, or in gym territory pages */}
-            {shouldShowBottomNav && <BottomNav onUploadClick={() => setIsUploadModalOpen(true)} />}
 
             {/* Premium GymRat Footer */}
 
