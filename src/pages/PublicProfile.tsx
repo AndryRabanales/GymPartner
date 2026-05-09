@@ -11,11 +11,18 @@ import { userService } from '../services/UserService';
 import { cloudinaryService } from '../services/CloudinaryService';
 import { useAuth } from '../context/AuthContext';
 
+export interface SocialProfileStats {
+    followersCount: number;
+    followingCount: number;
+    totalLikes: number;
+    workoutsCount: number;
+}
+
 export const PublicProfile = () => {
     const { username } = useParams();
     const { user } = useAuth();
     const [profile, setProfile] = useState<any>(null);
-    const [stats, setStats] = useState({ followersCount: 0, followingCount: 0 });
+    const [stats, setStats] = useState<SocialProfileStats>({ followersCount: 0, followingCount: 0, totalLikes: 0, workoutsCount: 0 });
     const [isFollowing, setIsFollowing] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
@@ -152,14 +159,18 @@ export const PublicProfile = () => {
                     </div>
 
                     {/* Quick Stats Grid */}
-                    <div className="grid grid-cols-2 gap-4 w-full mt-8 border-y border-white/5 py-6 bg-white/[0.02] rounded-2xl">
+                    <div className="grid grid-cols-3 gap-2 w-full mt-8 border-y border-white/5 py-6 bg-white/[0.02] rounded-2xl">
                         <div className="text-center">
-                            <span className="block text-2xl font-black text-white leading-none mb-1">{stats.followersCount}</span>
-                            <span className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Seguidores</span>
+                            <span className="block text-2xl font-black text-white leading-none mb-1">{stats?.followersCount || 0}</span>
+                            <span className="text-[9px] text-neutral-500 font-bold uppercase tracking-widest">Seguidores</span>
                         </div>
-                        <div className="text-center border-l border-white/5">
-                            <span className="block text-2xl font-black text-white leading-none mb-1">{Math.floor(profile.xp / 100)}</span>
-                            <span className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Entrenos</span>
+                        <div className="text-center border-x border-white/5">
+                            <span className="block text-2xl font-black text-white leading-none mb-1">{stats?.followingCount || 0}</span>
+                            <span className="text-[9px] text-neutral-500 font-bold uppercase tracking-widest">Seguidos</span>
+                        </div>
+                        <div className="text-center">
+                            <span className="block text-2xl font-black text-white leading-none mb-1">{stats?.workoutsCount || 0}</span>
+                            <span className="text-[9px] text-neutral-500 font-bold uppercase tracking-widest">Entrenos</span>
                         </div>
                     </div>
 

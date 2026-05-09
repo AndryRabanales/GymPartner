@@ -60,8 +60,8 @@ export const radarService = {
             gym_lat: user.gym_lat,
             gym_lng: user.gym_lng,
             distance_km: user.distance_km,
-            followers_count: user.followers_count,
-            following_count: user.following_count,
+            followers_count: Number(user.followers_count || 0),
+            following_count: Number(user.following_count || 0),
             is_boosted: user.is_boosted,
             tier: TierService.getTier(user.checkins_count)
         }));
