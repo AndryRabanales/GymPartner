@@ -28,7 +28,7 @@ export const radarService = {
      * @param lng Current User Longitude
      * @param radiusKm Search Radius (Default 100)
      */
-    async getNearbyGymRats(lat: number, lng: number, radiusKm: number = 100): Promise<RadarUser[]> {
+    async getNearbyGymRats(lat: number, lng: number, radiusKm: number = 99999): Promise<RadarUser[]> {
         console.log('📡 Radar Scanning...', { lat, lng, radiusKm });
 
         const { data, error } = await supabase
