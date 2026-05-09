@@ -347,7 +347,7 @@ export const Radar = () => {
 
 
     return (
-        <div className="h-full flex flex-col relative overflow-hidden bg-black">
+        <div className="h-[100dvh] w-full flex flex-col relative overflow-hidden bg-black selection:bg-gym-primary selection:text-black">
 
 
 
@@ -411,8 +411,8 @@ export const Radar = () => {
                         }}
                     >
 
-                        {/* --- BANNER SECTION (Balanced) --- */}
-                        <div className="h-40 shrink-0 relative w-full bg-neutral-800 overflow-hidden">
+                        {/* --- BANNER SECTION (Optimized Height) --- */}
+                        <div className="h-36 sm:h-44 shrink-0 relative w-full bg-neutral-800 overflow-hidden">
                             {currentUser.banner_url ? (
                                 <FadeInImage
                                     src={cloudinaryService.getOptimizedImageUrl(currentUser.banner_url, { width: 400, height: 200 })}
@@ -425,12 +425,12 @@ export const Radar = () => {
                                     <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-white to-transparent"></div>
                                 </div>
                             )}
-                            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/10 to-black"></div>
+                            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/20 to-black"></div>
                         </div>
 
 
-                        {/* --- CONTENT SECTION (Optimized) --- */}
-                        <div className="flex-1 flex flex-col items-center justify-start relative z-20 -mt-16 px-3 w-full min-h-0 overflow-y-auto custom-scrollbar pb-40">
+                        {/* --- CONTENT SECTION (Scrollable area inside card) --- */}
+                        <div className="flex-1 flex flex-col items-center justify-start relative z-20 -mt-14 px-3 w-full overflow-y-auto overflow-x-hidden custom-scrollbar pb-32">
 
                             {/* Top Info Group */}
                             <div className="flex flex-col items-center w-full">
@@ -490,9 +490,9 @@ export const Radar = () => {
                                 </div>
                             </div>
 
-                            {/* NEW: GYM PRINCIPAL SHOWCASE (Balanced height) */}
-                            <div className="w-full mt-1.5 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
-                                <div className="relative h-48 md:h-[350px] rounded-[1.5rem] overflow-hidden shadow-2xl border border-white/5">
+                            {/* GYM PRINCIPAL SHOWCASE (iPhone optimized) */}
+                            <div className="w-full mt-1.5 px-0.5">
+                                <div className="relative h-44 md:h-[350px] rounded-[1.5rem] overflow-hidden shadow-2xl border border-white/5">
                                     {/* Gym Banner/Photo */}
                                     <div 
                                         className="absolute inset-0 bg-neutral-800"
@@ -503,7 +503,7 @@ export const Radar = () => {
                                             backgroundPosition: 'center'
                                         }}
                                     >
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-90" />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-95" />
                                     </div>
 
                                     {/* Gym Content */}
@@ -530,9 +530,9 @@ export const Radar = () => {
 
                         </div>
 
-                        {/* --- FIXED FOOTER (Always Visible) --- */}
-                        <div className="absolute bottom-4 left-0 right-0 px-4 sm:px-6 z-40 pointer-events-none">
-                            <div className="flex items-center justify-center gap-4 sm:gap-6 max-w-sm mx-auto pointer-events-auto">
+                        {/* --- FIXED FOOTER (Anchored to Safe Area) --- */}
+                        <div className="absolute bottom-6 left-0 right-0 px-4 z-40 pointer-events-none pb-safe">
+                            <div className="flex items-center justify-center gap-4 max-w-sm mx-auto pointer-events-auto">
 
                             {/* REJECT BUTTON - Minimalist Outline */}
                             <button
