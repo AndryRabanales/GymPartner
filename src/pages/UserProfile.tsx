@@ -37,6 +37,7 @@ interface ProfileData {
     };
     referred_by?: string;
     featured_routine_id?: string;
+    boost_until?: string;
 }
 
 export const UserProfile = () => {
@@ -709,6 +710,44 @@ export const UserProfile = () => {
                 </Link>
 
 
+                <button 
+                    onClick={async () => {
+                        const isBoosted = profile?.boost_until && new Date(profile.boost_until) > new Date();
+                        if (isBoosted) {
+                            alert(`Tu perfil ya tiene un boost activo hasta el ${new Date(profile!.boost_until!).toLocaleString()}`);
+                            return;
+                        }
+
+                        if (confirm('¿Quieres boostear tu perfil por 1000 G-Points? Esto te dará visibilidad premium en el Radar durante 24h.')) {
+                            const success = await userService.spendGPoints(user!.id, 1000, 'profile_boost');
+                            if (success) {
+                                alert('🚀 ¡Perfil boosteado con éxito! Ahora eres una leyenda en el Radar.');
+                                loadUserData();
+                            } else {
+                                alert('No tienes suficientes G-Points.');
+                            }
+                        }
+                    }}
+                    className={`group border p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md 
+                        ${(profile?.boost_until && new Date(profile.boost_until) > new Date()) 
+                            ? 'bg-yellow-500/10 border-yellow-500 shadow-[0_0_20px_rgba(234,179,8,0.2)] animate-pulse' 
+                            : 'bg-neutral-900 hover:bg-neutral-800 border-neutral-800 hover:border-yellow-500/50'}`}
+                >
+                    <div className={`w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform border 
+                        ${(profile?.boost_until && new Date(profile.boost_until) > new Date())
+                            ? 'bg-yellow-500/20 border-yellow-500/50'
+                            : 'bg-yellow-500/5 border-yellow-500/10'}`}>
+                        <Coins className="text-yellow-500 w-4 h-4 md:w-6 md:h-6" />
+                    </div>
+                    <div className="flex flex-col">
+                        <span className="font-bold text-neutral-200 group-hover:text-white text-xs md:text-base">
+                            {(profile?.boost_until && new Date(profile.boost_until) > new Date()) ? 'Activo' : 'Boost'}
+                        </span>
+                        {(profile?.boost_until && new Date(profile.boost_until) > new Date()) && (
+                            <span className="text-[8px] text-yellow-500 font-black uppercase tracking-tighter">Radar Pro</span>
+                        )}
+                    </div>
+                </button>
             </div >
 
             {/* TERRITORIES SECTION (PASSPORT) */}

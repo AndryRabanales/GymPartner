@@ -295,8 +295,12 @@ export const Radar = () => {
                                         />
                                     </div>
 
-
-
+                                    {/* BOOST BADGE */}
+                                    {currentUser.is_boosted && (
+                                        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 z-20 bg-yellow-500 text-black text-[8px] font-black uppercase px-2 py-0.5 rounded-full border-2 border-black animate-pulse shadow-[0_0_10px_rgba(234,179,8,0.5)]">
+                                            BOOST
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* TEXT INFO */}

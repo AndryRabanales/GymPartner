@@ -7,6 +7,7 @@ import { BottomNav } from '../components/navigation/BottomNav';
 import { useBottomNav } from '../context/BottomNavContext';
 import { NotificationBell } from '../components/ui/NotificationBell';
 import { RescueModal } from '../components/gamification/RescueModal';
+import { GPointsDisplay } from '../components/gamification/GPointsDisplay';
 
 import { ActiveWorkoutBubble } from '../components/workout/ActiveWorkoutBubble';
 
@@ -82,6 +83,7 @@ export const AppLayout = () => {
                                     <MapPin size={18} className="group-hover:scale-110 transition-transform" />
                                 </Link>
 
+                                {user && <GPointsDisplay />}
 
                                 {user && <NotificationBell />}
 

@@ -153,8 +153,11 @@ class UserService {
                 });
 
             if (linkError) throw linkError;
+            
+            // 3. AWARD G-POINTS for Unlocking Gym
+            await this.addGPoints(userId, 50, 'gym_unlocked');
 
-            // 3. Update Profile Cache (if it's home base)
+            // 4. Update Profile Cache (if it's home base)
             if (isFirstGym) {
                 await supabase
                     .from('profiles')
@@ -195,7 +198,10 @@ class UserService {
 
             if (xpError) throw xpError;
 
-            // 2. Mark New User as Referred (Prevents duplicates)
+            // 2. Award G-Points to Referrer (100 G-Points)
+            await this.addGPoints(referrerId, 100, 'referral');
+
+            // 3. Mark New User as Referred (Prevents duplicates)
             const { error: updateError } = await supabase.auth.updateUser({
                 data: {
                     referred_by: referrerId,
@@ -209,6 +215,57 @@ class UserService {
         } catch (error) {
             console.error("Error processing referral:", error);
             return false;
+        }
+    }
+
+    /**
+     * Add G-Points to a user
+     */
+    async addGPoints(userId: string, amount: number, reason: string): Promise<{ success: boolean; error?: string }> {
+        try {
+            console.log(`🪙 Adding ${amount} G-Points to ${userId} for ${reason}`);
+            const { error } = await supabase.rpc('increment_g_points', {
+                u_id: userId,
+                amount: amount
+            });
+
+            if (error) throw error;
+            return { success: true };
+        } catch (error: any) {
+            console.error('Error adding G-Points:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Spend G-Points (checks balance)
+     */
+    async spendGPoints(userId: string, amount: number, reason: string): Promise<{ success: boolean; error?: string }> {
+        try {
+            console.log(`💸 Spending ${amount} G-Points for ${userId} on ${reason}`);
+            const { data, error } = await supabase.rpc('spend_g_points', {
+                u_id: userId,
+                amount: amount
+            });
+
+            if (error) throw error;
+            
+            // If it's a profile boost, we also need to set the boost_until timestamp
+            if (data && reason === 'profile_boost') {
+                const boostDurationHours = 24; // Standard boost duration
+                const boostUntil = new Date();
+                boostUntil.setHours(boostUntil.getHours() + boostDurationHours);
+                
+                await supabase
+                    .from('profiles')
+                    .update({ boost_until: boostUntil.toISOString() })
+                    .eq('id', userId);
+            }
+
+            return { success: data }; // RPC returns boolean
+        } catch (error: any) {
+            console.error('Error spending G-Points:', error);
+            return { success: false, error: error.message };
         }
     }
 

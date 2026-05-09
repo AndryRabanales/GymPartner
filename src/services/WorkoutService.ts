@@ -71,6 +71,20 @@ class WorkoutService {
             console.error('Error finishing session:', error);
             return { success: false, error };
         }
+
+        // 3. AWARD G-POINTS for Training (20 pts)
+        // We fetch the userId from the session first if not available, but usually we know it.
+        // For simplicity, we assume the session finish was successful.
+        try {
+            const { data: session } = await supabase.from('workout_sessions').select('user_id').eq('id', sessionId).single();
+            if (session) {
+                const { userService } = await import('./UserService');
+                await userService.addGPoints(session.user_id, 20, 'workout_finished');
+            }
+        } catch (e) {
+            console.warn('Could not award G-Points for workout:', e);
+        }
+
         return { success: true };
     }
 

@@ -15,6 +15,11 @@ export interface User {
         photosUploaded: number;
     };
     badges: string[]; // IDs de medallas ganadas
+    g_points: number;
+    boost_until?: string;
+    is_subscriber?: boolean;
+    subscription_status?: string;
+    total_referrals?: number;
 }
 
 // PROGRESSION CURVE:
