@@ -22,13 +22,13 @@ interface PlayerProfileModalProps {
     onClose: () => void;
 }
 
-export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, onClose }) => {
+export const PlayerProfileModal = ({ player, onClose }: PlayerProfileModalProps) => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const { hideBottomNav, showBottomNav } = useBottomNav();
 
     // Social State
-    const [stats, setStats] = useState({ followersCount: 0, followingCount: 0, totalLikes: 0 });
+    const [stats, setStats] = useState<any>({ followersCount: 0, followingCount: 0, totalLikes: 0, workoutsCount: 0 });
     const [viewedPostId, setViewedPostId] = useState<string | null>(null);
     const [isFollowing, setIsFollowing] = useState(false);
     // HIDDEN: Community Features - defaulting to routines
@@ -37,6 +37,7 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
     // Content State
     const [posts, setPosts] = useState<Post[]>([]);
     const [publicRoutines, setPublicRoutines] = useState<any[]>([]);
+    const [publicGyms, setPublicGyms] = useState<any[]>([]);
     const [viewRoutine, setViewRoutine] = useState<any | null>(null);
     const [copying, setCopying] = useState(false);
 
@@ -72,6 +73,7 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
             socialService.getUserPosts(player.id, 'video', user?.id).then(setPosts);
         } else if (activeTab === 'routines') {
             userService.getUserPublicRoutines(player.id).then(setPublicRoutines);
+            userService.getUserGyms(player.id).then(gyms => setPublicGyms(gyms.sort((a, b) => (a.is_home_base ? -1 : 1))));
         }
     }, [activeTab, player.id, user?.id]);
 
@@ -187,15 +189,20 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
                         </div>
 
                         {/* Social Stats Row */}
-                        <div className="flex items-center justify-center gap-8 mb-8 w-full border-y border-white/5 py-4 bg-white/[0.02]">
+                        <div className="flex items-center justify-center gap-6 mb-8 w-full border-y border-white/5 py-4 bg-white/[0.02]">
                             <div className="flex flex-col items-center group cursor-pointer hover:scale-105 transition-transform">
-                                <span className="font-black text-2xl text-white leading-none mb-1 group-hover:text-yellow-500 transition-colors">{stats.followersCount}</span>
-                                <span className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Seguidores</span>
+                                <span className="font-black text-xl text-white leading-none mb-1 group-hover:text-yellow-500 transition-colors">{stats.followersCount}</span>
+                                <span className="text-[8px] text-neutral-500 font-bold uppercase tracking-widest">Seguidores</span>
                             </div>
                             <div className="w-px h-8 bg-white/10"></div>
                             <div className="flex flex-col items-center group cursor-pointer hover:scale-105 transition-transform">
-                                <span className="font-black text-2xl text-white leading-none mb-1 group-hover:text-yellow-500 transition-colors">{stats.followingCount}</span>
-                                <span className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Siguiendo</span>
+                                <span className="font-black text-xl text-white leading-none mb-1 group-hover:text-yellow-500 transition-colors">{stats.followingCount}</span>
+                                <span className="text-[8px] text-neutral-500 font-bold uppercase tracking-widest">Siguiendo</span>
+                            </div>
+                            <div className="w-px h-8 bg-white/10"></div>
+                            <div className="flex flex-col items-center group cursor-pointer hover:scale-105 transition-transform">
+                                <span className="font-black text-xl text-white leading-none mb-1 group-hover:text-yellow-500 transition-colors">{stats.workoutsCount || 0}</span>
+                                <span className="text-[8px] text-neutral-500 font-bold uppercase tracking-widest">Entrenos</span>
                             </div>
                         </div>
 
@@ -330,7 +337,46 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
                                         </div>
                                     </div>
                                 ))}
-                                {publicRoutines.length === 0 && (
+
+                                {/* NEW: GYM PASSPORT SHOWCASE */}
+                                {publicGyms.length > 0 && (
+                                    <div className="mt-8 space-y-4">
+                                        <div className="flex items-center gap-2 border-b border-white/5 pb-3">
+                                            <Star className="text-yellow-500" size={16} />
+                                            <h3 className="text-sm font-black text-white italic uppercase tracking-tighter">Bases & Mejores Fotos</h3>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {publicGyms.map(gym => (
+                                                <div
+                                                    key={gym.gym_id}
+                                                    className="relative h-24 rounded-xl overflow-hidden border border-white/5 shadow-lg group/gym"
+                                                    style={{
+                                                        backgroundImage: gym.custom_bg_url ? `url(${gym.custom_bg_url})` : undefined,
+                                                        backgroundSize: 'cover',
+                                                        backgroundPosition: 'center',
+                                                        backgroundColor: gym.custom_color || '#171717'
+                                                    }}
+                                                >
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                                                    <div className="absolute bottom-2 left-3 right-3 flex justify-between items-end">
+                                                        <div>
+                                                            <h4 className={`font-black text-sm italic uppercase tracking-tight ${gym.is_home_base ? 'text-yellow-400' : 'text-white'}`}>
+                                                                {gym.gym_name}
+                                                            </h4>
+                                                        </div>
+                                                        {gym.is_home_base && (
+                                                            <div className="bg-yellow-500 text-black px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest flex items-center gap-1">
+                                                                <Star size={8} fill="black" /> Base
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {publicRoutines.length === 0 && publicGyms.length === 0 && (
                                     <div className="py-12 flex flex-col items-center justify-center text-neutral-600 space-y-3 opacity-60">
                                         <div className="w-16 h-16 rounded-full bg-neutral-800 flex items-center justify-center">
                                             <Swords size={24} />

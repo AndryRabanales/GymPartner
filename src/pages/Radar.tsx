@@ -16,9 +16,9 @@ const FadeInImage = ({ src, alt, className, imgClassName = "" }: { src: string; 
     const [isLoaded, setIsLoaded] = useState(false);
     const [blurLoaded, setBlurLoaded] = useState(false);
     const [error, setError] = useState(false);
-    
+
     // Generate an ultra-tiny version of the image for the blur placeholder
-    const blurUrl = src.includes('res.cloudinary.com') 
+    const blurUrl = src.includes('res.cloudinary.com')
         ? src.replace('/upload/', '/upload/c_fill,w_30,h_30,q_10,e_blur:1000,f_auto/')
         : src;
 
@@ -26,7 +26,7 @@ const FadeInImage = ({ src, alt, className, imgClassName = "" }: { src: string; 
         setIsLoaded(false);
         setBlurLoaded(false);
         setError(false);
-        
+
         // Pre-check high-res cache
         const img = new Image();
         img.src = src;
@@ -59,7 +59,7 @@ const FadeInImage = ({ src, alt, className, imgClassName = "" }: { src: string; 
                     <div className="w-4 h-4 border-2 border-gym-primary/20 border-t-gym-primary rounded-full animate-spin"></div>
                 </div>
             )}
-            
+
             {/* 3. HIGH-RES IMAGE */}
             {!error && (
                 <img
@@ -76,10 +76,10 @@ const FadeInImage = ({ src, alt, className, imgClassName = "" }: { src: string; 
                         ${isLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-105'}
                         ${imgClassName}
                     `}
-                    style={{ 
-                        backfaceVisibility: 'hidden', 
+                    style={{
+                        backfaceVisibility: 'hidden',
                         transform: 'translateZ(0)',
-                        willChange: 'transform, opacity' 
+                        willChange: 'transform, opacity'
                     }}
                 />
             )}
@@ -167,9 +167,9 @@ export const Radar = () => {
             try {
                 const { lat, lng, timestamp } = JSON.parse(cachedData);
                 const ageMinutes = (Date.now() - (timestamp || 0)) / 60000;
-                
+
                 console.log(`⚡ Found cache (${Math.round(ageMinutes)}m old):`, lat, lng);
-                
+
                 const users = await radarService.getNearbyGymRats(lat, lng, radius);
                 if (users.length > 0) {
                     setNearbyUsers(users);
@@ -196,17 +196,17 @@ export const Radar = () => {
             async (position) => {
                 try {
                     const { latitude, longitude } = position.coords;
-                    
+
                     // Save to cache with timestamp
-                    localStorage.setItem('gympartner_last_location', JSON.stringify({ 
-                        lat: latitude, 
+                    localStorage.setItem('gympartner_last_location', JSON.stringify({
+                        lat: latitude,
                         lng: longitude,
                         timestamp: Date.now()
                     }));
 
                     // Fetch fresh data
                     const users = await radarService.getNearbyGymRats(latitude, longitude, radius);
-                    
+
                     if (users.length > 0) {
                         setNearbyUsers(users);
                         if (!hasInitialData) setCurrentIndex(0);
@@ -236,14 +236,14 @@ export const Radar = () => {
     // Check boost status
     useEffect(() => {
         if (!user) return;
-        
+
         const checkBoost = async () => {
             const { data } = await supabase
                 .from('profiles')
                 .select('g_points, boost_until')
                 .eq('id', user.id)
                 .single();
-            
+
             if (data) {
                 setUserPoints(data.g_points || 0);
                 if (data.boost_until) {
@@ -411,8 +411,8 @@ export const Radar = () => {
                         }}
                     >
 
-                        {/* --- BANNER SECTION (Expanded Visual) --- */}
-                        <div className="h-48 sm:h-56 shrink-0 relative w-full bg-neutral-800 overflow-hidden">
+                        {/* --- BANNER SECTION (Ultra Compact) --- */}
+                        <div className="h-28 sm:h-36 shrink-0 relative w-full bg-neutral-800 overflow-hidden">
                             {currentUser.banner_url ? (
                                 <FadeInImage
                                     src={cloudinaryService.getOptimizedImageUrl(currentUser.banner_url, { width: 400, height: 200 })}
@@ -429,8 +429,8 @@ export const Radar = () => {
                         </div>
 
 
-                        {/* --- CONTENT SECTION (Overlapping Taller Banner) --- */}
-                        <div className="flex-1 flex flex-col items-center justify-start relative z-20 -mt-24 px-3 w-full overflow-y-auto overflow-x-hidden custom-scrollbar pb-32">
+                        {/* --- CONTENT SECTION (Compact) --- */}
+                        <div className="flex-1 flex flex-col items-center justify-start relative z-20 -mt-10 px-3 w-full overflow-y-auto overflow-x-hidden custom-scrollbar pb-32">
 
                             {/* Top Info Group */}
                             <div className="flex flex-col items-center w-full">
@@ -459,8 +459,8 @@ export const Radar = () => {
                                 </h1>
                                 {currentUser.is_boosted && (
                                     <div className="absolute top-2 right-2 z-20 flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full border border-yellow-500/40">
-                                        <img 
-                                            src="/Gemini_Generated_Image_bjc7ltbjc7ltbjc7 (2).png" 
+                                        <img
+                                            src="/Gemini_Generated_Image_bjc7ltbjc7ltbjc7 (2).png"
                                             alt="Boost"
                                             className="w-5 h-5 object-contain"
                                         />
@@ -490,13 +490,13 @@ export const Radar = () => {
                                 </div>
                             </div>
 
-                            {/* GYM PRINCIPAL SHOWCASE (Expanded to Red Box) */}
-                            <div className="w-full mt-2 px-0.5">
-                                <div className="relative h-56 md:h-[400px] rounded-[1.5rem] overflow-hidden shadow-2xl border border-white/5">
+                            {/* GYM PRINCIPAL SHOWCASE (Ultra Compact) */}
+                            <div className="w-full mt-1 px-0.5">
+                                <div className="relative h-32 md:h-[300px] rounded-[1.5rem] overflow-hidden shadow-2xl border border-white/5">
                                     {/* Gym Banner/Photo */}
-                                    <div 
+                                    <div
                                         className="absolute inset-0 bg-neutral-800"
-                                        style={{ 
+                                        style={{
                                             backgroundColor: currentUser.gym_custom_color || '#171717',
                                             backgroundImage: currentUser.gym_banner_url ? `url(${currentUser.gym_banner_url})` : undefined,
                                             backgroundSize: 'cover',
@@ -530,9 +530,9 @@ export const Radar = () => {
                         </div>
 
                         {/* --- FIXED ACTION BUTTONS (Positioned above fixed footer) --- */}
-                        <div className="absolute bottom-20 left-0 right-0 z-50 pointer-events-none px-4">
+                        <div className="absolute bottom-4 left-0 right-0 z-50 pointer-events-none px-4">
                             <div className="flex items-center justify-center gap-3 max-w-sm mx-auto pointer-events-auto">
-                                
+
                                 {/* REJECT BUTTON */}
                                 <button
                                     onClick={() => handleAction('skip')}
@@ -546,8 +546,8 @@ export const Radar = () => {
                                 <button
                                     onClick={handleFollowToggle}
                                     disabled={isAnimating}
-                                    className={`w-12 h-12 rounded-full border flex items-center justify-center transition-all active:scale-90 shadow-lg ${isFollowing 
-                                        ? 'bg-neutral-800 border-neutral-700 text-neutral-500' 
+                                    className={`w-12 h-12 rounded-full border flex items-center justify-center transition-all active:scale-90 shadow-lg ${isFollowing
+                                        ? 'bg-neutral-800 border-neutral-700 text-neutral-500'
                                         : 'bg-white border-white text-black'}`}
                                 >
                                     {isFollowing ? <UserCheck size={20} /> : <UserPlus size={20} />}
@@ -584,17 +584,17 @@ export const Radar = () => {
                         </div>
                     </div>
                 )}
-                </div>
-                {/* BOOST MODAL */}
-                <BoostModal 
-                    isOpen={isBoostModalOpen}
-                    onClose={() => setIsBoostModalOpen(false)}
-                    onConfirm={handleBoostConfirm}
-                    isBoosting={isBoosting}
-                    isActive={isUserBoosted}
-                    expiresAt={boostExpiresAt}
-                    currentPoints={userPoints}
-                />
             </div>
-        );
-    };
+            {/* BOOST MODAL */}
+            <BoostModal
+                isOpen={isBoostModalOpen}
+                onClose={() => setIsBoostModalOpen(false)}
+                onConfirm={handleBoostConfirm}
+                isBoosting={isBoosting}
+                isActive={isUserBoosted}
+                expiresAt={boostExpiresAt}
+                currentPoints={userPoints}
+            />
+        </div>
+    );
+};

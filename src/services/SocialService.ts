@@ -51,6 +51,7 @@ export interface SocialProfileStats {
     followersCount: number;
     followingCount: number;
     totalLikes: number;
+    workoutsCount: number;
 }
 
 class SocialService {
@@ -598,9 +599,10 @@ class SocialService {
     async getProfileStats(userId: string): Promise<SocialProfileStats> {
         try {
             // Parallel fetch for perf
-            const [followers, following, postsWithLikes] = await Promise.all([
+            const [followers, following, workouts, postsWithLikes] = await Promise.all([
                 supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', userId),
                 supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', userId),
+                supabase.from('workout_sessions').select('*', { count: 'exact', head: true }).eq('user_id', userId).not('finished_at', 'is', null),
                 supabase.from('posts').select('id, post_likes(count)', { count: 'exact' }).eq('user_id', userId)
             ]);
 
@@ -612,7 +614,8 @@ class SocialService {
             return {
                 followersCount: followers.count || 0,
                 followingCount: following.count || 0,
-                totalLikes: totalLikesReceived
+                totalLikes: totalLikesReceived,
+                workoutsCount: workouts.count || 0
             };
         } catch (e) {
             console.error(e);

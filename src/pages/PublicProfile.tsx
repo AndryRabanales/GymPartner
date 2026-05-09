@@ -28,6 +28,7 @@ export const PublicProfile = () => {
     const [error, setError] = useState(false);
     const [activeTab, setActiveTab] = useState<'routines' | 'stats'>('routines');
     const [publicRoutines, setPublicRoutines] = useState<any[]>([]);
+    const [publicGyms, setPublicGyms] = useState<any[]>([]);
     
     const navigate = useNavigate();
 
@@ -59,6 +60,10 @@ export const PublicProfile = () => {
                     // Fetch Routines
                     const routines = await userService.getUserPublicRoutines(data.id);
                     setPublicRoutines(routines);
+
+                    // Fetch Gym Passport
+                    const gyms = await userService.getUserGyms(data.id);
+                    setPublicGyms(gyms.sort((a, b) => (a.is_home_base ? -1 : 1)));
                 }
             } catch (err) {
                 console.error(err);
@@ -268,6 +273,54 @@ export const PublicProfile = () => {
                                 ))}
                             </div>
                         )}
+                    </div>
+                    {/* GYM PASSPORT SECTION (Showcase) */}
+                    <div className="w-full mt-8 space-y-6">
+                        <div className="flex items-center gap-2 border-b border-white/5 pb-4">
+                            <Star className="text-yellow-500" size={20} />
+                            <h3 className="text-lg font-black text-white italic uppercase tracking-tighter">Pasaporte de Bases</h3>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4">
+                            {publicGyms.map((gym) => (
+                                <div
+                                    key={gym.gym_id}
+                                    className={`relative h-28 md:h-32 rounded-2xl overflow-hidden border ${gym.is_home_base ? 'border-yellow-500/30' : 'border-white/5'} transition-transform hover:scale-[1.02] duration-300 shadow-xl`}
+                                    style={{
+                                        backgroundImage: gym.custom_bg_url ? `url(${gym.custom_bg_url})` : undefined,
+                                        backgroundSize: 'cover',
+                                        backgroundPosition: 'center',
+                                        backgroundColor: gym.custom_color || '#171717'
+                                    }}
+                                >
+                                    {/* Glass Overlay */}
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                                    
+                                    <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
+                                        <div>
+                                            <h4 className={`font-black text-base md:text-xl italic uppercase tracking-tighter ${gym.is_home_base ? 'text-yellow-400' : 'text-white'}`}>
+                                                {gym.gym_name}
+                                            </h4>
+                                            {gym.is_home_base && (
+                                                <span className="text-[8px] font-black bg-yellow-500 text-black px-1.5 py-0.5 rounded uppercase tracking-widest flex items-center gap-1 w-fit mt-1">
+                                                    <Crown size={8} fill="black" /> Sede Principal
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-white/10">
+                                            <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Base Conquistada</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+
+                            {publicGyms.length === 0 && (
+                                <div className="py-12 flex flex-col items-center justify-center text-neutral-600 border-2 border-dashed border-neutral-800 rounded-3xl opacity-50">
+                                    <MapPin size={32} className="mb-2" />
+                                    <p className="text-xs font-bold uppercase tracking-widest">Aún no tiene bases registradas</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
