@@ -11,51 +11,85 @@ import { BoostModal } from '../components/profile/BoostModal';
 import { socialService } from '../services/SocialService';
 import { useNavigate } from 'react-router-dom';
 
-// Helper component for fade-in images with skeleton
+// Helper component for progressive blur-up loading
 const FadeInImage = ({ src, alt, className, imgClassName = "" }: { src: string; alt: string; className?: string; imgClassName?: string }) => {
-    const [loaded, setLoaded] = useState(false);
+    const [isLoaded, setIsLoaded] = useState(false);
+    const [blurLoaded, setBlurLoaded] = useState(false);
     const [error, setError] = useState(false);
-    const imgRef = useRef<HTMLImageElement>(null);
     
+    // Generate an ultra-tiny version of the image for the blur placeholder
+    const blurUrl = src.includes('res.cloudinary.com') 
+        ? src.replace('/upload/', '/upload/c_fill,w_30,h_30,q_10,e_blur:1000,f_auto/')
+        : src;
+
     useEffect(() => {
-        setLoaded(false);
+        setIsLoaded(false);
+        setBlurLoaded(false);
         setError(false);
         
-        // If image is already in cache, it might be complete already
-        if (imgRef.current?.complete) {
-            setLoaded(true);
+        // Pre-check high-res cache
+        const img = new Image();
+        img.src = src;
+        if (img.complete) {
+            setIsLoaded(true);
+            setBlurLoaded(true);
         }
     }, [src]);
 
     return (
-        <div className={`relative overflow-hidden ${className} bg-neutral-900`}>
-            {/* Minimalist spinner while loading */}
-            {!loaded && !error && (
-                <div className="absolute inset-0 flex items-center justify-center bg-neutral-800">
-                    <div className="w-5 h-5 border-2 border-gym-primary/10 border-t-gym-primary rounded-full animate-spin"></div>
+        <div className={`relative overflow-hidden ${className} bg-neutral-900 isolation-auto`}>
+            {/* 1. ULTRA-LOW RES BLURRED PLACEHOLDER */}
+            {!error && (
+                <img
+                    src={blurUrl}
+                    alt=""
+                    onLoad={() => setBlurLoaded(true)}
+                    className={`
+                        absolute inset-0 w-full h-full object-cover filter blur-xl scale-110 transition-opacity duration-700
+                        ${blurLoaded ? 'opacity-40' : 'opacity-0'}
+                        ${isLoaded ? 'opacity-0' : 'opacity-40'}
+                    `}
+                    style={{ backfaceVisibility: 'hidden', transform: 'translateZ(0)' }}
+                />
+            )}
+
+            {/* 2. LOADING SPINNER (Minimalist fallback) */}
+            {!isLoaded && !blurLoaded && !error && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-4 h-4 border-2 border-gym-primary/20 border-t-gym-primary rounded-full animate-spin"></div>
                 </div>
             )}
             
-            {error && (
-                <div className="absolute inset-0 flex items-center justify-center bg-neutral-900 z-10">
-                    <RadarIcon size={20} className="text-neutral-700 opacity-50" />
-                </div>
+            {/* 3. HIGH-RES IMAGE */}
+            {!error && (
+                <img
+                    src={src}
+                    alt={alt}
+                    onLoad={() => {
+                        setIsLoaded(true);
+                        setBlurLoaded(true);
+                    }}
+                    onError={() => setError(true)}
+                    loading="eager"
+                    className={`
+                        absolute inset-0 w-full h-full object-cover transition-all duration-700 ease-out
+                        ${isLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-105'}
+                        ${imgClassName}
+                    `}
+                    style={{ 
+                        backfaceVisibility: 'hidden', 
+                        transform: 'translateZ(0)',
+                        willChange: 'transform, opacity' 
+                    }}
+                />
             )}
 
-            <img
-                ref={imgRef}
-                src={src}
-                alt={alt}
-                className={`w-full h-full object-cover transition-opacity duration-300 ${imgClassName} ${
-                    loaded ? 'opacity-100' : 'opacity-0'
-                }`}
-                onLoad={() => setLoaded(true)}
-                onError={() => {
-                    setError(true);
-                    setLoaded(true); // Stop spinner
-                }}
-                loading="eager"
-            />
+            {/* ERROR FALLBACK */}
+            {error && (
+                <div className="absolute inset-0 flex items-center justify-center bg-neutral-900">
+                    <RadarIcon size={20} className="text-neutral-700 opacity-30" />
+                </div>
+            )}
         </div>
     );
 };
