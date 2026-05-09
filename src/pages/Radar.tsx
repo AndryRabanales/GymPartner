@@ -411,8 +411,8 @@ export const Radar = () => {
                         }}
                     >
 
-                        {/* --- BANNER SECTION (Compact) --- */}
-                        <div className="h-32 sm:h-44 shrink-0 relative w-full bg-neutral-800 overflow-hidden">
+                        {/* --- BANNER SECTION (Balanced) --- */}
+                        <div className="h-40 shrink-0 relative w-full bg-neutral-800 overflow-hidden">
                             {currentUser.banner_url ? (
                                 <FadeInImage
                                     src={cloudinaryService.getOptimizedImageUrl(currentUser.banner_url, { width: 400, height: 200 })}
@@ -425,17 +425,17 @@ export const Radar = () => {
                                     <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-white to-transparent"></div>
                                 </div>
                             )}
-                            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/5 to-black"></div>
+                            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/10 to-black"></div>
                         </div>
 
 
-                        {/* --- CONTENT SECTION (Compact) --- */}
-                        <div className="flex-1 flex flex-col items-center justify-start relative z-20 -mt-16 px-3 w-full min-h-0 overflow-y-auto custom-scrollbar pb-32">
+                        {/* --- CONTENT SECTION (Optimized) --- */}
+                        <div className="flex-1 flex flex-col items-center justify-start relative z-20 -mt-16 px-3 w-full min-h-0 overflow-y-auto custom-scrollbar pb-40">
 
                             {/* Top Info Group */}
                             <div className="flex flex-col items-center w-full">
                                 {/* AVATAR (Compact) */}
-                                <div className="relative w-24 h-24 shrink-0 mb-2">
+                                <div className="relative w-24 h-24 shrink-0 mb-1">
                                     <div className={`absolute inset-0 rounded-full blur-xl transform scale-90 pointer-events-none ${currentUser.tier.color.replace('text-', 'bg-')}/30`}></div>
                                     <div className={`w-full h-full rounded-full overflow-hidden border-[3px] bg-neutral-900 shadow-xl relative z-10 ${currentUser.tier.borderColor}`}>
                                         <FadeInImage
@@ -490,9 +490,9 @@ export const Radar = () => {
                                 </div>
                             </div>
 
-                            {/* NEW: GYM PRINCIPAL SHOWCASE (Ultra Compact) */}
+                            {/* NEW: GYM PRINCIPAL SHOWCASE (Balanced height) */}
                             <div className="w-full mt-1.5 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
-                                <div className="relative h-64 md:h-[400px] rounded-[1.8rem] overflow-hidden shadow-2xl border border-white/5">
+                                <div className="relative h-48 md:h-[350px] rounded-[1.5rem] overflow-hidden shadow-2xl border border-white/5">
                                     {/* Gym Banner/Photo */}
                                     <div 
                                         className="absolute inset-0 bg-neutral-800"
@@ -508,11 +508,11 @@ export const Radar = () => {
 
                                     {/* Gym Content */}
                                     <div className="absolute inset-0 p-4 flex flex-col justify-end items-start">
-                                        <div className="flex items-center gap-1.5 mb-1.5 bg-black/60 backdrop-blur-md px-2.5 py-0.5 rounded-full border border-gym-primary/20">
+                                        <div className="flex items-center gap-1.5 mb-1.5 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-full border border-gym-primary/20">
                                             <Star size={9} className="text-gym-primary" fill="currentColor" />
                                             <span className="text-[8px] font-black text-white uppercase tracking-widest italic">Base Principal</span>
                                         </div>
-                                        <h3 className="text-lg md:text-4xl font-black text-white italic uppercase tracking-tighter leading-none">
+                                        <h3 className="text-lg md:text-3xl font-black text-white italic uppercase tracking-tighter leading-none">
                                             {currentUser.gym_name}
                                         </h3>
                                     </div>
@@ -530,9 +530,9 @@ export const Radar = () => {
 
                         </div>
 
-                        {/* --- FIXED FOOTER (Absolutely Anchored) --- */}
-                        <div className="absolute bottom-0 left-0 w-full flex justify-center items-center gap-6 pb-6 pt-10 z-30 bg-gradient-to-t from-black via-black to-transparent pointer-events-none">
-                            <div className="flex items-center gap-6 pointer-events-auto">
+                        {/* --- FIXED FOOTER (Always Visible) --- */}
+                        <div className="absolute bottom-4 left-0 right-0 px-4 sm:px-6 z-40 pointer-events-none">
+                            <div className="flex items-center justify-center gap-4 sm:gap-6 max-w-sm mx-auto pointer-events-auto">
 
                             {/* REJECT BUTTON - Minimalist Outline */}
                             <button
