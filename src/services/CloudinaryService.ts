@@ -217,7 +217,13 @@ class CloudinaryService {
 
         // 4. Universal Proxy (For images from other sources like Google, Facebook, etc.)
         // This uses Cloudinary as a fast CDN for ANY image URL
-        return `https://res.cloudinary.com/${this.cloudName}/image/fetch/c_${crop},w_${width},h_${height},f_auto,q_50,fl_lossy/${url}`;
+        // We encode the URL to prevent broken links with special characters
+        try {
+            const encodedUrl = encodeURIComponent(url);
+            return `https://res.cloudinary.com/${this.cloudName}/image/fetch/c_${crop},w_${width},h_${height},f_auto,q_50,fl_lossy/${encodedUrl}`;
+        } catch (e) {
+            return url;
+        }
     }
 }
 

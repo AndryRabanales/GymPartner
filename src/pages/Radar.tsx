@@ -15,10 +15,16 @@ import { useNavigate } from 'react-router-dom';
 const FadeInImage = ({ src, alt, className, imgClassName = "" }: { src: string; alt: string; className?: string; imgClassName?: string }) => {
     const [loaded, setLoaded] = useState(false);
     const [error, setError] = useState(false);
+    const imgRef = useRef<HTMLImageElement>(null);
     
     useEffect(() => {
         setLoaded(false);
         setError(false);
+        
+        // If image is already in cache, it might be complete already
+        if (imgRef.current?.complete) {
+            setLoaded(true);
+        }
     }, [src]);
 
     return (
@@ -37,17 +43,15 @@ const FadeInImage = ({ src, alt, className, imgClassName = "" }: { src: string; 
             )}
 
             <img
+                ref={imgRef}
                 src={src}
                 alt={alt}
-                // We use opacity-0 until fully loaded to avoid the "pixel-by-pixel" look.
-                // Since images are now tiny, the wait will be negligible.
                 className={`w-full h-full object-cover transition-opacity duration-300 ${imgClassName} ${
                     loaded ? 'opacity-100' : 'opacity-0'
                 }`}
                 onLoad={() => setLoaded(true)}
                 onError={() => setError(true)}
                 loading="eager"
-                fetchPriority="high"
             />
         </div>
     );
