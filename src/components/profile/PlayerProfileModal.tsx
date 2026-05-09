@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { X, Swords, MapPin, UserPlus, UserCheck } from 'lucide-react';
-// import { Grid, Film, Heart } from 'lucide-react'; // UNUSED: Hidden Community Features
+import { useNavigate } from 'react-router-dom';
+import { X, Swords, MapPin, UserPlus, UserCheck, Star, ExternalLink } from 'lucide-react';
 import { FeedViewerOverlay } from '../social/FeedViewerOverlay';
 import { useAuth } from '../../context/AuthContext';
 import { userService } from '../../services/UserService';
@@ -24,6 +23,7 @@ interface PlayerProfileModalProps {
 
 export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, onClose }) => {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const { hideBottomNav, showBottomNav } = useBottomNav();
 
     // Social State
@@ -346,24 +346,46 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
 
                 {/* Fixed Bottom Actions - PREMIUM CALL TO ACTION */}
                 {user && user.id !== player.id && (
-                    <div className="p-4 bg-neutral-900 border-t border-white/5 flex gap-3 animate-in slide-in-from-bottom duration-500">
+                    <div className="p-4 bg-neutral-900 border-t border-white/5 flex items-center gap-2 animate-in slide-in-from-bottom duration-500">
+                        {/* CLOSE */}
+                        <button
+                            onClick={onClose}
+                            className="w-12 h-12 rounded-full border-2 border-neutral-700 bg-neutral-900 text-neutral-400 flex items-center justify-center hover:bg-neutral-800 transition-all active:scale-95"
+                        >
+                            <X size={20} />
+                        </button>
+
+                        {/* FOLLOW */}
                         <button
                             onClick={handleFollowToggle}
-                            className={`flex-1 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg ${isFollowing
+                            className={`flex-1 h-12 rounded-full font-black text-[9px] uppercase tracking-widest transition-all flex flex-col items-center justify-center gap-0.5 shadow-lg ${isFollowing
                                 ? 'bg-neutral-800 text-neutral-400 border border-neutral-700'
                                 : 'bg-white text-black hover:bg-neutral-200'
                                 }`}
                         >
-                            {isFollowing ? <UserCheck size={16} /> : <UserPlus size={16} />}
-                            {isFollowing ? 'Siguiendo' : 'Seguir'}
+                            {isFollowing ? <UserCheck size={14} /> : <UserPlus size={14} />}
+                            <span>{isFollowing ? 'Siguiendo' : 'Seguir'}</span>
                         </button>
                         
+                        {/* INVITE */}
                         <button
-                            onClick={() => alert('¡Invitación enviada! Prepárate para el duelo.')}
-                            className="flex-[1.5] py-4 rounded-2xl bg-gym-primary text-black font-black text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(229,255,0,0.2)]"
+                            onClick={() => alert('¡Invitación enviada!')}
+                            className="flex-[1.5] h-12 rounded-full bg-gym-primary text-black font-black text-[9px] uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all flex flex-col items-center justify-center gap-0.5 shadow-[0_0_20px_rgba(229,255,0,0.2)]"
                         >
-                            <Swords size={16} />
-                            Invitar
+                            <Swords size={14} />
+                            <span>Invitar</span>
+                        </button>
+
+                        {/* VIEW FULL PROFILE */}
+                        <button
+                            onClick={() => {
+                                onClose();
+                                navigate(`/player/${player.username}`);
+                            }}
+                            className="w-12 h-12 rounded-full border-2 border-yellow-500/30 bg-yellow-500/10 text-yellow-500 flex items-center justify-center hover:bg-yellow-500 hover:text-black transition-all active:scale-95"
+                            title="Ver Perfil Completo"
+                        >
+                            <ExternalLink size={20} />
                         </button>
                     </div>
                 )}
