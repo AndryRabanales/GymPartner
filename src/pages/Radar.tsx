@@ -446,7 +446,7 @@ export const Radar = () => {
                                 <img 
                                     src="/Gemini_Generated_Image_qyk7sjqyk7sjqyk7-removebg-preview.png" 
                                     alt="Boost"
-                                    className={`w-10 h-10 object-contain ${isUserBoosted ? 'drop-shadow-[0_0_5px_rgba(234,179,8,0.8)]' : 'opacity-70 group-hover:opacity-100'}`}
+                                    className={`w-12 h-12 object-contain ${isUserBoosted ? 'drop-shadow-[0_0_5px_rgba(234,179,8,0.8)]' : 'opacity-70 group-hover:opacity-100'}`}
                                 />
                                 {isUserBoosted && (
                                     <div className="absolute top-0 right-0 w-3 h-3 bg-yellow-500 rounded-full border-2 border-black"></div>
