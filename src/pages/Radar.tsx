@@ -411,8 +411,8 @@ export const Radar = () => {
                         }}
                     >
 
-                        {/* --- BANNER SECTION (Zero-Gravity Growth) --- */}
-                        <div className="h-64 sm:h-72 shrink-0 relative w-full bg-neutral-800 overflow-hidden">
+                        {/* --- BANNER SECTION (Responsive Cinematographic) --- */}
+                        <div className="h-[45vh] min-h-[300px] shrink-0 relative w-full bg-neutral-800 overflow-hidden">
                             {currentUser.banner_url ? (
                                 <FadeInImage
                                     src={cloudinaryService.getOptimizedImageUrl(currentUser.banner_url, { width: 400, height: 200 })}
@@ -429,8 +429,8 @@ export const Radar = () => {
                         </div>
 
 
-                        {/* --- CONTENT SECTION (Compensated Margin for Zero Movement) --- */}
-                        <div className="flex-1 flex flex-col items-center justify-start relative z-20 -mt-40 px-3 w-full overflow-y-auto overflow-x-hidden custom-scrollbar pb-32">
+                        {/* --- CONTENT SECTION (Perfectly Balanced Overlay) --- */}
+                        <div className="flex-1 flex flex-col items-center justify-start relative z-20 -mt-[32vh] px-3 w-full overflow-y-auto overflow-x-hidden custom-scrollbar pb-32">
 
                             {/* Top Info Group */}
                             <div className="flex flex-col items-center w-full">
@@ -490,9 +490,9 @@ export const Radar = () => {
                                 </div>
                             </div>
 
-                            {/* GYM PRINCIPAL SHOWCASE (Filling Green Box) */}
+                            {/* GYM PRINCIPAL SHOWCASE (Responsive Cinematic Card) */}
                             <div className="w-full mt-2 px-0.5">
-                                <div className="relative h-80 md:h-[500px] rounded-[1.5rem] overflow-hidden shadow-2xl border border-white/5">
+                                <div className="relative h-[40vh] min-h-[280px] rounded-[1.5rem] overflow-hidden shadow-2xl border border-white/5">
                                     {/* Gym Banner/Photo */}
                                     <div
                                         className="absolute inset-0 bg-neutral-800"
