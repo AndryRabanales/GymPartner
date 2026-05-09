@@ -411,28 +411,20 @@ export const Radar = () => {
                         }}
                     >
 
-                        {/* --- BANNER SECTION (Gym Custom Photo) --- */}
-                        <div className="h-44 sm:h-52 shrink-0 relative w-full bg-neutral-800 overflow-hidden" 
-                             style={{ backgroundColor: currentUser.gym_custom_color || '#262626' }}>
-                            {(currentUser.gym_banner_url || currentUser.banner_url) ? (
+                        {/* --- BANNER SECTION (Profile Cover) --- */}
+                        <div className="h-44 sm:h-52 shrink-0 relative w-full bg-neutral-800 overflow-hidden">
+                            {currentUser.banner_url ? (
                                 <FadeInImage
-                                    src={cloudinaryService.getOptimizedImageUrl(currentUser.gym_banner_url || currentUser.banner_url, { width: 400, height: 200 })}
+                                    src={cloudinaryService.getOptimizedImageUrl(currentUser.banner_url, { width: 400, height: 200 })}
                                     alt="Banner"
                                     className="absolute inset-0 w-full h-full"
-                                    imgClassName="opacity-90 object-cover"
+                                    imgClassName="opacity-80 object-cover"
                                 />
                             ) : (
                                 <div className={`w-full h-full bg-gradient-to-br ${currentUser.tier.gradient} opacity-20 relative`}>
                                     <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-white to-transparent"></div>
                                 </div>
                             )}
-                            {/* Gym Name Badge on Banner */}
-                            <div className="absolute top-4 left-4 z-20">
-                                <div className="bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10 shadow-xl flex items-center gap-2">
-                                    <MapPin size={12} className="text-gym-primary" />
-                                    <span className="text-[10px] font-black text-white uppercase tracking-widest">{currentUser.gym_name}</span>
-                                </div>
-                            </div>
                             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/10 to-black"></div>
                         </div>
 
@@ -475,16 +467,9 @@ export const Radar = () => {
                                         <span className="text-yellow-400 font-black text-xs italic tracking-widest uppercase">Boost</span>
                                     </div>
                                 )}
-                                <div className="flex items-center justify-center gap-1.5 text-neutral-400 mb-2">
-                                    <Dumbbell size={10} className={currentUser.tier.color} />
-                                    <span className="text-[10px] font-bold uppercase tracking-wide truncate max-w-[200px]">
-                                        {currentUser.gym_name}
-                                    </span>
-                                </div>
                                 <p className="text-neutral-300 text-xs font-medium leading-relaxed px-6 max-w-md text-center mt-2">
                                     {currentUser.description || "✨ Sin descripción aún"}
                                 </p>
-
                             </div>
 
                             {/* Middle Stats Group */}
@@ -504,6 +489,48 @@ export const Radar = () => {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* NEW: GYM PRINCIPAL SHOWCASE (The Red Box Area) */}
+                            <div className="w-full mt-4 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
+                                <div className="relative h-32 md:h-40 rounded-3xl overflow-hidden shadow-2xl border border-white/5 group/gymcard">
+                                    {/* Gym Banner/Photo */}
+                                    <div 
+                                        className="absolute inset-0 bg-neutral-800"
+                                        style={{ 
+                                            backgroundColor: currentUser.gym_custom_color || '#171717',
+                                            backgroundImage: currentUser.gym_banner_url ? `url(${currentUser.gym_banner_url})` : undefined,
+                                            backgroundSize: 'cover',
+                                            backgroundPosition: 'center'
+                                        }}
+                                    >
+                                        {/* Overlay for readability */}
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-80" />
+                                    </div>
+
+                                    {/* Gym Content */}
+                                    <div className="absolute inset-0 p-4 flex flex-col justify-end items-start">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <div className="w-6 h-6 rounded-full bg-gym-primary/20 flex items-center justify-center border border-gym-primary/30">
+                                                <MapPin size={12} className="text-gym-primary" />
+                                            </div>
+                                            <span className="text-[10px] font-black text-gym-primary uppercase tracking-[0.2em] italic">Gimnasio Principal</span>
+                                        </div>
+                                        <h3 className="text-xl md:text-2xl font-black text-white italic uppercase tracking-tight leading-none">
+                                            {currentUser.gym_name}
+                                        </h3>
+                                    </div>
+
+                                    {/* Distance/Badge Info */}
+                                    <div className="absolute top-4 right-4">
+                                        <div className="bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-white/10">
+                                            <span className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">
+                                                {currentUser.distance_km < 1 ? '<1 km' : `${Math.round(currentUser.distance_km)} km`}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                         </div>
 
                         {/* --- FIXED FOOTER (Absolutely Anchored) --- */}
