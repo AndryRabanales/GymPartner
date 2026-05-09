@@ -110,6 +110,8 @@ export const WorkoutSession = () => {
     const [showSummary, setShowSummary] = useState(false);
     // NEW: Track Routine Name for AI Diagnosis
     const [currentRoutineName, setCurrentRoutineName] = useState<string | undefined>(undefined);
+    const [originalExerciseIds, setOriginalExerciseIds] = useState<string[]>([]); // To detect changes
+    const [originalMetricsSnapshot, setOriginalMetricsSnapshot] = useState<string>(''); // To detect metric changes
     // currentGym state removed
 
     // Tutorial State
@@ -757,6 +759,8 @@ export const WorkoutSession = () => {
 
         if (exercisesToAdd.length > 0) {
             setActiveExercises(exercisesToAdd);
+            setOriginalExerciseIds(exercisesToAdd.map(ex => ex.equipmentId)); // Store original IDs for "Smart Skip"
+            setOriginalMetricsSnapshot(JSON.stringify(exercisesToAdd.map(ex => ex.metrics))); // Snapshot metrics
 
             // Show warning if some exercises are missing, but allow continuing
             if (missingExercises.length > 0) {
@@ -1107,7 +1111,23 @@ export const WorkoutSession = () => {
     // 1. Triggered by UI Button
     const handleFinishRequest = async () => {
         setIsFinished(true); // Stop timer
-        setShowRoutineModal(true);
+
+        // SMART SKIP: If we have a routine name AND the exercises/metrics haven't changed, skip modal
+        const currentIds = activeExercises.map(ex => ex.equipmentId);
+        const currentMetrics = JSON.stringify(activeExercises.map(ex => ex.metrics));
+        
+        const hasChanged = currentRoutineName 
+            ? currentIds.length !== originalExerciseIds.length || 
+              !currentIds.every((id, idx) => id === originalExerciseIds[idx]) ||
+              currentMetrics !== originalMetricsSnapshot
+            : true; // Always ask for Quick Start sessions
+
+        if (currentRoutineName && !hasChanged) {
+            console.log('✨ Routine unchanged. Skipping save modal...');
+            checkLocationStep();
+        } else {
+            setShowRoutineModal(true);
+        }
     };
 
     // 2. Save Routine (Optional)
