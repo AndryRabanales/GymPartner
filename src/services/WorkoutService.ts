@@ -243,7 +243,7 @@ class WorkoutService {
     async checkPersonalRecord(_userId: string, exerciseId: string, weight: number): Promise<boolean> {
         // Find existing max weight for this exercise
         const { data } = await supabase
-            .from('workout_sets')
+            .from('workout_logs')
             .select('weight_kg')
             .eq('exercise_id', exerciseId)
             .gt('weight_kg', 0)
