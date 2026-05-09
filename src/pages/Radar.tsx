@@ -397,12 +397,6 @@ export const Radar = () => {
                                     {currentUser.description || "✨ Sin descripción aún"}
                                 </p>
 
-                                {/* Card Counter */}
-                                <div className="mt-2 px-3 py-1 bg-neutral-800/50 rounded-full border border-neutral-700/50">
-                                    <span className="text-xs font-bold text-neutral-400">
-                                        {currentIndex + 1} de {nearbyUsers.length}
-                                    </span>
-                                </div>
                             </div>
 
                             {/* Middle Stats Group */}
