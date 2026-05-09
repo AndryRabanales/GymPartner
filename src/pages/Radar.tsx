@@ -490,12 +490,12 @@ export const Radar = () => {
                                 </div>
                             </div>
 
-                            {/* NEW: GYM PRINCIPAL SHOWCASE (The Red Box Area) */}
-                            <div className="w-full mt-4 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
-                                <div className="relative h-80 md:h-[450px] rounded-[2.5rem] overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.6)] border border-white/10 group/gymcard">
+                            {/* NEW: GYM PRINCIPAL SHOWCASE (Optimized for Mobile) */}
+                            <div className="w-full mt-2 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
+                                <div className="relative h-72 md:h-[450px] rounded-[2rem] overflow-hidden shadow-[0_15px_40px_rgba(0,0,0,0.6)] border border-white/10 group/gymcard">
                                     {/* Gym Banner/Photo */}
                                     <div 
-                                        className="absolute inset-0 bg-neutral-800 transition-transform duration-1000 group-hover/gymcard:scale-105"
+                                        className="absolute inset-0 bg-neutral-800"
                                         style={{ 
                                             backgroundColor: currentUser.gym_custom_color || '#171717',
                                             backgroundImage: currentUser.gym_banner_url ? `url(${currentUser.gym_banner_url})` : undefined,
@@ -503,26 +503,25 @@ export const Radar = () => {
                                             backgroundPosition: 'center'
                                         }}
                                     >
-                                        {/* Overlay for readability - Extra deep at bottom */}
                                         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-95" />
                                     </div>
 
-                                    {/* Gym Content */}
-                                    <div className="absolute inset-0 p-8 flex flex-col justify-end items-start">
-                                        <div className="flex items-center gap-2 mb-3 bg-black/50 backdrop-blur-xl px-4 py-1.5 rounded-full border border-gym-primary/40 shadow-lg">
-                                            <div className="w-6 h-6 rounded-full bg-gym-primary flex items-center justify-center">
-                                                <Star size={12} className="text-black" fill="black" />
+                                    {/* Gym Content - Adjusted Padding for Mobile */}
+                                    <div className="absolute inset-0 p-5 md:p-8 flex flex-col justify-end items-start">
+                                        <div className="flex items-center gap-2 mb-2.5 bg-black/60 backdrop-blur-xl px-3 py-1 rounded-full border border-gym-primary/30">
+                                            <div className="w-4 h-4 rounded-full bg-gym-primary flex items-center justify-center">
+                                                <Star size={10} className="text-black" fill="black" />
                                             </div>
-                                            <span className="text-[11px] font-black text-white uppercase tracking-[0.25em] italic">Base Principal</span>
+                                            <span className="text-[9px] md:text-[11px] font-black text-white uppercase tracking-[0.2em] italic">Base Principal</span>
                                         </div>
-                                        <h3 className="text-3xl md:text-5xl font-black text-white italic uppercase tracking-tighter leading-tight drop-shadow-[0_5px_15px_rgba(0,0,0,0.5)]">
+                                        <h3 className="text-xl md:text-5xl font-black text-white italic uppercase tracking-tighter leading-none drop-shadow-lg">
                                             {currentUser.gym_name}
                                         </h3>
                                     </div>
 
-                                    {/* Distance/Badge Info */}
+                                    {/* Distance Badge - Adjusted Position */}
                                     <div className="absolute top-4 right-4">
-                                        <div className="bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-white/10">
+                                        <div className="bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/10">
                                             <span className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">
                                                 {currentUser.distance_km < 1 ? '<1 km' : `${Math.round(currentUser.distance_km)} km`}
                                             </span>
