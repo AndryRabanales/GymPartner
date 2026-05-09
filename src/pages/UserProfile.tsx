@@ -614,10 +614,9 @@ export const UserProfile = () => {
                 </div>
             </div>
 
-            {/* Quick Actions / Passport Grid */}
-            <div className="grid grid-cols-3 gap-2 md:gap-4">
+            {/* Primary Action & Quick Access */}
+            <div className="flex flex-col gap-4">
 
-                {/* SMART START BUTTON - PRIMARY ACTION */}
                 <button
                     onClick={async () => {
                         // SMART START LOGIC
@@ -695,7 +694,7 @@ export const UserProfile = () => {
                             setStartLoading(false);
                         }
                     }}
-                    className="col-span-3 group relative overflow-hidden bg-gradient-to-r from-yellow-400 to-orange-500 rounded-3xl p-1 shadow-[0_0_20px_rgba(250,204,21,0.3)] hover:shadow-[0_0_40px_rgba(250,204,21,0.6)] hover:-translate-y-1 transition-all duration-300 active:scale-95 ring-4 ring-yellow-400/20"
+                    className="group relative overflow-hidden bg-gradient-to-r from-yellow-400 to-orange-500 rounded-3xl p-1 shadow-[0_0_20px_rgba(250,204,21,0.3)] hover:shadow-[0_0_40px_rgba(250,204,21,0.6)] hover:-translate-y-1 transition-all duration-300 active:scale-95 ring-4 ring-yellow-400/20 w-full"
                 >
                     {/* Inner Glass Container */}
                     <div className="relative bg-black/10 backdrop-blur-sm w-full h-full rounded-[20px] px-4 md:px-8 py-4 md:py-6 flex items-center justify-between border border-white/20 group-hover:bg-transparent transition-all">
@@ -727,6 +726,7 @@ export const UserProfile = () => {
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 translate-x-[-200%] group-hover:animate-shine pointer-events-none" />
                     </div>
                 </button>
+            </div>
 
             {/* Quick Actions Grid - 2x2 Layout */}
             <div className="grid grid-cols-2 gap-3 md:gap-4">
