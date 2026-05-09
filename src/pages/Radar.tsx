@@ -492,10 +492,10 @@ export const Radar = () => {
 
                             {/* NEW: GYM PRINCIPAL SHOWCASE (The Red Box Area) */}
                             <div className="w-full mt-4 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
-                                <div className="relative h-32 md:h-40 rounded-3xl overflow-hidden shadow-2xl border border-white/5 group/gymcard">
+                                <div className="relative h-56 md:h-72 rounded-[2rem] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10 group/gymcard">
                                     {/* Gym Banner/Photo */}
                                     <div 
-                                        className="absolute inset-0 bg-neutral-800"
+                                        className="absolute inset-0 bg-neutral-800 transition-transform duration-700 group-hover/gymcard:scale-110"
                                         style={{ 
                                             backgroundColor: currentUser.gym_custom_color || '#171717',
                                             backgroundImage: currentUser.gym_banner_url ? `url(${currentUser.gym_banner_url})` : undefined,
@@ -503,19 +503,19 @@ export const Radar = () => {
                                             backgroundPosition: 'center'
                                         }}
                                     >
-                                        {/* Overlay for readability */}
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-80" />
+                                        {/* Overlay for readability - More subtle at bottom */}
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent opacity-90" />
                                     </div>
 
                                     {/* Gym Content */}
-                                    <div className="absolute inset-0 p-4 flex flex-col justify-end items-start">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <div className="w-6 h-6 rounded-full bg-gym-primary/20 flex items-center justify-center border border-gym-primary/30">
-                                                <MapPin size={12} className="text-gym-primary" />
+                                    <div className="absolute inset-0 p-6 flex flex-col justify-end items-start">
+                                        <div className="flex items-center gap-2 mb-2 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-gym-primary/30">
+                                            <div className="w-5 h-5 rounded-full bg-gym-primary flex items-center justify-center">
+                                                <MapPin size={10} className="text-black" />
                                             </div>
-                                            <span className="text-[10px] font-black text-gym-primary uppercase tracking-[0.2em] italic">Gimnasio Principal</span>
+                                            <span className="text-[10px] font-black text-white uppercase tracking-[0.2em] italic">Gimnasio Principal</span>
                                         </div>
-                                        <h3 className="text-xl md:text-2xl font-black text-white italic uppercase tracking-tight leading-none">
+                                        <h3 className="text-2xl md:text-4xl font-black text-white italic uppercase tracking-tighter leading-tight drop-shadow-2xl">
                                             {currentUser.gym_name}
                                         </h3>
                                     </div>
