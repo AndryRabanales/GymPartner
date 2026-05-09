@@ -2,8 +2,11 @@ import { useState, useEffect, useRef } from 'react';
 import { radarService, type RadarUser } from '../services/RadarService';
 import { notificationService } from '../services/NotificationService';
 import { cloudinaryService } from '../services/CloudinaryService';
-import { Radar as RadarIcon, Dumbbell, X, UserPlus } from 'lucide-react';
+import { Radar as RadarIcon, Dumbbell, X, UserPlus, Zap } from 'lucide-react';
 import { useSwipe } from '../hooks/useSwipe';
+import { useAuth } from '../context/AuthContext';
+import { userService } from '../services/UserService';
+import { supabase } from '../lib/supabase';
 
 // Helper component for fade-in images with skeleton
 const FadeInImage = ({ src, alt, className, imgClassName = "" }: { src: string; alt: string; className?: string; imgClassName?: string }) => {
@@ -57,6 +60,9 @@ export const Radar = () => {
     const initialized = useRef(false);
     const [direction, setDirection] = useState<'left' | 'right' | null>(null);
     const [isAnimating, setIsAnimating] = useState(false);
+    const { user } = useAuth();
+    const [isUserBoosted, setIsUserBoosted] = useState(false);
+    const [isBoosting, setIsBoosting] = useState(false);
 
     // Swipe Hook
     const { swipeState, handlers: swipeHandlers } = useSwipe({
@@ -145,6 +151,44 @@ export const Radar = () => {
         );
     };
 
+    // Check boost status
+    useEffect(() => {
+        if (!user) return;
+        
+        const checkBoost = async () => {
+            const { data } = await supabase
+                .from('profiles')
+                .select('boost_until')
+                .eq('id', user.id)
+                .single();
+            
+            if (data?.boost_until) {
+                setIsUserBoosted(new Date(data.boost_until) > new Date());
+            }
+        };
+
+        checkBoost();
+
+        // Subscribe to profile changes for real-time boost status
+        const channel = supabase
+            .channel(`radar-profile-${user.id}`)
+            .on('postgres_changes', {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'profiles',
+                filter: `id=eq.${user.id}`
+            }, (payload) => {
+                if (payload.new && payload.new.boost_until) {
+                    setIsUserBoosted(new Date(payload.new.boost_until) > new Date());
+                }
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [user]);
+
     // Auto-scan on mount
     useEffect(() => {
         if (!initialized.current) {
@@ -191,6 +235,31 @@ export const Radar = () => {
         handleNext();
         setDirection(null);
         setIsAnimating(false);
+    };
+
+    const handleBoost = async () => {
+        if (!user || isBoosting) return;
+        if (isUserBoosted) {
+            alert("¡Ya tienes un Boost activo!");
+            return;
+        }
+
+        if (confirm('¿Quieres activar un Boost de 24h por 1000 G-Points? Aparecerás al principio del Radar de todos.')) {
+            setIsBoosting(true);
+            try {
+                const success = await userService.spendGPoints(user.id, 1000, 'profile_boost');
+                if (success) {
+                    alert('🚀 ¡BOOST ACTIVADO! Ahora eres prioridad nacional en el Radar.');
+                    setIsUserBoosted(true);
+                } else {
+                    alert('No tienes suficientes G-Points.');
+                }
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setIsBoosting(false);
+            }
+        }
     };
 
     const currentUser = nearbyUsers.length > 0 ? nearbyUsers[currentIndex] : null;
@@ -361,6 +430,27 @@ export const Radar = () => {
                             >
                                 <UserPlus size={20} strokeWidth={2.5} />
                                 <span className="text-sm font-black uppercase tracking-widest">Invitar</span>
+                            </button>
+
+                            {/* BOOST BUTTON */}
+                            <button
+                                onClick={handleBoost}
+                                disabled={isBoosting || isUserBoosted}
+                                className={`
+                                    w-14 h-14 rounded-full border-2 flex items-center justify-center transition-all active:scale-95 shadow-lg relative overflow-hidden
+                                    ${isUserBoosted 
+                                        ? 'bg-yellow-500/10 border-yellow-500 shadow-yellow-500/30 animate-pulse' 
+                                        : 'bg-neutral-900/80 border-neutral-700 text-yellow-500 hover:bg-neutral-800 hover:border-yellow-500/50 hover:scale-110'}
+                                `}
+                            >
+                                <img 
+                                    src="/Gemini_Generated_Image_qyk7sjqyk7sjqyk7-removebg-preview.png" 
+                                    alt="Boost"
+                                    className={`w-10 h-10 object-contain ${isUserBoosted ? 'drop-shadow-[0_0_5px_rgba(234,179,8,0.8)]' : 'opacity-70 group-hover:opacity-100'}`}
+                                />
+                                {isUserBoosted && (
+                                    <div className="absolute top-0 right-0 w-3 h-3 bg-yellow-500 rounded-full border-2 border-black"></div>
+                                )}
                             </button>
                         </div>
                     </div>
