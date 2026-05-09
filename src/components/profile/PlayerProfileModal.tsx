@@ -190,19 +190,7 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
                             </div>
                         </div>
 
-                        {/* Follow Button */}
-                        {user && user.id !== player.id && (
-                            <button
-                                onClick={handleFollowToggle}
-                                className={`w-full py-3 rounded-xl font-black text-sm uppercase tracking-widest transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 mb-8 shadow-lg ${isFollowing
-                                    ? 'bg-neutral-800 text-neutral-400 border border-neutral-700 hover:text-white hover:border-neutral-500'
-                                    : 'bg-yellow-500 text-black hover:bg-yellow-400 shadow-yellow-500/20'
-                                    }`}
-                            >
-                                {isFollowing ? <UserCheck size={18} /> : <UserPlus size={18} />}
-                                {isFollowing ? 'Siguiendo' : 'Seguir Agente'}
-                            </button>
-                        )}
+                        {/* Follow Button - MOVED TO BOTTOM */}
 
                         {/* TABS SWITCHER */}
                         <div className="flex w-full border-b border-neutral-800 mb-4 sticky top-0 bg-neutral-900/95 backdrop-blur z-20 pt-2">
@@ -355,6 +343,30 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
                         />
                     )}
                 </div>
+
+                {/* Fixed Bottom Actions - PREMIUM CALL TO ACTION */}
+                {user && user.id !== player.id && (
+                    <div className="p-4 bg-neutral-900 border-t border-white/5 flex gap-3 animate-in slide-in-from-bottom duration-500">
+                        <button
+                            onClick={handleFollowToggle}
+                            className={`flex-1 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg ${isFollowing
+                                ? 'bg-neutral-800 text-neutral-400 border border-neutral-700'
+                                : 'bg-white text-black hover:bg-neutral-200'
+                                }`}
+                        >
+                            {isFollowing ? <UserCheck size={16} /> : <UserPlus size={16} />}
+                            {isFollowing ? 'Siguiendo' : 'Seguir'}
+                        </button>
+                        
+                        <button
+                            onClick={() => alert('¡Invitación enviada! Prepárate para el duelo.')}
+                            className="flex-[1.5] py-4 rounded-2xl bg-gym-primary text-black font-black text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(229,255,0,0.2)]"
+                        >
+                            <Swords size={16} />
+                            Invitar
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* Feed Viewer Overlay */}
