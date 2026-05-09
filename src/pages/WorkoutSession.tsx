@@ -184,43 +184,10 @@ export const WorkoutSession = () => {
 
 
     // NEW: Handle Batch Add
-    // --- Local Backup / Restore Logic ---
-    useEffect(() => {
-        const loadSavedSession = () => {
-            try {
-                const saved = localStorage.getItem(STORAGE_KEY);
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    // Check if data is fresh (< 24 hours)
-                    const now = Date.now();
-                    if (now - parsed.savedAt < 24 * 60 * 60 * 1000) {
-                        const data = parsed.data;
-                        if (data.exercises && data.exercises.length > 0) {
-                            // Restore state
-                            setActiveExercises(data.exercises);
-                            setStartTime(data.startTime ? new Date(data.startTime) : null); // Expects Date object or string?
-                            if (data.routineName) setCurrentRoutineName(data.routineName);
-                            // if (data.locationName) setLocationName(data.locationName); // No locationName state
-                            if (data.gymId) setResolvedGymId(data.gymId); // Assume setGymId exists or need to handle
+    // --- Local Backup / Restore Logic (Simplified to only cleanup) ---
+    // [REMOVED] Redundant loadSavedSession useEffect that caused state pollution.
+    // Initialization is now strictly handled by initializeBattle.
 
-                            // Visual feedback
-                            // alert("Sesión restaurada"); // Too intrusive? Just restore silently or use toast if available.
-                            console.log('Session restored from backup', parsed.savedAt);
-                        }
-                    } else {
-                        localStorage.removeItem(STORAGE_KEY);
-                    }
-                }
-            } catch (e) {
-                console.error("Failed to restore session", e);
-            }
-        };
-
-        // Only load if explicit "fresh" start?
-        // Or if exercises are empty?
-        // We generally want to load on mount.
-        loadSavedSession();
-    }, []);
 
     // Save state on change
     useEffect(() => {
@@ -548,6 +515,8 @@ export const WorkoutSession = () => {
                 // DO NOT START SESSION HERE. WAIT FOR USER ACTION.
                 setSessionId(null);
                 setStartTime(null);
+                setActiveExercises([]); // Reset state
+                setCurrentRoutineName(undefined); // Reset routine
 
                 // If no routines exist, auto-open "Add Exercise" modal (All Exercises)
                 // If routines exist, prompt choices (Start Options Modal)
@@ -582,6 +551,7 @@ export const WorkoutSession = () => {
                 setStartTime(new Date());
                 setElapsedTime("00:00");
                 setIsFinished(false);
+                setActiveExercises([]); // CRITICAL: Clear any stale state before starting fresh
                 console.log('✅ Session started:', newSession.id);
             }
         } catch (err) {
@@ -1036,6 +1006,8 @@ export const WorkoutSession = () => {
         if (window.confirm("¿Seguro que quieres cancelar? Se perderá todo el progreso de esta sesión.")) {
             // Clear Local Storage
             localStorage.removeItem(`workout_draft_${sessionId}`);
+            localStorage.removeItem(STORAGE_KEY);
+            setActiveExercises([]); // Clear state
 
             setLoading(true);
             await workoutService.deleteSession(sessionId);
@@ -1050,6 +1022,7 @@ export const WorkoutSession = () => {
         if (window.confirm("¿Reiniciar entrenamiento? Se borrarán todas las series de hoy.")) {
             // Clear Local Storage
             localStorage.removeItem(`workout_draft_${sessionId}`);
+            localStorage.removeItem(STORAGE_KEY);
 
             setLoading(true);
             await workoutService.deleteSession(sessionId);
@@ -1383,6 +1356,7 @@ export const WorkoutSession = () => {
             if (result.success) {
                 console.log('✅ Sesión terminada exitosamente');
                 localStorage.removeItem(`workout_draft_${sessionId}`);
+                localStorage.removeItem(STORAGE_KEY); // Also clear global key
                 // Removed blocking alert. 
                 // We'll rely on the UI showing "Guardando..." or similar via loading state, 
                 // or we could add a specific "Finished" state to show a success message briefly.

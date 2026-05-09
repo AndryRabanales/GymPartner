@@ -140,11 +140,14 @@ class WorkoutService {
 
     // Get incomplete session if app crashed or user left
     async getActiveSession(userId: string): Promise<{ data: WorkoutSession | null; error: any }> {
+        const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
+        
         const { data, error } = await supabase
             .from('workout_sessions')
             .select('*')
             .eq('user_id', userId)
             .is('end_time', null)
+            .gt('started_at', twelveHoursAgo) // Only sessions from the last 12 hours
             .order('started_at', { ascending: false })
             .limit(1)
             .maybeSingle();
