@@ -528,6 +528,7 @@ export const Radar = () => {
                                     </div>
                                 </div>
                             </div>
+                        </div>
 
                         {/* --- SLIDABLE ACTION BAR (Clean UI) --- */}
                         <div className="absolute bottom-0 left-0 right-0 z-50 pointer-events-none">
@@ -598,8 +599,8 @@ export const Radar = () => {
                                 </div>
                             </div>
                         </div>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
             {/* BOOST MODAL */}
             <BoostModal 
