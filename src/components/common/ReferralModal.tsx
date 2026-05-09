@@ -122,7 +122,11 @@ export const ReferralModal: React.FC<ReferralModalProps> = ({ isOpen, onClose, u
                             <div className="text-neutral-500 text-[10px] uppercase font-bold tracking-widest mt-1">Nivel</div>
                         </div>
                         <div className="bg-neutral-950/50 p-4 rounded-2xl border border-yellow-500/10 flex flex-col items-center text-center group">
-                            <Coins className="text-yellow-400 w-6 h-6 mb-2 group-hover:scale-110 transition-transform" />
+                            <img 
+                                src="/Gemini_Generated_Image_qyk7sjqyk7sjqyk7-removebg-preview.png" 
+                                alt="G-Points"
+                                className="w-6 h-6 mb-2 group-hover:scale-110 transition-transform object-contain"
+                            />
                             <div className="text-yellow-400 font-black text-lg leading-none">+100 G-PTS</div>
                             <div className="text-neutral-500 text-[10px] uppercase font-bold tracking-widest mt-1">Moneda</div>
                         </div>

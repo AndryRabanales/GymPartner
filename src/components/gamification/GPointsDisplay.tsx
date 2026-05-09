@@ -61,22 +61,19 @@ export const GPointsDisplay: React.FC = () => {
                     absolute inset-0 bg-yellow-400/20 rounded-full blur-md 
                     ${isAnimating ? 'animate-ping' : 'group-hover:animate-pulse'}
                 `}></div>
-                <Coins 
-                    size={20} 
+                <img 
+                    src="/Gemini_Generated_Image_qyk7sjqyk7sjqyk7-removebg-preview.png"
+                    alt="G-Points"
                     className={`
-                        text-yellow-400 relative z-10 
-                        ${isAnimating ? 'rotate-[360deg] transition-transform duration-700' : 'group-hover:rotate-12 transition-transform'}
+                        w-6 h-6 relative z-10 object-contain
+                        ${isAnimating ? 'scale-125 transition-transform duration-700' : 'group-hover:scale-110 transition-transform'}
                     `} 
-                    strokeWidth={2.5}
                 />
             </div>
             
             <div className="flex flex-col">
-                <span className="text-white font-black text-sm tracking-tighter leading-none italic uppercase">
+                <span className="text-white font-black text-lg tracking-tighter leading-none italic uppercase">
                     {points.toLocaleString()}
-                </span>
-                <span className="text-[8px] text-yellow-500/80 font-bold tracking-[0.2em] uppercase leading-none">
-                    G-POINTS
                 </span>
             </div>
             

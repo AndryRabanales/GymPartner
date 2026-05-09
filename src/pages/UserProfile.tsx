@@ -737,7 +737,11 @@ export const UserProfile = () => {
                         ${(profile?.boost_until && new Date(profile.boost_until) > new Date())
                             ? 'bg-yellow-500/20 border-yellow-500/50'
                             : 'bg-yellow-500/5 border-yellow-500/10'}`}>
-                        <Coins className="text-yellow-500 w-4 h-4 md:w-6 md:h-6" />
+                        <img 
+                            src="/Gemini_Generated_Image_qyk7sjqyk7sjqyk7-removebg-preview.png" 
+                            alt="G-Points"
+                            className="w-6 h-6 md:w-8 md:h-8 object-contain"
+                        />
                     </div>
                     <div className="flex flex-col">
                         <span className="font-bold text-neutral-200 group-hover:text-white text-xs md:text-base">
