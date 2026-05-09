@@ -241,6 +241,22 @@ export const Radar = () => {
         }
     }, []);
 
+    // Next-Card Preloading (The secret for instant swiping)
+    useEffect(() => {
+        if (nearbyUsers.length > 0) {
+            const nextIndex = (currentIndex + 1) % nearbyUsers.length;
+            const nextUser = nearbyUsers[nextIndex];
+            if (nextUser) {
+                const preloader = new Image();
+                preloader.src = cloudinaryService.getOptimizedImageUrl(nextUser.avatar_url, { width: 100, height: 100 });
+                if (nextUser.banner_url) {
+                    const bannerPreloader = new Image();
+                    bannerPreloader.src = cloudinaryService.getOptimizedImageUrl(nextUser.banner_url, { width: 400, height: 250 });
+                }
+            }
+        }
+    }, [currentIndex, nearbyUsers]);
+
     // Check follow status for current user
     useEffect(() => {
         const checkFollow = async () => {

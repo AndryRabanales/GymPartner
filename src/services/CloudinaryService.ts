@@ -196,8 +196,8 @@ class CloudinaryService {
         if (url.includes('res.cloudinary.com')) {
             if (url.includes('/upload/')) {
                 const parts = url.split('/upload/');
-                // Reduced quality to 60 for ultra-fast loading
-                const transform = `c_${crop},w_${width},h_${height},f_auto,q_60`;
+                // Aggressive compression for ultra-fast mobile loading
+                const transform = `c_${crop},w_${width},h_${height},f_auto,q_50,fl_lossy`;
                 return `${parts[0]}/upload/${transform}/${parts[1]}`;
             }
         }

@@ -6,6 +6,7 @@ import { userService } from '../../services/UserService';
 import { socialService, type Post } from '../../services/SocialService';
 import { RoutineViewModal } from './RoutineViewModal';
 import { useBottomNav } from '../../context/BottomNavContext';
+import { cloudinaryService } from '../../services/CloudinaryService';
 
 interface PlayerProfileModalProps {
     player: {
@@ -124,7 +125,11 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
                     {/* Header / Banner */}
                     <div className="h-32 bg-neutral-800 relative">
                         {player.banner_url ? (
-                            <img src={player.banner_url} alt="Banner" className="w-full h-full object-cover opacity-60" />
+                            <img 
+                                src={cloudinaryService.getOptimizedImageUrl(player.banner_url, { width: 400, height: 150 })} 
+                                alt="Banner" 
+                                className="w-full h-full object-cover opacity-60" 
+                            />
                         ) : (
                             <div className="absolute inset-0 bg-gradient-to-b from-neutral-800 to-neutral-900" />
                         )}
@@ -151,7 +156,11 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({ player, 
                         <div className="-mt-16 mb-4 relative z-10 group">
                             <div className="absolute inset-0 bg-yellow-500/20 rounded-full blur-xl animate-pulse group-hover:bg-yellow-500/40 transition-all"></div>
                             <div className="w-32 h-32 rounded-full border-4 border-neutral-900 bg-neutral-800 overflow-hidden shadow-2xl relative">
-                                <img src={player.avatar_url} alt={player.username} className="w-full h-full object-cover" />
+                                <img 
+                                    src={cloudinaryService.getOptimizedImageUrl(player.avatar_url || `https://ui-avatars.com/api/?name=${player.username}&background=random`, { width: 120, height: 120 })} 
+                                    alt={player.username} 
+                                    className="w-full h-full object-cover" 
+                                />
                             </div>
                             {/* Rank Badge Integration (Optional small badge) */}
                             <div className="absolute bottom-0 right-0 bg-black/80 backdrop-blur border border-yellow-500/50 text-yellow-500 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest shadow-lg">

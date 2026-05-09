@@ -8,6 +8,7 @@ import {
 import { TierService } from '../services/TierService';
 import { socialService } from '../services/SocialService';
 import { userService } from '../services/UserService';
+import { cloudinaryService } from '../services/CloudinaryService';
 import { useAuth } from '../context/AuthContext';
 
 export const PublicProfile = () => {
@@ -98,7 +99,7 @@ export const PublicProfile = () => {
             <div 
                 className="relative h-48 sm:h-72 bg-neutral-900 overflow-hidden"
                 style={profile.custom_settings?.banner_url ? {
-                    backgroundImage: `url(${profile.custom_settings.banner_url})`,
+                    backgroundImage: `url(${cloudinaryService.getOptimizedImageUrl(profile.custom_settings.banner_url, { width: 600, height: 300 })})`,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center'
                 } : {}}
@@ -131,7 +132,7 @@ export const PublicProfile = () => {
                         
                         <div className={`w-[135px] h-[135px] sm:w-[160px] sm:h-[160px] rounded-full overflow-hidden border-4 bg-neutral-900 shadow-2xl relative z-10 ${currentTier.borderColor}`}>
                             <img 
-                                src={profile.avatar_url || '/default-avatar.png'} 
+                                src={cloudinaryService.getOptimizedImageUrl(profile.avatar_url || `https://ui-avatars.com/api/?name=${profile.username}&background=random`, { width: 160, height: 160 })} 
                                 alt={profile.username}
                                 className="w-full h-full object-cover scale-105"
                             />
