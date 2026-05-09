@@ -51,21 +51,15 @@ export const GPointsDisplay: React.FC = () => {
 
     return (
         <div className={`
-            flex items-center gap-2 bg-neutral-900/50 backdrop-blur-xl px-4 py-1.5 rounded-full border border-yellow-500/30 
-            shadow-[0_0_15px_rgba(250,204,21,0.1)] hover:shadow-[0_0_25px_rgba(250,204,21,0.2)] 
-            transition-all duration-500 group cursor-pointer active:scale-95
-            ${isAnimating ? 'ring-2 ring-yellow-400 scale-105' : ''}
+            flex items-center gap-1 transition-all duration-500 group cursor-pointer active:scale-95
+            ${isAnimating ? 'scale-110' : ''}
         `}>
             <div className="relative">
-                <div className={`
-                    absolute inset-0 bg-yellow-400/20 rounded-full blur-md 
-                    ${isAnimating ? 'animate-ping' : 'group-hover:animate-pulse'}
-                `}></div>
                 <img 
                     src="/Gemini_Generated_Image_qyk7sjqyk7sjqyk7-removebg-preview.png"
                     alt="G-Points"
                     className={`
-                        h-16 w-auto relative z-10 object-contain drop-shadow-[0_0_15px_rgba(250,204,21,0.4)]
+                        h-10 w-auto relative z-10 object-contain
                         ${isAnimating ? 'scale-110 transition-transform duration-700' : 'group-hover:scale-105 transition-transform'}
                     `} 
                 />
