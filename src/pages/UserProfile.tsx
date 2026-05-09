@@ -12,6 +12,7 @@ import { EditProfileModal } from '../components/profile/EditProfileModal';
 import { LocationAccessModal } from '../components/common/LocationAccessModal';
 import { ReferralModal } from '../components/common/ReferralModal';
 import { PlayerProfileModal } from '../components/profile/PlayerProfileModal';
+import { BoostModal } from '../components/profile/BoostModal';
 
 
 import { userService } from '../services/UserService';
@@ -57,6 +58,24 @@ export const UserProfile = () => {
 
 
     // Modal State
+    const [isBoostModalOpen, setIsBoostModalOpen] = useState(false);
+    const [isBoosting, setIsBoosting] = useState(false);
+
+    const handleBoostConfirm = async () => {
+        if (!user || isBoosting) return;
+        setIsBoosting(true);
+        try {
+            const success = await userService.spendGPoints(user.id, 1000, 'profile_boost');
+            if (success) {
+                setIsBoostModalOpen(false);
+                loadUserData(); // Refetch profile to show new boost_until
+            }
+        } catch (err) {
+            console.error('Error activating boost:', err);
+        } finally {
+            setIsBoosting(false);
+        }
+    };
     const [showReferralModal, setShowReferralModal] = useState(false);
     const [locationError, setLocationError] = useState<{
         isOpen: boolean;
@@ -711,23 +730,7 @@ export const UserProfile = () => {
 
 
                 <button 
-                    onClick={async () => {
-                        const isBoosted = profile?.boost_until && new Date(profile.boost_until) > new Date();
-                        if (isBoosted) {
-                            alert(`Tu perfil ya tiene un boost activo hasta el ${new Date(profile!.boost_until!).toLocaleString()}`);
-                            return;
-                        }
-
-                        if (confirm('¿Quieres boostear tu perfil por 1000 G-Points? Esto te dará visibilidad premium en el Radar durante 24h.')) {
-                            const success = await userService.spendGPoints(user!.id, 1000, 'profile_boost');
-                            if (success) {
-                                alert('🚀 ¡Perfil boosteado con éxito! Ahora eres una leyenda en el Radar.');
-                                loadUserData();
-                            } else {
-                                alert('No tienes suficientes G-Points.');
-                            }
-                        }
-                    }}
+                    onClick={() => setIsBoostModalOpen(true)}
                     className={`group border p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 text-center no-underline shadow-sm hover:shadow-md 
                         ${(profile?.boost_until && new Date(profile.boost_until) > new Date()) 
                             ? 'bg-yellow-500/10 border-yellow-500 shadow-[0_0_20px_rgba(234,179,8,0.2)] animate-pulse' 
@@ -1073,6 +1076,16 @@ export const UserProfile = () => {
                     </div>
                 </div>
             )}
+            {/* BOOST MODAL */}
+            <BoostModal 
+                isOpen={isBoostModalOpen}
+                onClose={() => setIsBoostModalOpen(false)}
+                onConfirm={handleBoostConfirm}
+                isBoosting={isBoosting}
+                isActive={!!(profile?.boost_until && new Date(profile.boost_until) > new Date())}
+                expiresAt={profile?.boost_until}
+                currentPoints={profile?.g_points || 0}
+            />
         </div>
     );
 };
