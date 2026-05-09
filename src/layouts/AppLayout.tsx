@@ -12,7 +12,6 @@ import { GPointsDisplay } from '../components/gamification/GPointsDisplay';
 import { ActiveWorkoutBubble } from '../components/workout/ActiveWorkoutBubble';
 
 export const AppLayout = () => {
-    // ... (keep existing hook calls)
     const { user, signOut } = useAuth();
     const { isBottomNavVisible } = useBottomNav();
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -23,7 +22,6 @@ export const AppLayout = () => {
     // Hide BottomNav during workout sessions, gym territory pages, arsenal, stats, and history
     const isWorkoutPage = location.pathname === '/workout' || location.pathname.includes('/territory/');
     const isContentPage = location.pathname === '/arsenal' || location.pathname === '/stats' || location.pathname === '/history' || location.pathname.startsWith('/history/');
-    const isRadarPage = location.pathname === '/radar';
     const shouldShowBottomNav = user && !isWorkoutPage && !isContentPage && isBottomNavVisible;
 
     return (
@@ -61,10 +59,8 @@ export const AppLayout = () => {
                             <nav className="hidden md:flex items-center bg-white/5 rounded-full p-1 border border-white/5 backdrop-blur-md">
                                 {[
                                     { to: "/", label: "Inicio" },
-                                    // { to: "/reels", label: "Reels" }, // HIDDEN: Community Features
                                     { to: "/map", label: "Mapa" },
                                     { to: "/ranking", label: "Rankings" },
-                                    // { to: "/community", label: "Comunidad" } // HIDDEN: Community Features
                                 ].map((link) => (
                                     <Link
                                         key={link.to}
@@ -78,10 +74,7 @@ export const AppLayout = () => {
 
                             {/* Actions Area */}
                             <div className="flex items-center gap-3">
-                                {/* HEADER ACTIONS: RANKING & OTHERS REMOVED TO GRID */}
-
                                 {user && <GPointsDisplay />}
-
                                 {user && <NotificationBell />}
 
                                 {user ? (
@@ -103,12 +96,9 @@ export const AppLayout = () => {
                                             </span>
                                         </button>
 
-                                        {/* Dropdown Menu - CONTROLLED STATE */}
                                         {isUserMenuOpen && (
                                             <>
-                                                {/* Backdrop to close on click outside */}
                                                 <div className="fixed inset-0 z-[90]" onClick={() => setIsUserMenuOpen(false)}></div>
-
                                                 <div className="absolute right-0 mt-4 w-60 bg-neutral-950/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl py-2 animate-in fade-in slide-in-from-top-2 duration-200 z-[100]">
                                                     <div className="px-4 py-3 border-b border-white/5 mb-2 bg-white/2">
                                                         <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mb-1">Cuenta</p>
@@ -132,7 +122,6 @@ export const AppLayout = () => {
                                     </div>
                                 ) : null}
 
-                                {/* Desktop/Mobile Login Link if not logged in */}
                                 {!user && (
                                     <Link
                                         to="/login"
@@ -145,20 +134,12 @@ export const AppLayout = () => {
                             </div>
                         </div>
                     </div>
-
-                    {/* Mobile Menu Overlay - REMOVED (Replaced by Bottom Nav) */}
-
                 </nav>
             )}
 
             {/* Main Content (Scrollable Area) */}
             <main className="flex-1 overflow-y-auto custom-scrollbar relative flex flex-col">
-                <div className="flex-1">
-                    <Outlet />
-                </div>
-                
-                {/* MOBILE BOTTOM NAVIGATION (Inside Scroll Flow) */}
-                {shouldShowBottomNav && <BottomNav onUploadClick={() => setIsUploadModalOpen(true)} />}
+                <Outlet />
             </main>
 
             {/* Global Modals */}
@@ -168,7 +149,8 @@ export const AppLayout = () => {
             {/* Active Session Bubble Check */}
             <ActiveWorkoutBubble />
 
-            {/* Premium GymRat Footer */}
+            {/* MOBILE BOTTOM NAVIGATION (Fixed/Static Block at Bottom) */}
+            {shouldShowBottomNav && <BottomNav onUploadClick={() => setIsUploadModalOpen(true)} />}
 
         </div>
     );

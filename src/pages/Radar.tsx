@@ -411,8 +411,8 @@ export const Radar = () => {
                         }}
                     >
 
-                        {/* --- BANNER SECTION (Optimized Height) --- */}
-                        <div className="h-36 sm:h-44 shrink-0 relative w-full bg-neutral-800 overflow-hidden">
+                        {/* --- BANNER SECTION (Ultra Compact) --- */}
+                        <div className="h-28 sm:h-36 shrink-0 relative w-full bg-neutral-800 overflow-hidden">
                             {currentUser.banner_url ? (
                                 <FadeInImage
                                     src={cloudinaryService.getOptimizedImageUrl(currentUser.banner_url, { width: 400, height: 200 })}
@@ -429,8 +429,8 @@ export const Radar = () => {
                         </div>
 
 
-                        {/* --- CONTENT SECTION (Extra Bottom Space) --- */}
-                        <div className="flex-1 flex flex-col items-center justify-start relative z-20 -mt-14 px-3 w-full overflow-y-auto overflow-x-hidden custom-scrollbar pb-60">
+                        {/* --- CONTENT SECTION (Compact) --- */}
+                        <div className="flex-1 flex flex-col items-center justify-start relative z-20 -mt-10 px-3 w-full overflow-y-auto overflow-x-hidden custom-scrollbar pb-32">
 
                             {/* Top Info Group */}
                             <div className="flex flex-col items-center w-full">
@@ -490,9 +490,9 @@ export const Radar = () => {
                                 </div>
                             </div>
 
-                            {/* GYM PRINCIPAL SHOWCASE (iPhone optimized) */}
-                            <div className="w-full mt-1.5 px-0.5">
-                                <div className="relative h-44 md:h-[350px] rounded-[1.5rem] overflow-hidden shadow-2xl border border-white/5">
+                            {/* GYM PRINCIPAL SHOWCASE (Ultra Compact) */}
+                            <div className="w-full mt-1 px-0.5">
+                                <div className="relative h-32 md:h-[300px] rounded-[1.5rem] overflow-hidden shadow-2xl border border-white/5">
                                     {/* Gym Banner/Photo */}
                                     <div 
                                         className="absolute inset-0 bg-neutral-800"
@@ -529,8 +529,8 @@ export const Radar = () => {
                             </div>
                         </div>
 
-                        {/* --- FIXED ACTION BUTTONS (Standard Position) --- */}
-                        <div className="absolute bottom-6 left-0 right-0 z-50 pointer-events-none px-4">
+                        {/* --- FIXED ACTION BUTTONS (Positioned above fixed footer) --- */}
+                        <div className="absolute bottom-4 left-0 right-0 z-50 pointer-events-none px-4">
                             <div className="flex items-center justify-center gap-3 max-w-sm mx-auto pointer-events-auto">
                                 
                                 {/* REJECT BUTTON */}
