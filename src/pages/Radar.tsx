@@ -469,7 +469,6 @@ export const Radar = () => {
                     </div>
                 )}
             </div>
-        </div >
             {/* BOOST MODAL */}
             <BoostModal 
                 isOpen={isBoostModalOpen}
@@ -480,5 +479,6 @@ export const Radar = () => {
                 expiresAt={boostExpiresAt}
                 currentPoints={userPoints}
             />
+        </div >
     );
 };
