@@ -530,7 +530,7 @@ export const Radar = () => {
                         </div>
 
                         {/* --- FIXED ACTION BUTTONS (Positioned above fixed footer) --- */}
-                        <div className="absolute bottom-4 left-0 right-0 z-50 pointer-events-none px-4">
+                        <div className="absolute bottom-20 left-0 right-0 z-50 pointer-events-none px-4">
                             <div className="flex items-center justify-center gap-3 max-w-sm mx-auto pointer-events-auto">
                                 
                                 {/* REJECT BUTTON */}
