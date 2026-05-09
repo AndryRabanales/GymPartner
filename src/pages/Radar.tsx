@@ -72,6 +72,38 @@ export const Radar = () => {
     const [userPoints, setUserPoints] = useState(0);
     const [boostExpiresAt, setBoostExpiresAt] = useState<string | undefined>(undefined);
 
+    const currentUser = nearbyUsers.length > 0 ? nearbyUsers[currentIndex] : null;
+
+    // Card Actions
+    const handleNext = () => {
+        // Infinite Loop Logic
+        if (nearbyUsers.length === 0 || isAnimating) return;
+        setCurrentIndex((prev) => (prev + 1) % nearbyUsers.length);
+        setIsFollowing(false);
+    };
+
+    const handleAction = async (action: 'skip' | 'train' | 'like') => {
+        if (isAnimating) return;
+
+        // Set animation direction
+        setDirection(action === 'skip' ? 'left' : 'right');
+        setIsAnimating(true);
+
+        // Wait for animation
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        // Here we could add logic to save the "Like/Pass"
+        if (action === 'train' || action === 'like') {
+            if (nearbyUsers[currentIndex]?.user_id) {
+                await notificationService.sendInvitation(nearbyUsers[currentIndex].user_id, "Un Aliado");
+            }
+        }
+
+        handleNext();
+        setDirection(null);
+        setIsAnimating(false);
+    };
+
     // Swipe Hook
     const { swipeState, handlers: swipeHandlers } = useSwipe({
         onSwipeLeft: () => !isAnimating && handleAction('skip'),
@@ -235,35 +267,6 @@ export const Radar = () => {
         }
     };
 
-    // Card Actions
-    const handleNext = () => {
-        // Infinite Loop Logic
-        if (nearbyUsers.length === 0 || isAnimating) return;
-        setCurrentIndex((prev) => (prev + 1) % nearbyUsers.length);
-        setIsFollowing(false);
-    };
-
-    const handleAction = async (action: 'skip' | 'train' | 'like') => {
-        if (isAnimating) return;
-
-        // Set animation direction
-        setDirection(action === 'skip' ? 'left' : 'right');
-        setIsAnimating(true);
-
-        // Wait for animation
-        await new Promise(resolve => setTimeout(resolve, 300));
-
-        // Here we could add logic to save the "Like/Pass"
-        if (action === 'train' || action === 'like') {
-            if (nearbyUsers[currentIndex].user_id) {
-                await notificationService.sendInvitation(nearbyUsers[currentIndex].user_id, "Un Aliado");
-            }
-        }
-
-        handleNext();
-        setDirection(null);
-        setIsAnimating(false);
-    };
 
     const handleBoostConfirm = async () => {
         if (!user || isBoosting) return;
@@ -283,7 +286,6 @@ export const Radar = () => {
         }
     };
 
-    const currentUser = nearbyUsers.length > 0 ? nearbyUsers[currentIndex] : null;
 
 
     return (
