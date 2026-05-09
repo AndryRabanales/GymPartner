@@ -598,6 +598,7 @@ export const Radar = () => {
                                     </button>
                                 </div>
                             </div>
+                            </div>
                         </div>
                     )}
                 </div>
