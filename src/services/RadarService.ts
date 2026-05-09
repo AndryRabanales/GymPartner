@@ -8,6 +8,8 @@ export interface RadarUser {
     username: string;
     avatar_url: string;
     banner_url?: string;
+    gym_banner_url?: string;
+    gym_custom_color?: string;
     description?: string;
     checkins_count: number;
     gym_id: string;
@@ -53,6 +55,8 @@ export const radarService = {
             username: user.username,
             avatar_url: user.avatar_url,
             banner_url: user.banner_url,
+            gym_banner_url: user.gym_banner_url,
+            gym_custom_color: user.gym_custom_color,
             description: user.description,
             checkins_count: user.checkins_count,
             gym_id: user.gym_id,
