@@ -50,7 +50,10 @@ const FadeInImage = ({ src, alt, className, imgClassName = "" }: { src: string; 
                     loaded ? 'opacity-100' : 'opacity-0'
                 }`}
                 onLoad={() => setLoaded(true)}
-                onError={() => setError(true)}
+                onError={() => {
+                    setError(true);
+                    setLoaded(true); // Stop spinner
+                }}
                 loading="eager"
             />
         </div>
