@@ -8,6 +8,9 @@ import { useAuth } from '../context/AuthContext';
 import { userService } from '../services/UserService';
 import { supabase } from '../lib/supabase';
 import { BoostModal } from '../components/profile/BoostModal';
+import { socialService } from '../services/SocialService';
+import { Star, ExternalLink, UserCheck, UserPlus, Swords } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 // Helper component for fade-in images with skeleton
 const FadeInImage = ({ src, alt, className, imgClassName = "" }: { src: string; alt: string; className?: string; imgClassName?: string }) => {
@@ -52,16 +55,18 @@ const FadeInImage = ({ src, alt, className, imgClassName = "" }: { src: string; 
 
 
 export const Radar = () => {
+    const { user } = useAuth();
+    const navigate = useNavigate();
     const [nearbyUsers, setNearbyUsers] = useState<RadarUser[]>([]);
     const [loading, setLoading] = useState(true); // Start loading immediately
     const [locationError, setLocationError] = useState<string | null>(null);
     const [radius] = useState(100);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [scanComplete, setScanComplete] = useState(false);
+    const [isFollowing, setIsFollowing] = useState(false);
     const initialized = useRef(false);
     const [direction, setDirection] = useState<'left' | 'right' | null>(null);
     const [isAnimating, setIsAnimating] = useState(false);
-    const { user } = useAuth();
     const [isUserBoosted, setIsUserBoosted] = useState(false);
     const [isBoosting, setIsBoosting] = useState(false);
     const [isBoostModalOpen, setIsBoostModalOpen] = useState(false);
@@ -205,20 +210,41 @@ export const Radar = () => {
         }
     }, []);
 
-    // Background preloading removed to prioritize CURRENT card bandwidth
+    // Check follow status for current user
     useEffect(() => {
-        // Disabled to ensure current images load with 100% of available connection.
-    }, [currentIndex, nearbyUsers]);
+        const checkFollow = async () => {
+            if (user && currentUser) {
+                const following = await socialService.getFollowStatus(user.id, currentUser.user_id);
+                setIsFollowing(following);
+            }
+        };
+        checkFollow();
+    }, [user, currentIndex, nearbyUsers, currentUser]);
 
+    // Follow Toggle Logic
+    const handleFollowToggle = async () => {
+        if (!user || !currentUser) return;
+        try {
+            if (isFollowing) {
+                await socialService.unfollowUser(user.id, currentUser.user_id);
+            } else {
+                await socialService.followUser(user.id, currentUser.user_id);
+            }
+            setIsFollowing(!isFollowing);
+        } catch (err) {
+            console.error("Follow error", err);
+        }
+    };
 
     // Card Actions
     const handleNext = () => {
         // Infinite Loop Logic
         if (nearbyUsers.length === 0 || isAnimating) return;
         setCurrentIndex((prev) => (prev + 1) % nearbyUsers.length);
+        setIsFollowing(false);
     };
 
-    const handleAction = async (action: 'skip' | 'train') => {
+    const handleAction = async (action: 'skip' | 'train' | 'like') => {
         if (isAnimating) return;
 
         // Set animation direction
@@ -229,14 +255,9 @@ export const Radar = () => {
         await new Promise(resolve => setTimeout(resolve, 300));
 
         // Here we could add logic to save the "Like/Pass"
-        if (action === 'train') {
-            console.log(`Reclutando a ${nearbyUsers[currentIndex].username}`);
-
+        if (action === 'train' || action === 'like') {
             if (nearbyUsers[currentIndex].user_id) {
-                const success = await notificationService.sendInvitation(nearbyUsers[currentIndex].user_id, "Un Aliado");
-                if (success) {
-                    alert("¡Invitación enviada!");
-                }
+                await notificationService.sendInvitation(nearbyUsers[currentIndex].user_id, "Un Aliado");
             }
         }
 
@@ -422,19 +443,39 @@ export const Radar = () => {
                             <button
                                 onClick={() => handleAction('skip')}
                                 disabled={isAnimating}
-                                className="w-14 h-14 rounded-full border-2 border-neutral-700 bg-neutral-900/80 backdrop-blur-sm text-neutral-400 flex items-center justify-center hover:bg-neutral-800 hover:text-white hover:border-neutral-600 hover:scale-110 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                                className="w-14 h-14 rounded-full border-2 border-neutral-700 bg-neutral-900/80 backdrop-blur-sm text-neutral-400 flex items-center justify-center hover:bg-neutral-800 hover:border-white transition-all active:scale-95 shadow-lg group"
                             >
-                                <X size={24} strokeWidth={2.5} />
+                                <X size={24} className="group-hover:rotate-90 transition-transform" />
                             </button>
 
-                            {/* ACCEPT BUTTON - Solid Capsule "Pro" Style */}
+                            {/* FOLLOW BUTTON */}
                             <button
-                                onClick={() => handleAction('train')}
+                                onClick={handleFollowToggle}
                                 disabled={isAnimating}
-                                className="h-14 px-8 rounded-full bg-gradient-to-r from-gym-primary to-yellow-400 text-black flex items-center gap-3 shadow-xl shadow-yellow-500/30 hover:shadow-yellow-500/50 hover:scale-105 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className={`w-14 h-14 rounded-full border-2 flex items-center justify-center transition-all active:scale-95 shadow-lg ${isFollowing 
+                                    ? 'bg-neutral-800 border-neutral-600 text-neutral-400' 
+                                    : 'bg-white border-white text-black hover:bg-neutral-200'}`}
                             >
-                                <UserPlus size={20} strokeWidth={2.5} />
-                                <span className="text-sm font-black uppercase tracking-widest">Invitar</span>
+                                {isFollowing ? <UserCheck size={24} /> : <UserPlus size={24} />}
+                            </button>
+
+                            {/* LIKE/INVITE BUTTON - Gym Primary Impact */}
+                            <button
+                                onClick={() => handleAction('like')}
+                                disabled={isAnimating}
+                                className="w-20 h-20 rounded-full bg-gym-primary text-black flex items-center justify-center hover:scale-110 active:scale-90 transition-all shadow-[0_0_30px_rgba(229,255,0,0.4)] relative group"
+                            >
+                                <div className="absolute inset-0 rounded-full bg-gym-primary animate-ping opacity-20 group-hover:opacity-40"></div>
+                                <Swords size={32} className="relative z-10" />
+                            </button>
+
+                            {/* VIEW PROFILE BUTTON */}
+                            <button
+                                onClick={() => navigate(`/player/${currentUser.username}`)}
+                                disabled={isAnimating}
+                                className="w-14 h-14 rounded-full border-2 border-yellow-500/30 bg-yellow-500/10 text-yellow-500 flex items-center justify-center hover:bg-yellow-500 hover:text-black transition-all active:scale-95 shadow-lg"
+                            >
+                                <ExternalLink size={24} />
                             </button>
 
                             {/* BOOST BUTTON */}
