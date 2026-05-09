@@ -551,7 +551,6 @@ export const WorkoutSession = () => {
                 setStartTime(new Date());
                 setElapsedTime("00:00");
                 setIsFinished(false);
-                setActiveExercises([]); // CRITICAL: Clear any stale state before starting fresh
                 console.log('✅ Session started:', newSession.id);
             }
         } catch (err) {
@@ -2033,8 +2032,8 @@ export const WorkoutSession = () => {
                                 {routines.map((routine) => (
                                     <button
                                         key={routine.id}
-                                        onClick={() => {
-                                            startNewSession(); // START TIMER HERE
+                                        onClick={async () => {
+                                            await startNewSession(); // Await to ensure session is ready
                                             loadRoutine(routine);
                                             setCurrentRoutineName(routine.name);
                                             setShowStartOptionsModal(false);
