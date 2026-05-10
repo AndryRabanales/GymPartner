@@ -60,27 +60,33 @@ export const Radar = () => {
     const loadNearbyUsers = async () => {
         setLoading(true);
         try {
-            // 1. Fetch profiles with REAL stats columns
+            console.log("🛰️ [RADAR] Escaneando guerreros...");
+            // 1. Fetch profiles - PRIORITIZE BOOSTED USERS
             const { data: profiles, error: pError } = await supabase
                 .from('profiles')
-                .select('id, username, avatar_url, description, custom_settings, home_gym_id, checkins_count, xp')
+                .select('*')
                 .neq('id', authUser?.id)
-                .limit(20);
+                .order('boost_until', { ascending: false, nullsFirst: false }) // BOOSTED FIRST
+                .limit(50); // Fetch a good batch
 
             if (pError) throw pError;
 
             if (profiles) {
-                // 2. Fetch Gym Names and IMAGES (Official)
+                // 2. Fetch Gym Names and IMAGES (Official) - SAFETY CHECK
                 const gymIds = [...new Set(profiles.map(p => p.home_gym_id).filter(Boolean))];
-                const { data: gymsData } = await supabase
-                    .from('gyms')
-                    .select('id, name, image_url')
-                    .in('id', gymIds);
+                let gymMap: any = {};
+                
+                if (gymIds.length > 0) {
+                    const { data: gymsData } = await supabase
+                        .from('gyms')
+                        .select('id, name, image_url')
+                        .in('id', gymIds);
 
-                const gymMap = (gymsData || []).reduce((acc: any, g) => {
-                    acc[g.id] = { name: g.name, image: g.image_url };
-                    return acc;
-                }, {});
+                    gymMap = (gymsData || []).reduce((acc: any, g) => {
+                        acc[g.id] = { name: g.name, image: g.image_url };
+                        return acc;
+                    }, {});
+                }
 
                 // 2.2 NEW: Fetch CUSTOM Main Base Assets for these users
                 const profileIds = profiles.map(p => p.id);
@@ -101,6 +107,8 @@ export const Radar = () => {
                     const gymInfo = gymMap[p.home_gym_id || ''] || { name: "Gimnasio Partner", image: null };
                     const customBase = customBaseMap[p.id];
                     
+                    const isBoosted = p.boost_until && new Date(p.boost_until) > new Date();
+                    
                     return {
                         ...p,
                         gym_name: gymInfo.name,
@@ -112,9 +120,9 @@ export const Radar = () => {
                         following_count: 0,
                         is_following: false,
                         stats_loaded: false,
-                        distance: (Math.random() * 5 + 0.5).toFixed(1),
+                        distance: isBoosted ? '🔥 ELITE' : (Math.random() * 5 + 0.5).toFixed(1),
                         bio: p.description || settings.description || settings.bio || "¡Entrenando duro para subir de rango! 💪 🔥",
-                        is_pro: (p.xp || 0) > 1000
+                        is_pro: (p.xp || 0) > 1000 || isBoosted
                     };
                 });
                 setNearbyUsers(enriched);
