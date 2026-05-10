@@ -31,12 +31,9 @@ export const PublicProfile = () => {
     const loadProfile = async (identifier: string) => {
         setLoading(true);
         try {
-            // SMART SEARCH: Detect if identifier is a UUID or a Username
+            // 1. Find the core profile
             const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(identifier);
-            
-            let query = supabase
-                .from('profiles')
-                .select('id, username, avatar_url');
+            let query = supabase.from('profiles').select('*'); // Select all to get custom_settings if any
 
             if (isUUID) {
                 query = query.eq('id', identifier);
@@ -45,19 +42,15 @@ export const PublicProfile = () => {
             }
 
             const { data, error } = await query.limit(1).maybeSingle();
-
-            if (error) {
-                console.error("Supabase error:", error);
-                throw error;
-            }
+            if (error) throw error;
 
             if (data) {
-                // 1. Fetch REAL stats with direct counts for maximum reliability
+                // 2. Fetch REAL stats & Gym info with SAFE COUNTING (no select('id'))
                 const [followersRes, followingRes, workoutsRes, gymRes] = await Promise.all([
-                    supabase.from('follows').select('id', { count: 'exact' }).eq('following_id', data.id),
-                    supabase.from('follows').select('id', { count: 'exact' }).eq('follower_id', data.id),
-                    supabase.from('workout_sessions').select('id', { count: 'exact' }).eq('user_id', data.id),
-                    supabase.from('user_gyms').select('*, gyms(name, image_url)').eq('user_id', data.id).eq('is_home_base', true).maybeSingle()
+                    supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', data.id),
+                    supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', data.id),
+                    supabase.from('workout_sessions').select('*', { count: 'exact', head: true }).eq('user_id', data.id).not('finished_at', 'is', null),
+                    supabase.from('user_gyms').select('*, gyms:gym_id(name, image_url)').eq('user_id', data.id).eq('is_home_base', true).maybeSingle()
                 ]);
 
                 if (authUser) {
@@ -65,21 +58,23 @@ export const PublicProfile = () => {
                     setIsFollowing(following);
                 }
 
+                // Identify the real GymPartner photo
+                const realAvatar = data.avatar_url;
+                const realBanner = data.banner_url || (data.custom_settings as any)?.banner_url;
+
                 setProfile({
                     ...data,
-                    // Use real counts
+                    avatar_url: realAvatar,
+                    banner_url: realBanner || FALLBACK_BANNERS[Math.floor(Math.random() * FALLBACK_BANNERS.length)],
                     training_days_count: workoutsRes.count || 0,
                     followers_count: followersRes.count || 0,
                     following_count: followingRes.count || 0,
-                    // Real Gym Info
-                    gym_name: (gymRes.data as any)?.gyms?.name || "Guerrero Independiente",
-                    gym_image: (gymRes.data as any)?.gyms?.image_url || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80',
-                    banner_url: data.banner_url || FALLBACK_BANNERS[Math.floor(Math.random() * FALLBACK_BANNERS.length)],
-                    bio: data.bio || "Guerrero de la legión GymPartner. 🔥",
-                    distance: 'Base'
+                    gym_name: (gymRes.data as any)?.gyms?.name || "Base Central",
+                    gym_image: (gymRes.data as any)?.gyms?.image_url || FALLBACK_BANNERS[0],
+                    bio: data.bio || (data.custom_settings as any)?.bio || "Guerrero de élite en GymPartner. 🔥",
+                    distance: 'Local'
                 });
             } else {
-                // Not found state
                 throw new Error("Profile not found");
             }
         } catch (error) {
