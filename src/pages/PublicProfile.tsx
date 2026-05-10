@@ -30,10 +30,15 @@ export const PublicProfile = () => {
 
     const loadProfile = async (identifier: string) => {
         setLoading(true);
+        console.log("🔍 [PublicProfile] Starting load for:", identifier);
+        console.log("👤 [PublicProfile] Current Auth User:", authUser ? authUser.email : "NOT LOGGED IN");
+
         try {
             // 1. Find the core profile safely
             const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(identifier);
-            let query = supabase.from('profiles').select('*'); // Select * to get all potential custom fields
+            console.log("🆔 [PublicProfile] Is identifier UUID?", isUUID);
+
+            let query = supabase.from('profiles').select('*');
 
             if (isUUID) {
                 query = query.eq('id', identifier);
@@ -42,49 +47,79 @@ export const PublicProfile = () => {
             }
 
             const { data: profileData, error: profileError } = await query.limit(1).maybeSingle();
-            if (profileError) throw profileError;
+            
+            if (profileError) {
+                console.error("❌ [PublicProfile] Profile Query Error:", profileError);
+                throw profileError;
+            }
+
+            console.log("📄 [PublicProfile] Profile Raw Data:", profileData);
 
             if (profileData) {
-                // 2. Fetch REAL data from all services
-                const [stats, gymRes] = await Promise.all([
-                    socialService.getProfileStats(profileData.id),
-                    supabase
-                        .from('user_gyms')
-                        .select('*, gyms(name, image_url)')
-                        .eq('user_id', profileData.id)
-                        .eq('is_home_base', true)
-                        .maybeSingle()
-                ]);
+                // 2. Fetch REAL stats & Gym info
+                console.log("📊 [PublicProfile] Fetching stats for user ID:", profileData.id);
+                
+                try {
+                    const [stats, gymRes] = await Promise.all([
+                        socialService.getProfileStats(profileData.id),
+                        supabase
+                            .from('user_gyms')
+                            .select('*, gyms(name, image_url)')
+                            .eq('user_id', profileData.id)
+                            .eq('is_home_base', true)
+                            .maybeSingle()
+                    ]);
 
-                if (authUser) {
-                    const following = await socialService.getFollowStatus(authUser.id, profileData.id);
-                    setIsFollowing(following);
+                    console.log("📈 [PublicProfile] Stats Result:", stats);
+                    console.log("🏢 [PublicProfile] Gym Result:", gymRes.data);
+
+                    if (gymRes.error) console.warn("⚠️ [PublicProfile] Gym Query Warning:", gymRes.error);
+
+                    if (authUser) {
+                        const following = await socialService.getFollowStatus(authUser.id, profileData.id);
+                        console.log("🤝 [PublicProfile] Is following?", following);
+                        setIsFollowing(following);
+                    }
+
+                    // 3. MAP REAL DATA
+                    const finalProfile = {
+                        ...profileData,
+                        avatar_url: profileData.avatar_url,
+                        banner_url: profileData.banner_url || (profileData.custom_settings as any)?.banner_url || FALLBACK_BANNERS[0],
+                        bio: profileData.description || "¡Entrenando duro para subir de rango! 💪🔥",
+                        gym_name: (gymRes.data as any)?.gyms?.name || "Base Central",
+                        gym_image: (gymRes.data as any)?.gyms?.image_url || FALLBACK_BANNERS[1],
+                        training_days_count: stats.workoutsCount || 0,
+                        followers_count: stats.followersCount || 0,
+                        following_count: stats.followingCount || 0,
+                        distance: 'Base'
+                    };
+
+                    console.log("✅ [PublicProfile] FINAL MAPPED PROFILE:", finalProfile);
+                    setProfile(finalProfile);
+                } catch (innerError) {
+                    console.error("❌ [PublicProfile] Error fetching secondary data (stats/gym):", innerError);
+                    // Still set the profile with what we have
+                    setProfile({
+                        ...profileData,
+                        bio: profileData.description || "¡Entrenando duro! 💪🔥",
+                        training_days_count: 0,
+                        followers_count: 0,
+                        following_count: 0
+                    });
                 }
-
-                // 3. MAP REAL DATA (Using correct schema names: description, not bio)
-                setProfile({
-                    ...profileData,
-                    avatar_url: profileData.avatar_url,
-                    banner_url: profileData.banner_url || (profileData.custom_settings as any)?.banner_url || FALLBACK_BANNERS[0],
-                    bio: profileData.description || "¡Entrenando duro para subir de rango! 💪🔥",
-                    gym_name: (gymRes.data as any)?.gyms?.name || "Base Central GymPartner",
-                    gym_image: (gymRes.data as any)?.gyms?.image_url || FALLBACK_BANNERS[1],
-                    training_days_count: stats.workoutsCount || 0,
-                    followers_count: stats.followersCount || 0,
-                    following_count: stats.followingCount || 0,
-                    distance: 'Local'
-                });
             } else {
+                console.warn("⚠️ [PublicProfile] NO PROFILE DATA FOUND for:", identifier);
                 throw new Error("Profile not found");
             }
-        } catch (error) {
-            console.error("Error loading profile:", error);
+        } catch (error: any) {
+            console.error("❌ [PublicProfile] FATAL ERROR:", error);
             setProfile({
                 id: 'unknown',
                 username: identifier || 'Guerrero',
                 avatar_url: null,
                 banner_url: FALLBACK_BANNERS[0],
-                bio: "Este guerrero aún no ha reclamado su identidad en la legión.",
+                bio: `Error: ${error.message || 'No se pudo cargar el perfil'}`,
                 gym_name: "Desconocido",
                 gym_image: FALLBACK_BANNERS[1],
                 training_days_count: 0,
