@@ -33,16 +33,16 @@ export const AppLayout = () => {
             {!isReelsPage && (
                 <header className="fixed top-6 left-1/2 -translate-x-1/2 w-[92%] max-w-7xl z-50 animate-in slide-in-from-top-8 duration-700">
                     <nav className="bg-black/40 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-2 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
-                        <div className="px-4 sm:px-6">
+                        <div className="px-3 sm:px-6">
                             <div className="flex items-center justify-between h-14 sm:h-16">
-                                <Link to="/" className="flex items-center gap-3 no-underline group">
+                                <Link to="/" className="flex items-center gap-2 no-underline group">
                                     <div className="relative group flex items-center gap-1.5">
                                         <div className="relative">
                                             <div className="absolute inset-0 bg-white/5 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                                             <img
                                                 src="/logo-gp.png"
                                                 alt="GymPartner"
-                                                className="h-10 w-auto sm:h-11 relative z-10 transition-all duration-500 group-hover:scale-110 drop-shadow-[0_0_20px_rgba(255,255,255,0.2)] animate-in zoom-in-50 duration-700"
+                                                className="h-9 w-auto sm:h-11 relative z-10 transition-all duration-500 group-hover:scale-110 drop-shadow-[0_0_20px_rgba(255,255,255,0.2)] animate-in zoom-in-50 duration-700"
                                             />
                                         </div>
                                         <div className="flex flex-col">
@@ -72,61 +72,63 @@ export const AppLayout = () => {
                                     ))}
                                 </nav>
 
-                                <div className="flex items-center gap-6 sm:gap-8">
+                                <div className="flex items-center gap-4 sm:gap-8">
                                     {user && <GPointsDisplay />}
-                                    <div className="flex items-center gap-4">
+                                    
+                                    <div className="flex items-center gap-3">
                                         {user && <NotificationBell />}
                                         {user ? (
-                                        <div className="relative z-50">
-                                            <button
-                                                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                                                className="flex items-center gap-1.5 bg-neutral-900/50 hover:bg-neutral-800 pl-0.5 pr-3 py-1 rounded-2xl border border-white/5 hover:border-gym-primary/30 transition-all shadow-lg group/avatar"
-                                            >
-                                                <div className="relative w-8 h-8">
-                                                    <div className="absolute inset-0 bg-gym-primary blur-md rounded-full opacity-0 group-hover/avatar:opacity-40 transition-opacity"></div>
-                                                    <img
-                                                        src={user.user_metadata.avatar_url}
-                                                        alt="Avatar"
-                                                        className="relative w-full h-full rounded-full object-cover border border-white/10"
-                                                    />
-                                                </div>
-                                                <span className="hidden sm:block text-xs font-black text-neutral-400 group-hover/avatar:text-white transition-colors uppercase tracking-widest">
-                                                    {user.user_metadata.full_name?.split(' ')[0]}
-                                                </span>
-                                            </button>
-
-                                            {isUserMenuOpen && (
-                                                <>
-                                                    <div className="fixed inset-0 z-[90]" onClick={() => setIsUserMenuOpen(false)}></div>
-                                                    <div className="absolute right-0 mt-4 w-60 bg-neutral-950/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl py-2 animate-in fade-in slide-in-from-top-2 duration-200 z-[100]">
-                                                        <div className="px-4 py-3 border-b border-white/5 mb-2 bg-white/2">
-                                                            <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mb-1">Cuenta</p>
-                                                            <p className="text-sm font-bold text-white truncate">{user.user_metadata.full_name}</p>
-                                                        </div>
-                                                        <div className="border-t border-white/5 mt-2 pt-2 mx-2">
-                                                            <button
-                                                                onClick={() => {
-                                                                    signOut();
-                                                                    setIsUserMenuOpen(false);
-                                                                }}
-                                                                className="w-full text-left px-4 py-3 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors font-bold flex items-center gap-3 rounded-xl"
-                                                            >
-                                                                <LogOut size={16} /> Cerrar Sesión
-                                                            </button>
-                                                        </div>
+                                            <div className="relative z-50">
+                                                <button
+                                                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                                                    className="flex items-center gap-1.5 bg-neutral-900/50 hover:bg-neutral-800 pl-0.5 pr-3 py-1 rounded-2xl border border-white/5 hover:border-gym-primary/30 transition-all shadow-lg group/avatar"
+                                                >
+                                                    <div className="relative w-7 h-7 sm:w-8 sm:h-8">
+                                                        <div className="absolute inset-0 bg-gym-primary blur-md rounded-full opacity-0 group-hover/avatar:opacity-40 transition-opacity"></div>
+                                                        <img
+                                                            src={user.user_metadata.avatar_url}
+                                                            alt="Avatar"
+                                                            className="relative w-full h-full rounded-full object-cover border border-white/10"
+                                                        />
                                                     </div>
-                                                </>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <Link
-                                            to="/login"
-                                            className="hidden md:flex items-center gap-2 bg-gym-primary text-black hover:bg-yellow-400 px-6 py-2.5 rounded-full text-sm font-black tracking-wide transition-all shadow-[0_0_20px_rgba(250,204,21,0.15)] hover:shadow-[0_0_30px_rgba(250,204,21,0.3)] hover:-translate-y-0.5 no-underline"
-                                        >
-                                            <LogIn size={18} strokeWidth={2.5} />
-                                            <span>ENTRAR</span>
-                                        </Link>
-                                    )}
+                                                    <span className="hidden sm:block text-[10px] font-black text-neutral-400 group-hover/avatar:text-white transition-colors uppercase tracking-widest">
+                                                        {user.user_metadata.full_name?.split(' ')[0]}
+                                                    </span>
+                                                </button>
+
+                                                {isUserMenuOpen && (
+                                                    <>
+                                                        <div className="fixed inset-0 z-[90]" onClick={() => setIsUserMenuOpen(false)}></div>
+                                                        <div className="absolute right-0 mt-4 w-60 bg-neutral-950/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl py-2 animate-in fade-in slide-in-from-top-2 duration-200 z-[100]">
+                                                            <div className="px-4 py-3 border-b border-white/5 mb-2 bg-white/2">
+                                                                <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mb-1">Cuenta</p>
+                                                                <p className="text-sm font-bold text-white truncate">{user.user_metadata.full_name}</p>
+                                                            </div>
+                                                            <div className="border-t border-white/5 mt-2 pt-2 mx-2">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        signOut();
+                                                                        setIsUserMenuOpen(false);
+                                                                    }}
+                                                                    className="w-full text-left px-4 py-3 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors font-bold flex items-center gap-3 rounded-xl"
+                                                                >
+                                                                    <LogOut size={16} /> Cerrar Sesión
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <Link
+                                                to="/login"
+                                                className="hidden md:flex items-center gap-2 bg-gym-primary text-black hover:bg-yellow-400 px-6 py-2.5 rounded-full text-sm font-black tracking-wide transition-all shadow-[0_0_20px_rgba(250,204,21,0.15)] hover:shadow-[0_0_30px_rgba(250,204,21,0.3)] hover:-translate-y-0.5 no-underline"
+                                            >
+                                                <LogIn size={18} strokeWidth={2.5} />
+                                                <span>ENTRAR</span>
+                                            </Link>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>
