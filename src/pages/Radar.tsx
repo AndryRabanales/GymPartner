@@ -169,40 +169,50 @@ export const Radar = () => {
     };
 
     const handleFollow = async () => {
-        if (!authUser || !nearbyUsers[currentIndex] || isBoosting) return;
-        const targetUser = nearbyUsers[currentIndex];
-
-        // SAFETY CHECK: Don't follow if already following
-        if (targetUser.is_following) {
+        if (!authUser || !currentUser || isBoosting) return;
+        
+        // 1. SAFETY CHECK: Don't follow if already following
+        if (currentUser.is_following) {
             toast.success("¡Ya sigues a este guerrero!");
             return;
         }
 
-        try {
-            await socialService.followUser(authUser.id, targetUser.id);
-            toast.success(`¡Siguiendo a ${targetUser.username}!`);
-            
-            // Optimistic Update
-            const updated = [...nearbyUsers];
-            updated[currentIndex] = { ...targetUser, is_following: true, followers_count: (targetUser.followers_count || 0) + 1 };
-            setNearbyUsers(updated);
+        // 2. OPTIMISTIC UPDATE: Update UI INSTANTLY
+        const targetId = currentUser.id;
+        const updatedUsers = [...nearbyUsers];
+        updatedUsers[currentIndex] = { 
+            ...currentUser, 
+            is_following: true, 
+            followers_count: (currentUser.followers_count || 0) + 1 
+        };
+        setNearbyUsers(updatedUsers);
 
-            // Notify
-            await notificationService.createNotification(targetUser.id, {
-                type: 'follow',
-                title: 'Nuevo Seguidor',
+        try {
+            // 3. DATABASE ACTION (Background)
+            await socialService.followUser(authUser.id, targetId);
+            toast.success(`¡Siguiendo a ${currentUser.username}!`);
+            
+            // 4. NOTIFY (Background)
+            await notificationService.createNotification(targetId, {
+                type: 'system',
+                title: 'NUEVO SEGUIDOR',
                 content: `${authUser.user_metadata?.full_name || 'Alguien'} ha comenzado a seguirte.`,
                 data: { follower_id: authUser.id }
             });
         } catch (error: any) {
-            if (error.code === '23505' || error.message?.includes('Conflict')) {
-                // Already following (Conflict) - Just update UI
-                const updated = [...nearbyUsers];
-                updated[currentIndex] = { ...targetUser, is_following: true };
-                setNearbyUsers(updated);
-            } else {
+            // ROLLBACK if real error (except Conflict)
+            if (error.code !== '23505' && !error.message?.includes('Conflict')) {
                 console.error("Error following:", error);
                 toast.error("No se pudo seguir al usuario");
+                
+                // Revert state
+                const reverted = [...nearbyUsers];
+                reverted[currentIndex] = { 
+                    ...currentUser, 
+                    is_following: false, 
+                    followers_count: Math.max(0, (currentUser.followers_count || 0)) 
+                };
+                setNearbyUsers(reverted);
             }
         }
     };
