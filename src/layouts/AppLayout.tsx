@@ -25,10 +25,12 @@ export const AppLayout = () => {
     const shouldShowBottomNav = user && !isWorkoutPage && !isContentPage && isBottomNavVisible;
 
     return (
-        <div className="h-[100dvh] bg-neutral-950 text-white flex flex-col overflow-hidden">
+        <div className="h-[100dvh] text-white flex flex-col overflow-hidden relative">
+            {/* Texture overlay for more depth */}
+            <div className="fixed inset-0 bg-black/20 pointer-events-none z-0"></div>
             {/* Top Navigation - Hidden only on Reels */}
             {!isReelsPage && (
-                <nav className="border-b border-white/10 bg-neutral-950/80 backdrop-blur-2xl sticky top-0 z-50 transition-all duration-500 shrink-0 animate-in fade-in slide-in-from-top-4 duration-700">
+                <nav className="border-b border-white/10 bg-black/60 backdrop-blur-2xl sticky top-0 z-50 transition-all duration-500 shrink-0 animate-in fade-in slide-in-from-top-4 duration-700">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="flex items-center justify-between h-16 sm:h-20">
                             <Link to="/" className="flex items-center gap-3 no-underline group">

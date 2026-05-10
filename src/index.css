@@ -20,11 +20,19 @@
 /* Custom Base Styles for Premium Feel */
 :root {
   color-scheme: dark;
+  --gym-primary: #fbbf24; /* Yellow Accent */
+  --gym-secondary: #ffffff; /* White */
+  --gym-background: #000000; /* Black */
 }
 
 body {
-  background-color: #121212;
-  color: #e0e0e0;
+  background-image: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('/leather-bg.png');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-color: #000000;
+  color: #ffffff;
   font-family: 'Inter', system-ui, sans-serif;
   width: 100%;
   max-width: 100vw;

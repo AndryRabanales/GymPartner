@@ -142,9 +142,9 @@ export const RankingPage = () => {
     const currentGym = userGyms[currentGymIndex];
 
     return (
-        <div className="bg-neutral-950 pb-20">
+        <div className="pb-20 bg-transparent">
             {/* Header */}
-            <div className="sticky top-0 z-30 bg-neutral-950/95 backdrop-blur-xl border-b border-white/5 p-4 shadow-2xl shadow-black/50">
+            <div className="sticky top-0 z-30 bg-black/60 backdrop-blur-2xl border-b border-white/5 p-4 shadow-2xl shadow-black/50">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
                     <h1 className="flex items-center gap-3 group cursor-default">
                         <div className="relative">
