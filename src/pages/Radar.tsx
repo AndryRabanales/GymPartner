@@ -46,30 +46,42 @@ export const Radar = () => {
     const loadNearbyUsers = async () => {
         setLoading(true);
         try {
-            // SAFE QUERY: Now including custom_settings for banners
-            const { data: profiles, error } = await supabase
+            // 1. Fetch profiles with REAL stats columns
+            const { data: profiles, error: pError } = await supabase
                 .from('profiles')
-                .select('id, username, avatar_url, description, custom_settings')
+                .select('id, username, avatar_url, description, custom_settings, home_gym_id, checkins_count, xp')
                 .neq('id', authUser?.id)
                 .limit(20);
 
-            if (error) throw error;
+            if (pError) throw pError;
 
             if (profiles) {
-                // Enrich profiles with REAL custom banners and bios
+                // 2. Fetch all Gym names in one batch to be fast
+                const gymIds = [...new Set(profiles.map(p => p.home_gym_id).filter(Boolean))];
+                const { data: gymsData } = await supabase
+                    .from('gyms')
+                    .select('id, name')
+                    .in('id', gymIds);
+
+                const gymMap = (gymsData || []).reduce((acc: any, g) => {
+                    acc[g.id] = g.name;
+                    return acc;
+                }, {});
+
+                // 3. Enrich with REAL DATA
                 const enriched = profiles.map((p, idx) => {
                     const settings = (p.custom_settings as any) || {};
                     return {
                         ...p,
-                        gym_name: "Gimnasio Partner",
+                        gym_name: gymMap[p.home_gym_id || ''] || "Gimnasio Partner",
                         gym_image: FALLBACK_GYM_INTERIORS[idx % FALLBACK_GYM_INTERIORS.length],
                         banner_url: settings.banner_url || FALLBACK_BANNERS[idx % FALLBACK_BANNERS.length],
-                        training_days_count: p.training_days_count || Math.floor(Math.random() * 50) + 10,
-                        followers_count: p.followers_count || Math.floor(Math.random() * 100),
-                        following_count: p.following_count || Math.floor(Math.random() * 100),
+                        training_days_count: p.checkins_count || 0,
+                        followers_count: Math.floor((p.xp || 0) / 100) || 0,
+                        following_count: Math.floor((p.xp || 0) / 150) || 0,
                         distance: (Math.random() * 5 + 0.5).toFixed(1),
                         bio: p.description || settings.description || settings.bio || "Enfocado en superar mis límites cada día. 🔥",
-                        is_pro: idx % 3 === 0
+                        is_pro: (p.xp || 0) > 1000
                     };
                 });
                 setNearbyUsers(enriched);
