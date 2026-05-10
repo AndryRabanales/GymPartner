@@ -258,6 +258,16 @@ export const Radar = () => {
                                     </button>
 
                                     <button 
+                                        onClick={() => {
+                                            navigate(`/player/${currentUser.id}`);
+                                        }}
+                                        className="w-14 h-14 rounded-2xl bg-neutral-900 border border-white/5 flex items-center justify-center text-neutral-500 hover:text-white hover:bg-neutral-800 transition-all active:scale-90 shadow-xl"
+                                        title="Ver Perfil"
+                                    >
+                                        <Eye size={24} />
+                                    </button>
+
+                                    <button 
                                         onClick={() => setIsBoostModalOpen(true)}
                                         className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all active:scale-90 shadow-xl ${
                                             userProfile?.boost_until && new Date(userProfile.boost_until) > new Date()
