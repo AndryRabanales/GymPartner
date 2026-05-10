@@ -75,46 +75,21 @@ export const Radar = () => {
                     return acc;
                 }, {});
 
-                // 2.5 Fetch REAL Follow Counts for all these users
-                const profileIds = profiles.map(p => p.id);
-                const { data: followsData } = await supabase
-                    .from('follows')
-                    .select('follower_id, following_id')
-                    .or(`follower_id.in.(${profileIds.join(',')}),following_id.in.(${profileIds.join(',')})`);
-
-                const statsMap = profileIds.reduce((acc: any, id) => {
-                    acc[id] = { followers: 0, following: 0, is_following: false };
-                    return acc;
-                }, {});
-
-                if (followsData) {
-                    followsData.forEach(f => {
-                        if (statsMap[f.following_id]) statsMap[f.following_id].followers++;
-                        if (statsMap[f.follower_id]) statsMap[f.follower_id].following++;
-                        
-                        // Check if I (authUser) am following this person
-                        if (authUser && f.follower_id === authUser.id && statsMap[f.following_id]) {
-                            statsMap[f.following_id].is_following = true;
-                        }
-                    });
-                }
-
-                // 3. Enrich with REAL DATA
+                // 3. Enrich with basic profile info (Stats will load lazily)
                 const enriched = profiles.map((p, idx) => {
                     const settings = (p.custom_settings as any) || {};
-                    const realStats = statsMap[p.id] || { followers: 0, following: 0, is_following: false };
-                    
                     return {
                         ...p,
                         gym_name: gymMap[p.home_gym_id || ''] || "Gimnasio Partner",
                         gym_image: FALLBACK_GYM_INTERIORS[idx % FALLBACK_GYM_INTERIORS.length],
                         banner_url: settings.banner_url || FALLBACK_BANNERS[idx % FALLBACK_BANNERS.length],
                         training_days_count: p.checkins_count || 0,
-                        followers_count: realStats.followers,
-                        following_count: realStats.following,
-                        is_following: realStats.is_following,
+                        followers_count: 0, // Placeholder
+                        following_count: 0, // Placeholder
+                        is_following: false,
+                        stats_loaded: false,
                         distance: (Math.random() * 5 + 0.5).toFixed(1),
-                        bio: p.description || settings.description || settings.bio || "Enfocado en superar mis límites cada día. 🔥",
+                        bio: p.description || settings.description || settings.bio || "¡Entrenando duro para subir de rango! 💪 🔥",
                         is_pro: (p.xp || 0) > 1000
                     };
                 });
@@ -128,6 +103,37 @@ export const Radar = () => {
             setTimeout(() => setScanComplete(true), 1500);
         }
     };
+
+    // LAZY LOAD STATS: Fetch real stats for the CURRENT card only
+    useEffect(() => {
+        const loadCurrentStats = async () => {
+            const currentUser = nearbyUsers[currentIndex];
+            if (!currentUser || currentUser.stats_loaded || !authUser) return;
+
+            try {
+                const [stats, { data: followCheck }] = await Promise.all([
+                    socialService.getProfileStats(currentUser.id),
+                    supabase.from('follows').select('*').eq('follower_id', authUser.id).eq('following_id', currentUser.id).maybeSingle()
+                ]);
+
+                const updatedUsers = [...nearbyUsers];
+                updatedUsers[currentIndex] = {
+                    ...currentUser,
+                    followers_count: stats.followersCount,
+                    following_count: stats.followingCount,
+                    is_following: !!followCheck,
+                    stats_loaded: true
+                };
+                setNearbyUsers(updatedUsers);
+            } catch (err) {
+                console.error("Error lazy loading stats:", err);
+            }
+        };
+
+        if (scanComplete && nearbyUsers.length > 0) {
+            loadCurrentStats();
+        }
+    }, [currentIndex, scanComplete, nearbyUsers.length, authUser]);
 
     useEffect(() => {
         if (authUser) {
