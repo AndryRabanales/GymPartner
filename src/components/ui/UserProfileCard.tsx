@@ -116,11 +116,12 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
                     style={{ backgroundColor: user.gym_color || '#E5FF00' }}
                 >
                     {user.gym_image && (
-                        <div className="absolute inset-0 opacity-40">
+                        <div className="absolute inset-0 opacity-80 group-hover:opacity-100 transition-opacity duration-500">
                             <img src={user.gym_image} alt="Gym" className="w-full h-full object-cover" />
                         </div>
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
+                    {/* Subtle Overlay for Readability */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
                     
                     <div className="relative z-10 p-5">
                         <div className="flex items-center gap-2 mb-2">
