@@ -75,17 +75,38 @@ export const Radar = () => {
                     return acc;
                 }, {});
 
+                // 2.5 Fetch REAL Follow Counts for all these users
+                const profileIds = profiles.map(p => p.id);
+                const { data: followsData } = await supabase
+                    .from('follows')
+                    .select('follower_id, following_id')
+                    .or(`follower_id.in.(${profileIds.join(',')}),following_id.in.(${profileIds.join(',')})`);
+
+                const statsMap = profileIds.reduce((acc: any, id) => {
+                    acc[id] = { followers: 0, following: 0 };
+                    return acc;
+                }, {});
+
+                if (followsData) {
+                    followsData.forEach(f => {
+                        if (statsMap[f.following_id]) statsMap[f.following_id].followers++;
+                        if (statsMap[f.follower_id]) statsMap[f.follower_id].following++;
+                    });
+                }
+
                 // 3. Enrich with REAL DATA
                 const enriched = profiles.map((p, idx) => {
                     const settings = (p.custom_settings as any) || {};
+                    const realStats = statsMap[p.id] || { followers: 0, following: 0 };
+                    
                     return {
                         ...p,
                         gym_name: gymMap[p.home_gym_id || ''] || "Gimnasio Partner",
                         gym_image: FALLBACK_GYM_INTERIORS[idx % FALLBACK_GYM_INTERIORS.length],
                         banner_url: settings.banner_url || FALLBACK_BANNERS[idx % FALLBACK_BANNERS.length],
                         training_days_count: p.checkins_count || 0,
-                        followers_count: Math.floor((p.xp || 0) / 100) || 0,
-                        following_count: Math.floor((p.xp || 0) / 150) || 0,
+                        followers_count: realStats.followers,
+                        following_count: realStats.following,
                         distance: (Math.random() * 5 + 0.5).toFixed(1),
                         bio: p.description || settings.description || settings.bio || "Enfocado en superar mis límites cada día. 🔥",
                         is_pro: (p.xp || 0) > 1000
