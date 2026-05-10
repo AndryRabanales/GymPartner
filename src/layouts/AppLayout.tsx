@@ -28,7 +28,7 @@ export const AppLayout = () => {
         <div className="h-[100dvh] bg-neutral-950 text-white flex flex-col overflow-hidden">
             {/* Top Navigation - Hidden only on Reels */}
             {!isReelsPage && (
-                <nav className="border-b border-white/5 bg-neutral-950/80 backdrop-blur-xl sticky top-0 z-50 transition-all duration-500 shrink-0 animate-in fade-in slide-in-from-top-4 duration-700">
+                <nav className="border-b border-white/10 bg-neutral-950/80 backdrop-blur-2xl sticky top-0 z-50 transition-all duration-500 shrink-0 animate-in fade-in slide-in-from-top-4 duration-700">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="flex items-center justify-between h-16 sm:h-20">
                             <Link to="/" className="flex items-center gap-3 no-underline group">
@@ -45,10 +45,10 @@ export const AppLayout = () => {
 
                                     {/* Brand Text - GYMRAT STYLE */}
                                     <div className="flex flex-col">
-                                        <span className="font-black text-xl sm:text-2xl tracking-widest text-white italic leading-none group-hover:text-gym-primary transition-colors uppercase drop-shadow-md" style={{ fontFamily: 'Impact, sans-serif', WebkitTextStroke: '1px black' }} translate="no">
+                                        <span className="font-black text-xl sm:text-2xl tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-neutral-500 italic leading-none group-hover:from-gym-primary group-hover:to-yellow-600 transition-all duration-500 uppercase" style={{ fontFamily: 'Impact, sans-serif' }} translate="no">
                                             GYMPARTNER
                                         </span>
-                                        <span className="text-[10px] font-bold tracking-[0.2em] text-neutral-500 uppercase leading-none group-hover:text-white transition-colors" translate="no">
+                                        <span className="text-[9px] font-black tracking-[0.3em] text-neutral-500 uppercase leading-none mt-0.5 group-hover:text-white transition-colors" translate="no">
                                             Intelligence
                                         </span>
                                     </div>
@@ -81,17 +81,17 @@ export const AppLayout = () => {
                                     <div className="relative z-50">
                                         <button
                                             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                                            className="flex items-center gap-3 bg-neutral-900/50 hover:bg-neutral-800 pl-1 pr-4 py-1 rounded-full border border-white/5 hover:border-white/20 transition-all shadow-lg shadow-black/50"
+                                            className="flex items-center gap-2 bg-neutral-900/50 hover:bg-neutral-800 pl-1 pr-4 py-1 rounded-2xl border border-white/5 hover:border-gym-primary/30 transition-all shadow-lg group/avatar"
                                         >
                                             <div className="relative w-8 h-8">
-                                                <div className="absolute inset-0 bg-gradient-to-tr from-yellow-400 to-orange-500 rounded-full animate-pulse opacity-20"></div>
+                                                <div className="absolute inset-0 bg-gym-primary blur-md rounded-full opacity-0 group-hover/avatar:opacity-40 transition-opacity"></div>
                                                 <img
                                                     src={user.user_metadata.avatar_url}
                                                     alt="Avatar"
-                                                    className="relative w-full h-full rounded-full object-cover border-2 border-neutral-950 ring-1 ring-white/10"
+                                                    className="relative w-full h-full rounded-full object-cover border border-white/10"
                                                 />
                                             </div>
-                                            <span className="hidden sm:block text-sm font-bold text-neutral-300 group-hover:text-white transition-colors">
+                                            <span className="hidden sm:block text-xs font-black text-neutral-400 group-hover/avatar:text-white transition-colors uppercase tracking-widest">
                                                 {user.user_metadata.full_name?.split(' ')[0]}
                                             </span>
                                         </button>

@@ -115,20 +115,23 @@ export const NotificationBell = () => {
         <div className="relative" ref={dropdownRef}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="relative p-2 text-neutral-400 hover:text-white transition-colors rounded-full hover:bg-white/10"
+                className={`
+                    relative p-2 text-neutral-400 hover:text-white transition-all rounded-xl hover:bg-white/5 group
+                    ${unreadCount > 0 ? 'animate-in fade-in zoom-in' : ''}
+                `}
             >
-                <Bell size={24} />
+                <Bell size={22} className={`${unreadCount > 0 ? 'animate-[swing_2s_ease-in-out_infinite]' : ''}`} />
                 {unreadCount > 0 && (
-                    <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-[10px] flex items-center justify-center text-white rounded-full font-bold border-2 border-black">
+                    <span className="absolute top-1.5 right-1.5 w-3.5 h-3.5 bg-red-600 text-[9px] flex items-center justify-center text-white rounded-full font-black border border-neutral-950 shadow-[0_0_10px_rgba(220,38,38,0.5)]">
                         {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                 )}
             </button>
 
             {isOpen && (
-                <div className="absolute right-0 mt-2 w-80 bg-neutral-900 border border-neutral-800 rounded-xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top-right">
-                    <div className="p-3 border-b border-neutral-800 flex justify-between items-center bg-neutral-950">
-                        <h3 className="font-bold text-sm text-white">Notificaciones</h3>
+                <div className="absolute right-0 mt-3 w-80 bg-neutral-950/90 backdrop-blur-3xl border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                    <div className="p-4 border-b border-white/5 flex justify-between items-center bg-white/5">
+                        <h3 className="font-black text-xs text-white uppercase tracking-widest">Notificaciones</h3>
                         {unreadCount > 0 && (
                             <button
                                 onClick={handleMarkAllRead}

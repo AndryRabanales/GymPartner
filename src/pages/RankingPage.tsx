@@ -146,34 +146,42 @@ export const RankingPage = () => {
             {/* Header */}
             <div className="sticky top-0 z-30 bg-neutral-950/95 backdrop-blur-xl border-b border-white/5 p-4 shadow-2xl shadow-black/50">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
-                    <h1 className="text-2xl font-black text-white italic uppercase tracking-tighter flex items-center gap-2">
-                        <Trophy className="text-yellow-500 animate-pulse" />
-                        <span className="bg-clip-text text-transparent bg-gradient-to-r from-white to-neutral-500">Ranking</span>
+                    <h1 className="flex items-center gap-3 group cursor-default">
+                        <div className="relative">
+                            <Trophy className="text-yellow-500 animate-pulse relative z-10" size={28} />
+                            <div className="absolute inset-0 bg-yellow-500/20 blur-lg rounded-full scale-150"></div>
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.3em] leading-none mb-1">Global</span>
+                            <span className="text-2xl font-black text-white italic uppercase tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-r from-white to-neutral-500">
+                                Ranking
+                            </span>
+                        </div>
                     </h1>
 
                     {/* GYM SWITCHER */}
                     {userGyms.length > 0 ? (
-                        <div className="flex items-center gap-2 bg-neutral-900/80 backdrop-blur-md border border-white/10 rounded-2xl p-1 pl-4 pr-1 shadow-lg group">
-                            <div className="flex flex-col items-end mr-1">
-                                <span className="text-[10px] text-neutral-500 font-black uppercase tracking-[0.2em] leading-none mb-1">Territorio</span>
-                                <span className="text-xs font-black text-white truncate max-w-[100px] sm:max-w-[150px] leading-tight uppercase italic group-hover:text-gym-primary transition-colors">
+                        <div className="flex items-center gap-3 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-1.5 pl-5 pr-1.5 shadow-2xl group/gym transition-all hover:bg-white/10">
+                            <div className="flex flex-col items-end mr-2">
+                                <span className="text-[9px] text-neutral-500 font-black uppercase tracking-[0.25em] leading-none mb-1 opacity-70">Territorio</span>
+                                <span className="text-sm font-black text-white truncate max-w-[120px] sm:max-w-[180px] leading-tight uppercase italic group-hover/gym:text-gym-primary transition-colors tracking-tight">
                                     {currentGym?.gym_name || 'Cargando...'}
                                 </span>
                             </div>
 
                             {userGyms.length > 1 && (
-                                <div className="flex items-center gap-1">
+                                <div className="flex items-center gap-1.5">
                                     <button
                                         onClick={handlePrevGym}
-                                        className="w-7 h-7 rounded-xl bg-neutral-800 flex items-center justify-center text-neutral-400 hover:text-white hover:bg-neutral-700 active:scale-90 transition-all border border-white/5"
+                                        className="w-8 h-8 rounded-2xl bg-white/5 flex items-center justify-center text-neutral-400 hover:text-white hover:bg-gym-primary/20 hover:border-gym-primary/50 active:scale-90 transition-all border border-white/10 shadow-lg"
                                     >
-                                        <ChevronLeft size={16} />
+                                        <ChevronLeft size={18} strokeWidth={3} />
                                     </button>
                                     <button
                                         onClick={handleNextGym}
-                                        className="w-7 h-7 rounded-xl bg-neutral-800 flex items-center justify-center text-neutral-400 hover:text-white hover:bg-neutral-700 active:scale-90 transition-all border border-white/5"
+                                        className="w-8 h-8 rounded-2xl bg-white/5 flex items-center justify-center text-neutral-400 hover:text-white hover:bg-gym-primary/20 hover:border-gym-primary/50 active:scale-90 transition-all border border-white/10 shadow-lg"
                                     >
-                                        <ChevronRight size={16} />
+                                        <ChevronRight size={18} strokeWidth={3} />
                                     </button>
                                 </div>
                             )}

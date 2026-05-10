@@ -54,19 +54,25 @@ export const GPointsDisplay: React.FC = () => {
             flex items-center gap-1 transition-all duration-500 group cursor-pointer active:scale-95
             ${isAnimating ? 'scale-110' : ''}
         `}>
-            <div className="relative">
+            <div className="relative group flex items-center justify-center">
+                {/* Elegant Ambient Glow */}
+                <div className="absolute inset-0 bg-yellow-500/20 blur-xl rounded-full scale-150 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
                 <img 
                     src="/Gemini_Generated_Image_qyk7sjqyk7sjqyk7-removebg-preview.png"
                     alt="G-Points"
                     className={`
-                        h-10 w-auto relative z-10 object-contain
-                        ${isAnimating ? 'scale-110 transition-transform duration-700' : 'group-hover:scale-105 transition-transform'}
+                        h-9 w-auto relative z-10 object-contain drop-shadow-[0_0_10px_rgba(250,204,21,0.3)]
+                        ${isAnimating ? 'scale-125 rotate-[360deg] transition-all duration-1000' : 'group-hover:scale-110 transition-transform duration-500'}
                     `} 
                 />
             </div>
             
             <div className="flex flex-col">
-                <span className="text-white font-black text-base tracking-tighter leading-none italic uppercase">
+                <span className={`
+                    font-black text-lg tracking-tighter leading-none italic tabular-nums
+                    bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-neutral-400
+                    drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]
+                `}>
                     {points.toLocaleString()}
                 </span>
             </div>

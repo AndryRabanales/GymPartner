@@ -40,3 +40,18 @@ html {
   min-height: 100%;
   overflow-x: hidden;
 }
+
+/* Custom Keyframes for Premium Animations */
+@keyframes swing {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: rotate(15deg); }
+  40% { transform: rotate(-10deg); }
+  60% { transform: rotate(5deg); }
+  80% { transform: rotate(-5deg); }
+}
+
+@keyframes shine {
+  0% { left: -100%; }
+  20% { left: 100%; }
+  100% { left: 100%; }
+}
