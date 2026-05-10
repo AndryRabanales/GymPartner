@@ -1,12 +1,14 @@
-// Add static import at top
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Trophy, Shield, MapPin, Swords, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Trophy, Shield, MapPin, Swords, ChevronLeft, ChevronRight, Zap, UserPlus } from 'lucide-react';
 import { PublicTeaser } from '../components/common/PublicTeaser';
-import { PlayerProfileModal } from '../components/profile/PlayerProfileModal';
 import { userService } from '../services/UserService';
 import type { UserPrimaryGym } from '../services/UserService';
+import { UserProfileCard } from '../components/ui/UserProfileCard';
+import { socialService } from '../services/SocialService';
+import { notificationService } from '../services/NotificationService';
+import toast from 'react-hot-toast';
 
 interface RankedUser {
     id: string;
@@ -23,7 +25,8 @@ interface RankedUser {
 export const RankingPage = () => {
     const { user } = useAuth();
     const [leaderboard, setLeaderboard] = useState<RankedUser[]>([]);
-    const [selectedPlayer, setSelectedPlayer] = useState<RankedUser | null>(null);
+    const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
+    const [loadingPlayer, setLoadingPlayer] = useState(false);
 
     // Gym Switcher State
     const [userGyms, setUserGyms] = useState<UserPrimaryGym[]>([]);
@@ -36,7 +39,6 @@ export const RankingPage = () => {
             if (!user) return;
             try {
                 const gyms = await userService.getUserGyms(user.id);
-                // Sort: Home Base First
                 const sortedGyms = gyms.sort((a, b) => {
                     if (a.is_home_base === b.is_home_base) return 0;
                     return a.is_home_base ? -1 : 1;
@@ -60,20 +62,17 @@ export const RankingPage = () => {
             if (!targetGym) return;
 
             try {
-                // Call RPC
                 const { data: leaderboardData, error } = await supabase
                     .rpc('get_gym_followers_leaderboard', { gym_id_param: targetGym.gym_id });
 
-                if (error) {
-                    console.error('Error fetching gym leaderboard:', error);
-                }
+                if (error) console.error('Error fetching gym leaderboard:', error);
 
                 if (leaderboardData) {
                     const mapped = leaderboardData.map((p: any, index: number) => ({
                         id: p.id,
                         username: p.username || 'Usuario',
                         avatar_url: p.avatar_url,
-                        xp: p.followers_count, // Displaying Followers
+                        xp: p.followers_count,
                         rank: index + 1,
                         gym_name: p.gym_name || targetGym.gym_name,
                         is_current_user: p.id === user.id,
@@ -84,7 +83,6 @@ export const RankingPage = () => {
                 } else {
                     setLeaderboard([]);
                 }
-
             } catch (err) {
                 console.error('Error in ranking fetch:', err);
             }
@@ -119,8 +117,49 @@ export const RankingPage = () => {
         return <div className="w-8 h-8 flex items-center justify-center text-neutral-500 font-bold">{rank}</div>;
     };
 
-    const handlePlayerClick = (player: RankedUser) => {
-        setSelectedPlayer(player);
+    const handlePlayerClick = async (player: RankedUser) => {
+        setLoadingPlayer(true);
+        try {
+            // Fetch complete profile for the card
+            const { data: profile, error } = await supabase
+                .from('profiles')
+                .select('*, training_days_count, followers_count, following_count')
+                .eq('id', player.id)
+                .single();
+            
+            if (error) throw error;
+
+            setSelectedPlayer({
+                ...profile,
+                gym_name: player.gym_name,
+                gym_image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80', // Fallback
+                distance: 'Local'
+            });
+        } catch (err) {
+            console.error("Error loading player profile:", err);
+            toast.error("Error al cargar perfil");
+        } finally {
+            setLoadingPlayer(false);
+        }
+    };
+
+    const handleFollow = async (targetId: string) => {
+        if (!user) return;
+        try {
+            await socialService.followUser(user.id, targetId);
+            toast.success("Siguiendo!");
+        } catch (e) {
+            toast.error("Error al seguir");
+        }
+    };
+
+    const handleInvite = async (targetId: string) => {
+        try {
+            const success = await notificationService.sendInvitation(targetId);
+            if (success) toast.success("Invitación enviada!");
+        } catch (e) {
+            toast.error("Error al enviar invitación");
+        }
     };
 
     if (!user) {
@@ -133,150 +172,100 @@ export const RankingPage = () => {
                 benefitDescription="Gana XP por cada entrenamiento, conquista territorios y desbloquea insignias de prestigio."
                 iconColor="text-yellow-500"
                 bgAccent="bg-yellow-500/10"
-            >
-                {/* ... existing teaser content ... */}
-            </PublicTeaser>
+            />
         );
     }
 
-    const currentGym = userGyms[currentGymIndex];
-
     return (
-        <div className="pb-20 bg-transparent">
-            {/* Header - Floating Capsule Style */}
-            <div className="sticky top-2 z-30 px-4 pt-1 animate-in slide-in-from-top-4 duration-700">
-                <div className="max-w-7xl mx-auto flex items-center justify-between bg-black/40 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-2 px-6 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
-                    <h1 className="flex items-center gap-2 group cursor-default shrink-0">
-                        <div className="relative">
-                            <Trophy className="text-yellow-500 animate-pulse relative z-10" size={22} />
-                            <div className="absolute inset-0 bg-yellow-500/20 blur-lg rounded-full scale-150"></div>
-                        </div>
-                        <div className="flex flex-col">
-                            <span className="hidden sm:block text-[9px] font-black text-neutral-500 uppercase tracking-[0.3em] leading-none mb-1">Global</span>
-                            <span className="text-lg sm:text-2xl font-black text-white italic uppercase tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-r from-white to-neutral-500">
-                                Ranking
-                            </span>
-                        </div>
+        <div className="pb-24 bg-transparent">
+            {/* Header */}
+            <div className="sticky top-2 z-30 px-4 pt-1">
+                <div className="max-w-7xl mx-auto flex items-center justify-between bg-black/40 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-2 px-6 shadow-2xl">
+                    <h1 className="flex items-center gap-2">
+                        <Trophy className="text-yellow-500" size={22} />
+                        <span className="text-xl font-black text-white italic uppercase tracking-tighter">Ranking</span>
                     </h1>
 
-                    {/* GYM SWITCHER - Compacted for Mobile */}
-                    {userGyms.length > 0 ? (
-                        <div className="flex items-center gap-2 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-1 pl-3 pr-1 shadow-2xl group/gym transition-all hover:bg-white/10 min-w-0 flex-1 ml-4 justify-end">
-                            <div className="flex flex-col items-end mr-1 min-w-0">
-                                <span className="hidden sm:block text-[9px] text-neutral-500 font-black uppercase tracking-[0.25em] leading-none mb-1 opacity-70">Territorio</span>
-                                <span className="text-[11px] sm:text-sm font-black text-white truncate max-w-[80px] xs:max-w-[120px] sm:max-w-[180px] leading-tight uppercase italic group-hover/gym:text-gym-primary transition-colors tracking-tight">
-                                    {currentGym?.gym_name || 'Cargando...'}
-                                </span>
-                            </div>
-
+                    {userGyms.length > 0 && (
+                        <div className="flex items-center gap-2 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-full p-1 pl-4 shadow-xl">
+                            <span className="text-[11px] font-black text-white uppercase italic truncate max-w-[120px]">
+                                {userGyms[currentGymIndex]?.gym_name}
+                            </span>
                             {userGyms.length > 1 && (
-                                <div className="flex items-center gap-1 shrink-0">
-                                    <button
-                                        onClick={handlePrevGym}
-                                        className="w-7 h-7 rounded-xl bg-white/5 flex items-center justify-center text-neutral-400 hover:text-white hover:bg-gym-primary/20 hover:border-gym-primary/50 active:scale-90 transition-all border border-white/10"
-                                    >
-                                        <ChevronLeft size={16} strokeWidth={3} />
-                                    </button>
-                                    <button
-                                        onClick={handleNextGym}
-                                        className="w-7 h-7 rounded-xl bg-white/5 flex items-center justify-center text-neutral-400 hover:text-white hover:bg-gym-primary/20 hover:border-gym-primary/50 active:scale-90 transition-all border border-white/10"
-                                    >
-                                        <ChevronRight size={16} strokeWidth={3} />
-                                    </button>
+                                <div className="flex gap-1">
+                                    <button onClick={handlePrevGym} className="p-1.5 rounded-full hover:bg-white/10 text-neutral-400 hover:text-white"><ChevronLeft size={16} /></button>
+                                    <button onClick={handleNextGym} className="p-1.5 rounded-full hover:bg-white/10 text-neutral-400 hover:text-white"><ChevronRight size={16} /></button>
                                 </div>
                             )}
-                        </div>
-                    ) : (
-                        <div className="flex items-center gap-2 bg-neutral-900 border border-neutral-800 px-3 py-1 rounded-full">
-                            <Shield size={14} className="text-neutral-500" />
-                            <span className="text-xs font-bold text-neutral-500">Sin Gimnasio</span>
                         </div>
                     )}
                 </div>
             </div>
 
-            <div className="max-w-7xl mx-auto p-4 space-y-2 mt-2">
-                {leaderboard.map((player, index) => (
+            {/* Leaderboard List */}
+            <div className="max-w-7xl mx-auto p-4 space-y-2 mt-4">
+                {leaderboard.map((player) => (
                     <button
-                        key={player.rank}
+                        key={player.id}
                         onClick={() => handlePlayerClick(player)}
-                        className={`w-full text-left relative flex items-center gap-4 p-3 rounded-2xl border transition-all overflow-hidden hover:brightness-125 active:scale-[0.97] cursor-pointer animate-in fade-in slide-in-from-right-4 duration-500 fill-mode-both ${getRankStyle(player.rank)} ${player.is_current_user ? 'ring-2 ring-gym-primary ring-offset-4 ring-offset-neutral-950 scale-[1.01] shadow-[0_0_30px_rgba(250,204,21,0.2)] z-10' : 'hover:border-white/20'}`}
-                        style={{
-                            animationDelay: `${index * 50}ms`,
-                            ...(player.banner_url ? {
-                                backgroundImage: `url(${player.banner_url})`,
-                                backgroundSize: 'cover',
-                                backgroundPosition: 'center'
-                            } : {})
-                        }}
+                        className={`w-full text-left relative flex items-center gap-4 p-3 rounded-2xl border transition-all hover:brightness-125 active:scale-[0.98] ${getRankStyle(player.rank)} ${player.is_current_user ? 'ring-1 ring-gym-primary' : ''}`}
                     >
-                        {/* Banner Overlay */}
-                        {player.banner_url && (
-                            <div className="absolute inset-0 bg-black/60 z-0"></div>
-                        )}
-
-                        {/* Rank */}
-                        <div className="shrink-0 w-10 flex justify-center relative z-10">
+                        <div className="shrink-0 w-8 flex justify-center font-black text-neutral-500">
                             {getRankBadge(player.rank)}
                         </div>
-
-                        {/* Trend (Fake) */}
-                        <div className="hidden sm:block text-xs font-bold text-green-500 relative z-10">
-                            ▲
+                        <div className="w-12 h-12 rounded-xl bg-neutral-800 overflow-hidden shrink-0 border border-white/10">
+                            <img src={player.avatar_url} alt={player.username} className="w-full h-full object-cover" />
                         </div>
-
-                        {/* Avatar */}
-                        <div className="relative shrink-0 z-10">
-                            <div className={`w-12 h-12 rounded-xl bg-neutral-800 border-2 overflow-hidden transition-transform group-hover:scale-110 ${
-                                player.rank === 1 ? 'border-yellow-500/50 shadow-[0_0_10px_rgba(234,179,8,0.3)]' : 
-                                player.rank === 2 ? 'border-slate-400/50' :
-                                player.rank === 3 ? 'border-orange-600/50' : 'border-neutral-700'
-                            }`}>
-                                <img src={player.avatar_url} alt={player.username} className="w-full h-full object-cover" />
-                            </div>
-                            {/* Clan/Gym Icon fake */}
-                            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-neutral-900 rounded border border-neutral-600 flex items-center justify-center">
-                                <Shield size={10} className="text-gym-primary" />
+                        <div className="flex-1 min-w-0">
+                            <h3 className="font-black text-sm text-white truncate uppercase italic tracking-tight">
+                                {player.username}
+                            </h3>
+                            <div className="flex items-center gap-1 text-[10px] text-neutral-500 font-bold uppercase tracking-widest">
+                                <MapPin size={10} /> {player.gym_name}
                             </div>
                         </div>
-
-                        {/* Info */}
-                        <div className="flex-1 min-w-0 relative z-10">
-                            <div className="flex items-center gap-2">
-                                <h3 className={`font-black text-sm sm:text-base truncate ${player.is_current_user ? 'text-gym-primary' : 'text-white'}`}>
-                                    {player.username}
-                                </h3>
-                                {/* Battle Deck Icon */}
-                                {player.featured_routine_id && (
-                                    <div className="bg-users-500/10 border border-yellow-500/30 rounded px-1.5 py-0.5 flex items-center gap-1" title="Rutina Destacada Activa">
-                                        <Swords size={10} className="text-yellow-500" />
-                                        <span className="text-[9px] font-bold text-yellow-500 tracking-wider hidden sm:block">RUTINA</span>
-                                    </div>
-                                )}
-                            </div>
-                            <div className="flex items-center gap-1 text-xs text-neutral-400">
-                                <MapPin size={10} />
-                                <span className="truncate">{player.gym_name}</span>
-                            </div>
-                        </div>
-
-                        {/* Followers Count */}
-                        <div className="shrink-0 flex items-center gap-2 bg-black/40 px-3 py-1.5 rounded-lg border border-white/5 relative z-10 w-24 justify-end">
-                            <span className="font-black text-white text-sm tabular-nums">{player.xp}</span>
-                            <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">Seguidores</span>
+                        <div className="shrink-0 flex flex-col items-end">
+                            <span className="font-black text-white text-sm italic">{player.xp}</span>
+                            <span className="text-[8px] text-neutral-500 font-bold uppercase">Seguidores</span>
                         </div>
                     </button>
                 ))}
             </div>
 
-            {/* User Floating Dock if not visible? (Optional, skipping for now) */}
-
-            {/* PLAYER PROFILE INSPECTOR (Clash Royale Style) */}
+            {/* PREMIUM PROFILE MODAL */}
             {selectedPlayer && (
-                <PlayerProfileModal
-                    player={selectedPlayer}
-                    onClose={() => setSelectedPlayer(null)}
-                />
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-300">
+                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setSelectedPlayer(null)}></div>
+                    <div className="relative w-full max-w-sm aspect-[3/4] sm:h-[80vh] animate-in zoom-in-95 slide-in-from-bottom-12 duration-500">
+                        <UserProfileCard 
+                            user={selectedPlayer} 
+                            onClose={() => setSelectedPlayer(null)}
+                            actions={
+                                <div className="flex gap-3">
+                                    <button 
+                                        onClick={() => handleFollow(selectedPlayer.id)}
+                                        className="flex-1 py-3 bg-neutral-900 border border-white/10 rounded-2xl text-white font-black text-[10px] uppercase tracking-widest hover:bg-neutral-800 transition-all active:scale-95 flex items-center justify-center gap-2"
+                                    >
+                                        <UserPlus size={16} /> Seguir
+                                    </button>
+                                    <button 
+                                        onClick={() => handleInvite(selectedPlayer.id)}
+                                        className="flex-1 py-3 bg-white rounded-2xl text-black font-black text-[10px] uppercase tracking-widest hover:bg-gym-primary transition-all active:scale-95 shadow-xl flex items-center justify-center gap-2"
+                                    >
+                                        <Zap size={16} fill="currentColor" /> Invitar
+                                    </button>
+                                </div>
+                            }
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* Loading Player Overlay */}
+            {loadingPlayer && (
+                <div className="fixed inset-0 z-[110] bg-black/40 backdrop-blur-md flex items-center justify-center">
+                    <div className="w-12 h-12 border-4 border-gym-primary border-t-transparent rounded-full animate-spin"></div>
+                </div>
             )}
         </div>
     );
