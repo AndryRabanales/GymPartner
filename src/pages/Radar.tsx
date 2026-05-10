@@ -70,7 +70,7 @@ export const Radar = () => {
             if (pError) throw pError;
 
             if (profiles) {
-                // 2. Fetch Gym Names and IMAGES
+                // 2. Fetch Gym Names and IMAGES (Official)
                 const gymIds = [...new Set(profiles.map(p => p.home_gym_id).filter(Boolean))];
                 const { data: gymsData } = await supabase
                     .from('gyms')
@@ -82,19 +82,34 @@ export const Radar = () => {
                     return acc;
                 }, {});
 
+                // 2.2 NEW: Fetch CUSTOM Main Base Assets for these users
+                const profileIds = profiles.map(p => p.id);
+                const { data: customBases } = await supabase
+                    .from('user_gyms')
+                    .select('user_id, gym_id, custom_bg_url, custom_color')
+                    .in('user_id', profileIds)
+                    .eq('is_home_base', true);
+
+                const customBaseMap = (customBases || []).reduce((acc: any, b) => {
+                    acc[b.user_id] = b;
+                    return acc;
+                }, {});
+
                 // 3. Enrich with basic profile info (Stats will load lazily)
                 const enriched = profiles.map((p, idx) => {
                     const settings = (p.custom_settings as any) || {};
                     const gymInfo = gymMap[p.home_gym_id || ''] || { name: "Gimnasio Partner", image: null };
+                    const customBase = customBaseMap[p.id];
                     
                     return {
                         ...p,
                         gym_name: gymInfo.name,
-                        gym_image: gymInfo.image || FALLBACK_GYM_INTERIORS[idx % FALLBACK_GYM_INTERIORS.length],
+                        // PRIORITIZE Custom BG from User Gyms, then Gym Official Image, then Fallback
+                        gym_image: customBase?.custom_bg_url || gymInfo.image || FALLBACK_GYM_INTERIORS[idx % FALLBACK_GYM_INTERIORS.length],
                         banner_url: settings.banner_url || FALLBACK_BANNERS[idx % FALLBACK_BANNERS.length],
                         training_days_count: p.checkins_count || 0,
-                        followers_count: 0, // Placeholder
-                        following_count: 0, // Placeholder
+                        followers_count: 0,
+                        following_count: 0,
                         is_following: false,
                         stats_loaded: false,
                         distance: (Math.random() * 5 + 0.5).toFixed(1),
