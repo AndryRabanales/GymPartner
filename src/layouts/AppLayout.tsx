@@ -145,7 +145,7 @@ export const AppLayout = () => {
 
             <main 
                 key={location.pathname} 
-                className={`flex-1 overflow-y-auto custom-scrollbar relative flex flex-col animate-in fade-in duration-500 pb-32 ${shouldHideHeader ? 'pt-0' : 'pt-28'}`}
+                className={`flex-1 overflow-y-auto custom-scrollbar relative flex flex-col animate-in fade-in duration-500 ${shouldHideHeader ? 'pt-0 pb-16' : 'pt-28 pb-32'}`}
             >
                 <Outlet />
             </main>

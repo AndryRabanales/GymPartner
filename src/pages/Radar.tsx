@@ -224,7 +224,7 @@ export const Radar = () => {
                 {scanComplete && nearbyUsers.length > 0 && currentUser && !loading && (
                     <div
                         {...swipeHandlers}
-                        className={`flex-1 flex flex-col relative bg-black/40 backdrop-blur-3xl w-[94%] mx-auto mb-2 rounded-[3rem] border border-white/10 shadow-[0_30px_60px_rgba(0,0,0,0.8)] transition-all duration-300 select-none overflow-hidden ${direction === 'left' ? 'animate-[slideOutLeft_0.3s_ease-out_forwards]' :
+                        className={`flex-1 flex flex-col relative bg-black/40 backdrop-blur-3xl w-[94%] mx-auto mb-1 rounded-[3rem] border border-white/10 shadow-[0_30px_60px_rgba(0,0,0,0.8)] transition-all duration-300 select-none overflow-hidden ${direction === 'left' ? 'animate-[slideOutLeft_0.3s_ease-out_forwards]' :
                             direction === 'right' ? 'animate-[slideOutRight_0.3s_ease-out_forwards]' :
                                 'animate-in fade-in zoom-in-95 slide-in-from-bottom-12 duration-700'
                             }`}
