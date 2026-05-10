@@ -26,6 +26,7 @@ interface NearbyUser {
     following_count: number;
     is_boosted?: boolean;
     is_pro?: boolean;
+    gym_image?: string;
 }
 
 export const Radar = () => {
@@ -50,10 +51,23 @@ export const Radar = () => {
         return () => clearTimeout(timer);
     }, []);
 
+    // Fallback images for a premium look when data is missing
+    const FALLBACK_BANNERS = [
+        'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1000&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1540497077202-7c8a3999166f?q=80&w=1000&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1571902258032-78a79ad3a77b?q=80&w=1000&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1593079831268-3381b0db4a77?q=80&w=1000&auto=format&fit=crop'
+    ];
+
+    const FALLBACK_GYMS = [
+        'https://images.unsplash.com/photo-1570829460005-c840387bb1ca?q=80&w=1000&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1558611848-73f7eb4001a1?q=80&w=1000&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1574673130244-c707e9d89427?q=80&w=1000&auto=format&fit=crop'
+    ];
+
     const loadNearbyUsers = async () => {
         setLoading(true);
         try {
-            // 1. Get ONLY the most basic columns that we know exist
             const { data: users, error } = await supabase
                 .from('profiles')
                 .select('id, username, avatar_url')
@@ -62,23 +76,23 @@ export const Radar = () => {
 
             if (error) throw error;
 
-            const formattedUsers: NearbyUser[] = (users || []).map(u => ({
+            const formattedUsers: NearbyUser[] = (users || []).map((u, index) => ({
                 id: u.id,
                 username: u.username,
                 full_name: u.username,
                 avatar_url: u.avatar_url,
-                banner_url: '', // Default to empty/none
+                banner_url: FALLBACK_BANNERS[index % FALLBACK_BANNERS.length],
                 bio: '¡Listo para entrenar!',
-                gym_name: 'Gimnasio Local',
+                gym_name: 'Gimnasio Partner ' + (index + 1),
                 distance: Math.floor(Math.random() * 5) + 1,
                 training_days_count: Math.floor(Math.random() * 50) + 5,
                 followers_count: Math.floor(Math.random() * 100) + 10,
                 following_count: Math.floor(Math.random() * 80) + 5,
                 is_boosted: Math.random() > 0.8,
-                is_pro: Math.random() > 0.9
+                is_pro: Math.random() > 0.9,
+                gym_image: FALLBACK_GYMS[index % FALLBACK_GYMS.length]
             }));
 
-            // Shuffle and sort by boosted
             setNearbyUsers(formattedUsers.sort((a, b) => (b.is_boosted ? 1 : 0) - (a.is_boosted ? 1 : 0)));
             setScanComplete(true);
         } catch (error) {
@@ -222,15 +236,11 @@ export const Radar = () => {
                     >
                         {/* --- BANNER SECTION (Immersive Cover) --- */}
                         <div className="h-40 sm:h-48 shrink-0 relative w-full bg-neutral-800 overflow-hidden">
-                            {currentUser.banner_url ? (
-                                <FadeInImage
-                                    src={cloudinaryService.getOptimizedImageUrl(currentUser.banner_url, { width: 400, height: 200 })}
-                                    alt="Banner"
-                                    className="w-full h-full object-cover opacity-60"
-                                />
-                            ) : (
-                                <div className="w-full h-full bg-gradient-to-br from-neutral-800 to-neutral-950"></div>
-                            )}
+                            <FadeInImage
+                                src={currentUser.banner_url || FALLBACK_BANNERS[0]}
+                                alt="Banner"
+                                className="w-full h-full object-cover opacity-60"
+                            />
                             <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
                             
                             {/* Boost Badge on Banner */}
@@ -249,7 +259,7 @@ export const Radar = () => {
                             <div className="relative group">
                                 <div className={`absolute -inset-1 rounded-full blur-xl opacity-40 group-hover:opacity-70 transition-opacity ${isUserBoosted ? 'bg-yellow-500' : 'bg-gym-primary'}`}></div>
                                 <div className={`relative w-24 h-24 rounded-full p-1 shadow-2xl ${isUserBoosted ? 'bg-gradient-to-tr from-yellow-600 to-yellow-300' : 'bg-gradient-to-tr from-neutral-800 to-neutral-600'}`}>
-                                    <div className="w-full h-full rounded-full bg-black flex items-center justify-center overflow-hidden border border-white/10 relative">
+                                    <div className="w-full h-full rounded-full bg-neutral-900 flex items-center justify-center overflow-hidden border border-white/10 relative">
                                         {currentUser.avatar_url ? (
                                             <FadeInImage
                                                 src={cloudinaryService.getOptimizedImageUrl(currentUser.avatar_url, { width: 100, height: 100 })}
@@ -257,7 +267,9 @@ export const Radar = () => {
                                                 className="w-full h-full object-cover"
                                             />
                                         ) : (
-                                            <span className="text-3xl font-black text-white">{currentUser.username[0].toUpperCase()}</span>
+                                            <div className="w-full h-full bg-gradient-to-br from-neutral-800 to-black flex items-center justify-center">
+                                                <span className="text-3xl font-black text-gym-primary italic">{currentUser.username[0].toUpperCase()}</span>
+                                            </div>
                                         )}
                                         
                                         {/* Pro Badge */}
@@ -303,11 +315,14 @@ export const Radar = () => {
 
                             {/* Bio / Motivation */}
                             <div className="w-full mt-6 px-2">
-                                <div className="bg-gradient-to-br from-neutral-900/80 to-black/80 rounded-[2rem] p-4 border border-white/5 relative overflow-hidden group shadow-2xl">
-                                    <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                                        <Sparkles size={40} className="text-gym-primary" />
+                                <div className="bg-gradient-to-br from-neutral-900/90 to-black rounded-[2rem] border border-white/5 relative overflow-hidden group shadow-2xl min-h-[120px]">
+                                    {/* Gym Image Fallback in Card */}
+                                    <div className="absolute inset-0 opacity-20 group-hover:opacity-30 transition-opacity">
+                                        <img src={currentUser.gym_image} alt="Gym" className="w-full h-full object-cover" />
                                     </div>
-                                    <div className="relative z-10">
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
+                                    
+                                    <div className="relative z-10 p-4">
                                         <div className="flex items-center gap-2 mb-2">
                                             <div className="w-6 h-6 rounded-full bg-gym-primary/10 flex items-center justify-center">
                                                 <Sparkles size={12} className="text-gym-primary" />
@@ -318,7 +333,7 @@ export const Radar = () => {
                                             {currentUser.gym_name.toUpperCase()}
                                         </p>
                                         <div className="mt-3 flex items-center justify-between">
-                                            <div className="flex items-center gap-2 text-neutral-500">
+                                            <div className="flex items-center gap-2 text-neutral-400">
                                                 <Activity size={12} className="text-gym-primary" />
                                                 <span className="text-[10px] font-bold uppercase tracking-widest">Enfocado</span>
                                             </div>
