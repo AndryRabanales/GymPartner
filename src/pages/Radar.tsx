@@ -5,7 +5,7 @@ import {
     X, 
     UserPlus, 
     Swords, 
-    Eye, 
+    ArrowRight, 
     Zap, 
     Loader2, 
     MapPin, 
@@ -322,13 +322,11 @@ export const Radar = () => {
                                     </button>
 
                                     <button 
-                                        onClick={() => {
-                                            navigate(`/player/${currentUser.id}`);
-                                        }}
+                                        onClick={handleSkip}
                                         className="w-14 h-14 rounded-2xl bg-neutral-900 border border-white/5 flex items-center justify-center text-neutral-500 hover:text-white hover:bg-neutral-800 transition-all active:scale-90 shadow-xl"
-                                        title="Ver Perfil"
+                                        title="Siguiente"
                                     >
-                                        <Eye size={24} />
+                                        <ArrowRight size={24} />
                                     </button>
 
                                     <button 
