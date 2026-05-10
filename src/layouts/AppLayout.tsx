@@ -17,7 +17,14 @@ export const AppLayout = () => {
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const location = useLocation();
+    
+    // Pages where the global header should be hidden
+    const isRadarPage = location.pathname === '/radar';
+    const isRankingPage = location.pathname === '/ranking';
+    const isChatPage = location.pathname === '/inbox' || location.pathname.startsWith('/chat/');
     const isReelsPage = location.pathname === '/reels';
+    
+    const shouldHideHeader = isRadarPage || isRankingPage || isChatPage || isReelsPage;
 
     // Hide BottomNav during workout sessions, gym territory pages, arsenal, stats, and history
     const isWorkoutPage = location.pathname === '/workout' || location.pathname.includes('/territory/');
@@ -29,8 +36,8 @@ export const AppLayout = () => {
             {/* Texture overlay for more depth */}
             <div className="fixed inset-0 bg-black/20 pointer-events-none z-0"></div>
             
-            {/* Top Navigation - Floating Dock Style */}
-            {!isReelsPage && (
+            {/* Top Navigation - Floating Dock Style (Hidden on specific pages) */}
+            {!shouldHideHeader && (
                 <header className="fixed top-6 left-1/2 -translate-x-1/2 w-[92%] max-w-7xl z-50 animate-in slide-in-from-top-8 duration-700">
                     <nav className="bg-black/40 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-2 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
                         <div className="px-3 sm:px-6">
@@ -138,7 +145,7 @@ export const AppLayout = () => {
 
             <main 
                 key={location.pathname} 
-                className="flex-1 overflow-y-auto custom-scrollbar relative flex flex-col animate-in fade-in duration-500 pt-28 pb-32"
+                className={`flex-1 overflow-y-auto custom-scrollbar relative flex flex-col animate-in fade-in duration-500 pb-32 ${shouldHideHeader ? 'pt-0' : 'pt-28'}`}
             >
                 <Outlet />
             </main>

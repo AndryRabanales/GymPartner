@@ -150,12 +150,14 @@ export const InboxPage = () => {
 
     return (
         <div className="min-h-screen bg-black text-white flex flex-col">
-            {/* Header */}
-            <div className="p-4 border-b border-neutral-800 bg-neutral-900/50 backdrop-blur-md sticky top-0 z-10 flex items-center gap-4">
-                <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-white/10 text-neutral-400 hover:text-white transition-colors">
-                    <ChevronLeft size={24} />
-                </button>
-                <h1 className="text-lg font-black tracking-wide">Bandeja de Entrada</h1>
+            {/* Header - Floating Capsule Style */}
+            <div className="sticky top-6 z-30 px-4 pt-1 animate-in slide-in-from-top-4 duration-700">
+                <div className="max-w-7xl mx-auto flex items-center gap-4 bg-black/40 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-2 px-6 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+                    <button onClick={() => navigate(-1)} className="p-2 rounded-full hover:bg-white/10 text-neutral-400 hover:text-white transition-colors">
+                        <ChevronLeft size={24} />
+                    </button>
+                    <h1 className="text-lg font-black tracking-wide uppercase italic">Bandeja de Entrada</h1>
+                </div>
             </div>
 
             {/* Tabs */}
