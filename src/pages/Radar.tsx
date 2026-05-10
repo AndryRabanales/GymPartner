@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSwipeable } from 'react-swipeable';
 import { 
     X, 
@@ -35,6 +36,7 @@ const FALLBACK_GYM_INTERIORS = [
 
 export const Radar = () => {
     const { user: authUser } = useAuth();
+    const navigate = useNavigate();
     const [nearbyUsers, setNearbyUsers] = useState<any[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [loading, setLoading] = useState(true);
