@@ -143,9 +143,9 @@ export const RankingPage = () => {
 
     return (
         <div className="pb-20 bg-transparent">
-            {/* Header */}
-            <div className="sticky top-0 z-30 bg-black/60 backdrop-blur-2xl border-b border-white/5 p-4 shadow-2xl shadow-black/50">
-                <div className="max-w-7xl mx-auto flex items-center justify-between">
+            {/* Header - Floating Capsule Style */}
+            <div className="sticky top-[5.75rem] z-30 px-4 pt-1 animate-in slide-in-from-top-4 duration-700">
+                <div className="max-w-7xl mx-auto flex items-center justify-between bg-black/40 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-2 px-6 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
                     <h1 className="flex items-center gap-3 group cursor-default">
                         <div className="relative">
                             <Trophy className="text-yellow-500 animate-pulse relative z-10" size={28} />

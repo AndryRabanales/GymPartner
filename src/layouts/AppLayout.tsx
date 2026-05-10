@@ -28,11 +28,12 @@ export const AppLayout = () => {
         <div className="h-[100dvh] text-white flex flex-col overflow-hidden relative">
             {/* Texture overlay for more depth */}
             <div className="fixed inset-0 bg-black/20 pointer-events-none z-0"></div>
-            {/* Top Navigation - Hidden only on Reels */}
+            {/* Top Navigation - Floating Dock Style */}
             {!isReelsPage && (
-                <nav className="border-b border-white/10 bg-black/60 backdrop-blur-2xl sticky top-0 z-50 transition-all duration-500 shrink-0 animate-in fade-in slide-in-from-top-4 duration-700">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                        <div className="flex items-center justify-between h-16 sm:h-20">
+                <header className="fixed top-6 left-1/2 -translate-x-1/2 w-[92%] max-w-7xl z-50 animate-in slide-in-from-top-8 duration-700">
+                    <nav className="bg-black/40 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-2 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+                        <div className="px-4 sm:px-6">
+                            <div className="flex items-center justify-between h-14 sm:h-16">
                             <Link to="/" className="flex items-center gap-3 no-underline group">
                                 {/* Desktop/Mobile Logo - Custom GP Brand */}
                                 <div className="relative group flex items-center gap-1.5">
@@ -135,14 +136,14 @@ export const AppLayout = () => {
                                 )}
                             </div>
                         </div>
-                    </div>
-                </nav>
+                    </nav>
+                </header>
             )}
 
             {/* Main Content (Scrollable Area) */}
             <main 
                 key={location.pathname} 
-                className="flex-1 overflow-y-auto custom-scrollbar relative flex flex-col animate-in fade-in duration-500"
+                className="flex-1 overflow-y-auto custom-scrollbar relative flex flex-col animate-in fade-in duration-500 pt-28 pb-32"
             >
                 <Outlet />
             </main>
