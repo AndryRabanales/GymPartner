@@ -36,30 +36,30 @@ export const BottomNav: React.FC<BottomNavProps> = ({ onUploadClick: _ }) => {
                 <Link to="/" className="flex flex-col items-center justify-center gap-0.5 w-14 h-full relative group">
                     <Home
                         size={22}
-                        className={`transition-colors duration-300 ${isActive('/') ? "text-white fill-white" : "text-neutral-500 group-hover:text-neutral-300"}`}
+                        className={`transition-all duration-300 ${isActive('/') ? "text-white fill-white scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]" : "text-neutral-500 group-hover:text-neutral-300"}`}
                         strokeWidth={isActive('/') ? 2.5 : 2}
                     />
-                    <span className={`text-[10px] font-bold transition-colors duration-300 ${isActive('/') ? 'text-white' : 'text-neutral-500 group-hover:text-neutral-300'}`}>Inicio</span>
+                    <span className={`text-[10px] font-bold transition-all duration-300 ${isActive('/') ? 'text-white translate-y-[-1px]' : 'text-neutral-500 group-hover:text-neutral-300'}`}>Inicio</span>
                 </Link>
 
                 {/* 2. RANKING (Moved from Header) */}
                 <Link to="/ranking" className="flex flex-col items-center justify-center gap-0.5 w-14 h-full relative group">
                     <Trophy
                         size={22}
-                        className={`transition-colors duration-300 ${isActive('/ranking') ? "text-yellow-500 fill-yellow-500/20" : "text-neutral-500 group-hover:text-neutral-300"}`}
+                        className={`transition-all duration-300 ${isActive('/ranking') ? "text-yellow-500 fill-yellow-500/20 scale-110 drop-shadow-[0_0_8px_rgba(234,179,8,0.3)]" : "text-neutral-500 group-hover:text-neutral-300"}`}
                         strokeWidth={isActive('/ranking') ? 2.5 : 2}
                     />
-                    <span className={`text-[10px] font-bold transition-colors duration-300 ${isActive('/ranking') ? 'text-yellow-500' : 'text-neutral-500 group-hover:text-neutral-300'}`}>Ranking</span>
+                    <span className={`text-[10px] font-bold transition-all duration-300 ${isActive('/ranking') ? 'text-yellow-500 translate-y-[-1px]' : 'text-neutral-500 group-hover:text-neutral-300'}`}>Ranking</span>
                 </Link>
 
                 {/* 3. RADAR (GymRats) */}
                 <Link to="/radar" className="flex flex-col items-center justify-center gap-0.5 w-14 h-full relative group">
                     <Radar
                         size={22}
-                        className={`transition-colors duration-300 ${isActive('/radar') ? "text-gym-primary fill-gym-primary/20" : "text-neutral-500 group-hover:text-neutral-300"}`}
+                        className={`transition-all duration-300 ${isActive('/radar') ? "text-gym-primary fill-gym-primary/20 scale-110 drop-shadow-[0_0_8px_rgba(250,204,21,0.3)]" : "text-neutral-500 group-hover:text-neutral-300"}`}
                         strokeWidth={isActive('/radar') ? 2.5 : 2}
                     />
-                    <span className={`text-[10px] font-bold transition-colors duration-300 ${isActive('/radar') ? 'text-gym-primary' : 'text-neutral-500 group-hover:text-neutral-300'}`}>Radar</span>
+                    <span className={`text-[10px] font-bold transition-all duration-300 ${isActive('/radar') ? 'text-gym-primary translate-y-[-1px]' : 'text-neutral-500 group-hover:text-neutral-300'}`}>Radar</span>
                 </Link>
 
                 {/* 4. MENSAJES (Moved from Header) */}
@@ -67,14 +67,14 @@ export const BottomNav: React.FC<BottomNavProps> = ({ onUploadClick: _ }) => {
                     <div className="relative">
                         <MessageCircle
                             size={22}
-                            className={`transition-colors duration-300 ${isActive('/inbox') ? "text-white fill-white/20" : "text-neutral-500 group-hover:text-neutral-300"}`}
+                            className={`transition-all duration-300 ${isActive('/inbox') ? "text-white fill-white/20 scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]" : "text-neutral-500 group-hover:text-neutral-300"}`}
                             strokeWidth={isActive('/inbox') ? 2.5 : 2}
                         />
                         {hasUnread && (
                             <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-gym-primary rounded-full border-2 border-black animate-pulse"></span>
                         )}
                     </div>
-                    <span className={`text-[10px] font-bold transition-colors duration-300 ${isActive('/inbox') ? 'text-white' : 'text-neutral-500 group-hover:text-neutral-300'}`}>Chat</span>
+                    <span className={`text-[10px] font-bold transition-all duration-300 ${isActive('/inbox') ? 'text-white translate-y-[-1px]' : 'text-neutral-500 group-hover:text-neutral-300'}`}>Chat</span>
                 </Link>
             </div>
         </div>

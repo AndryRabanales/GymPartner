@@ -28,7 +28,7 @@ export const AppLayout = () => {
         <div className="h-[100dvh] bg-neutral-950 text-white flex flex-col overflow-hidden">
             {/* Top Navigation - Hidden only on Reels */}
             {!isReelsPage && (
-                <nav className="border-b border-white/5 bg-neutral-950/80 backdrop-blur-xl sticky top-0 z-50 transition-all duration-300 shrink-0">
+                <nav className="border-b border-white/5 bg-neutral-950/80 backdrop-blur-xl sticky top-0 z-50 transition-all duration-500 shrink-0 animate-in fade-in slide-in-from-top-4 duration-700">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="flex items-center justify-between h-16 sm:h-20">
                             <Link to="/" className="flex items-center gap-3 no-underline group">
@@ -39,7 +39,7 @@ export const AppLayout = () => {
                                         <img
                                             src="/logo-gp.png"
                                             alt="GymPartner"
-                                            className="h-12 w-auto sm:h-14 relative z-10 transition-transform duration-300 group-hover:scale-105 drop-shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+                                            className="h-12 w-auto sm:h-14 relative z-10 transition-all duration-500 group-hover:scale-110 drop-shadow-[0_0_20px_rgba(255,255,255,0.2)] animate-in zoom-in-50 duration-700"
                                         />
                                     </div>
 
@@ -138,7 +138,10 @@ export const AppLayout = () => {
             )}
 
             {/* Main Content (Scrollable Area) */}
-            <main className="flex-1 overflow-y-auto custom-scrollbar relative flex flex-col">
+            <main 
+                key={location.pathname} 
+                className="flex-1 overflow-y-auto custom-scrollbar relative flex flex-col animate-in fade-in duration-500"
+            >
                 <Outlet />
             </main>
 
