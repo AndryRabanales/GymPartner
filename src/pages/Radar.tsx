@@ -224,7 +224,7 @@ export const Radar = () => {
                 {scanComplete && nearbyUsers.length > 0 && currentUser && !loading && (
                     <div
                         {...swipeHandlers}
-                        className={`flex-1 flex flex-col relative bg-black/40 backdrop-blur-3xl w-[92%] mx-auto mb-4 rounded-[3rem] border border-white/10 shadow-[0_30px_60px_rgba(0,0,0,0.8)] transition-all duration-300 select-none overflow-hidden ${direction === 'left' ? 'animate-[slideOutLeft_0.3s_ease-out_forwards]' :
+                        className={`flex-1 flex flex-col relative bg-black/40 backdrop-blur-3xl w-[92%] mx-auto mb-3 rounded-[3rem] border border-white/10 shadow-[0_30px_60px_rgba(0,0,0,0.8)] transition-all duration-300 select-none overflow-hidden ${direction === 'left' ? 'animate-[slideOutLeft_0.3s_ease-out_forwards]' :
                             direction === 'right' ? 'animate-[slideOutRight_0.3s_ease-out_forwards]' :
                                 'animate-in fade-in zoom-in-95 slide-in-from-bottom-12 duration-700'
                             }`}
@@ -235,7 +235,7 @@ export const Radar = () => {
                         }}
                     >
                         {/* --- BANNER SECTION (Immersive Cover) --- */}
-                        <div className="h-40 sm:h-48 shrink-0 relative w-full bg-neutral-800 overflow-hidden">
+                        <div className="h-48 sm:h-56 shrink-0 relative w-full bg-neutral-800 overflow-hidden">
                             <FadeInImage
                                 src={currentUser.banner_url || FALLBACK_BANNERS[0]}
                                 alt="Banner"
@@ -315,9 +315,9 @@ export const Radar = () => {
 
                             {/* Bio / Motivation */}
                             <div className="w-full mt-6 px-2">
-                                <div className="bg-gradient-to-br from-neutral-900/90 to-black rounded-[2rem] border border-white/5 relative overflow-hidden group shadow-2xl min-h-[120px]">
+                                <div className="bg-gradient-to-br from-neutral-900/90 to-black rounded-[2rem] border border-white/5 relative overflow-hidden group shadow-2xl min-h-[180px]">
                                     {/* Gym Image Fallback in Card */}
-                                    <div className="absolute inset-0 opacity-20 group-hover:opacity-30 transition-opacity">
+                                    <div className="absolute inset-0 opacity-20 group-hover:opacity-40 transition-opacity">
                                         <img src={currentUser.gym_image} alt="Gym" className="w-full h-full object-cover" />
                                     </div>
                                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
