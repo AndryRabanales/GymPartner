@@ -245,5 +245,26 @@ export const notificationService = {
         }
 
         return null;
+    },
+
+    /**
+     * Crear una notificación genérica
+     */
+    async createNotification(userId: string, data: { type: string, title: string, content: string, data?: any }) {
+        const { error } = await supabase
+            .from('notifications')
+            .insert({
+                user_id: userId,
+                type: data.type as any,
+                title: data.title,
+                message: data.content,
+                data: data.data
+            });
+
+        if (error) {
+            console.error('Error creating notification:', error);
+            return false;
+        }
+        return true;
     }
 };
