@@ -50,7 +50,7 @@ export const PublicProfile = () => {
                     socialService.getProfileStats(profileData.id),
                     supabase
                         .from('user_gyms')
-                        .select('*, gyms:gym_id(name, image_url)')
+                        .select('*, gyms(name, image_url)')
                         .eq('user_id', profileData.id)
                         .eq('is_home_base', true)
                         .maybeSingle()
@@ -61,12 +61,12 @@ export const PublicProfile = () => {
                     setIsFollowing(following);
                 }
 
-                // 3. MAP REAL DATA (No more random mocks)
+                // 3. MAP REAL DATA (Using correct schema names: description, not bio)
                 setProfile({
                     ...profileData,
                     avatar_url: profileData.avatar_url,
                     banner_url: profileData.banner_url || (profileData.custom_settings as any)?.banner_url || FALLBACK_BANNERS[0],
-                    bio: profileData.bio || (profileData.custom_settings as any)?.bio || "¡Entrenando duro para subir de rango! 💪🔥",
+                    bio: profileData.description || "¡Entrenando duro para subir de rango! 💪🔥",
                     gym_name: (gymRes.data as any)?.gyms?.name || "Base Central GymPartner",
                     gym_image: (gymRes.data as any)?.gyms?.image_url || FALLBACK_BANNERS[1],
                     training_days_count: stats.workoutsCount || 0,
