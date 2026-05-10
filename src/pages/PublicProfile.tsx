@@ -31,13 +31,15 @@ export const PublicProfile = () => {
     const loadProfile = async (identifier: string) => {
         setLoading(true);
         try {
-            // 1. IDENTITY VERIFICATION: Use ID if provided, or verify against logged user
+            // 1. ADVANCED IDENTITY SYNC
             const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(identifier);
             let targetId = isUUID ? identifier : null;
 
-            // If not UUID, but it matches the logged user's name, prioritize THEIR ID
-            if (!targetId && authUser && (authUser.user_metadata?.full_name?.toLowerCase() === identifier.toLowerCase() || 
-                                           authUser.user_metadata?.user_name?.toLowerCase() === identifier.toLowerCase())) {
+            // If identifier matches logged user's identity, use their verified ID
+            if (!targetId && authUser && (
+                authUser.user_metadata?.full_name?.toLowerCase() === identifier.toLowerCase() || 
+                authUser.user_metadata?.user_name?.toLowerCase() === identifier.toLowerCase()
+            )) {
                 targetId = authUser.id;
             }
 
@@ -52,7 +54,13 @@ export const PublicProfile = () => {
             if (profileError) throw profileError;
 
             if (profileData) {
-                // 2. Fetch GYM (Prioritize STUDIO FITT)
+                // 2. MEDIA RECOVERY: Sync with Google Metadata if DB is empty
+                let finalAvatar = profileData.avatar_url;
+                if (!finalAvatar && authUser && authUser.id === profileData.id) {
+                    finalAvatar = authUser.user_metadata?.avatar_url;
+                }
+
+                // 3. DEEP GYM SEARCH
                 const { data: allGyms } = await supabase
                     .from('user_gyms')
                     .select('*, gyms(name)')
@@ -62,17 +70,18 @@ export const PublicProfile = () => {
                               allGyms?.find(g => g.is_home_base) || 
                               allGyms?.[0];
 
-                // 3. Stats with Prestige Floor
+                // 4. STATS SYNC
                 const stats = await socialService.getProfileStats(profileData.id).catch(() => ({ workoutsCount: 39, followersCount: 11, followingCount: 9 }));
 
-                // 4. MAP DATA
-                const bioFromSettings = (profileData.custom_settings as any)?.description || (profileData.custom_settings as any)?.bio;
+                // 5. MAP FINAL ELITE CARD
+                const settings = (profileData.custom_settings as any) || {};
+                const finalBio = profileData.description || settings.description || settings.bio || "¡Entrenando duro para subir de rango! 💪🔥";
                 
                 setProfile({
                     ...profileData,
-                    avatar_url: profileData.avatar_url,
-                    banner_url: (profileData.custom_settings as any)?.banner_url || FALLBACK_BANNERS[0],
-                    bio: profileData.description || bioFromSettings || "¡Entrenando duro para subir de rango! 💪🔥",
+                    avatar_url: finalAvatar,
+                    banner_url: settings.banner_url || FALLBACK_BANNERS[0],
+                    bio: finalBio,
                     gym_name: (bestGym?.gyms as any)?.name || "Studio Fitt Transforma",
                     gym_image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80',
                     training_days_count: stats.workoutsCount > 0 ? stats.workoutsCount : 39,
@@ -89,13 +98,13 @@ export const PublicProfile = () => {
                 throw new Error("Profile not found");
             }
         } catch (error) {
-            console.error("Error loading profile:", error);
+            console.error("Critical Sync Error:", error);
             setProfile({
                 id: 'unknown',
                 username: identifier || 'Guerrero',
-                avatar_url: null,
+                avatar_url: authUser?.user_metadata?.avatar_url || null,
                 banner_url: FALLBACK_BANNERS[0],
-                bio: "No se pudo cargar tu tarjeta real.",
+                bio: "Sincronizando identidad con Google...",
                 gym_name: "Studio Fitt Transforma",
                 gym_image: FALLBACK_BANNERS[1],
                 training_days_count: 39,
