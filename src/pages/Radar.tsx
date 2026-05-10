@@ -53,22 +53,15 @@ export const Radar = () => {
     const loadNearbyUsers = async () => {
         setLoading(true);
         try {
-            // Get current user's gym
+            // 1. Get current user's profile and gym
             const { data: profile } = await supabase
                 .from('profiles')
-                .select('primary_gym_id')
+                .select('id, primary_gym_id')
                 .eq('id', user?.id)
                 .single();
 
-            if (!profile?.primary_gym_id) {
-                setNearbyUsers([]);
-                setScanComplete(true);
-                setLoading(false);
-                return;
-            }
-
-            // Get users from the same gym
-            const { data: users, error } = await supabase
+            // 2. Try to find users in SAME GYM first
+            let query = supabase
                 .from('profiles')
                 .select(`
                     id, 
@@ -79,12 +72,40 @@ export const Radar = () => {
                     bio,
                     training_days_count,
                     followers_count,
-                    following_count,
-                    gyms:primary_gym_id (gym_name)
+                    following_count
                 `)
                 .neq('id', user?.id)
-                .eq('primary_gym_id', profile.primary_gym_id)
                 .limit(20);
+
+            // Filter by gym if the user has one
+            if (profile?.primary_gym_id) {
+                query = query.eq('primary_gym_id', profile.primary_gym_id);
+            }
+
+            let { data: users, error } = await query;
+
+            // 3. FALLBACK: If no one in gym, get ANY active users (Global search)
+            if (!users || users.length === 0) {
+                const { data: globalUsers, error: globalError } = await supabase
+                    .from('profiles')
+                    .select(`
+                        id, 
+                        username, 
+                        full_name, 
+                        avatar_url, 
+                        banner_url, 
+                        bio,
+                        training_days_count,
+                        followers_count,
+                        following_count
+                    `)
+                    .neq('id', user?.id)
+                    .order('last_training_at', { ascending: false })
+                    .limit(20);
+                
+                users = globalUsers;
+                if (globalError) throw globalError;
+            }
 
             if (error) throw error;
 
@@ -95,7 +116,7 @@ export const Radar = () => {
                 avatar_url: u.avatar_url,
                 banner_url: u.banner_url,
                 bio: u.bio || '¡Listo para entrenar!',
-                gym_name: (u.gyms as any)?.gym_name || 'Gimnasio Local',
+                gym_name: 'Gimnasio Local', // Simplified for fallback
                 distance: Math.floor(Math.random() * 5) + 1,
                 training_days_count: u.training_days_count || 0,
                 followers_count: u.followers_count || 0,
@@ -109,6 +130,7 @@ export const Radar = () => {
             setScanComplete(true);
         } catch (error) {
             console.error("Error loading nearby users:", error);
+            setScanComplete(true);
         } finally {
             setLoading(false);
         }
