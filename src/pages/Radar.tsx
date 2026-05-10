@@ -116,15 +116,21 @@ export const Radar = () => {
                     supabase.from('follows').select('*').eq('follower_id', authUser.id).eq('following_id', currentUser.id).maybeSingle()
                 ]);
 
-                const updatedUsers = [...nearbyUsers];
-                updatedUsers[currentIndex] = {
-                    ...currentUser,
-                    followers_count: stats.followersCount,
-                    following_count: stats.followingCount,
-                    is_following: !!followCheck,
-                    stats_loaded: true
-                };
-                setNearbyUsers(updatedUsers);
+                setNearbyUsers(prev => {
+                    const updated = [...prev];
+                    // IMPORTANT: Only update if the user hasn't already followed manually in the meantime
+                    const currentInState = updated[currentIndex];
+                    if (currentInState && currentInState.id === currentUser.id) {
+                        updated[currentIndex] = {
+                            ...currentInState,
+                            followers_count: currentInState.is_following ? (stats.followersCount + 1) : stats.followersCount,
+                            following_count: stats.followingCount,
+                            is_following: currentInState.is_following || !!followCheck,
+                            stats_loaded: true
+                        };
+                    }
+                    return updated;
+                });
             } catch (err) {
                 console.error("Error lazy loading stats:", err);
             }
