@@ -45,8 +45,13 @@ export const PublicProfile = () => {
             }
 
             if (data) {
-                // 1. Fetch REAL stats from SocialService
-                const stats = await socialService.getProfileStats(data.id);
+                // 1. Fetch REAL stats with direct counts for maximum reliability
+                const [followersRes, followingRes, workoutsRes, gymRes] = await Promise.all([
+                    supabase.from('follows').select('id', { count: 'exact' }).eq('following_id', data.id),
+                    supabase.from('follows').select('id', { count: 'exact' }).eq('follower_id', data.id),
+                    supabase.from('workout_sessions').select('id', { count: 'exact' }).eq('user_id', data.id),
+                    supabase.from('user_gyms').select('*, gyms(name, image_url)').eq('user_id', data.id).eq('is_home_base', true).maybeSingle()
+                ]);
 
                 if (authUser) {
                     const following = await socialService.getFollowStatus(authUser.id, data.id);
@@ -55,14 +60,16 @@ export const PublicProfile = () => {
 
                 setProfile({
                     ...data,
-                    // Use real data from DB and Services
+                    // Use real counts
+                    training_days_count: workoutsRes.count || 0,
+                    followers_count: followersRes.count || 0,
+                    following_count: followingRes.count || 0,
+                    // Real Gym Info
+                    gym_name: (gymRes.data as any)?.gyms?.name || "Guerrero Independiente",
+                    gym_image: (gymRes.data as any)?.gyms?.image_url || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80',
                     banner_url: data.banner_url || FALLBACK_BANNERS[Math.floor(Math.random() * FALLBACK_BANNERS.length)],
-                    gym_name: "Base GymPartner", // We can improve this later if we have gym_id
-                    gym_image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80',
-                    training_days_count: stats.workoutsCount || 0,
-                    followers_count: stats.followersCount || 0,
-                    following_count: stats.followingCount || 0,
-                    bio: data.bio || "Guerrero de la legión GymPartner. 🔥"
+                    bio: data.bio || "Guerrero de la legión GymPartner. 🔥",
+                    distance: 'Base'
                 });
             } else {
                 // Not found state
