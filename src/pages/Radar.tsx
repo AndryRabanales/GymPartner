@@ -184,7 +184,7 @@ export const Radar = () => {
         <div className="flex-1 w-full flex flex-col relative overflow-hidden bg-transparent selection:bg-gym-primary selection:text-black">
 
             {/* Main Content Area - Optimized for Floating Cards */}
-            <div className="flex-1 flex flex-col w-full h-full overflow-hidden pt-6 pb-2">
+            <div className="flex-1 flex flex-col w-full h-full overflow-hidden pt-2 pb-0">
 
                 {/* IDLE/ERROR STATE */}
                 {!loading && scanComplete && nearbyUsers.length === 0 && (
@@ -224,7 +224,7 @@ export const Radar = () => {
                 {scanComplete && nearbyUsers.length > 0 && currentUser && !loading && (
                     <div
                         {...swipeHandlers}
-                        className={`flex-1 flex flex-col relative bg-black/40 backdrop-blur-3xl w-[92%] mx-auto mb-3 rounded-[3rem] border border-white/10 shadow-[0_30px_60px_rgba(0,0,0,0.8)] transition-all duration-300 select-none overflow-hidden ${direction === 'left' ? 'animate-[slideOutLeft_0.3s_ease-out_forwards]' :
+                        className={`flex-1 flex flex-col relative bg-black/40 backdrop-blur-3xl w-[94%] mx-auto mb-2 rounded-[3rem] border border-white/10 shadow-[0_30px_60px_rgba(0,0,0,0.8)] transition-all duration-300 select-none overflow-hidden ${direction === 'left' ? 'animate-[slideOutLeft_0.3s_ease-out_forwards]' :
                             direction === 'right' ? 'animate-[slideOutRight_0.3s_ease-out_forwards]' :
                                 'animate-in fade-in zoom-in-95 slide-in-from-bottom-12 duration-700'
                             }`}
@@ -237,7 +237,7 @@ export const Radar = () => {
                         {/* --- STATIC IDENTITY SECTION (Fixed at top) --- */}
                         <div className="shrink-0 flex flex-col items-center">
                             {/* Banner */}
-                            <div className="h-44 sm:h-52 shrink-0 relative w-full bg-neutral-800 overflow-hidden">
+                            <div className="h-40 sm:h-48 shrink-0 relative w-full bg-neutral-800 overflow-hidden">
                                 <FadeInImage
                                     src={currentUser.banner_url || FALLBACK_BANNERS[0]}
                                     alt="Banner"
