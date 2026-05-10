@@ -51,27 +51,26 @@ export const GPointsDisplay: React.FC = () => {
 
     return (
         <div className={`
-            flex items-center gap-1 transition-all duration-500 group cursor-pointer active:scale-95
-            ${isAnimating ? 'scale-110' : ''}
+            flex items-center gap-0.5 transition-all duration-500 group cursor-pointer active:scale-95
+            ${isAnimating ? 'scale-105' : ''}
         `}>
-            <div className="relative group flex items-center justify-center">
+            <div className="relative group flex items-center justify-center shrink-0">
                 {/* Elegant Ambient Glow */}
-                <div className="absolute inset-0 bg-yellow-500/20 blur-xl rounded-full scale-150 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                <div className="absolute inset-0 bg-yellow-500/20 blur-lg rounded-full scale-125 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
                 <img 
                     src="/Gemini_Generated_Image_qyk7sjqyk7sjqyk7-removebg-preview.png"
                     alt="G-Points"
                     className={`
-                        h-9 w-auto relative z-10 object-contain drop-shadow-[0_0_10px_rgba(250,204,21,0.3)]
+                        h-6 w-auto relative z-10 object-contain drop-shadow-[0_0_8px_rgba(250,204,21,0.3)]
                         ${isAnimating ? 'scale-125 rotate-[360deg] transition-all duration-1000' : 'group-hover:scale-110 transition-transform duration-500'}
                     `} 
                 />
             </div>
             
-            <div className="flex flex-col">
+            <div className="flex flex-col shrink-0">
                 <span className={`
-                    font-black text-lg tracking-tighter leading-none italic tabular-nums
+                    font-black text-sm tracking-tighter leading-none italic tabular-nums
                     bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-neutral-400
-                    drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]
                 `}>
                     {points.toLocaleString()}
                 </span>

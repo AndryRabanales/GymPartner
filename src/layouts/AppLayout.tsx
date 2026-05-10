@@ -33,13 +33,13 @@ export const AppLayout = () => {
                         <div className="flex items-center justify-between h-16 sm:h-20">
                             <Link to="/" className="flex items-center gap-3 no-underline group">
                                 {/* Desktop/Mobile Logo - Custom GP Brand */}
-                                <div className="relative group flex items-center gap-3">
+                                <div className="relative group flex items-center gap-1.5">
                                     <div className="relative">
                                         <div className="absolute inset-0 bg-white/5 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                                         <img
                                             src="/logo-gp.png"
                                             alt="GymPartner"
-                                            className="h-12 w-auto sm:h-14 relative z-10 transition-all duration-500 group-hover:scale-110 drop-shadow-[0_0_20px_rgba(255,255,255,0.2)] animate-in zoom-in-50 duration-700"
+                                            className="h-10 w-auto sm:h-11 relative z-10 transition-all duration-500 group-hover:scale-110 drop-shadow-[0_0_20px_rgba(255,255,255,0.2)] animate-in zoom-in-50 duration-700"
                                         />
                                     </div>
 
@@ -73,7 +73,7 @@ export const AppLayout = () => {
                             </nav>
 
                             {/* Actions Area */}
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-4 sm:gap-6">
                                 {user && <GPointsDisplay />}
                                 {user && <NotificationBell />}
 
@@ -81,7 +81,7 @@ export const AppLayout = () => {
                                     <div className="relative z-50">
                                         <button
                                             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                                            className="flex items-center gap-2 bg-neutral-900/50 hover:bg-neutral-800 pl-1 pr-4 py-1 rounded-2xl border border-white/5 hover:border-gym-primary/30 transition-all shadow-lg group/avatar"
+                                            className="flex items-center gap-1.5 bg-neutral-900/50 hover:bg-neutral-800 pl-0.5 pr-3 py-1 rounded-2xl border border-white/5 hover:border-gym-primary/30 transition-all shadow-lg group/avatar"
                                         >
                                             <div className="relative w-8 h-8">
                                                 <div className="absolute inset-0 bg-gym-primary blur-md rounded-full opacity-0 group-hover/avatar:opacity-40 transition-opacity"></div>
