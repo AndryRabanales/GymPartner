@@ -602,7 +602,7 @@ class SocialService {
             const [followers, following, workouts, postsWithLikes] = await Promise.all([
                 supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', userId),
                 supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', userId),
-                supabase.from('workout_sessions').select('*', { count: 'exact', head: true }).eq('user_id', userId).not('end_time', 'is', null),
+                supabase.from('workout_sessions').select('*', { count: 'exact', head: true }).eq('user_id', userId).or('finished_at.not.is.null,end_time.not.is.null'),
                 supabase.from('posts').select('id, post_likes(count)', { count: 'exact' }).eq('user_id', userId)
             ]);
 

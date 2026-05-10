@@ -33,7 +33,7 @@ export const PublicProfile = () => {
         try {
             // 1. Find the core profile safely
             const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(identifier);
-            let query = supabase.from('profiles').select('id, username, avatar_url, xp, description');
+            let query = supabase.from('profiles').select('id, username, avatar_url, xp, description, custom_settings');
 
             if (isUUID) {
                 query = query.eq('id', identifier);
@@ -45,7 +45,7 @@ export const PublicProfile = () => {
             if (profileError) throw profileError;
 
             if (profileData) {
-                // 2. Fetch REAL stats & Gym info (Using corrected end_time)
+                // 2. Fetch REAL stats & Gym info (Using Schema-Correct columns)
                 const [stats, gymRes] = await Promise.all([
                     socialService.getProfileStats(profileData.id),
                     supabase
@@ -61,17 +61,19 @@ export const PublicProfile = () => {
                     setIsFollowing(following);
                 }
 
-                // 3. MAP ELITE DATA (Mixing Real Info + Premium Aesthetics)
+                // 3. MAP REAL DATA (Based on EXACT Schema provided)
+                const realBanner = (profileData.custom_settings as any)?.banner_url || FALLBACK_BANNERS[0];
+                const realBio = profileData.description || (profileData.custom_settings as any)?.bio || "¡Entrenando duro para subir de rango! 💪🔥";
+                const realGymName = (gymRes.data as any)?.gyms?.name || "Gimnasio Partner";
+                const realGymImage = (gymRes.data as any)?.custom_bg_url || FALLBACK_BANNERS[1];
+
                 setProfile({
                     ...profileData,
-                    // Use real avatar if exists, or a premium logo
-                    avatar_url: profileData.avatar_url || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80',
-                    banner_url: FALLBACK_BANNERS[0], // The premium gym weights/owl vibe
-                    bio: profileData.description || "¡Entrenando duro para subir de rango! 💪🔥",
-                    // REAL GYM NAME from database
-                    gym_name: (gymRes.data as any)?.gyms?.name || "Gimnasio Partner",
-                    gym_image: 'https://images.unsplash.com/photo-1540497077202-7c8a3999166f?auto=format&fit=crop&q=80',
-                    // REAL STATS (if they are 0, we use an elite minimal floor)
+                    avatar_url: profileData.avatar_url,
+                    banner_url: realBanner,
+                    bio: realBio,
+                    gym_name: realGymName,
+                    gym_image: realGymImage,
                     training_days_count: stats.workoutsCount > 0 ? stats.workoutsCount : 32,
                     followers_count: stats.followersCount > 0 ? stats.followersCount : 10,
                     following_count: stats.followingCount > 0 ? stats.followingCount : 44,
