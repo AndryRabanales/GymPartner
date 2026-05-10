@@ -45,6 +45,13 @@ export const Radar = () => {
     const [isBoostModalOpen, setIsBoostModalOpen] = useState(false);
     const [isBoosting, setIsBoosting] = useState(false);
     const [userProfile, setUserProfile] = useState<any>(null);
+    const currentUser = nearbyUsers[currentIndex];
+
+    useEffect(() => {
+        if (currentUser) {
+            console.log(`👁️ [RADAR] Usuario activo: ${currentUser.username} | Seguidores actuales: ${currentUser.followers_count} | Stats cargadas: ${currentUser.stats_loaded}`);
+        }
+    }, [currentIndex, nearbyUsers]);
 
     useEffect(() => {
         loadNearbyUsers();
@@ -184,6 +191,7 @@ export const Radar = () => {
         }
 
         // 2. OPTIMISTIC UPDATE: Update UI INSTANTLY
+        console.log("🚀 [FOLLOW] Iniciando para:", currentUser.username, "Seguidores actuales:", currentUser.followers_count);
         const targetId = currentUser.id;
         const updatedUsers = [...nearbyUsers];
         updatedUsers[currentIndex] = { 
@@ -191,6 +199,7 @@ export const Radar = () => {
             is_following: true, 
             followers_count: (currentUser.followers_count || 0) + 1 
         };
+        console.log("✅ [FOLLOW] Estado optimista aplicado. Nuevo conteo esperado:", updatedUsers[currentIndex].followers_count);
         setNearbyUsers(updatedUsers);
 
         try {

@@ -29,6 +29,7 @@ const FALLBACK_BANNERS = [
 ];
 
 export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose, actions }) => {
+    console.log("📸 [CARD] Recibiendo datos de perfil:", user.username, "| Seguidores:", user.followers_count, "| Siguiendo:", (user as any).is_following);
     return (
         <div className="flex-1 flex flex-col relative bg-black/40 backdrop-blur-3xl w-full h-full rounded-[3rem] border border-white/10 shadow-[0_30px_60px_rgba(0,0,0,0.8)] overflow-hidden select-none">
             {/* Close Button (if provided) */}
