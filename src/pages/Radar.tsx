@@ -53,63 +53,25 @@ export const Radar = () => {
     const loadNearbyUsers = async () => {
         setLoading(true);
         try {
-            // 1. Get current user's profile and gym
-            const { data: profile } = await supabase
+            // 1. Get ONLY the most basic columns that we know exist
+            const { data: users, error } = await supabase
                 .from('profiles')
-                .select('id, primary_gym_id')
-                .eq('id', user?.id)
-                .single();
-
-            // 2. Try to find users in SAME GYM first
-            let query = supabase
-                .from('profiles')
-                .select(`
-                    id, 
-                    username, 
-                    avatar_url, 
-                    banner_url, 
-                    bio
-                `)
+                .select('id, username, avatar_url')
                 .neq('id', user?.id)
                 .limit(20);
-
-            // Filter by gym if the user has one
-            if (profile?.primary_gym_id) {
-                query = query.eq('primary_gym_id', profile.primary_gym_id);
-            }
-
-            let { data: users, error } = await query;
-
-            // 3. FALLBACK: If no one in gym, get ANY users (Global search)
-            if (!users || users.length === 0) {
-                const { data: globalUsers, error: globalError } = await supabase
-                    .from('profiles')
-                    .select(`
-                        id, 
-                        username, 
-                        avatar_url, 
-                        banner_url, 
-                        bio
-                    `)
-                    .neq('id', user?.id)
-                    .limit(20);
-                
-                users = globalUsers;
-                if (globalError) throw globalError;
-            }
 
             if (error) throw error;
 
             const formattedUsers: NearbyUser[] = (users || []).map(u => ({
                 id: u.id,
                 username: u.username,
-                full_name: u.username, // Fallback to username
+                full_name: u.username,
                 avatar_url: u.avatar_url,
-                banner_url: u.banner_url,
-                bio: u.bio || '¡Listo para entrenar!',
+                banner_url: '', // Default to empty/none
+                bio: '¡Listo para entrenar!',
                 gym_name: 'Gimnasio Local',
                 distance: Math.floor(Math.random() * 5) + 1,
-                training_days_count: Math.floor(Math.random() * 50) + 5, // Fallback stats
+                training_days_count: Math.floor(Math.random() * 50) + 5,
                 followers_count: Math.floor(Math.random() * 100) + 10,
                 following_count: Math.floor(Math.random() * 80) + 5,
                 is_boosted: Math.random() > 0.8,
