@@ -255,8 +255,6 @@ export const Radar = () => {
         trackMouse: true
     });
 
-    const currentUser = nearbyUsers[currentIndex];
-
     return (
         <div className="flex-1 w-full flex flex-col relative overflow-hidden bg-transparent selection:bg-gym-primary selection:text-black">
 
