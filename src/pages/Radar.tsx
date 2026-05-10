@@ -411,8 +411,8 @@ export const Radar = () => {
                         }}
                     >
 
-                        {/* --- BANNER SECTION (Ultra Compact) --- */}
-                        <div className="h-28 sm:h-36 shrink-0 relative w-full bg-neutral-800 overflow-hidden pt-8">
+                        {/* --- BANNER SECTION (Immersive Cover) --- */}
+                        <div className="h-40 sm:h-48 shrink-0 relative w-full bg-neutral-800 overflow-hidden">
                             {currentUser.banner_url ? (
                                 <FadeInImage
                                     src={cloudinaryService.getOptimizedImageUrl(currentUser.banner_url, { width: 400, height: 200 })}
