@@ -64,7 +64,7 @@ export const PublicProfile = () => {
                         socialService.getProfileStats(profileData.id),
                         supabase
                             .from('user_gyms')
-                            .select('*, gyms(name, image_url)')
+                            .select('*, gyms(name)')
                             .eq('user_id', profileData.id)
                             .eq('is_home_base', true)
                             .maybeSingle()
@@ -88,7 +88,7 @@ export const PublicProfile = () => {
                         banner_url: profileData.banner_url || (profileData.custom_settings as any)?.banner_url || FALLBACK_BANNERS[0],
                         bio: profileData.description || "¡Entrenando duro para subir de rango! 💪🔥",
                         gym_name: (gymRes.data as any)?.gyms?.name || "Base Central",
-                        gym_image: (gymRes.data as any)?.gyms?.image_url || FALLBACK_BANNERS[1],
+                        gym_image: FALLBACK_BANNERS[1],
                         training_days_count: stats.workoutsCount || 0,
                         followers_count: stats.followersCount || 0,
                         following_count: stats.followingCount || 0,

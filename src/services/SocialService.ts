@@ -452,7 +452,7 @@ class SocialService {
         if (!data) return [];
 
         if (data.length > 0) {
-            console.log(`[Algorithm V3] Top post rank: ${Math.round(data[0].rank_score)} | Viral: ${data[0].is_viral} | Cold Start: ${data[0].is_cold_start}`);
+            console.log(`[Algorithm V3] Top post rank: ${Math.round(data[0].rank_score)}`);
         }
 
         const mappedPosts: any[] = data.map((row: any) => ({
@@ -602,7 +602,7 @@ class SocialService {
             const [followers, following, workouts, postsWithLikes] = await Promise.all([
                 supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', userId),
                 supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', userId),
-                supabase.from('workout_sessions').select('*', { count: 'exact', head: true }).eq('user_id', userId).not('finished_at', 'is', null),
+                supabase.from('workout_sessions').select('*', { count: 'exact', head: true }).eq('user_id', userId).not('end_time', 'is', null),
                 supabase.from('posts').select('id, post_likes(count)', { count: 'exact' }).eq('user_id', userId)
             ]);
 
@@ -618,8 +618,8 @@ class SocialService {
                 workoutsCount: workouts.count || 0
             };
         } catch (e) {
-            console.error(e);
-            return { followersCount: 0, followingCount: 0, totalLikes: 0 };
+            console.error("Error fetching profile stats:", e);
+            return { followersCount: 0, followingCount: 0, totalLikes: 0, workoutsCount: 0 };
         }
     }
 
