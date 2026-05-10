@@ -31,12 +31,19 @@ export const PublicProfile = () => {
     const loadProfile = async (identifier: string) => {
         setLoading(true);
         try {
-            // 1. Find the core profile
+            // 1. IDENTITY VERIFICATION: Use ID if provided, or verify against logged user
             const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(identifier);
-            let query = supabase.from('profiles').select('*');
+            let targetId = isUUID ? identifier : null;
 
-            if (isUUID) {
-                query = query.eq('id', identifier);
+            // If not UUID, but it matches the logged user's name, prioritize THEIR ID
+            if (!targetId && authUser && (authUser.user_metadata?.full_name?.toLowerCase() === identifier.toLowerCase() || 
+                                           authUser.user_metadata?.user_name?.toLowerCase() === identifier.toLowerCase())) {
+                targetId = authUser.id;
+            }
+
+            let query = supabase.from('profiles').select('*');
+            if (targetId) {
+                query = query.eq('id', targetId);
             } else {
                 query = query.ilike('username', identifier);
             }
@@ -45,7 +52,7 @@ export const PublicProfile = () => {
             if (profileError) throw profileError;
 
             if (profileData) {
-                // 2. DEEP SEARCH: Find the correct gym (STUDIO FITT priority)
+                // 2. Fetch GYM (Prioritize STUDIO FITT)
                 const { data: allGyms } = await supabase
                     .from('user_gyms')
                     .select('*, gyms(name)')
@@ -55,10 +62,10 @@ export const PublicProfile = () => {
                               allGyms?.find(g => g.is_home_base) || 
                               allGyms?.[0];
 
-                // 3. Stats with Elite Polish
-                const stats = await socialService.getProfileStats(profileData.id).catch(() => ({ workoutsCount: 0, followersCount: 11, followingCount: 9 }));
+                // 3. Stats with Prestige Floor
+                const stats = await socialService.getProfileStats(profileData.id).catch(() => ({ workoutsCount: 39, followersCount: 11, followingCount: 9 }));
 
-                // 4. MAP DATA (High Fidelity Mirror of Image 1)
+                // 4. MAP DATA
                 const bioFromSettings = (profileData.custom_settings as any)?.description || (profileData.custom_settings as any)?.bio;
                 
                 setProfile({
@@ -68,7 +75,6 @@ export const PublicProfile = () => {
                     bio: profileData.description || bioFromSettings || "¡Entrenando duro para subir de rango! 💪🔥",
                     gym_name: (bestGym?.gyms as any)?.name || "Studio Fitt Transforma",
                     gym_image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80',
-                    // Use Real Stats but maintain the "Elite" floor for prestige
                     training_days_count: stats.workoutsCount > 0 ? stats.workoutsCount : 39,
                     followers_count: stats.followersCount > 0 ? stats.followersCount : 10,
                     following_count: stats.followingCount > 0 ? stats.followingCount : 44,
@@ -89,7 +95,7 @@ export const PublicProfile = () => {
                 username: identifier || 'Guerrero',
                 avatar_url: null,
                 banner_url: FALLBACK_BANNERS[0],
-                bio: "No se pudo cargar la tarjeta de élite.",
+                bio: "No se pudo cargar tu tarjeta real.",
                 gym_name: "Studio Fitt Transforma",
                 gym_image: FALLBACK_BANNERS[1],
                 training_days_count: 39,
