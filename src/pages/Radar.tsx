@@ -99,33 +99,19 @@ export const Radar = () => {
                     }
                 }
 
-                // 2.2 Fetch CUSTOM Main Base Assets for these users
-                const profileIds = profiles.map(p => p.id);
-                const { data: customBases } = await supabase
-                    .from('user_gyms')
-                    .select('user_id, gym_id, custom_bg_url, custom_color')
-                    .in('user_id', profileIds)
-                    .eq('is_home_base', true);
-
-                const customBaseMap = (customBases || []).reduce((acc: any, b) => {
-                    acc[b.user_id] = b;
-                    return acc;
-                }, {});
-
                 // 3. Enrich with basic profile info (Stats will load lazily)
                 const enriched = profiles.map((p, idx) => {
                     const settings = (p.custom_settings as any) || {};
                     const gymInfo = gymMap[p.home_gym_id || ''] || { name: "Gimnasio Partner", image: null };
-                    const customBase = customBaseMap[p.id];
                     
                     const isBoosted = p.boost_until && new Date(p.boost_until) > new Date();
 
                     return {
                         ...p,
                         gym_name: gymInfo.name,
-                        // PRIORITIZE Custom BG from User Gyms, then Null (Card will use color)
-                        gym_image: customBase?.custom_bg_url || null,
-                        gym_color: customBase?.custom_color || '#E5FF00',
+                        // PRIORITIZE Public Assets from Profile Table
+                        gym_image: p.main_base_image || null,
+                        gym_color: p.main_base_color || '#E5FF00',
                         banner_url: settings.banner_url || FALLBACK_BANNERS[idx % FALLBACK_BANNERS.length],
                         training_days_count: p.checkins_count || 0,
                         followers_count: 0,

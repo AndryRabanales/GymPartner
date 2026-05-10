@@ -90,12 +90,35 @@ class UserService {
     // Update User Gym Customization (Background & Color)
     async updateUserGymCustomization(userId: string, gymId: string, styles: { custom_bg_url?: string, custom_color?: string }) {
         try {
+            // 1. Update the private gym record
             const { error } = await supabase
                 .from('user_gyms')
                 .update(styles)
                 .match({ user_id: userId, gym_id: gymId });
 
             if (error) throw error;
+
+            // 2. SYNC WITH PUBLIC PROFILE if it's the home base
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('home_gym_id')
+                .eq('id', userId)
+                .single();
+
+            if (profile?.home_gym_id === gymId) {
+                console.log("🔄 [SYNC] Actualizando assets de Sede Principal en Perfil Público...");
+                const profileUpdate: any = {};
+                if (styles.custom_bg_url !== undefined) profileUpdate.main_base_image = styles.custom_bg_url;
+                if (styles.custom_color !== undefined) profileUpdate.main_base_color = styles.custom_color;
+
+                if (Object.keys(profileUpdate).length > 0) {
+                    await supabase
+                        .from('profiles')
+                        .update(profileUpdate)
+                        .eq('id', userId);
+                }
+            }
+
             return { success: true };
         } catch (error) {
             console.error('Error updating gym customization:', error);
