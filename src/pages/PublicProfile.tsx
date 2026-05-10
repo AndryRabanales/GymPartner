@@ -45,6 +45,9 @@ export const PublicProfile = () => {
             }
 
             if (data) {
+                // 1. Fetch REAL stats from SocialService
+                const stats = await socialService.getProfileStats(data.id);
+
                 if (authUser) {
                     const following = await socialService.getFollowStatus(authUser.id, data.id);
                     setIsFollowing(following);
@@ -52,13 +55,14 @@ export const PublicProfile = () => {
 
                 setProfile({
                     ...data,
-                    banner_url: FALLBACK_BANNERS[Math.floor(Math.random() * FALLBACK_BANNERS.length)],
-                    gym_name: "Base Central GymPartner",
+                    // Use real data from DB and Services
+                    banner_url: data.banner_url || FALLBACK_BANNERS[Math.floor(Math.random() * FALLBACK_BANNERS.length)],
+                    gym_name: "Base GymPartner", // We can improve this later if we have gym_id
                     gym_image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80',
-                    training_days_count: Math.floor(Math.random() * 50) + 10,
-                    followers_count: Math.floor(Math.random() * 100),
-                    following_count: Math.floor(Math.random() * 100),
-                    bio: data.bio || "Enfocado en el ascenso. ¡Únete a mi equipo para dominar el ranking! 🔥"
+                    training_days_count: stats.workoutsCount || 0,
+                    followers_count: stats.followersCount || 0,
+                    following_count: stats.followingCount || 0,
+                    bio: data.bio || "Guerrero de la legión GymPartner. 🔥"
                 });
             } else {
                 // Not found state
