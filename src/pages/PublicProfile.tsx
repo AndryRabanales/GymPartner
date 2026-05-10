@@ -36,7 +36,7 @@ export const PublicProfile = () => {
             
             let query = supabase
                 .from('profiles')
-                .select('id, username, avatar_url, bio');
+                .select('id, username, avatar_url');
 
             if (isUUID) {
                 query = query.eq('id', identifier);
