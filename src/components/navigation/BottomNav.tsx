@@ -30,51 +30,63 @@ export const BottomNav: React.FC<BottomNavProps> = ({ onUploadClick: _ }) => {
     }, [location.pathname]);
 
     return (
-        <div className="md:hidden w-full bg-black/60 backdrop-blur-2xl border-t border-white/10 pb-[env(safe-area-inset-bottom)] shrink-0 relative z-50">
-            <div className="flex items-center justify-around h-16 px-2">
+        <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-md z-50 animate-in slide-in-from-bottom-8 duration-700">
+            <div className="relative bg-black/40 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-2 shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden">
+                {/* Active Indicator Background Pill */}
+                <div 
+                    className="absolute h-12 bg-gym-primary/10 border border-gym-primary/20 rounded-3xl transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] z-0"
+                    style={{
+                        width: 'calc(25% - 12px)',
+                        left: isActive('/') ? '8px' : 
+                              isActive('/ranking') ? 'calc(25% + 4px)' : 
+                              isActive('/radar') ? 'calc(50% + 1px)' : 'calc(75% - 2px)'
+                    }}
+                />
+
+                <div className="flex items-center justify-around h-14 relative z-10">
                 {/* 1. INICIO */}
-                <Link to="/" className="flex flex-col items-center justify-center gap-0.5 w-14 h-full relative group">
+                <Link to="/" className="flex flex-col items-center justify-center w-full h-full relative group">
                     <Home
                         size={22}
-                        className={`transition-all duration-300 ${isActive('/') ? "text-white fill-white scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]" : "text-neutral-500 group-hover:text-neutral-300"}`}
+                        className={`transition-all duration-500 ${isActive('/') ? "text-gym-primary scale-110 drop-shadow-[0_0_12px_rgba(250,204,21,0.5)]" : "text-neutral-500 group-hover:text-neutral-300"}`}
                         strokeWidth={isActive('/') ? 2.5 : 2}
                     />
-                    <span className={`text-[10px] font-bold transition-all duration-300 ${isActive('/') ? 'text-white translate-y-[-1px]' : 'text-neutral-500 group-hover:text-neutral-300'}`}>Inicio</span>
+                    <span className={`text-[9px] font-black uppercase tracking-tighter mt-0.5 transition-all duration-500 ${isActive('/') ? 'text-gym-primary opacity-100' : 'text-neutral-500 opacity-0'}`}>Inicio</span>
                 </Link>
 
-                {/* 2. RANKING (Moved from Header) */}
-                <Link to="/ranking" className="flex flex-col items-center justify-center gap-0.5 w-14 h-full relative group">
+                {/* 2. RANKING */}
+                <Link to="/ranking" className="flex flex-col items-center justify-center w-full h-full relative group">
                     <Trophy
                         size={22}
-                        className={`transition-all duration-300 ${isActive('/ranking') ? "text-yellow-500 fill-yellow-500/20 scale-110 drop-shadow-[0_0_8px_rgba(234,179,8,0.3)]" : "text-neutral-500 group-hover:text-neutral-300"}`}
+                        className={`transition-all duration-500 ${isActive('/ranking') ? "text-gym-primary scale-110 drop-shadow-[0_0_12px_rgba(250,204,21,0.5)]" : "text-neutral-500 group-hover:text-neutral-300"}`}
                         strokeWidth={isActive('/ranking') ? 2.5 : 2}
                     />
-                    <span className={`text-[10px] font-bold transition-all duration-300 ${isActive('/ranking') ? 'text-yellow-500 translate-y-[-1px]' : 'text-neutral-500 group-hover:text-neutral-300'}`}>Ranking</span>
+                    <span className={`text-[9px] font-black uppercase tracking-tighter mt-0.5 transition-all duration-500 ${isActive('/ranking') ? 'text-gym-primary opacity-100' : 'text-neutral-500 opacity-0'}`}>Ranking</span>
                 </Link>
 
-                {/* 3. RADAR (GymRats) */}
-                <Link to="/radar" className="flex flex-col items-center justify-center gap-0.5 w-14 h-full relative group">
+                {/* 3. RADAR */}
+                <Link to="/radar" className="flex flex-col items-center justify-center w-full h-full relative group">
                     <Radar
                         size={22}
-                        className={`transition-all duration-300 ${isActive('/radar') ? "text-gym-primary fill-gym-primary/20 scale-110 drop-shadow-[0_0_8px_rgba(250,204,21,0.3)]" : "text-neutral-500 group-hover:text-neutral-300"}`}
+                        className={`transition-all duration-500 ${isActive('/radar') ? "text-gym-primary scale-110 drop-shadow-[0_0_12px_rgba(250,204,21,0.5)]" : "text-neutral-500 group-hover:text-neutral-300"}`}
                         strokeWidth={isActive('/radar') ? 2.5 : 2}
                     />
-                    <span className={`text-[10px] font-bold transition-all duration-300 ${isActive('/radar') ? 'text-gym-primary translate-y-[-1px]' : 'text-neutral-500 group-hover:text-neutral-300'}`}>Radar</span>
+                    <span className={`text-[9px] font-black uppercase tracking-tighter mt-0.5 transition-all duration-500 ${isActive('/radar') ? 'text-gym-primary opacity-100' : 'text-neutral-500 opacity-0'}`}>Radar</span>
                 </Link>
 
-                {/* 4. MENSAJES (Moved from Header) */}
-                <Link to="/inbox" className="flex flex-col items-center justify-center gap-0.5 w-14 h-full relative group">
+                {/* 4. CHAT */}
+                <Link to="/inbox" className="flex flex-col items-center justify-center w-full h-full relative group">
                     <div className="relative">
                         <MessageCircle
                             size={22}
-                            className={`transition-all duration-300 ${isActive('/inbox') ? "text-white fill-white/20 scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]" : "text-neutral-500 group-hover:text-neutral-300"}`}
+                            className={`transition-all duration-500 ${isActive('/inbox') ? "text-gym-primary scale-110 drop-shadow-[0_0_12px_rgba(250,204,21,0.5)]" : "text-neutral-500 group-hover:text-neutral-300"}`}
                             strokeWidth={isActive('/inbox') ? 2.5 : 2}
                         />
                         {hasUnread && (
-                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-gym-primary rounded-full border-2 border-black animate-pulse"></span>
+                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-black animate-pulse"></span>
                         )}
                     </div>
-                    <span className={`text-[10px] font-bold transition-all duration-300 ${isActive('/inbox') ? 'text-white translate-y-[-1px]' : 'text-neutral-500 group-hover:text-neutral-300'}`}>Chat</span>
+                    <span className={`text-[9px] font-black uppercase tracking-tighter mt-0.5 transition-all duration-500 ${isActive('/inbox') ? 'text-gym-primary opacity-100' : 'text-neutral-500 opacity-0'}`}>Chat</span>
                 </Link>
             </div>
         </div>
