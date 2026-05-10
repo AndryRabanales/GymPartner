@@ -74,21 +74,32 @@ export const Radar = () => {
             if (profiles) {
                 // 2. Fetch Gym Names and IMAGES (Official) - SAFETY CHECK
                 const gymIds = [...new Set(profiles.map(p => p.home_gym_id).filter(Boolean))];
+                console.log("🔍 [RADAR] IDs de gimnasios detectados:", gymIds);
+                
                 let gymMap: any = {};
                 
                 if (gymIds.length > 0) {
-                    const { data: gymsData } = await supabase
-                        .from('gyms')
-                        .select('id, name, image_url')
-                        .in('id', gymIds);
+                    try {
+                        const { data: gymsData, error: gError } = await supabase
+                            .from('gyms')
+                            .select('id, name, image_url')
+                            .in('id', gymIds);
 
-                    gymMap = (gymsData || []).reduce((acc: any, g) => {
-                        acc[g.id] = { name: g.name, image: g.image_url };
-                        return acc;
-                    }, {});
+                        if (gError) {
+                            console.error("🚨 [RADAR] Error en consulta de gimnasios:", gError);
+                        } else if (gymsData) {
+                            gymMap = gymsData.reduce((acc: any, g) => {
+                                acc[g.id] = { name: g.name, image: g.image_url };
+                                return acc;
+                            }, {});
+                            console.log("✅ [RADAR] Datos de gimnasios cargados:", Object.keys(gymMap).length);
+                        }
+                    } catch (err) {
+                        console.error("🚨 [RADAR] Excepción al cargar gimnasios:", err);
+                    }
                 }
 
-                // 2.2 NEW: Fetch CUSTOM Main Base Assets for these users
+                // 2.2 Fetch CUSTOM Main Base Assets for these users
                 const profileIds = profiles.map(p => p.id);
                 const { data: customBases } = await supabase
                     .from('user_gyms')
@@ -108,7 +119,7 @@ export const Radar = () => {
                     const customBase = customBaseMap[p.id];
                     
                     const isBoosted = p.boost_until && new Date(p.boost_until) > new Date();
-                    
+
                     return {
                         ...p,
                         gym_name: gymInfo.name,
