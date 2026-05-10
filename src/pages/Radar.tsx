@@ -234,29 +234,28 @@ export const Radar = () => {
                                 : 'none'
                         }}
                     >
-                        {/* --- BANNER SECTION (Immersive Cover) --- */}
-                        <div className="h-48 sm:h-56 shrink-0 relative w-full bg-neutral-800 overflow-hidden">
-                            <FadeInImage
-                                src={currentUser.banner_url || FALLBACK_BANNERS[0]}
-                                alt="Banner"
-                                className="w-full h-full object-cover opacity-60"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
-                            
-                            {/* Boost Badge on Banner */}
-                            {isUserBoosted && (
-                                <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md border border-yellow-500/50 px-3 py-1.5 rounded-full flex items-center gap-2 shadow-2xl animate-pulse">
-                                    <Zap size={14} className="text-yellow-500" fill="currentColor" />
-                                    <span className="text-[10px] font-black text-white italic uppercase tracking-widest">BOOST</span>
-                                </div>
-                            )}
-                        </div>
+                        {/* --- STATIC IDENTITY SECTION (Fixed at top) --- */}
+                        <div className="shrink-0 flex flex-col items-center">
+                            {/* Banner */}
+                            <div className="h-44 sm:h-52 shrink-0 relative w-full bg-neutral-800 overflow-hidden">
+                                <FadeInImage
+                                    src={currentUser.banner_url || FALLBACK_BANNERS[0]}
+                                    alt="Banner"
+                                    className="w-full h-full object-cover opacity-60"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
+                                
+                                {/* Boost Badge on Banner */}
+                                {isUserBoosted && (
+                                    <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md border border-yellow-500/50 px-3 py-1.5 rounded-full flex items-center gap-2 shadow-2xl animate-pulse">
+                                        <Zap size={14} className="text-yellow-500" fill="currentColor" />
+                                        <span className="text-[10px] font-black text-white italic uppercase tracking-widest">BOOST</span>
+                                    </div>
+                                )}
+                            </div>
 
-                        {/* --- PROFILE CONTENT (SCROLLABLE) --- */}
-                        <div className="flex-1 flex flex-col items-center justify-start relative z-20 -mt-10 px-3 overflow-y-auto custom-scrollbar pb-6">
-                            
-                            {/* Avatar with Ring */}
-                            <div className="relative group">
+                            {/* Avatar (Static -mt-10) */}
+                            <div className="relative z-30 -mt-12 group">
                                 <div className={`absolute -inset-1 rounded-full blur-xl opacity-40 group-hover:opacity-70 transition-opacity ${isUserBoosted ? 'bg-yellow-500' : 'bg-gym-primary'}`}></div>
                                 <div className={`relative w-24 h-24 rounded-full p-1 shadow-2xl ${isUserBoosted ? 'bg-gradient-to-tr from-yellow-600 to-yellow-300' : 'bg-gradient-to-tr from-neutral-800 to-neutral-600'}`}>
                                     <div className="w-full h-full rounded-full bg-neutral-900 flex items-center justify-center overflow-hidden border border-white/10 relative">
@@ -271,8 +270,6 @@ export const Radar = () => {
                                                 <span className="text-3xl font-black text-gym-primary italic">{currentUser.username[0].toUpperCase()}</span>
                                             </div>
                                         )}
-                                        
-                                        {/* Pro Badge */}
                                         {currentUser.is_pro && (
                                             <div className="absolute bottom-0 right-0 bg-gym-primary text-black p-1 rounded-full border-2 border-black shadow-lg">
                                                 <Shield size={10} fill="currentColor" />
@@ -287,62 +284,73 @@ export const Radar = () => {
                                 )}
                             </div>
 
-                            {/* Identity */}
-                            <div className="text-center mt-4">
+                            {/* Name & Gym (Static) */}
+                            <div className="text-center mt-3 pb-4 border-b border-white/5 w-full">
                                 <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase leading-tight drop-shadow-lg">
                                     {currentUser.username.replace('_', ' ')}
                                 </h2>
-                                <p className="text-[11px] font-medium text-neutral-500 mt-1 flex items-center justify-center gap-1.5 uppercase tracking-wide">
+                                <p className="text-[10px] font-bold text-neutral-500 mt-1 flex items-center justify-center gap-1.5 uppercase tracking-widest">
                                     <MapPin size={10} className="text-gym-primary" /> {currentUser.gym_name}
                                 </p>
                             </div>
+                        </div>
 
+                        {/* --- SCROLLABLE INFORMATION AREA --- */}
+                        <div className="flex-1 overflow-y-auto custom-scrollbar px-3 pt-4 pb-8 space-y-6">
+                            
                             {/* Stats Grid */}
-                            <div className="grid grid-cols-3 gap-2 w-full mt-6 px-1">
-                                <div className="bg-white/5 backdrop-blur-md rounded-2xl p-3 border border-white/5 text-center transition-transform hover:scale-105">
+                            <div className="grid grid-cols-3 gap-2 w-full px-1">
+                                <div className="bg-white/5 backdrop-blur-md rounded-2xl p-3 border border-white/5 text-center transition-transform active:scale-95">
                                     <p className="text-lg font-black text-gym-primary leading-none italic">{currentUser.training_days_count}</p>
                                     <p className="text-[8px] text-neutral-500 font-bold uppercase tracking-widest mt-1">Entrenos</p>
                                 </div>
-                                <div className="bg-white/5 backdrop-blur-md rounded-2xl p-3 border border-white/5 text-center transition-transform hover:scale-105">
+                                <div className="bg-white/5 backdrop-blur-md rounded-2xl p-3 border border-white/5 text-center transition-transform active:scale-95">
                                     <p className="text-lg font-black text-white leading-none italic">{currentUser.followers_count}</p>
                                     <p className="text-[8px] text-neutral-500 font-bold uppercase tracking-widest mt-1">Seguidores</p>
                                 </div>
-                                <div className="bg-white/5 backdrop-blur-md rounded-2xl p-3 border border-white/5 text-center transition-transform hover:scale-105">
+                                <div className="bg-white/5 backdrop-blur-md rounded-2xl p-3 border border-white/5 text-center transition-transform active:scale-95">
                                     <p className="text-lg font-black text-white leading-none italic">{currentUser.following_count}</p>
                                     <p className="text-[8px] text-neutral-500 font-bold uppercase tracking-widest mt-1">Seguidos</p>
                                 </div>
                             </div>
 
-                            {/* Bio / Motivation */}
-                            <div className="w-full mt-6 px-2">
-                                <div className="bg-gradient-to-br from-neutral-900/90 to-black rounded-[2rem] border border-white/5 relative overflow-hidden group shadow-2xl min-h-[180px]">
+                            {/* Bio / Motivation / Base Card */}
+                            <div className="px-1">
+                                <div className="bg-gradient-to-br from-neutral-900/90 to-black rounded-[2.5rem] border border-white/5 relative overflow-hidden group shadow-2xl min-h-[180px]">
                                     {/* Gym Image Fallback in Card */}
                                     <div className="absolute inset-0 opacity-20 group-hover:opacity-40 transition-opacity">
                                         <img src={currentUser.gym_image} alt="Gym" className="w-full h-full object-cover" />
                                     </div>
                                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
                                     
-                                    <div className="relative z-10 p-4">
+                                    <div className="relative z-10 p-5">
                                         <div className="flex items-center gap-2 mb-2">
                                             <div className="w-6 h-6 rounded-full bg-gym-primary/10 flex items-center justify-center">
                                                 <Sparkles size={12} className="text-gym-primary" />
                                             </div>
                                             <span className="text-[10px] font-black text-white uppercase tracking-widest italic">Base Principal</span>
                                         </div>
-                                        <p className="text-sm font-black text-white leading-relaxed italic uppercase tracking-tight">
+                                        <p className="text-base font-black text-white leading-relaxed italic uppercase tracking-tight">
                                             {currentUser.gym_name.toUpperCase()}
                                         </p>
-                                        <div className="mt-3 flex items-center justify-between">
+                                        <div className="mt-4 flex items-center justify-between">
                                             <div className="flex items-center gap-2 text-neutral-400">
-                                                <Activity size={12} className="text-gym-primary" />
+                                                <Activity size={14} className="text-gym-primary" />
                                                 <span className="text-[10px] font-bold uppercase tracking-widest">Enfocado</span>
                                             </div>
-                                            <div className="px-2 py-1 bg-white/5 rounded-lg border border-white/10 text-[9px] font-mono text-neutral-400">
+                                            <div className="px-3 py-1.5 bg-white/5 rounded-xl border border-white/10 text-[10px] font-mono text-neutral-400">
                                                 {currentUser.distance} KM
                                             </div>
                                         </div>
                                     </div>
                                 </div>
+                            </div>
+
+                            {/* Bio Text (if exists) */}
+                            <div className="px-4">
+                                <p className="text-sm font-medium text-neutral-400 italic leading-relaxed text-center">
+                                    "{currentUser.bio}"
+                                </p>
                             </div>
                         </div>
                     </div>
