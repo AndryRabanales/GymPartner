@@ -30,6 +30,9 @@ export const PublicProfile = () => {
 
     const loadProfile = async (identifier: string) => {
         setLoading(true);
+        console.log("🔍 [DIAGNOSTICO] Buscando perfil para:", identifier);
+        console.log("👤 [DIAGNOSTICO] ¿Usuario logueado?:", authUser ? authUser.email : "NO (MODO INCOGNITO)");
+
         try {
             // 1. Find the core profile using PUBLIC columns
             const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(identifier);
@@ -42,63 +45,79 @@ export const PublicProfile = () => {
             }
 
             const { data: profileData, error: profileError } = await query.limit(1).maybeSingle();
-            if (profileError) throw profileError;
+            
+            if (profileError) {
+                console.error("❌ [DIAGNOSTICO ERROR] Error en tabla profiles:", profileError);
+                throw profileError;
+            }
+
+            console.log("📄 [DIAGNOSTICO] Perfil RAW:", profileData);
 
             if (profileData) {
                 // 2. Fetch GYM info from PUBLIC gyms table using home_gym_id
                 let gymName = "Gimnasio Partner";
                 if (profileData.home_gym_id) {
-                    const { data: gymData } = await supabase
+                    console.log("🏢 [DIAGNOSTICO] Buscando gym ID:", profileData.home_gym_id);
+                    const { data: gymData, error: gymError } = await supabase
                         .from('gyms')
                         .select('name')
                         .eq('id', profileData.home_gym_id)
                         .maybeSingle();
-                    if (gymData) gymName = gymData.name;
+                    
+                    if (gymError) console.error("❌ [DIAGNOSTICO ERROR] Error en tabla gyms:", gymError);
+                    if (gymData) {
+                        console.log("🏢 [DIAGNOSTICO] Gym encontrado:", gymData.name);
+                        gymName = gymData.name;
+                    }
                 }
 
-                // 3. Handle stats with PUBLIC fallbacks (for non-logged in visitors)
-                const [stats] = await Promise.all([
-                    socialService.getProfileStats(profileData.id).catch(() => ({ workoutsCount: 0, followersCount: 0, followingCount: 0 }))
-                ]);
+                // 3. Handle stats with PUBLIC fallbacks
+                const stats = await socialService.getProfileStats(profileData.id).catch(() => {
+                    console.warn("⚠️ [DIAGNOSTICO] Stats bloqueadas por RLS, usando fallbacks.");
+                    return { workoutsCount: 0, followersCount: 0, followingCount: 0 };
+                });
 
-                // 4. MAP DATA (Prioritizing REAL DB values even if visitor is unauthenticated)
+                console.log("📊 [DIAGNOSTICO] Stats recibidas:", stats);
+
+                // 4. MAP DATA
                 const bioFromSettings = (profileData.custom_settings as any)?.description || (profileData.custom_settings as any)?.bio;
-                
-                // Clean up avatar URL if it has double nesting
                 let cleanAvatar = profileData.avatar_url;
                 if (cleanAvatar?.includes('avatars/avatars/')) {
                     cleanAvatar = cleanAvatar.replace('avatars/avatars/', 'avatars/');
                 }
 
-                setProfile({
+                const finalProfile = {
                     ...profileData,
                     avatar_url: cleanAvatar,
                     banner_url: (profileData.custom_settings as any)?.banner_url || FALLBACK_BANNERS[0],
                     bio: profileData.description || bioFromSettings || "¡Entrenando duro para subir de rango! 💪🔥",
                     gym_name: gymName,
                     gym_image: 'https://images.unsplash.com/photo-1540497077202-7c8a3999166f?auto=format&fit=crop&q=80',
-                    // Fallback to xp/checkins if social stats are blocked by RLS
                     training_days_count: stats.workoutsCount || profileData.checkins_count || 32,
                     followers_count: stats.followersCount || Math.floor((profileData.xp || 0) / 100) || 10,
                     following_count: stats.followingCount || 9,
                     distance: 'Local'
-                });
+                };
+
+                console.log("✅ [DIAGNOSTICO] Perfil final:", finalProfile);
+                setProfile(finalProfile);
 
                 if (authUser) {
                     const following = await socialService.getFollowStatus(authUser.id, profileData.id);
                     setIsFollowing(following);
                 }
             } else {
+                console.warn("⚠️ [DIAGNOSTICO] No se encontró el perfil en modo público.");
                 throw new Error("Profile not found");
             }
-        } catch (error) {
-            console.error("Error loading profile:", error);
+        } catch (error: any) {
+            console.error("❌ [DIAGNOSTICO FATAL]:", error);
             setProfile({
                 id: 'unknown',
                 username: identifier || 'Guerrero',
                 avatar_url: null,
                 banner_url: FALLBACK_BANNERS[0],
-                bio: "Este guerrero está forjando su camino de élite.",
+                bio: `Error de acceso: ${error.message || 'Privado'}`,
                 gym_name: "Desconocido",
                 gym_image: FALLBACK_BANNERS[1],
                 training_days_count: 0,
