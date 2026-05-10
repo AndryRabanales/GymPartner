@@ -145,7 +145,7 @@ export const UserProfile = () => {
 
     const handleShareProfile = () => {
         const username = profile?.username || user?.user_metadata?.full_name || 'gymrat';
-        const profileUrl = `${window.location.origin}/player/${username}`;
+        const profileUrl = `${window.location.origin}/player/${profile.id}`;
         navigator.clipboard.writeText(profileUrl);
         alert('🚀 ¡Enlace de tu perfil copiado! Compártelo con el mundo.');
     };
@@ -585,14 +585,31 @@ export const UserProfile = () => {
                             )}
                         </div>
 
-                        {/* Edit Button - PREMIUM GLASS PENCIL */}
-                        <div className="absolute top-4 right-4 sm:static sm:order-last">
+                        {/* Actions Group: Boost & Edit */}
+                        <div className="absolute top-4 right-4 flex items-center gap-2 sm:static sm:order-last">
+                            {/* BOOST BUTTON - HIGH ENERGY ZAP */}
+                            <button
+                                onClick={() => setIsBoostModalOpen(true)}
+                                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all backdrop-blur-md shadow-lg group relative overflow-hidden ${
+                                    profile?.boost_until && new Date(profile.boost_until) > new Date()
+                                    ? 'bg-yellow-500 text-black border-yellow-400 animate-pulse'
+                                    : 'bg-white/5 border border-white/10 text-neutral-400 hover:text-yellow-500 hover:bg-white/10 hover:border-yellow-500/30'
+                                }`}
+                                title="Boost Perfil"
+                            >
+                                <Zap size={18} className="group-hover:scale-125 transition-transform z-10" fill={profile?.boost_until && new Date(profile.boost_until) > new Date() ? "currentColor" : "none"} />
+                                {!(profile?.boost_until && new Date(profile.boost_until) > new Date()) && (
+                                    <div className="absolute inset-0 bg-gradient-to-tr from-yellow-500/0 via-yellow-500/10 to-yellow-500/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                )}
+                            </button>
+
                             <button
                                 onClick={() => {
                                     setShowEditProfile(true);
                                     hideBottomNav();
                                 }}
                                 className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all backdrop-blur-md shadow-sm group"
+                                title="Editar Perfil"
                             >
                                 <Edit2 size={18} className="group-hover:scale-110 transition-transform" />
                             </button>
