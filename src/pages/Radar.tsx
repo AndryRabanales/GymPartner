@@ -46,10 +46,10 @@ export const Radar = () => {
     const loadNearbyUsers = async () => {
         setLoading(true);
         try {
-            // Simplified query to essential columns to avoid 400 Bad Request
+            // SAFE QUERY: Essentials only to avoid schema errors
             const { data: profiles, error } = await supabase
                 .from('profiles')
-                .select('id, username, avatar_url, banner_url, bio, training_days_count, followers_count, following_count')
+                .select('id, username, avatar_url')
                 .neq('id', authUser?.id)
                 .limit(20);
 

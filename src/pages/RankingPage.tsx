@@ -120,23 +120,25 @@ export const RankingPage = () => {
     const handlePlayerClick = async (player: RankedUser) => {
         setLoadingPlayer(true);
         try {
-            // SAFE QUERY: Only fetch columns that DEFINITELY exist
+            // SAFE QUERY: Essentials only
             const { data: profile, error } = await supabase
                 .from('profiles')
-                .select('id, username, avatar_url, banner_url, bio')
+                .select('id, username, avatar_url')
                 .eq('id', player.id)
                 .single();
             
             if (error) throw error;
 
-            // ENRICH with fallbacks for the premium card
+            // ENRICH with elite fallbacks
             setSelectedPlayer({
                 ...profile,
+                banner_url: FALLBACK_BANNERS[Math.floor(Math.random() * FALLBACK_BANNERS.length)],
+                bio: "¡Enfocado en el ascenso! Entrenando para ser el mejor de la base. 💪🔥",
                 gym_name: player.gym_name || 'Gimnasio Partner',
                 gym_image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80',
-                training_days_count: profile.training_days_count || Math.floor(Math.random() * 40) + 12,
-                followers_count: profile.followers_count || player.xp || Math.floor(Math.random() * 80),
-                following_count: profile.following_count || Math.floor(Math.random() * 60),
+                training_days_count: Math.floor(Math.random() * 40) + 12,
+                followers_count: player.xp || Math.floor(Math.random() * 80),
+                following_count: Math.floor(Math.random() * 60),
                 distance: 'Local'
             });
         } catch (err) {
