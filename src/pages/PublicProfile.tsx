@@ -31,13 +31,20 @@ export const PublicProfile = () => {
     const loadProfile = async (identifier: string) => {
         setLoading(true);
         try {
-            // DUAL SEARCH: Try to find by ID OR by Username (resilient to different link formats)
-            // Using .or() with case-insensitive check for username
-            const { data, error } = await supabase
+            // SMART SEARCH: Detect if identifier is a UUID or a Username
+            const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(identifier);
+            
+            let query = supabase
                 .from('profiles')
-                .select('id, username, avatar_url, bio')
-                .or(`id.eq.${identifier},username.ilike.${identifier}`)
-                .maybeSingle();
+                .select('id, username, avatar_url, bio');
+
+            if (isUUID) {
+                query = query.eq('id', identifier);
+            } else {
+                query = query.ilike('username', identifier);
+            }
+
+            const { data, error } = await query.maybeSingle();
 
             if (error) {
                 console.error("Supabase error:", error);
