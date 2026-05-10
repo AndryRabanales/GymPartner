@@ -44,7 +44,7 @@ export const PublicProfile = () => {
                 query = query.ilike('username', identifier);
             }
 
-            const { data, error } = await query.maybeSingle();
+            const { data, error } = await query.limit(1).maybeSingle();
 
             if (error) {
                 console.error("Supabase error:", error);
