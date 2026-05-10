@@ -70,25 +70,27 @@ export const Radar = () => {
             if (pError) throw pError;
 
             if (profiles) {
-                // 2. Fetch all Gym names in one batch to be fast
+                // 2. Fetch Gym Names and IMAGES
                 const gymIds = [...new Set(profiles.map(p => p.home_gym_id).filter(Boolean))];
                 const { data: gymsData } = await supabase
                     .from('gyms')
-                    .select('id, name')
+                    .select('id, name, image_url')
                     .in('id', gymIds);
 
                 const gymMap = (gymsData || []).reduce((acc: any, g) => {
-                    acc[g.id] = g.name;
+                    acc[g.id] = { name: g.name, image: g.image_url };
                     return acc;
                 }, {});
 
                 // 3. Enrich with basic profile info (Stats will load lazily)
                 const enriched = profiles.map((p, idx) => {
                     const settings = (p.custom_settings as any) || {};
+                    const gymInfo = gymMap[p.home_gym_id || ''] || { name: "Gimnasio Partner", image: null };
+                    
                     return {
                         ...p,
-                        gym_name: gymMap[p.home_gym_id || ''] || "Gimnasio Partner",
-                        gym_image: FALLBACK_GYM_INTERIORS[idx % FALLBACK_GYM_INTERIORS.length],
+                        gym_name: gymInfo.name,
+                        gym_image: gymInfo.image || FALLBACK_GYM_INTERIORS[idx % FALLBACK_GYM_INTERIORS.length],
                         banner_url: settings.banner_url || FALLBACK_BANNERS[idx % FALLBACK_BANNERS.length],
                         training_days_count: p.checkins_count || 0,
                         followers_count: 0, // Placeholder
