@@ -83,7 +83,7 @@ export const Radar = () => {
                     .or(`follower_id.in.(${profileIds.join(',')}),following_id.in.(${profileIds.join(',')})`);
 
                 const statsMap = profileIds.reduce((acc: any, id) => {
-                    acc[id] = { followers: 0, following: 0 };
+                    acc[id] = { followers: 0, following: 0, is_following: false };
                     return acc;
                 }, {});
 
@@ -91,13 +91,18 @@ export const Radar = () => {
                     followsData.forEach(f => {
                         if (statsMap[f.following_id]) statsMap[f.following_id].followers++;
                         if (statsMap[f.follower_id]) statsMap[f.follower_id].following++;
+                        
+                        // Check if I (authUser) am following this person
+                        if (authUser && f.follower_id === authUser.id && statsMap[f.following_id]) {
+                            statsMap[f.following_id].is_following = true;
+                        }
                     });
                 }
 
                 // 3. Enrich with REAL DATA
                 const enriched = profiles.map((p, idx) => {
                     const settings = (p.custom_settings as any) || {};
-                    const realStats = statsMap[p.id] || { followers: 0, following: 0 };
+                    const realStats = statsMap[p.id] || { followers: 0, following: 0, is_following: false };
                     
                     return {
                         ...p,
@@ -107,6 +112,7 @@ export const Radar = () => {
                         training_days_count: p.checkins_count || 0,
                         followers_count: realStats.followers,
                         following_count: realStats.following,
+                        is_following: realStats.is_following,
                         distance: (Math.random() * 5 + 0.5).toFixed(1),
                         bio: p.description || settings.description || settings.bio || "Enfocado en superar mis límites cada día. 🔥",
                         is_pro: (p.xp || 0) > 1000
@@ -157,17 +163,41 @@ export const Radar = () => {
     };
 
     const handleFollow = async () => {
-        if (!authUser || !currentUser) return;
+        if (!authUser || !nearbyUsers[currentIndex] || isBoosting) return;
+        const targetUser = nearbyUsers[currentIndex];
+
+        // SAFETY CHECK: Don't follow if already following
+        if (targetUser.is_following) {
+            toast.success("¡Ya sigues a este guerrero!");
+            return;
+        }
+
         try {
-            await socialService.followUser(authUser.id, currentUser.id);
-            toast.success(`Siguiendo a @${currentUser.username}`);
-            setDirection('right');
-            setTimeout(() => {
-                setCurrentIndex(prev => prev + 1);
-                setDirection(null);
-            }, 300);
-        } catch (error) {
-            toast.error("Error al seguir usuario");
+            await socialService.followUser(authUser.id, targetUser.id);
+            toast.success(`¡Siguiendo a ${targetUser.username}!`);
+            
+            // Optimistic Update
+            const updated = [...nearbyUsers];
+            updated[currentIndex] = { ...targetUser, is_following: true, followers_count: (targetUser.followers_count || 0) + 1 };
+            setNearbyUsers(updated);
+
+            // Notify
+            await notificationService.createNotification(targetUser.id, {
+                type: 'follow',
+                title: 'Nuevo Seguidor',
+                content: `${authUser.user_metadata?.full_name || 'Alguien'} ha comenzado a seguirte.`,
+                data: { follower_id: authUser.id }
+            });
+        } catch (error: any) {
+            if (error.code === '23505' || error.message?.includes('Conflict')) {
+                // Already following (Conflict) - Just update UI
+                const updated = [...nearbyUsers];
+                updated[currentIndex] = { ...targetUser, is_following: true };
+                setNearbyUsers(updated);
+            } else {
+                console.error("Error following:", error);
+                toast.error("No se pudo seguir al usuario");
+            }
         }
     };
 
@@ -267,9 +297,14 @@ export const Radar = () => {
                                     
                                     <button 
                                         onClick={handleFollow}
-                                        className="w-14 h-14 rounded-2xl bg-neutral-900 border border-white/5 flex items-center justify-center text-neutral-500 hover:text-white hover:bg-neutral-800 transition-all active:scale-90 shadow-xl"
+                                        className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all active:scale-90 shadow-xl ${
+                                            currentUser.is_following 
+                                            ? 'bg-blue-500 text-white border-blue-400' 
+                                            : 'bg-neutral-900 border border-white/5 text-neutral-500 hover:text-blue-500 hover:bg-blue-500/10'
+                                        }`}
+                                        title={currentUser.is_following ? "Siguiendo" : "Seguir"}
                                     >
-                                        <UserPlus size={24} />
+                                        <UserPlus size={24} fill={currentUser.is_following ? "currentColor" : "none"} />
                                     </button>
 
                                     {/* MAIN ACTION: LIKE/INVITE */}
