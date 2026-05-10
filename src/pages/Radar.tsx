@@ -231,7 +231,6 @@ export const Radar = () => {
     });
 
     const currentUser = nearbyUsers[currentIndex];
-    const isUserBoosted = currentIndex === 0;
 
     return (
         <div className="flex-1 w-full flex flex-col relative overflow-hidden bg-transparent selection:bg-gym-primary selection:text-black">
@@ -292,20 +291,22 @@ export const Radar = () => {
                         <UserProfileCard 
                             user={currentUser}
                             actions={
-                                <div className="flex items-center justify-around w-full gap-3">
-                                    {/* Action Buttons */}
+                                <div className="flex items-center justify-between gap-2 px-2 mt-auto pb-4">
+                                    {/* 1. CANCELAR (SALTA A LA IZQUIERDA) */}
                                     <button 
                                         onClick={handleSkip}
-                                        className="w-14 h-14 rounded-2xl bg-neutral-900 border border-white/5 flex items-center justify-center text-neutral-500 hover:text-white hover:bg-neutral-800 transition-all active:scale-90 shadow-xl group"
+                                        className="w-14 h-14 rounded-2xl bg-neutral-900 border border-white/5 flex items-center justify-center text-red-500/50 hover:text-red-500 hover:bg-red-500/10 transition-all active:scale-90 shadow-xl"
+                                        title="Cancelar"
                                     >
-                                        <X size={24} className="group-hover:rotate-90 transition-transform duration-300" />
+                                        <X size={24} />
                                     </button>
-                                    
+
+                                    {/* 2. SEGUIR GUERRERO */}
                                     <button 
                                         onClick={handleFollow}
                                         className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all active:scale-90 shadow-xl ${
                                             currentUser.is_following 
-                                            ? 'bg-blue-500 text-white border-blue-400' 
+                                            ? 'bg-blue-500 text-white border-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.3)]' 
                                             : 'bg-neutral-900 border border-white/5 text-neutral-500 hover:text-blue-500 hover:bg-blue-500/10'
                                         }`}
                                         title={currentUser.is_following ? "Siguiendo" : "Seguir"}
@@ -313,32 +314,35 @@ export const Radar = () => {
                                         <UserPlus size={24} fill={currentUser.is_following ? "currentColor" : "none"} />
                                     </button>
 
-                                    {/* MAIN ACTION: LIKE/INVITE */}
+                                    {/* 3. ACCIÓN CENTRAL: DESAFIAR/INVITAR (EL MÁS GRANDE) */}
                                     <button 
                                         onClick={handleInvite}
-                                        className="w-20 h-20 rounded-[2rem] bg-white flex items-center justify-center text-black hover:bg-gym-primary transition-all active:scale-95 shadow-[0_15px_30px_rgba(255,255,255,0.2)] hover:shadow-[0_15px_40px_rgba(250,204,21,0.4)] group"
+                                        className="w-20 h-20 rounded-[2rem] bg-white flex items-center justify-center text-black hover:bg-gym-primary hover:scale-110 transition-all active:scale-95 shadow-[0_0_30px_rgba(255,255,255,0.2)] group"
+                                        title="Invitar a Entrenar"
                                     >
                                         <Swords size={32} className="group-hover:scale-110 transition-transform" fill="currentColor" />
                                     </button>
 
+                                    {/* 4. BOOST PERSONAL (ZAP) */}
+                                    <button 
+                                        onClick={() => setIsBoostModalOpen(true)}
+                                        className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all active:scale-90 shadow-xl ${
+                                            userProfile?.boost_until && new Date(userProfile.boost_until) > new Date()
+                                            ? 'bg-yellow-500 text-black border-yellow-400 animate-pulse shadow-[0_0_15px_rgba(250,204,21,0.3)]'
+                                            : 'bg-neutral-900 border border-white/5 text-neutral-500 hover:text-yellow-500 hover:bg-yellow-500/10'
+                                        }`}
+                                        title="Boost Perfil"
+                                    >
+                                        <Zap size={24} fill={userProfile?.boost_until && new Date(userProfile.boost_until) > new Date() ? "currentColor" : "none"} />
+                                    </button>
+
+                                    {/* 5. SIGUIENTE (FLECHA AL FINAL) */}
                                     <button 
                                         onClick={handleSkip}
                                         className="w-14 h-14 rounded-2xl bg-neutral-900 border border-white/5 flex items-center justify-center text-neutral-500 hover:text-white hover:bg-neutral-800 transition-all active:scale-90 shadow-xl"
                                         title="Siguiente"
                                     >
                                         <ArrowRight size={24} />
-                                    </button>
-
-                                    <button 
-                                        onClick={() => setIsBoostModalOpen(true)}
-                                        className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all active:scale-90 shadow-xl ${
-                                            userProfile?.boost_until && new Date(userProfile.boost_until) > new Date()
-                                            ? 'bg-yellow-500 text-black border-yellow-400 animate-pulse'
-                                            : 'bg-neutral-900 border border-white/5 text-neutral-500 hover:text-yellow-500 hover:bg-yellow-500/10'
-                                        }`}
-                                        title="Boost Perfil"
-                                    >
-                                        <Zap size={24} fill={userProfile?.boost_until && new Date(userProfile.boost_until) > new Date() ? "currentColor" : "none"} />
                                     </button>
                                 </div>
                             }
