@@ -60,18 +60,17 @@ export const PublicProfile = () => {
                     finalAvatar = authUser.user_metadata?.avatar_url;
                 }
 
-                // 3. DEEP GYM SEARCH
+                // 3. DEEP GYM SEARCH - Optimized to fetch customizations
                 const { data: allGyms } = await supabase
                     .from('user_gyms')
-                    .select('*, gyms(name)')
+                    .select('*, gyms(name, image_url)')
                     .eq('user_id', profileData.id);
                 
-                let bestGym = allGyms?.find(g => (g.gyms as any)?.name?.toUpperCase().includes('STUDIO FITT')) || 
-                              allGyms?.find(g => g.is_home_base) || 
-                              allGyms?.[0];
+                const homeBase = allGyms?.find(g => g.is_home_base);
+                const bestGym = homeBase || allGyms?.[0];
 
                 // 4. STATS SYNC
-                const stats = await socialService.getProfileStats(profileData.id).catch(() => ({ workoutsCount: 39, followersCount: 11, followingCount: 9 }));
+                const stats = await socialService.getProfileStats(profileData.id).catch(() => ({ workoutsCount: profileData.checkins_count || 0, followersCount: 0, followingCount: 0 }));
 
                 // 5. MAP FINAL ELITE CARD
                 const settings = (profileData.custom_settings as any) || {};
@@ -83,10 +82,11 @@ export const PublicProfile = () => {
                     banner_url: settings.banner_url || FALLBACK_BANNERS[0],
                     bio: finalBio,
                     gym_name: (bestGym?.gyms as any)?.name || "Studio Fitt Transforma",
-                    gym_image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80',
-                    training_days_count: stats.workoutsCount > 0 ? stats.workoutsCount : 39,
-                    followers_count: stats.followersCount > 0 ? stats.followersCount : 10,
-                    following_count: stats.followingCount > 0 ? stats.followingCount : 44,
+                    // PRIORITIZE Custom BG from User Gyms, then Gym Official Image, then Fallback
+                    gym_image: bestGym?.custom_bg_url || (bestGym?.gyms as any)?.image_url || FALLBACK_BANNERS[1],
+                    training_days_count: stats.workoutsCount > 0 ? stats.workoutsCount : (profileData.checkins_count || 0),
+                    followers_count: stats.followersCount,
+                    following_count: stats.followingCount,
                     distance: 'Local'
                 });
 
