@@ -28,16 +28,21 @@ export const PublicProfile = () => {
         }
     }, [username, authUser]);
 
-    const loadProfile = async (uname: string) => {
+    const loadProfile = async (identifier: string) => {
         setLoading(true);
         try {
+            // DUAL SEARCH: Try to find by ID OR by Username (resilient to different link formats)
+            // Using .or() with case-insensitive check for username
             const { data, error } = await supabase
                 .from('profiles')
                 .select('id, username, avatar_url, bio')
-                .eq('username', uname)
-                .single();
+                .or(`id.eq.${identifier},username.ilike.${identifier}`)
+                .maybeSingle();
 
-            if (error) throw error;
+            if (error) {
+                console.error("Supabase error:", error);
+                throw error;
+            }
 
             if (data) {
                 if (authUser) {
@@ -55,13 +60,15 @@ export const PublicProfile = () => {
                     following_count: Math.floor(Math.random() * 100),
                     bio: data.bio || "Enfocado en el ascenso. ¡Únete a mi equipo para dominar el ranking! 🔥"
                 });
+            } else {
+                // Not found state
+                throw new Error("Profile not found");
             }
         } catch (error) {
             console.error("Error loading profile:", error);
-            // Fallback object instead of redirect
             setProfile({
                 id: 'unknown',
-                username: 'Guerrero',
+                username: identifier || 'Guerrero',
                 avatar_url: null,
                 banner_url: FALLBACK_BANNERS[0],
                 bio: "Este guerrero aún no ha reclamado su identidad en la legión.",
