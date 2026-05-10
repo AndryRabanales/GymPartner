@@ -347,12 +347,12 @@ export const Radar = () => {
 
 
     return (
-        <div className="flex-1 w-full flex flex-col relative overflow-hidden bg-black selection:bg-gym-primary selection:text-black">
+        <div className="flex-1 w-full flex flex-col relative overflow-hidden bg-transparent selection:bg-gym-primary selection:text-black">
 
 
 
-            {/* Main Content Area */}
-            <div className="flex-1 flex flex-col w-full h-full overflow-hidden">
+            {/* Main Content Area - Optimized for Floating Cards */}
+            <div className="flex-1 flex flex-col w-full h-full overflow-hidden pt-6 pb-4">
 
                 {/* IDLE/ERROR STATE */}
                 {!loading && scanComplete && nearbyUsers.length === 0 && (
@@ -390,13 +390,13 @@ export const Radar = () => {
                     </div>
                 )}
 
-                {/* ACTIVE CARD CONTAINER - FLEX STRETCH */}
+                {/* ACTIVE CARD CONTAINER - FLOATING STYLE */}
                 {scanComplete && nearbyUsers.length > 0 && currentUser && !loading && (
                     <div
                         {...swipeHandlers}
-                        className={`flex-1 flex flex-col relative bg-neutral-900 w-full mb-0 rounded-b-none transition-all duration-300 select-none ${direction === 'left' ? 'animate-[slideOutLeft_0.3s_ease-out_forwards]' :
+                        className={`flex-1 flex flex-col relative bg-black/40 backdrop-blur-3xl w-[92%] mx-auto mb-6 rounded-[3rem] border border-white/10 shadow-[0_30px_60px_rgba(0,0,0,0.8)] transition-all duration-300 select-none overflow-hidden ${direction === 'left' ? 'animate-[slideOutLeft_0.3s_ease-out_forwards]' :
                             direction === 'right' ? 'animate-[slideOutRight_0.3s_ease-out_forwards]' :
-                                'animate-in fade-in slide-in-from-bottom-8 duration-500'
+                                'animate-in fade-in zoom-in-95 slide-in-from-bottom-12 duration-700'
                             }`}
                         style={{
                             transform: swipeState.isDragging
