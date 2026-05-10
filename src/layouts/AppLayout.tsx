@@ -46,10 +46,10 @@ export const AppLayout = () => {
                                             />
                                         </div>
                                         <div className="flex flex-col">
-                                            <span className="font-black text-xl sm:text-2xl tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-neutral-500 italic leading-none group-hover:from-gym-primary group-hover:to-yellow-600 transition-all duration-500 uppercase" style={{ fontFamily: 'Impact, sans-serif' }} translate="no">
+                                            <span className="font-black text-lg sm:text-xl tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-neutral-500 italic leading-none group-hover:from-gym-primary group-hover:to-yellow-600 transition-all duration-500 uppercase" style={{ fontFamily: 'Impact, sans-serif' }} translate="no">
                                                 GYMPARTNER
                                             </span>
-                                            <span className="text-[9px] font-black tracking-[0.3em] text-neutral-500 uppercase leading-none mt-0.5 group-hover:text-white transition-colors" translate="no">
+                                            <span className="hidden sm:block text-[8px] font-black tracking-[0.3em] text-neutral-500 uppercase leading-none mt-0.5 group-hover:text-white transition-colors" translate="no">
                                                 Intelligence
                                             </span>
                                         </div>
@@ -72,10 +72,11 @@ export const AppLayout = () => {
                                     ))}
                                 </nav>
 
-                                <div className="flex items-center gap-4 sm:gap-6">
+                                <div className="flex items-center gap-6 sm:gap-8">
                                     {user && <GPointsDisplay />}
-                                    {user && <NotificationBell />}
-                                    {user ? (
+                                    <div className="flex items-center gap-4">
+                                        {user && <NotificationBell />}
+                                        {user ? (
                                         <div className="relative z-50">
                                             <button
                                                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}

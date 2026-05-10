@@ -69,7 +69,7 @@ export const GPointsDisplay: React.FC = () => {
             
             <div className="flex flex-col shrink-0">
                 <span className={`
-                    font-black text-sm tracking-tighter leading-none italic tabular-nums
+                    font-black text-[11px] tracking-tighter leading-none italic tabular-nums
                     bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-neutral-400
                 `}>
                     {points.toLocaleString()}
