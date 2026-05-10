@@ -15,6 +15,8 @@ import { notificationService } from '../services/NotificationService';
 import { socialService } from '../services/SocialService';
 import { useAuth } from '../context/AuthContext';
 import { UserProfileCard } from '../components/ui/UserProfileCard';
+import { BoostModal } from '../components/profile/BoostModal';
+import { userService } from '../services/UserService';
 import toast from 'react-hot-toast';
 
 // Curated collection of high-quality gym/fitness images for fallbacks
@@ -38,6 +40,9 @@ export const Radar = () => {
     const [loading, setLoading] = useState(true);
     const [scanComplete, setScanComplete] = useState(false);
     const [direction, setDirection] = useState<'left' | 'right' | null>(null);
+    const [isBoostModalOpen, setIsBoostModalOpen] = useState(false);
+    const [isBoosting, setIsBoosting] = useState(false);
+    const [userProfile, setUserProfile] = useState<any>(null);
 
     useEffect(() => {
         loadNearbyUsers();
@@ -92,6 +97,31 @@ export const Radar = () => {
         } finally {
             setLoading(false);
             setTimeout(() => setScanComplete(true), 1500);
+        }
+    };
+
+    useEffect(() => {
+        if (authUser) {
+            supabase.from('profiles').select('*').eq('id', authUser.id).maybeSingle().then(({ data }) => setUserProfile(data));
+        }
+    }, [authUser]);
+
+    const handleBoostConfirm = async () => {
+        if (!authUser || isBoosting) return;
+        setIsBoosting(true);
+        try {
+            const success = await userService.spendGPoints(authUser.id, 1000, 'profile_boost');
+            if (success) {
+                toast.success("🚀 ¡PERFIL DESTACADO EN EL RADAR!");
+                setIsBoostModalOpen(false);
+                // Refresh local profile state
+                const { data } = await supabase.from('profiles').select('*').eq('id', authUser.id).maybeSingle();
+                setUserProfile(data);
+            }
+        } catch (err) {
+            toast.error("Error al activar Boost");
+        } finally {
+            setIsBoosting(false);
         }
     };
 
@@ -227,15 +257,29 @@ export const Radar = () => {
                                         <Swords size={32} className="group-hover:scale-110 transition-transform" fill="currentColor" />
                                     </button>
 
-                                    <button className="w-14 h-14 rounded-2xl bg-neutral-900 border border-white/5 flex items-center justify-center text-neutral-500 hover:text-white hover:bg-neutral-800 transition-all active:scale-90 shadow-xl">
-                                        <Eye size={24} />
-                                    </button>
-
-                                    <button className="w-14 h-14 rounded-2xl bg-neutral-900 border border-white/5 flex items-center justify-center text-neutral-500 hover:text-yellow-500 hover:bg-yellow-500/10 transition-all active:scale-90 shadow-xl">
-                                        <Zap size={24} />
+                                    <button 
+                                        onClick={() => setIsBoostModalOpen(true)}
+                                        className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all active:scale-90 shadow-xl ${
+                                            userProfile?.boost_until && new Date(userProfile.boost_until) > new Date()
+                                            ? 'bg-yellow-500 text-black border-yellow-400 animate-pulse'
+                                            : 'bg-neutral-900 border border-white/5 text-neutral-500 hover:text-yellow-500 hover:bg-yellow-500/10'
+                                        }`}
+                                        title="Boost Perfil"
+                                    >
+                                        <Zap size={24} fill={userProfile?.boost_until && new Date(userProfile.boost_until) > new Date() ? "currentColor" : "none"} />
                                     </button>
                                 </div>
                             }
+                        />
+                        
+                        <BoostModal 
+                            isOpen={isBoostModalOpen}
+                            onClose={() => setIsBoostModalOpen(false)}
+                            onConfirm={handleBoostConfirm}
+                            isBoosting={isBoosting}
+                            isActive={!!(userProfile?.boost_until && new Date(userProfile.boost_until) > new Date())}
+                            expiresAt={userProfile?.boost_until}
+                            currentPoints={userProfile?.g_points || 0}
                         />
                     </div>
                 )}

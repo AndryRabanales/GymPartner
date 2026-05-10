@@ -585,24 +585,8 @@ export const UserProfile = () => {
                             )}
                         </div>
 
-                        {/* Actions Group: Boost & Edit */}
-                        <div className="absolute top-4 right-4 flex items-center gap-2 sm:static sm:order-last">
-                            {/* BOOST BUTTON - HIGH ENERGY ZAP */}
-                            <button
-                                onClick={() => setIsBoostModalOpen(true)}
-                                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all backdrop-blur-md shadow-lg group relative overflow-hidden ${
-                                    profile?.boost_until && new Date(profile.boost_until) > new Date()
-                                    ? 'bg-yellow-500 text-black border-yellow-400 animate-pulse'
-                                    : 'bg-white/5 border border-white/10 text-neutral-400 hover:text-yellow-500 hover:bg-white/10 hover:border-yellow-500/30'
-                                }`}
-                                title="Boost Perfil"
-                            >
-                                <Zap size={18} className="group-hover:scale-125 transition-transform z-10" fill={profile?.boost_until && new Date(profile.boost_until) > new Date() ? "currentColor" : "none"} />
-                                {!(profile?.boost_until && new Date(profile.boost_until) > new Date()) && (
-                                    <div className="absolute inset-0 bg-gradient-to-tr from-yellow-500/0 via-yellow-500/10 to-yellow-500/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                                )}
-                            </button>
-
+                        {/* Edit Button - PREMIUM GLASS PENCIL */}
+                        <div className="absolute top-4 right-4 sm:static sm:order-last">
                             <button
                                 onClick={() => {
                                     setShowEditProfile(true);
