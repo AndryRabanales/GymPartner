@@ -63,7 +63,7 @@ export const PublicProfile = () => {
                 // 3. DEEP GYM SEARCH - Optimized to fetch customizations
                 const { data: allGyms } = await supabase
                     .from('user_gyms')
-                    .select('*, gyms(name, image_url)')
+                    .select('*, gyms(name)')
                     .eq('user_id', profileData.id);
                 
                 const homeBase = allGyms?.find(g => g.is_home_base);
@@ -82,8 +82,8 @@ export const PublicProfile = () => {
                     banner_url: settings.banner_url || FALLBACK_BANNERS[0],
                     bio: finalBio,
                     gym_name: (bestGym?.gyms as any)?.name || "Studio Fitt Transforma",
-                    // PRIORITIZE Custom BG from User Gyms, then Gym Official Image, then Fallback
-                    gym_image: bestGym?.custom_bg_url || (bestGym?.gyms as any)?.image_url || FALLBACK_BANNERS[1],
+                    // PRIORITIZE Custom BG from User Gyms, then Fallback
+                    gym_image: bestGym?.custom_bg_url || FALLBACK_BANNERS[1],
                     training_days_count: stats.workoutsCount > 0 ? stats.workoutsCount : (profileData.checkins_count || 0),
                     followers_count: stats.followersCount,
                     following_count: stats.followingCount,

@@ -82,14 +82,14 @@ export const Radar = () => {
                     try {
                         const { data: gymsData, error: gError } = await supabase
                             .from('gyms')
-                            .select('id, name, image_url')
+                            .select('id, name')
                             .in('id', gymIds);
 
                         if (gError) {
                             console.error("🚨 [RADAR] Error en consulta de gimnasios:", gError);
                         } else if (gymsData) {
                             gymMap = gymsData.reduce((acc: any, g) => {
-                                acc[g.id] = { name: g.name, image: g.image_url };
+                                acc[g.id] = { name: g.name };
                                 return acc;
                             }, {});
                             console.log("✅ [RADAR] Datos de gimnasios cargados:", Object.keys(gymMap).length);
