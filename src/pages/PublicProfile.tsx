@@ -82,8 +82,9 @@ export const PublicProfile = () => {
                     banner_url: settings.banner_url || FALLBACK_BANNERS[0],
                     bio: finalBio,
                     gym_name: (bestGym?.gyms as any)?.name || "Studio Fitt Transforma",
-                    // PRIORITIZE Custom BG from User Gyms, then Fallback
-                    gym_image: bestGym?.custom_bg_url || FALLBACK_BANNERS[1],
+                    // PRIORITIZE Custom BG from User Gyms, then Null (uses color)
+                    gym_image: bestGym?.custom_bg_url || null,
+                    gym_color: bestGym?.custom_color || '#E5FF00',
                     training_days_count: stats.workoutsCount > 0 ? stats.workoutsCount : (profileData.checkins_count || 0),
                     followers_count: stats.followersCount,
                     following_count: stats.followingCount,

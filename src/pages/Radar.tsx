@@ -123,8 +123,9 @@ export const Radar = () => {
                     return {
                         ...p,
                         gym_name: gymInfo.name,
-                        // PRIORITIZE Custom BG from User Gyms, then Gym Official Image, then Fallback
-                        gym_image: customBase?.custom_bg_url || gymInfo.image || FALLBACK_GYM_INTERIORS[idx % FALLBACK_GYM_INTERIORS.length],
+                        // PRIORITIZE Custom BG from User Gyms, then Null (Card will use color)
+                        gym_image: customBase?.custom_bg_url || null,
+                        gym_color: customBase?.custom_color || '#E5FF00',
                         banner_url: settings.banner_url || FALLBACK_BANNERS[idx % FALLBACK_BANNERS.length],
                         training_days_count: p.checkins_count || 0,
                         followers_count: 0,

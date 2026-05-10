@@ -10,7 +10,8 @@ interface UserProfileCardProps {
         avatar_url: string | null;
         banner_url?: string | null;
         gym_name: string;
-        gym_image: string;
+        gym_image: string | null;
+        gym_color?: string;
         training_days_count: number;
         followers_count: number;
         following_count: number;
@@ -110,11 +111,16 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
                 </div>
 
                 {/* Base Card */}
-                <div className="bg-gradient-to-br from-neutral-900/90 to-black rounded-[2.5rem] border border-white/5 relative overflow-hidden group shadow-2xl min-h-[160px]">
-                    <div className="absolute inset-0 opacity-20">
-                        <img src={user.gym_image} alt="Gym" className="w-full h-full object-cover" />
-                    </div>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
+                <div 
+                    className="rounded-[2.5rem] border border-white/5 relative overflow-hidden group shadow-2xl min-h-[160px]"
+                    style={{ backgroundColor: user.gym_color || '#E5FF00' }}
+                >
+                    {user.gym_image && (
+                        <div className="absolute inset-0 opacity-40">
+                            <img src={user.gym_image} alt="Gym" className="w-full h-full object-cover" />
+                        </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
                     
                     <div className="relative z-10 p-5">
                         <div className="flex items-center gap-2 mb-2">
