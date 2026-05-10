@@ -33,7 +33,7 @@ export const PublicProfile = () => {
         try {
             // 1. Find the core profile safely
             const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(identifier);
-            let query = supabase.from('profiles').select('id, username, avatar_url');
+            let query = supabase.from('profiles').select('*'); // Select * to get all potential custom fields
 
             if (isUUID) {
                 query = query.eq('id', identifier);
@@ -45,30 +45,40 @@ export const PublicProfile = () => {
             if (profileError) throw profileError;
 
             if (profileData) {
-                // 2. EXPLICITLY CLONE THE RANKING CARD LOGIC (This is what works)
-                // We use the same enrichment pattern that makes the Ranking look elite
-                setProfile({
-                    ...profileData,
-                    banner_url: FALLBACK_BANNERS[Math.floor(Math.random() * FALLBACK_BANNERS.length)],
-                    bio: "¡Entrenando duro para subir de rango! 💪🔥",
-                    gym_name: "Gimnasio Partner",
-                    gym_image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80',
-                    training_days_count: Math.floor(Math.random() * 40) + 12,
-                    followers_count: Math.floor(Math.random() * 80) + 5,
-                    following_count: Math.floor(Math.random() * 60) + 2,
-                    distance: 'Local'
-                });
+                // 2. Fetch REAL data from all services
+                const [stats, gymRes] = await Promise.all([
+                    socialService.getProfileStats(profileData.id),
+                    supabase
+                        .from('user_gyms')
+                        .select('*, gyms:gym_id(name, image_url)')
+                        .eq('user_id', profileData.id)
+                        .eq('is_home_base', true)
+                        .maybeSingle()
+                ]);
 
                 if (authUser) {
                     const following = await socialService.getFollowStatus(authUser.id, profileData.id);
                     setIsFollowing(following);
                 }
+
+                // 3. MAP REAL DATA (No more random mocks)
+                setProfile({
+                    ...profileData,
+                    avatar_url: profileData.avatar_url,
+                    banner_url: profileData.banner_url || (profileData.custom_settings as any)?.banner_url || FALLBACK_BANNERS[0],
+                    bio: profileData.bio || (profileData.custom_settings as any)?.bio || "¡Entrenando duro para subir de rango! 💪🔥",
+                    gym_name: (gymRes.data as any)?.gyms?.name || "Base Central GymPartner",
+                    gym_image: (gymRes.data as any)?.gyms?.image_url || FALLBACK_BANNERS[1],
+                    training_days_count: stats.workoutsCount || 0,
+                    followers_count: stats.followersCount || 0,
+                    following_count: stats.followingCount || 0,
+                    distance: 'Local'
+                });
             } else {
                 throw new Error("Profile not found");
             }
         } catch (error) {
             console.error("Error loading profile:", error);
-            // Show the fallback card if everything fails
             setProfile({
                 id: 'unknown',
                 username: identifier || 'Guerrero',
