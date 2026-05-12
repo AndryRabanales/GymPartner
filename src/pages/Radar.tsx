@@ -117,11 +117,21 @@ export const Radar = () => {
                     }
                 }
 
-                // 4. Enrich Profiles
+                // 4. GET CURRENT USER'S HOME GYM FOR PRIORITY
+                const { data: myProfile } = await supabase
+                    .from('profiles')
+                    .select('home_gym_id')
+                    .eq('id', authUser?.id)
+                    .maybeSingle();
+                
+                const myHomeGymId = myProfile?.home_gym_id;
+
+                // 5. Enrich and SORT Profiles (THE ALGORITHM)
                 const enriched = profiles.map((p, idx) => {
                     const settings = (p.custom_settings as any) || {};
                     const gymInfo = gymMap[p.home_gym_id || ''] || { name: "Gimnasio Partner" };
                     const isBoosted = p.boost_until && new Date(p.boost_until) > new Date();
+                    const isSameGym = myHomeGymId && p.home_gym_id === myHomeGymId;
 
                     return {
                         ...p,
@@ -137,10 +147,15 @@ export const Radar = () => {
                         stats_loaded: false,
                         distance: isBoosted ? '🔥 ELITE' : (Math.random() * 5 + 0.5).toFixed(1),
                         bio: p.description || settings.description || settings.bio || "¡Entrenando duro para subir de rango! 💪 🔥",
-                        is_pro: (p.xp || 0) > 1000 || isBoosted
+                        is_pro: (p.xp || 0) > 1000 || isBoosted,
+                        // Algorithm weight calculation
+                        algo_score: (isBoosted ? 10000 : 0) + (isSameGym ? 5000 : 0) + (p.checkins_count || 0)
                     };
                 });
-                setNearbyUsers(enriched);
+
+                // Final sort based on algo_score
+                const sorted = enriched.sort((a, b) => b.algo_score - a.algo_score);
+                setNearbyUsers(sorted);
             }
         } catch (error) {
             console.error("Error loading nearby users:", error);
