@@ -1747,9 +1747,7 @@ export const WorkoutSession = () => {
 
                             {/* Muscle Filter Bar */}
                             {!isCreatingExercise && (
-                                <div className="mt-4 overflow-x-auto flex gap-2 pb-2 no-scrollbar scroll-smooth">
-                                    <button
-                                <div className="flex gap-2 overflow-x-auto py-2 px-1 no-scrollbar scroll-smooth items-center">
+                                <div className="mt-4 flex gap-2 overflow-x-auto py-2 px-1 no-scrollbar scroll-smooth items-center">
                                     {/* --- RAMA: PECHO --- */}
                                     <button
                                         onClick={() => setActiveMuscleFilter(activeMuscleFilter === "PECHO" ? null : "PECHO")}
