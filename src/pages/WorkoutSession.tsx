@@ -1868,10 +1868,7 @@ export const WorkoutSession = () => {
                         </div>
 
                         <div className="flex-1 overflow-y-auto min-h-0 px-2 sm:px-4 pb-32 bg-black">
-                            {/* Content Switch */}
-                            {!isCreatingExercise ? (
-                                <div className="pt-4">
-                                    <ArsenalGrid
+                                      <ArsenalGrid
                                         inventory={effectiveInventory.filter(item => {
                                             // 1. Filter by Search Term
                                             const itemName = item?.name || "";
@@ -1881,7 +1878,7 @@ export const WorkoutSession = () => {
                                             // 2. Filter by Muscle Group
                                             if (!activeMuscleFilter) return true;
 
-                                            const n = normalizeText(item.name);
+                                            const n = normalizeText(itemName);
                                             const c = item.category;
 
                                             if (activeMuscleFilter === "Cuádriceps") {
@@ -1923,6 +1920,9 @@ export const WorkoutSession = () => {
 
                                             return false;
                                         })}
+                                        selectedItems={selectedCatalogItems}
+                                        userSettings={userSettings}
+                                        searchTerm={searchTerm}
                                         onToggleSelection={(id) => {
                                             toggleCatalogItem(id);
                                         }}
