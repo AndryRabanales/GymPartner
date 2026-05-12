@@ -366,14 +366,24 @@ export const WorkoutSession = () => {
                 userService.getUserGyms(userId),
                 equipmentService.getUserSettings(userId),
                 userService.ensurePersonalGym(userId),
-                // 4s timeout for GPS to not block too long
-                Promise.race([
-                    getPosition({ enableHighAccuracy: true, timeout: 4000 }),
-                    new Promise<null>((_, reject) => setTimeout(() => reject(new Error("GPS Timeout")), 4000))
-                ]).catch(err => {
-                    console.warn("GPS Resolution failed or timed out:", err);
-                    return null;
-                })
+                // Optimized GPS: Try High Accuracy, fallback to Low Accuracy if timeout
+                (async () => {
+                    try {
+                        return await Promise.race([
+                            getPosition({ enableHighAccuracy: true, timeout: 4000 }),
+                            new Promise<null>((_, reject) => setTimeout(() => reject(new Error("GPS Timeout")), 4000))
+                        ]);
+                    } catch (err) {
+                        console.warn("High Accuracy GPS failed, trying Low Accuracy fallback...");
+                        try {
+                            // Fast fallback using WiFi/Cell towers (Low Accuracy)
+                            return await getPosition({ enableHighAccuracy: false, timeout: 3000 });
+                        } catch (finalErr) {
+                            console.error("All GPS attempts failed:", finalErr);
+                            return null;
+                        }
+                    }
+                })()
             ]);
 
             let targetGymId = routeGymId === 'personal' ? undefined : routeGymId;
