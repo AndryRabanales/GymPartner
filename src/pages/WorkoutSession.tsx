@@ -383,43 +383,63 @@ export const WorkoutSession = () => {
             const mergedInventory = [...items, ...personalItems.filter(i => !items.some(existing => existing.id === i.id))];
             setArsenal(mergedInventory);
 
-            // 3. PHASE 3: Background GPS Resolution (Non-blocking)
+            // 3. PHASE 3: High-Precision Background GPS Resolution
             (async () => {
                 try {
                     const getPosition = (options?: PositionOptions): Promise<GeolocationPosition> => {
                         return new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, options));
                     };
 
+                    // Try to get a stable position
                     const gpsPosition = await Promise.race([
-                        getPosition({ enableHighAccuracy: true, timeout: 2000 }),
-                        new Promise<null>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 2000))
+                        getPosition({ enableHighAccuracy: true, timeout: 3500 }),
+                        new Promise<null>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3500))
                     ]).catch(async () => {
+                        // Immediate fallback to low accuracy if high accuracy fails
                         return await getPosition({ enableHighAccuracy: false, timeout: 2000 }).catch(() => null);
                     });
 
                     if (gpsPosition && !routeGymId) {
                         const userLat = gpsPosition.coords.latitude;
                         const userLng = gpsPosition.coords.longitude;
-                        const nearbyGym = gyms.find(gym => {
-                            if (!gym.lat || !gym.lng) return false;
-                            const R = 6371;
-                            const dLat = (gym.lat - userLat) * (Math.PI / 180);
-                            const dLon = (gym.lng - userLng) * (Math.PI / 180);
-                            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(userLat * (Math.PI / 180)) * Math.cos(gym.lat * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-                            return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))) <= 0.12;
-                        });
+                        
+                        // Sort gyms by distance to pick the ABSOLUTE closest one
+                        const gymsWithDistance = gyms
+                            .filter(g => g.lat && g.lng)
+                            .map(g => {
+                                const R = 6371;
+                                const dLat = (g.lat - userLat) * (Math.PI / 180);
+                                const dLon = (g.lng - userLng) * (Math.PI / 180);
+                                const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(userLat * (Math.PI / 180)) * Math.cos(g.lat * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                                const dist = (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+                                return { ...g, dist };
+                            })
+                            .filter(g => g.dist <= 0.15) // 150m radius for better indoor coverage
+                            .sort((a, b) => a.dist - b.dist);
 
-                        if (nearbyGym && nearbyGym.gym_id !== targetGymId) {
-                            console.log(`🎯 Background Detection: ${nearbyGym.gym_name}`);
-                            setDetectedGymName(nearbyGym.gym_name || '');
-                            setResolvedGymId(nearbyGym.gym_id);
-                            // Refresh inventory for the new detected gym
-                            const newItems = await equipmentService.getInventory(nearbyGym.gym_id);
-                            setArsenal(prev => [...newItems, ...prev.filter(p => !newItems.some(n => n.id === p.id))]);
+                        const nearestGym = gymsWithDistance[0];
+
+                        if (nearestGym && nearestGym.gym_id !== targetGymId) {
+                            console.log(`🎯 Precision Lock: ${nearestGym.gym_name} (${Math.round(nearestGym.dist * 1000)}m)`);
+                            setDetectedGymName(nearestGym.gym_name || '');
+                            setResolvedGymId(nearestGym.gym_id);
+                            
+                            // Hot-swap inventory and routines
+                            const [newItems, newRoutines] = await Promise.all([
+                                equipmentService.getInventory(nearestGym.gym_id),
+                                workoutService.getUserRoutines(userId, nearestGym.gym_id)
+                            ]);
+                            
+                            setRoutines(newRoutines);
+                            setArsenal(prev => {
+                                const combined = [...newItems, ...prev];
+                                const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
+                                return unique;
+                            });
                         }
                     }
                 } catch (err) {
-                    console.warn("Background GPS failed:", err);
+                    console.warn("Precision GPS failed:", err);
                 }
             })();
 
