@@ -355,14 +355,57 @@ export const WorkoutSession = () => {
             // Start 1s timer for animation immediately
             setTimeout(() => setShowIntroAnim(false), 1200);
 
-            // 1. Resolve Gym and Basic Data in Parallel
-            const [gyms, settings, personalGymId] = await Promise.all([
+            // 1. Parallelize Initial Data Fetching AND Geolocation
+            const getPosition = (options?: PositionOptions): Promise<GeolocationPosition> => {
+                return new Promise((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject, options);
+                });
+            };
+
+            const [gyms, settings, personalGymId, gpsPosition] = await Promise.all([
                 userService.getUserGyms(userId),
                 equipmentService.getUserSettings(userId),
-                userService.ensurePersonalGym(userId)
+                userService.ensurePersonalGym(userId),
+                // 4s timeout for GPS to not block too long
+                Promise.race([
+                    getPosition({ enableHighAccuracy: true, timeout: 4000 }),
+                    new Promise<null>((_, reject) => setTimeout(() => reject(new Error("GPS Timeout")), 4000))
+                ]).catch(err => {
+                    console.warn("GPS Resolution failed or timed out:", err);
+                    return null;
+                })
             ]);
 
             let targetGymId = routeGymId === 'personal' ? undefined : routeGymId;
+            
+            // Proximity Detection Logic
+            if (!targetGymId && gpsPosition) {
+                const userLat = gpsPosition.coords.latitude;
+                const userLng = gpsPosition.coords.longitude;
+                const ALLOWED_RADIUS = 0.12; // 120m
+
+                const nearbyGym = gyms.find(gym => {
+                    if (!gym.lat || !gym.lng) return false;
+                    // Helper directly inside to avoid import issues
+                    const R = 6371; // Radius of the earth in km
+                    const dLat = (gym.lat - userLat) * (Math.PI / 180);
+                    const dLon = (gym.lng - userLng) * (Math.PI / 180);
+                    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                              Math.cos(userLat * (Math.PI / 180)) * Math.cos(gym.lat * (Math.PI / 180)) *
+                              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                    const d = R * c; // Distance in km
+                    return d <= ALLOWED_RADIUS;
+                });
+
+                if (nearbyGym) {
+                    targetGymId = nearbyGym.gym_id;
+                    setDetectedGymName(nearbyGym.gym_name || 'Gimnasio Detectado');
+                    console.log(`🎯 Smart Detected Gym: ${nearbyGym.gym_name}`);
+                }
+            }
+
+            // Fallback to Home Base if still no target
             if (!targetGymId) {
                 const homeGym = gyms.find(g => g.is_home_base) || gyms[0];
                 targetGymId = homeGym?.gym_id || personalGymId;
