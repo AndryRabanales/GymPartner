@@ -1327,21 +1327,34 @@ export const WorkoutSession = () => {
 
     return (
         <div className="min-h-screen bg-neutral-950 text-white pb-32 relative overflow-hidden">
-            {/* 0. INTRO ANIMATION (1s) */}
+            {/* 0. INTRO ANIMATION (Matching Image Reference) */}
             {showIntroAnim && (
-                <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center animate-out fade-out duration-300 delay-1000">
-                    <div className="relative group">
-                        <div className="absolute -inset-1 bg-gradient-to-r from-gym-primary to-yellow-600 rounded-full blur opacity-25 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse"></div>
-                        <div className="relative px-8 py-4 bg-black rounded-full leading-none flex items-center divide-x divide-gray-600">
-                            <span className="flex items-center space-x-5">
-                                <Swords className="text-gym-primary animate-bounce" size={32} />
-                                <span className="pr-6 text-2xl font-black italic uppercase tracking-tighter text-white">
-                                    {detectedGymName}
-                                </span>
-                            </span>
-                            <span className="pl-6 text-gym-primary text-sm font-black uppercase tracking-widest animate-pulse">
-                                READY
-                            </span>
+                <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center animate-out fade-out duration-300 delay-700">
+                    <div className="flex flex-col items-center gap-8 px-6 text-center">
+                        {/* Map Icon (Gold) */}
+                        <div className="relative">
+                            <Map size={100} className="text-gym-primary fill-gym-primary/10 animate-pulse" strokeWidth={1.5} />
+                            <div className="absolute inset-0 bg-gym-primary/20 blur-2xl rounded-full" />
+                        </div>
+
+                        {/* Text Content */}
+                        <div className="space-y-2">
+                            <h2 className="text-2xl sm:text-3xl font-black italic uppercase tracking-[0.15em] text-white animate-in slide-in-from-bottom-2 duration-500">
+                                INICIANDO
+                            </h2>
+                            <h2 className="text-2xl sm:text-3xl font-black italic uppercase tracking-[0.15em] text-white animate-in slide-in-from-bottom-3 duration-600">
+                                ENTRENAMIENTO
+                            </h2>
+                            <h3 className="text-xl sm:text-2xl font-black italic uppercase tracking-wider text-gym-primary animate-in slide-in-from-bottom-4 duration-700">
+                                {detectedGymName}
+                            </h3>
+                        </div>
+
+                        {/* Animated Dots */}
+                        <div className="flex gap-2">
+                            <div className="w-3 h-3 rounded-full bg-gym-primary animate-bounce [animation-delay:-0.3s]" />
+                            <div className="w-3 h-3 rounded-full bg-gym-primary animate-bounce [animation-delay:-0.15s]" />
+                            <div className="w-3 h-3 rounded-full bg-gym-primary animate-bounce" />
                         </div>
                     </div>
                 </div>
