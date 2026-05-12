@@ -232,9 +232,9 @@ export const UserProfile = () => {
 
     if (!user) {
         return (
-            <div className="flex flex-col bg-neutral-950 flex-1 h-full">
+            <div className="flex flex-col bg-neutral-950 min-h-screen">
                 {/* Hero Section */}
-                <div className="flex-1 flex flex-col items-center justify-center p-4 py-12 md:py-20 text-center relative overflow-hidden">
+                <div className="flex-1 flex flex-col items-center justify-center p-6 py-20 md:py-32 text-center relative overflow-hidden">
                     {/* Background Glow */}
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gym-primary/10 rounded-full blur-[100px] pointer-events-none"></div>
 
