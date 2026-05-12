@@ -10,36 +10,31 @@ export const useAutoCheckin = () => {
     const hasCheckedIn = useRef(false);
 
     useEffect(() => {
-        // Only run if user is logged in, we have a location, and haven't checked in this session
-        if (!user || !location || hasCheckedIn.current) return;
-
         const performAutoCheckin = async () => {
             // Wait for Google Maps to be ready
             if (!window.google || !window.google.maps || !window.google.maps.places) {
-                console.log('⏳ [AUTO-CHECKIN] Esperando a Google Maps API...');
                 return;
             }
 
-            console.log('🛰️ [AUTO-CHECKIN] Iniciando escaneo de ubicación...');
+            // Only run if user is logged in and we have a location
+            if (!user || !location) return;
+
+            console.log('🛰️ [AUTO-CHECKIN] Escaneo táctico en curso...');
             
             try {
-                // Create a dummy div for PlacesService (it requires an element or map)
                 const dummyDiv = document.createElement('div');
                 const service = new google.maps.places.PlacesService(dummyDiv);
-
                 const center = new google.maps.LatLng(location.lat, location.lng);
                 
                 const request: google.maps.places.PlaceSearchRequest = {
                     location: center,
-                    radius: 100, // 100 meters detection radius
+                    radius: 120, // Slightly wider detection
                     type: 'gym'
                 };
 
                 service.nearbySearch(request, async (results, status) => {
                     if (status === google.maps.places.PlacesServiceStatus.OK && results && results.length > 0) {
                         const nearestGym = results[0];
-                        
-                        // Check distance precisely
                         if (nearestGym.geometry?.location) {
                             const dist = getDistance(
                                 location.lat, 
@@ -48,9 +43,7 @@ export const useAutoCheckin = () => {
                                 nearestGym.geometry.location.lng()
                             );
 
-                            if (dist <= 0.1) { // 100 meters
-                                console.log(`🎯 [AUTO-CHECKIN] ¡Gimnasio detectado!: ${nearestGym.name}`);
-                                
+                            if (dist <= 0.12) { // 120 meters
                                 const result = await userService.addGymToPassport(user.id, {
                                     place_id: nearestGym.place_id!,
                                     name: nearestGym.name || 'Gimnasio Detectado',
@@ -63,25 +56,32 @@ export const useAutoCheckin = () => {
                                 });
 
                                 if (result.success) {
-                                    console.log('✅ [AUTO-CHECKIN] Pasaporte actualizado automáticamente.');
+                                    console.log(`✅ [AUTO-CHECKIN] Registrado en: ${nearestGym.name}`);
                                     hasCheckedIn.current = true;
-                                    // Optional: Show a subtle toast or notification? 
-                                    // For now, silent is better as requested.
                                 }
                             }
                         }
                     }
                 });
             } catch (err) {
-                console.error('🚨 [AUTO-CHECKIN] Error en detección automática:', err);
+                console.error('🚨 [AUTO-CHECKIN] Error:', err);
             }
         };
 
-        // Delay slightly to ensure services are ready
-        const timer = setTimeout(performAutoCheckin, 3000);
-        return () => clearTimeout(timer);
+        // 1. Initial Instant Check (No delay)
+        if (!hasCheckedIn.current) {
+            performAutoCheckin();
+        }
 
-    }, [user, location]);
+        // 2. Continuous Monitoring: Every 20 minutes
+        const interval = setInterval(() => {
+            console.log('🔄 [AUTO-CHECKIN] Re-escaneando ubicación (Ciclo 20min)...');
+            performAutoCheckin();
+        }, 20 * 60 * 1000); 
+
+        return () => clearInterval(interval);
+
+    }, [user, location?.lat, location?.lng]);
 
     return null;
 };
