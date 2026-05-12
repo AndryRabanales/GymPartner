@@ -24,7 +24,7 @@ export const useGeolocation = (enableHighAccuracy = true) => {
         return {
             location: saved ? JSON.parse(saved) : null,
             error: null,
-            loading: true,
+            loading: saved ? false : true, // INSTANT LOAD: If we have a cache, don't show loading
         };
     });
 
