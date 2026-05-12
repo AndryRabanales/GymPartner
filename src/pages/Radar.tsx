@@ -248,7 +248,7 @@ export const Radar = () => {
         
         // Track "Ignore" in background
         if (targetId) {
-            supabase.rpc('increment_profile_skips', { u_id: targetId }).catch(() => {});
+            await supabase.rpc('increment_profile_skips', { u_id: targetId });
         }
 
         setTimeout(() => {
@@ -266,7 +266,7 @@ export const Radar = () => {
 
         // Track "Match" in background if following
         if (!wasFollowing) {
-            supabase.rpc('increment_profile_matches', { u_id: targetId }).catch(() => {});
+            await supabase.rpc('increment_profile_matches', { u_id: targetId });
         }
 
         // ... existing optimistic update ...
@@ -315,7 +315,7 @@ export const Radar = () => {
             const success = await notificationService.sendInvitation(currentUser.id, currentUser.username);
             if (success) {
                 // Track "Match" success
-                supabase.rpc('increment_profile_matches', { u_id: currentUser.id }).catch(() => {});
+                await supabase.rpc('increment_profile_matches', { u_id: currentUser.id });
                 
                 toast.success("Desafío enviado!");
                 setDirection('right');
