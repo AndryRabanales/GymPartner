@@ -141,15 +141,18 @@ export const WorkoutSession = () => {
 
     const scrollToCategory = (category: string) => {
         setActiveMuscleFilter(category);
-        const element = document.getElementById(`category-section-${category}`);
-        if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        } else {
-            // If not found (maybe filtered), reset scroll to top
-            if (catalogScrollRef.current) {
-                catalogScrollRef.current.scrollTop = 0;
+        
+        // Use a small timeout to ensure state update and DOM alignment
+        setTimeout(() => {
+            const element = document.getElementById(`category-section-${category}`);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+                if (catalogScrollRef.current) {
+                    catalogScrollRef.current.scrollTop = 0;
+                }
             }
-        }
+        }, 100);
     };
     const catalogScrollRef = useRef<HTMLDivElement>(null);
 
