@@ -1399,7 +1399,7 @@ export const WorkoutSession = () => {
                                 ENTRENAMIENTO
                             </h2>
                             <h3 className="text-xl sm:text-2xl font-black italic uppercase tracking-wider text-gym-primary animate-in fade-in duration-500">
-                                {detectedGymName || "LOCALIZANDO..."}
+                                {detectedGymName}
                             </h3>
                         </div>
 
