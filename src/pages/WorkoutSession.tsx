@@ -118,17 +118,8 @@ export const WorkoutSession = () => {
     const [tutorialStep, setTutorialStep] = useState(0);
 
     // NEW: Start Options Modal
-    const [showStartOptionsModal, setShowStartOptionsModal] = useState(false);
-
-    useEffect(() => {
-        const step = parseInt(localStorage.getItem('tutorial_step') || '0');
-        if (step === 6 || step === 7) {
-            setTutorialStep(step);
-        }
-    }, []);
-
-    // Numpad State Removed
-    // handleNumpadOpen Removed
+    const [showIntroAnim, setShowIntroAnim] = useState(true);
+    const [detectedGymName, setDetectedGymName] = useState('Gimnasio Detectado');
 
     const [userSettings, setUserSettings] = useState<CustomSettings>({ categories: [], metrics: [] });
     // Arsenal Modal State
@@ -341,224 +332,106 @@ export const WorkoutSession = () => {
     }, [user, routeGymId]);
 
     const initializeBattle = async (userId: string) => {
-        if (!userId) {
-            console.error('❌ userId is NULL or undefined!');
-            alert('Error: No se pudo autenticar al usuario');
-            navigate('/login');
-            return;
-        }
+        if (!userId) return navigate('/login');
 
-        console.log('🎯 Iniciando batalla para user:', userId);
-
+        // Parallelize Initial Data Fetching
         try {
-            // 1. Resolve Gym
-            let targetGymId = routeGymId === 'personal' ? undefined : routeGymId;
+            // Start 1s timer for animation immediately
+            setTimeout(() => setShowIntroAnim(false), 1200);
 
-            if (!targetGymId) {
-                const gyms = await userService.getUserGyms(userId);
-                const gym = gyms.find(g => g.is_home_base) || gyms[0];
-                if (gym) {
-                    targetGymId = gym.gym_id;
-                }
-            }
-
-            // Fetch actual Gym Details for GPS check (Lat/Lng) - REMOVED as redundant for now with auto-start
-
-            // Fallback: If no physical gym, use Personal Virtual Gym (Fix for Global Users)
-            if (!targetGymId) {
-                try {
-                    targetGymId = await userService.ensurePersonalGym(userId);
-                    console.log("Using Personal Gym for Battle:", targetGymId);
-                    // Personal gym might not have GPS, we can handle that in handleStartTraining
-                } catch (e) {
-                    console.warn("Could not resolve personal gym");
-                }
-            }
-
-            if (!targetGymId) {
-                console.warn("No gym found for battle.");
-                navigate('/');
-                return;
-            }
-            setResolvedGymId(targetGymId);
-
-            // 2. Load Inventory, Routines AND Custom Settings
-            const [items, localRoutines, settings] = await Promise.all([
-                equipmentService.getInventory(targetGymId),
-                workoutService.getUserRoutines(userId, targetGymId),
-                equipmentService.getUserSettings(userId)
+            // 1. Resolve Gym and Basic Data in Parallel
+            const [gyms, settings, personalGymId] = await Promise.all([
+                userService.getUserGyms(userId),
+                equipmentService.getUserSettings(userId),
+                userService.ensurePersonalGym(userId)
             ]);
 
-            // [FIX] ALWAYS Fetch Personal Inventory Logic (Global Custom Exercises)
-            let finalInventory = [...items];
-            try {
-                const personalGymId = await userService.ensurePersonalGym(userId);
-                if (personalGymId && personalGymId !== targetGymId) {
-                    const personalItems = await equipmentService.getInventory(personalGymId);
-                    console.log('🔗 Merged Personal Inventory into Session:', personalItems.length, 'items');
-
-                    // Merge avoiding duplicates by ID
-                    const existingIds = new Set(items.map(i => i.id));
-                    const newItems = personalItems.filter(i => !existingIds.has(i.id));
-                    finalInventory = [...finalInventory, ...newItems];
-                }
-            } catch (e) {
-                console.warn('Could not fetch personal inventory linkage', e);
+            let targetGymId = routeGymId === 'personal' ? undefined : routeGymId;
+            if (!targetGymId) {
+                const homeGym = gyms.find(g => g.is_home_base) || gyms[0];
+                targetGymId = homeGym?.gym_id || personalGymId;
+                if (homeGym) setDetectedGymName(homeGym.gym_name || 'Home Base');
             }
-
-            setArsenal(finalInventory);
-            setRoutines(localRoutines);
+            
+            setResolvedGymId(targetGymId || null);
             setUserSettings(settings);
 
-            // 3. Start or Resume Session
-            let active = null;
-            let activeError = null;
+            // 2. Fetch Inventory and Session Status in Parallel
+            const [items, localRoutines, activeResult, personalItems] = await Promise.all([
+                equipmentService.getInventory(targetGymId || ''),
+                workoutService.getUserRoutines(userId, targetGymId || ''),
+                workoutService.getActiveSession(userId),
+                targetGymId !== personalGymId ? equipmentService.getInventory(personalGymId || '') : Promise.resolve([])
+            ]);
 
-            // 3a. Check if we have an INTENDED session from navigation (Volver button)
-            const intendedSessionId = (location as any).state?.sessionId;
-            if (intendedSessionId) {
-                console.log("📍 Resuming specific session from navigation:", intendedSessionId);
-                const result = await workoutService.getSessionById(intendedSessionId);
-                // Handle split return {data, error}
-                if (result.data && !result.data.end_time) {
-                    active = result.data;
-                } else {
-                    console.warn("Intended session not found or closed. Checking for any active session.");
-                }
-            }
+            setRoutines(localRoutines);
+            
+            // Merge Inventories
+            const existingIds = new Set(items.map(i => i.id));
+            const mergedInventory = [...items, ...personalItems.filter(i => !existingIds.has(i.id))];
+            setArsenal(mergedInventory);
 
-            // 3b. If no specific session found, check general active session
-            if (!active) {
-                const result = await workoutService.getActiveSession(userId);
-                active = result.data;
-                activeError = result.error;
-            }
-
-            if (activeError) {
-                console.error("Error fetching active session:", activeError);
-                // Optionally alert user or fail gracefully
-            }
-
+            // 3. Restore or Start Logic
+            const active = activeResult.data;
             if (active) {
-                console.log('♻️ Sesión activa encontrada:', active.id);
                 setSessionId(active.id);
                 setStartTime(new Date(active.started_at));
-
-                // NEW: Restore State (Hydrate activeExercises)
-                setLoading(true);
-
-                // 1. FAST RESTORE: Local Storage Draft (Preserves unsaved inputs)
-                // This fixes the issue where returning to the session shows the routine list instead of the active exercises
+                
+                // Hydrate from Draft or DB
                 const savedDraft = localStorage.getItem(`workout_draft_${active.id}`);
                 if (savedDraft) {
-                    try {
-                        const parsed = JSON.parse(savedDraft);
-                        // Support both legacy array format and new object format
-                        const draftExercises = Array.isArray(parsed) ? parsed : (parsed.exercises || []);
-                        const draftRoutineName = Array.isArray(parsed) ? undefined : parsed.routineName;
-                        const draftOriginalIds = Array.isArray(parsed) ? [] : (parsed.originalIds || []);
+                    const parsed = JSON.parse(savedDraft);
+                    setActiveExercises(Array.isArray(parsed) ? parsed : (parsed.exercises || []));
+                    setLoading(false);
+                } else {
+                    const logs = await workoutService.getSessionLogs(active.id);
+                    if (logs && logs.length > 0) {
+                        const restoredExercises: WorkoutExercise[] = [];
+                        const exerciseMap = new Map<string, WorkoutExercise>();
 
-                        if (draftExercises.length > 0) {
-                            setActiveExercises(draftExercises);
-                            if (draftRoutineName) setCurrentRoutineName(draftRoutineName);
-                            if (draftOriginalIds.length > 0) setOriginalExerciseIds(draftOriginalIds);
-                            
-                            console.log('⚡ Draft restored with metadata - Skipping DB Log Fetch');
-                            setLoading(false);
-                            return;
-                        }
-                    } catch (e) {
-                        console.warn('Failed to parse workout draft', e);
-                    }
-                }
+                        logs.forEach((log: any) => {
+                            const exName = log.exercise?.name || 'Unknown Exercise';
+                            const exId = log.exercise_id;
+                            const equipItem = items.find(i => normalizeText(i.name) === normalizeText(exName));
+                            const defaultMetrics = { weight: true, reps: true, time: false, distance: false, rpe: false };
 
-                // 2. SLOW RESTORE: Database Logs (Only if no local draft found)
-                const logs = await workoutService.getSessionLogs(active.id);
+                            let exercise = exerciseMap.get(exId);
+                            if (!exercise) {
+                                exercise = {
+                                    id: Math.random().toString(),
+                                    equipmentId: equipItem?.id || exId,
+                                    equipmentName: exName,
+                                    metrics: (equipItem?.metrics || defaultMetrics) as any,
+                                    sets: [],
+                                    category: log.category_snapshot || equipItem?.target_muscle_group || 'Custom'
+                                };
+                                exerciseMap.set(exId, exercise);
+                                restoredExercises.push(exercise);
+                            }
 
-                if (logs && logs.length > 0) {
-                    // Group logs by Exercise ID (or Name if unique in session context) to reconstruct cards
-                    const restoredExercises: WorkoutExercise[] = [];
-                    const exerciseMap = new Map<string, WorkoutExercise>(); // Map by Exercise Name or ID
-
-                    logs.forEach((log: any) => {
-                        const exName = log.exercise?.name || 'Unknown Exercise';
-                        const exId = log.exercise_id;
-
-                        // Find matching equipment in local arsenal to get metrics config
-                        // If not found in arsenal, fallback to default metrics
-                        const equipItem = items.find(i => normalizeText(i.name) === normalizeText(exName));
-                        const defaultMetrics = { weight: true, reps: true, time: false, distance: false, rpe: false };
-
-                        let exercise = exerciseMap.get(exId);
-                        if (!exercise) {
-                            exercise = {
-                                id: Math.random().toString(), // UI Key
-                                equipmentId: equipItem?.id || exId,
-                                equipmentName: exName,
-                                metrics: (equipItem?.metrics || defaultMetrics) as any,
-                                sets: [],
-                                category: log.category_snapshot || equipItem?.target_muscle_group || 'Custom'
-                            };
-                            exerciseMap.set(exId, exercise);
-                            restoredExercises.push(exercise);
-                        }
-
-                        // Add Set
-                        exercise.sets.push({
-                            id: Math.random().toString(),
-                            weight: log.weight_kg || 0,
-                            reps: log.reps || 0,
-                            time: log.time || 0,
-                            distance: log.distance || 0,
-                            rpe: log.rpe || 0,
-                            custom: log.metrics_data || {},
-                            completed: true // Logged means completed/saved? Usually yes.
-                            // Actually, restore as uncompleted if we want them editable readily?
-                            // User wants "datos donde escribes ... mantenerse". If allowed to edit old sets, keep incomplete?
-                            // But logs are usually final. Let's mark as completed but editable.
+                            exercise.sets.push({
+                                id: Math.random().toString(),
+                                weight: log.weight_kg || 0,
+                                reps: log.reps || 0,
+                                time: log.time || 0,
+                                distance: log.distance || 0,
+                                rpe: log.rpe || 0,
+                                custom: log.metrics_data || {},
+                                completed: true
+                            });
                         });
-                    });
-
-                    if (restoredExercises.length > 0) {
                         setActiveExercises(restoredExercises);
-                        console.log('📦 State Restored:', restoredExercises.length, 'exercises');
                     } else {
-                        // Active Session found, but 0 exercises logged -> User was in "Armería"
-                        console.log('📦 Empty Active Session -> Re-opening Armería');
                         setShowAddModal(true);
                     }
-                } else {
-                    // No logs found -> User implies 0 exercises -> Open Armería
-                    console.log('📦 No Logs -> Re-opening Armería');
-                    setShowAddModal(true);
                 }
-                setLoading(false);
-
             } else {
-                console.log('✨ No hay sesión activa. Esperando input del usuario...');
-
-                // DO NOT START SESSION HERE. WAIT FOR USER ACTION.
-                setSessionId(null);
-                setStartTime(null);
-                if (!sessionId) { // Only reset if we don't have an active session in memory
-                    setActiveExercises([]); 
-                    setCurrentRoutineName(undefined);
-                    setOriginalExerciseIds([]);
-                }
-
-                // If no routines exist, auto-open "Add Exercise" modal (All Exercises)
-                // If routines exist, prompt choices (Start Options Modal)
-                if (localRoutines.length === 0) {
-                    console.log('🔰 No routines found - Auto-opening exercise picker');
-                    setShowAddModal(true);
-                } else {
-                    console.log('🔰 Routines found - Asking user intent');
-                    setShowStartOptionsModal(true);
-                }
+                if (localRoutines.length === 0) setShowAddModal(true);
+                else setShowStartOptionsModal(true);
             }
 
         } catch (error) {
-            console.error('❌ Error en initializeBattle:', error);
+            console.error('❌ Error initializing battle:', error);
         } finally {
             setLoading(false);
         }
@@ -1447,6 +1320,25 @@ export const WorkoutSession = () => {
 
     return (
         <div className="min-h-screen bg-neutral-950 text-white pb-32 relative overflow-hidden">
+            {/* 0. INTRO ANIMATION (1s) */}
+            {showIntroAnim && (
+                <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center animate-out fade-out duration-300 delay-1000">
+                    <div className="relative group">
+                        <div className="absolute -inset-1 bg-gradient-to-r from-gym-primary to-yellow-600 rounded-full blur opacity-25 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse"></div>
+                        <div className="relative px-8 py-4 bg-black rounded-full leading-none flex items-center divide-x divide-gray-600">
+                            <span className="flex items-center space-x-5">
+                                <Swords className="text-gym-primary animate-bounce" size={32} />
+                                <span className="pr-6 text-2xl font-black italic uppercase tracking-tighter text-white">
+                                    {detectedGymName}
+                                </span>
+                            </span>
+                            <span className="pl-6 text-gym-primary text-sm font-black uppercase tracking-widest animate-pulse">
+                                READY
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            )}
             {/* Background Ambient Effects */}
             <div className="fixed top-0 left-0 w-full h-1/2 bg-gradient-to-b from-red-900/10 to-transparent pointer-events-none" />
 
