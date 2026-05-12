@@ -127,7 +127,7 @@ export const WorkoutSession = () => {
     // NEW: Start Options Modal
     const [showStartOptionsModal, setShowStartOptionsModal] = useState(false);
     const [showIntroAnim, setShowIntroAnim] = useState(true);
-    const [detectedGymName, setDetectedGymName] = useState('Gimnasio Detectado');
+    const [detectedGymName, setDetectedGymName] = useState('');
     const catalogScrollRef = useRef<HTMLDivElement>(null);
 
     const [userSettings, setUserSettings] = useState<CustomSettings>({ categories: [], metrics: [] });
@@ -1388,8 +1388,8 @@ export const WorkoutSession = () => {
                             <h2 className="text-2xl sm:text-3xl font-black italic uppercase tracking-[0.15em] text-white animate-in slide-in-from-bottom-3 duration-600">
                                 ENTRENAMIENTO
                             </h2>
-                            <h3 className="text-xl sm:text-2xl font-black italic uppercase tracking-wider text-gym-primary animate-in slide-in-from-bottom-4 duration-700">
-                                {detectedGymName}
+                            <h3 className="text-xl sm:text-2xl font-black italic uppercase tracking-wider text-gym-primary animate-in fade-in duration-500">
+                                {detectedGymName || "LOCALIZANDO..."}
                             </h3>
                         </div>
 
