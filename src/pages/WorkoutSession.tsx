@@ -128,6 +128,7 @@ export const WorkoutSession = () => {
     const [showStartOptionsModal, setShowStartOptionsModal] = useState(false);
     const [showIntroAnim, setShowIntroAnim] = useState(true);
     const [detectedGymName, setDetectedGymName] = useState('Gimnasio Detectado');
+    const catalogScrollRef = useRef<HTMLDivElement>(null);
 
     const [userSettings, setUserSettings] = useState<CustomSettings>({ categories: [], metrics: [] });
     // Arsenal Modal State
@@ -168,6 +169,13 @@ export const WorkoutSession = () => {
         const savedUnit = localStorage.getItem('gympartner_weight_unit');
         if (savedUnit === 'lb') setDefaultWeightUnit('lb');
     }, []);
+
+    // Reset Scroll when filters change
+    useEffect(() => {
+        if (catalogScrollRef.current) {
+            catalogScrollRef.current.scrollTop = 0;
+        }
+    }, [activeMuscleFilter, searchTerm]);
 
     // Helpers for Unit Conversion
     const toDisplayWeight = (kgVal: number, unit: 'kg' | 'lb' = 'kg'): string => {
@@ -1825,7 +1833,7 @@ export const WorkoutSession = () => {
                             )}
                         </div>
 
-                        <div className="flex-1 overflow-y-auto min-h-0 px-2 sm:px-4 pb-32 bg-black">
+                        <div ref={catalogScrollRef} className="flex-1 overflow-y-auto min-h-0 px-2 sm:px-4 pb-32 bg-black">
                             {/* Content Switch */}
                             {!isCreatingExercise ? (
                                 <div className="pt-4">
