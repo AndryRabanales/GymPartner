@@ -10,8 +10,10 @@ import { RescueModal } from '../components/gamification/RescueModal';
 import { GPointsDisplay } from '../components/gamification/GPointsDisplay';
 
 import { ActiveWorkoutBubble } from '../components/workout/ActiveWorkoutBubble';
+import { useAutoCheckin } from '../hooks/useAutoCheckin';
 
 export const AppLayout = () => {
+    useAutoCheckin();
     const { user, signOut } = useAuth();
     const { isBottomNavVisible } = useBottomNav();
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
