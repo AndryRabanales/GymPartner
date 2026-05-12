@@ -164,6 +164,15 @@ export const WorkoutSession = () => {
     const [selectedCatalogItems, setSelectedCatalogItems] = useState<Set<string>>(new Set());
     const [activeMuscleFilter, setActiveMuscleFilter] = useState<string | null>(null);
 
+    const handleCatalogToggle = (id: string) => {
+        setSelectedCatalogItems(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
+
     const MUSCLE_GROUPS = [
         "Cuádriceps",
         "Isquiotibiales",
