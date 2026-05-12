@@ -13,6 +13,7 @@ interface ArsenalGridProps {
     onEditItem: (item: Equipment) => void;
     routineConfigs?: Map<string, any>;
     gridClassName?: string;
+    sectionOrder?: string[];
 }
 
 export const ArsenalGrid = ({
@@ -24,14 +25,19 @@ export const ArsenalGrid = ({
     onOpenCatalog,
     onEditItem,
     routineConfigs = new Map(),
-    gridClassName = "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2"
+    gridClassName = "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2",
+    sectionOrder
 }: ArsenalGridProps) => {
 
-    const SECTION_ORDER = [
-        'Pecho', 'Espalda', 'Pierna', 'Hombros', 'Bíceps', 'Tríceps', 'Antebrazo',
-        'Cardio', 'Poleas / Varios', 'Peso Libre (General)', 'Otros',
-        ...(userSettings?.categories || []).map(c => c.label)
+    const DEFAULT_ORDER = [
+        'PECHO', 'HOMBRO', 'TRÍCEPS',
+        'ESPALDA', 'BÍCEPS', 'ANTEBRAZO',
+        'CUÁDRICEPS', 'ISQUIOTIBIALES', 'GLÚTEOS', 'PANTORRILLAS', 'ADUCTORES',
+        'ABDOMINALES', 'LUMBARES', 'CUELLO',
+        'Otros'
     ];
+
+    const finalOrder = sectionOrder || DEFAULT_ORDER;
 
     const filteredInventory = inventory.filter(item =>
         normalizeText(item.name).includes(normalizeText(searchTerm))
@@ -57,16 +63,19 @@ export const ArsenalGrid = ({
             </div>
 
             {/* Render Groups */}
-            {SECTION_ORDER.map(section => {
+            {finalOrder.map(section => {
                 const items = groupedInventory[section] || [];
-                const isCore = ['Pecho', 'Espalda', 'Pierna', 'Bíceps', 'Tríceps', 'Hombros'].includes(section);
-
-                // Pass empty sections only if no search is active (so they can add), but if searching, hide empty.
-                if (items.length === 0 && !isCore && searchTerm) return null;
+                // Only show essential categories if search is active
+                if (items.length === 0 && searchTerm) return null;
+                if (items.length === 0 && section === 'Otros') return null;
 
                 return (
-                    <div key={section} className="animate-in fade-in slide-in-from-bottom-8 duration-700 fill-mode-both">
-                        <h3 className="text-xs font-black text-neutral-500 uppercase tracking-widest mb-2 pl-1 sticky top-36 z-30 bg-black/80 backdrop-blur w-fit px-2 rounded-r-full">{section}</h3>
+                    <div 
+                        key={section} 
+                        id={`category-section-${section}`}
+                        className="animate-in fade-in slide-in-from-bottom-8 duration-700 fill-mode-both scroll-mt-40"
+                    >
+                        <h3 className="text-xs font-black text-neutral-500 uppercase tracking-widest mb-2 pl-1 sticky top-36 z-30 bg-black/80 backdrop-blur w-fit px-2 rounded-r-full border-l-2 border-gym-primary">{section}</h3>
 
                         <div className={gridClassName}>
                             {items.map(item => {

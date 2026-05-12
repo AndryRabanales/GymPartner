@@ -8,35 +8,41 @@ export const normalizeText = (text: any) => {
 export const getMuscleGroup = (item: Equipment | { name: string, category: string }, userSettings?: CustomSettings): string => {
     const n = normalizeText(item.name);
 
-    // 1. Check Custom Categories (Safety Check for userSettings)
+    // 1. Check Custom Categories
     if (userSettings && userSettings.categories) {
         const matchedCategory = userSettings.categories.find(c => c.id === item.category);
         if (matchedCategory) return matchedCategory.label;
     }
 
-    // 2. Explicit Category Mapping (Standard)
-    if (item.category === 'CHEST') return 'Pecho';
-    if (item.category === 'BACK') return 'Espalda';
-    if (item.category === 'LEGS' || item.category === 'GLUTES' || item.category === 'CALVES') return 'Pierna';
-    if (item.category === 'SHOULDERS') return 'Hombros';
-    if (item.category === 'FOREARMS') return 'Antebrazo';
-    if (item.category === 'ARMS') {
-        if (n.includes('tricep') || n.includes('copa') || n.includes('fondos')) return 'Tríceps';
-        return 'Bíceps';
-    }
+    // 2. Granular Keyword Matching (Highest Priority)
+    if (n.includes('abdominal') || n.includes('crunch') || n.includes('plancha') || n.includes('core')) return 'ABDOMINALES';
+    if (n.includes('lumbar') || n.includes('hiperextension') || n.includes('espalda baja')) return 'LUMBARES';
+    if (n.includes('cuello') || n.includes('neck')) return 'CUELLO';
+    
+    if (n.includes('cuadricep') || n.includes('extension de pierna') || n.includes('sentadilla') || n.includes('squat') || n.includes('hack') || n.includes('prensa')) return 'CUÁDRICEPS';
+    if (n.includes('isquio') || n.includes('femoral') || n.includes('peso muerto rumano')) return 'ISQUIOTIBIALES';
+    if (n.includes('gluteo') || n.includes('hip thrust') || n.includes('patada de gluteo')) return 'GLÚTEOS';
+    if (n.includes('pantorrilla') || n.includes('gemelo') || n.includes('costurera')) return 'PANTORRILLAS';
+    if (n.includes('aductor') || n.includes('abductor')) return 'ADUCTORES';
 
-    // 3. Fallback Keyword Matching
+    if (n.includes('hombro') || n.includes('militar') || n.includes('lateral') || n.includes('press de hombro') || n.includes('trasnuca') || n.includes('pajaros') || n.includes('face pull')) return 'HOMBRO';
+    if (n.includes('tricep') || n.includes('copa') || n.includes('fondos') || n.includes('frances') || n.includes('extension polea alta')) return 'TRÍCEPS';
+    if (n.includes('bicep') || n.includes('curl') || n.includes('predicador') || n.includes('martillo')) return 'BÍCEPS';
+    if (n.includes('antebrazo') || n.includes('muñeca')) return 'ANTEBRAZO';
+
+    if (n.includes('banca') || n.includes('pecho') || n.includes('chest') || n.includes('apertura') || n.includes('press inclinado') || n.includes('press plano') || n.includes('pec deck')) return 'PECHO';
+    if (n.includes('espalda') || n.includes('jalon') || n.includes('remo') || n.includes('dorsal') || n.includes('dominada') || n.includes('t-bar')) return 'ESPALDA';
+
+    // 3. Fallback to Category Enums
+    if (item.category === 'CHEST') return 'PECHO';
+    if (item.category === 'BACK') return 'ESPALDA';
+    if (item.category === 'LEGS') return 'CUÁDRICEPS';
+    if (item.category === 'GLUTES') return 'GLÚTEOS';
+    if (item.category === 'CALVES') return 'PANTORRILLAS';
+    if (item.category === 'SHOULDERS') return 'HOMBRO';
+    if (item.category === 'FOREARMS') return 'ANTEBRAZO';
+    if (item.category === 'ARMS') return 'BÍCEPS';
     if (item.category === 'CARDIO') return 'Cardio';
-    if (n.includes('jalon') || n.includes('remo') || n.includes('espalda') || n.includes('dorsal') || n.includes('lumbares') || n.includes('dominada') || n.includes('pull over') || n.includes('hyper')) return 'Espalda';
-    if (n.includes('banca') || n.includes('pecho') || n.includes('chest') || n.includes('flexion') || n.includes('press plano') || n.includes('press inclinado') || n.includes('press declinado') || n.includes('pec deck') || n.includes('cruce de poleas') || n.includes('apertura')) return 'Pecho';
-    if (n.includes('pierna') || n.includes('sentadilla') || n.includes('squat') || n.includes('femoral') || n.includes('cuadriceps') || n.includes('gemelo') || n.includes('gluteo') || n.includes('hack') || n.includes('pantorrilla') || n.includes('hip thrust') || n.includes('prensa')) return 'Pierna';
-    if (n.includes('hombro') || n.includes('militar') || n.includes('lateral') || n.includes('press de hombro') || n.includes('trasnuca') || n.includes('face pull') || n.includes('pajaros')) return 'Hombros';
-    if (n.includes('bicep') || n.includes('curl') || n.includes('predicador')) return 'Bíceps';
-    if (n.includes('tricep') || n.includes('copa') || n.includes('fondos') || n.includes('frances')) return 'Tríceps';
-    if (n.includes('antebrazo') || n.includes('muñeca')) return 'Antebrazo';
-    if (n.includes('mancuerna') || n.includes('smith') || n.includes('multipower')) return 'Peso Libre (General)';
-    if (item.category === 'FREE_WEIGHT') return 'Peso Libre (General)';
-    if (item.category === 'CABLE') return 'Poleas / Varios';
 
     return 'Otros';
 };

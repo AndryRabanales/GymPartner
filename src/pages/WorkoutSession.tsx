@@ -128,6 +128,29 @@ export const WorkoutSession = () => {
     const [showStartOptionsModal, setShowStartOptionsModal] = useState(false);
     const [showIntroAnim, setShowIntroAnim] = useState(true);
     const [detectedGymName, setDetectedGymName] = useState('');
+    const CATALOG_ORDER = [
+        // PECHO
+        'PECHO', 'HOMBRO', 'TRÍCEPS',
+        // ESPALDA
+        'ESPALDA', 'BÍCEPS', 'ANTEBRAZO',
+        // PIERNA
+        'CUÁDRICEPS', 'ISQUIOTIBIALES', 'GLÚTEOS', 'PANTORRILLAS', 'ADUCTORES',
+        // CORE
+        'ABDOMINALES', 'LUMBARES', 'CUELLO'
+    ];
+
+    const scrollToCategory = (category: string) => {
+        setActiveMuscleFilter(category);
+        const element = document.getElementById(`category-section-${category}`);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+            // If not found (maybe filtered), reset scroll to top
+            if (catalogScrollRef.current) {
+                catalogScrollRef.current.scrollTop = 0;
+            }
+        }
+    };
     const catalogScrollRef = useRef<HTMLDivElement>(null);
 
     const [userSettings, setUserSettings] = useState<CustomSettings>({ categories: [], metrics: [] });
@@ -1823,7 +1846,7 @@ export const WorkoutSession = () => {
                                 <div className="mt-4 flex gap-2 overflow-x-auto py-2 px-1 no-scrollbar scroll-smooth items-center">
                                     {/* --- RAMA: PECHO --- */}
                                     <button
-                                        onClick={() => setActiveMuscleFilter(activeMuscleFilter === "PECHO" ? null : "PECHO")}
+                                        onClick={() => scrollToCategory("PECHO")}
                                         className={`shrink-0 px-6 py-2.5 rounded-xl text-sm font-black italic uppercase tracking-tighter transition-all border-2 ${activeMuscleFilter === "PECHO" ? 'bg-gym-primary text-black border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-neutral-900 text-gym-primary border-neutral-800'}`}
                                     >
                                         PECHO
@@ -1831,8 +1854,8 @@ export const WorkoutSession = () => {
                                     {["PECHO", "HOMBRO", "TRÍCEPS"].map(sub => (
                                         <button
                                             key={sub}
-                                            onClick={() => setActiveMuscleFilter(`SUB_${sub}`)}
-                                            className={`shrink-0 px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border ${activeMuscleFilter === `SUB_${sub}` ? 'bg-white text-black border-white' : 'bg-neutral-800 text-neutral-400 border-neutral-700'}`}
+                                            onClick={() => scrollToCategory(sub)}
+                                            className={`shrink-0 px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border ${activeMuscleFilter === sub ? 'bg-white text-black border-white' : 'bg-neutral-800 text-neutral-400 border-neutral-700'}`}
                                         >
                                             {sub}
                                         </button>
@@ -1842,7 +1865,7 @@ export const WorkoutSession = () => {
 
                                     {/* --- RAMA: ESPALDA --- */}
                                     <button
-                                        onClick={() => setActiveMuscleFilter(activeMuscleFilter === "ESPALDA" ? null : "ESPALDA")}
+                                        onClick={() => scrollToCategory("ESPALDA")}
                                         className={`shrink-0 px-6 py-2.5 rounded-xl text-sm font-black italic uppercase tracking-tighter transition-all border-2 ${activeMuscleFilter === "ESPALDA" ? 'bg-gym-primary text-black border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-neutral-900 text-gym-primary border-neutral-800'}`}
                                     >
                                         ESPALDA
@@ -1850,8 +1873,8 @@ export const WorkoutSession = () => {
                                     {["ESPALDA", "BÍCEPS", "ANTEBRAZO"].map(sub => (
                                         <button
                                             key={sub}
-                                            onClick={() => setActiveMuscleFilter(`SUB_${sub}`)}
-                                            className={`shrink-0 px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border ${activeMuscleFilter === `SUB_${sub}` ? 'bg-white text-black border-white' : 'bg-neutral-800 text-neutral-400 border-neutral-700'}`}
+                                            onClick={() => scrollToCategory(sub)}
+                                            className={`shrink-0 px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border ${activeMuscleFilter === sub ? 'bg-white text-black border-white' : 'bg-neutral-800 text-neutral-400 border-neutral-700'}`}
                                         >
                                             {sub}
                                         </button>
@@ -1861,7 +1884,7 @@ export const WorkoutSession = () => {
 
                                     {/* --- RAMA: PIERNA --- */}
                                     <button
-                                        onClick={() => setActiveMuscleFilter(activeMuscleFilter === "PIERNA" ? null : "PIERNA")}
+                                        onClick={() => scrollToCategory("PIERNA")}
                                         className={`shrink-0 px-6 py-2.5 rounded-xl text-sm font-black italic uppercase tracking-tighter transition-all border-2 ${activeMuscleFilter === "PIERNA" ? 'bg-gym-primary text-black border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-neutral-900 text-gym-primary border-neutral-800'}`}
                                     >
                                         PIERNA
@@ -1869,8 +1892,8 @@ export const WorkoutSession = () => {
                                     {["CUÁDRICEPS", "ISQUIOTIBIALES", "GLÚTEOS", "PANTORRILLAS", "ADUCTORES"].map(sub => (
                                         <button
                                             key={sub}
-                                            onClick={() => setActiveMuscleFilter(`SUB_${sub}`)}
-                                            className={`shrink-0 px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border ${activeMuscleFilter === `SUB_${sub}` ? 'bg-white text-black border-white' : 'bg-neutral-800 text-neutral-400 border-neutral-700'}`}
+                                            onClick={() => scrollToCategory(sub)}
+                                            className={`shrink-0 px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border ${activeMuscleFilter === sub ? 'bg-white text-black border-white' : 'bg-neutral-800 text-neutral-400 border-neutral-700'}`}
                                         >
                                             {sub}
                                         </button>
@@ -1880,7 +1903,7 @@ export const WorkoutSession = () => {
 
                                     {/* --- RAMA: CORE --- */}
                                     <button
-                                        onClick={() => setActiveMuscleFilter(activeMuscleFilter === "CORE" ? null : "CORE")}
+                                        onClick={() => scrollToCategory("CORE")}
                                         className={`shrink-0 px-6 py-2.5 rounded-xl text-sm font-black italic uppercase tracking-tighter transition-all border-2 ${activeMuscleFilter === "CORE" ? 'bg-gym-primary text-black border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-neutral-900 text-gym-primary border-neutral-800'}`}
                                     >
                                         CORE
@@ -1888,8 +1911,8 @@ export const WorkoutSession = () => {
                                     {["ABDOMINALES", "LUMBARES", "CUELLO"].map(sub => (
                                         <button
                                             key={sub}
-                                            onClick={() => setActiveMuscleFilter(`SUB_${sub}`)}
-                                            className={`shrink-0 px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border ${activeMuscleFilter === `SUB_${sub}` ? 'bg-white text-black border-white' : 'bg-neutral-800 text-neutral-400 border-neutral-700'}`}
+                                            onClick={() => scrollToCategory(sub)}
+                                            className={`shrink-0 px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border ${activeMuscleFilter === sub ? 'bg-white text-black border-white' : 'bg-neutral-800 text-neutral-400 border-neutral-700'}`}
                                         >
                                             {sub}
                                         </button>
@@ -1903,67 +1926,15 @@ export const WorkoutSession = () => {
                             {!isCreatingExercise ? (
                                 <div className="pt-4">
                                     <ArsenalGrid
-                                        inventory={effectiveInventory.filter(item => {
-                                            // 1. Filter by Search Term
-                                            const itemName = item?.name || "";
-                                            const matchesSearch = normalizeText(itemName).includes(normalizeText(searchTerm));
-                                            if (!matchesSearch) return false;
-
-                                            // 2. Filter by Hierarchical Muscle Group
-                                            if (!activeMuscleFilter) return true;
-
-                                            const n = normalizeText(itemName);
-                                            const c = item.category;
-
-                                            // Logic for BRANCHES (Multi-muscle)
-                                            if (activeMuscleFilter === "PECHO") {
-                                                return c === 'CHEST' || c === 'SHOULDERS' || n.includes('pecho') || n.includes('pectoral') || n.includes('press') || n.includes('banca') || n.includes('hombro') || n.includes('deltoide') || n.includes('tricep');
-                                            }
-                                            if (activeMuscleFilter === "ESPALDA") {
-                                                return c === 'BACK' || c === 'FOREARMS' || n.includes('espalda') || n.includes('jalon') || n.includes('remo') || n.includes('dorsal') || n.includes('bicep') || n.includes('antebrazo');
-                                            }
-                                            if (activeMuscleFilter === "PIERNA") {
-                                                return c === 'GLUTES' || c === 'CALVES' || n.includes('pierna') || n.includes('cuadricep') || n.includes('femoral') || n.includes('isquio') || n.includes('gluteo') || n.includes('pantorrilla') || n.includes('aductor');
-                                            }
-                                            if (activeMuscleFilter === "CORE") {
-                                                return n.includes('abdomen') || n.includes('abs') || n.includes('crunch') || n.includes('lumbar') || n.includes('cuello') || n.includes('neck');
-                                            }
-
-                                            // Logic for SUB-BRANCHES (Specific)
-                                            // PECHO Sub
-                                            if (activeMuscleFilter === "SUB_PECHO") return c === 'CHEST' || n.includes('pecho') || n.includes('pectoral') || n.includes('press');
-                                            if (activeMuscleFilter === "SUB_HOMBRO") return c === 'SHOULDERS' || n.includes('hombro') || n.includes('deltoide') || n.includes('militar');
-                                            if (activeMuscleFilter === "SUB_TRÍCEPS") return n.includes('tricep') || n.includes('copa') || n.includes('fondos');
-                                            
-                                            // ESPALDA Sub
-                                            if (activeMuscleFilter === "SUB_ESPALDA") return c === 'BACK' || n.includes('espalda') || n.includes('jalon') || n.includes('remo') || n.includes('dorsal');
-                                            if (activeMuscleFilter === "SUB_BÍCEPS") return n.includes('bicep') || n.includes('curl') || n.includes('martillo');
-                                            if (activeMuscleFilter === "SUB_ANTEBRAZO") return c === 'FOREARMS' || n.includes('antebrazo');
-
-                                            // PIERNA Sub
-                                            if (activeMuscleFilter === "SUB_CUÁDRICEPS") return n.includes('cuadricep') || n.includes('extensio') || n.includes('prensa');
-                                            if (activeMuscleFilter === "SUB_ISQUIOTIBIALES") return n.includes('femoral') || n.includes('isquio') || n.includes('rumano');
-                                            if (activeMuscleFilter === "SUB_GLÚTEOS") return c === 'GLUTES' || n.includes('gluteo') || n.includes('hip thrust');
-                                            if (activeMuscleFilter === "SUB_PANTORRILLAS") return c === 'CALVES' || n.includes('pantorrilla') || n.includes('gemelo');
-                                            if (activeMuscleFilter === "SUB_ADUCTORES") return n.includes('aductor');
-
-                                            // CORE Sub
-                                            if (activeMuscleFilter === "SUB_ABDOMINALES") return n.includes('abdomen') || n.includes('abs') || n.includes('crunch');
-                                            if (activeMuscleFilter === "SUB_LUMBARES") return n.includes('lumbar');
-                                            if (activeMuscleFilter === "SUB_CUELLO") return n.includes('cuello') || n.includes('neck');
-
-                                            return false;
-                                        })}
+                                        inventory={effectiveInventory}
                                         selectedItems={selectedCatalogItems}
                                         userSettings={userSettings}
                                         searchTerm={searchTerm}
-                                        onToggleSelection={(id) => {
-                                            toggleCatalogItem(id);
-                                        }}
-                                        onOpenCatalog={(section) => {
-                                            setActiveSection(section);
-                                            setIsCreatingExercise(true);
-                                        }}
+                                        onToggleSelection={handleCatalogToggle}
+                                        onOpenCatalog={() => {}}
+                                        onEditItem={setEditingItem}
+                                        sectionOrder={CATALOG_ORDER}
+                                    />
                                         onEditItem={(item) => {
                                             setEditingItem(item);
                                             setIsCreatingExercise(true);
