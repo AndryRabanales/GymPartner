@@ -117,7 +117,15 @@ export const WorkoutSession = () => {
     // Tutorial State
     const [tutorialStep, setTutorialStep] = useState(0);
 
+    useEffect(() => {
+        const step = parseInt(localStorage.getItem('tutorial_step') || '0');
+        if (step === 6 || step === 7) {
+            setTutorialStep(step);
+        }
+    }, []);
+
     // NEW: Start Options Modal
+    const [showStartOptionsModal, setShowStartOptionsModal] = useState(false);
     const [showIntroAnim, setShowIntroAnim] = useState(true);
     const [detectedGymName, setDetectedGymName] = useState('Gimnasio Detectado');
 
