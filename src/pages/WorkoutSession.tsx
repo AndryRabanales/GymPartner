@@ -355,77 +355,23 @@ export const WorkoutSession = () => {
             // Start 1s timer for animation immediately
             setTimeout(() => setShowIntroAnim(false), 1200);
 
-            // 1. Parallelize Initial Data Fetching AND Geolocation
-            const getPosition = (options?: PositionOptions): Promise<GeolocationPosition> => {
-                return new Promise((resolve, reject) => {
-                    navigator.geolocation.getCurrentPosition(resolve, reject, options);
-                });
-            };
-
-            const [gyms, settings, personalGymId, gpsPosition] = await Promise.all([
+            // 1. PHASE 1: Instant Data Fetch (Settings & Gyms) - NO GPS WAIT
+            const [gyms, settings, personalGymId] = await Promise.all([
                 userService.getUserGyms(userId),
                 equipmentService.getUserSettings(userId),
                 userService.ensurePersonalGym(userId),
-                // Optimized GPS: Try High Accuracy, fallback to Low Accuracy if timeout
-                (async () => {
-                    try {
-                        return await Promise.race([
-                            getPosition({ enableHighAccuracy: true, timeout: 4000 }),
-                            new Promise<null>((_, reject) => setTimeout(() => reject(new Error("GPS Timeout")), 4000))
-                        ]);
-                    } catch (err) {
-                        console.warn("High Accuracy GPS failed, trying Low Accuracy fallback...");
-                        try {
-                            // Fast fallback using WiFi/Cell towers (Low Accuracy)
-                            return await getPosition({ enableHighAccuracy: false, timeout: 3000 });
-                        } catch (finalErr) {
-                            console.error("All GPS attempts failed:", finalErr);
-                            return null;
-                        }
-                    }
-                })()
             ]);
 
-            let targetGymId = routeGymId === 'personal' ? undefined : routeGymId;
+            // Predict target gym immediately (Home Base) to start loading inventory/routines
+            const homeGym = gyms.find(g => g.is_home_base) || gyms[0];
+            let targetGymId = routeGymId === 'personal' ? undefined : (routeGymId || homeGym?.gym_id || personalGymId);
             
-            // Proximity Detection Logic
-            if (!targetGymId && gpsPosition) {
-                const userLat = gpsPosition.coords.latitude;
-                const userLng = gpsPosition.coords.longitude;
-                const ALLOWED_RADIUS = 0.12; // 120m
-
-                const nearbyGym = gyms.find(gym => {
-                    if (!gym.lat || !gym.lng) return false;
-                    // Helper directly inside to avoid import issues
-                    const R = 6371; // Radius of the earth in km
-                    const dLat = (gym.lat - userLat) * (Math.PI / 180);
-                    const dLon = (gym.lng - userLng) * (Math.PI / 180);
-                    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                              Math.cos(userLat * (Math.PI / 180)) * Math.cos(gym.lat * (Math.PI / 180)) *
-                              Math.sin(dLon / 2) * Math.sin(dLon / 2);
-                    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-                    const d = R * c; // Distance in km
-                    return d <= ALLOWED_RADIUS;
-                });
-
-                if (nearbyGym) {
-                    targetGymId = nearbyGym.gym_id;
-                    setDetectedGymName(nearbyGym.gym_name || 'Gimnasio Detectado');
-                    console.log(`🎯 Smart Detected Gym: ${nearbyGym.gym_name}`);
-                }
-            }
-
-            // Fallback to Home Base if still no target
-            if (!targetGymId) {
-                const homeGym = gyms.find(g => g.is_home_base) || gyms[0];
-                targetGymId = homeGym?.gym_id || personalGymId;
-                if (homeGym) setDetectedGymName(homeGym.gym_name || 'Home Base');
-            }
+            if (homeGym && !routeGymId) setDetectedGymName(homeGym.gym_name || 'Home Base');
             
             setResolvedGymId(targetGymId || null);
             setUserSettings(settings);
 
-            // 2. Fetch Inventory and Session Status in Parallel
+            // 2. PHASE 2: Fetch Inventory and Routines using predicted gym
             const [items, localRoutines, activeResult, personalItems] = await Promise.all([
                 equipmentService.getInventory(targetGymId || ''),
                 workoutService.getUserRoutines(userId, targetGymId || ''),
@@ -434,11 +380,48 @@ export const WorkoutSession = () => {
             ]);
 
             setRoutines(localRoutines);
-            
-            // Merge Inventories
-            const existingIds = new Set(items.map(i => i.id));
-            const mergedInventory = [...items, ...personalItems.filter(i => !existingIds.has(i.id))];
+            const mergedInventory = [...items, ...personalItems.filter(i => !items.some(existing => existing.id === i.id))];
             setArsenal(mergedInventory);
+
+            // 3. PHASE 3: Background GPS Resolution (Non-blocking)
+            (async () => {
+                try {
+                    const getPosition = (options?: PositionOptions): Promise<GeolocationPosition> => {
+                        return new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, options));
+                    };
+
+                    const gpsPosition = await Promise.race([
+                        getPosition({ enableHighAccuracy: true, timeout: 2000 }),
+                        new Promise<null>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 2000))
+                    ]).catch(async () => {
+                        return await getPosition({ enableHighAccuracy: false, timeout: 2000 }).catch(() => null);
+                    });
+
+                    if (gpsPosition && !routeGymId) {
+                        const userLat = gpsPosition.coords.latitude;
+                        const userLng = gpsPosition.coords.longitude;
+                        const nearbyGym = gyms.find(gym => {
+                            if (!gym.lat || !gym.lng) return false;
+                            const R = 6371;
+                            const dLat = (gym.lat - userLat) * (Math.PI / 180);
+                            const dLon = (gym.lng - userLng) * (Math.PI / 180);
+                            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(userLat * (Math.PI / 180)) * Math.cos(gym.lat * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                            return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))) <= 0.12;
+                        });
+
+                        if (nearbyGym && nearbyGym.gym_id !== targetGymId) {
+                            console.log(`🎯 Background Detection: ${nearbyGym.gym_name}`);
+                            setDetectedGymName(nearbyGym.gym_name || '');
+                            setResolvedGymId(nearbyGym.gym_id);
+                            // Refresh inventory for the new detected gym
+                            const newItems = await equipmentService.getInventory(nearbyGym.gym_id);
+                            setArsenal(prev => [...newItems, ...prev.filter(p => !newItems.some(n => n.id === p.id))]);
+                        }
+                    }
+                } catch (err) {
+                    console.warn("Background GPS failed:", err);
+                }
+            })();
 
             // 3. Restore or Start Logic
             const active = activeResult.data;
