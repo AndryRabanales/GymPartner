@@ -355,18 +355,23 @@ export const WorkoutSession = () => {
             // Start 1s timer for animation immediately
             setTimeout(() => setShowIntroAnim(false), 1200);
 
-            // 1. PHASE 1: Instant Data Fetch (Settings & Gyms) - NO GPS WAIT
+            // 1. PHASE 1: Instant Data Fetch (Settings & Gyms)
             const [gyms, settings, personalGymId] = await Promise.all([
                 userService.getUserGyms(userId),
                 equipmentService.getUserSettings(userId),
                 userService.ensurePersonalGym(userId),
             ]);
 
-            // Predict target gym immediately (Home Base) to start loading inventory/routines
-            const homeGym = gyms.find(g => g.is_home_base) || gyms[0];
-            let targetGymId = routeGymId === 'personal' ? undefined : (routeGymId || homeGym?.gym_id || personalGymId);
+            // ALWAYS DEFAULT TO PERSONAL INVENTORY FIRST (Avoid false gym detection)
+            let targetGymId = routeGymId === 'personal' ? personalGymId : (routeGymId || personalGymId);
             
-            if (homeGym && !routeGymId) setDetectedGymName(homeGym.gym_name || 'Home Base');
+            // Set initial name only if we have a specific route ID, otherwise empty (wait for GPS)
+            if (routeGymId && routeGymId !== 'personal') {
+                const routeGym = gyms.find(g => g.gym_id === routeGymId);
+                if (routeGym) setDetectedGymName(routeGym.gym_name || '');
+            } else {
+                setDetectedGymName(''); // Clean start
+            }
             
             setResolvedGymId(targetGymId || null);
             setUserSettings(settings);
