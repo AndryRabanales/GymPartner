@@ -1868,7 +1868,10 @@ export const WorkoutSession = () => {
                         </div>
 
                         <div className="flex-1 overflow-y-auto min-h-0 px-2 sm:px-4 pb-32 bg-black">
-                                      <ArsenalGrid
+                            {/* Content Switch */}
+                            {!isCreatingExercise ? (
+                                <div className="pt-4">
+                                    <ArsenalGrid
                                         inventory={effectiveInventory.filter(item => {
                                             // 1. Filter by Search Term
                                             const itemName = item?.name || "";
