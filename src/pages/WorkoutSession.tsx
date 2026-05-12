@@ -1333,7 +1333,7 @@ export const WorkoutSession = () => {
                     <div className="flex flex-col items-center gap-8 px-6 text-center">
                         {/* Map Icon (Gold) */}
                         <div className="relative">
-                            <Map size={100} className="text-gym-primary fill-gym-primary/10 animate-pulse" strokeWidth={1.5} />
+                            <MapIcon size={100} className="text-gym-primary fill-gym-primary/10 animate-pulse" strokeWidth={1.5} />
                             <div className="absolute inset-0 bg-gym-primary/20 blur-2xl rounded-full" />
                         </div>
 

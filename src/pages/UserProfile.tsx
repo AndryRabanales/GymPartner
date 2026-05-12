@@ -619,81 +619,10 @@ export const UserProfile = () => {
             <div className="flex flex-col gap-4">
 
                 <button
-                    onClick={async () => {
-                        // SMART START LOGIC
-                        if (!navigator.geolocation) {
-                            setLocationError({
-                                isOpen: true,
-                                gymName: 'GPS',
-                                distanceMeters: null,
-                                errorType: 'GPS_ERROR'
-                            });
-                            return;
-                        }
-
-                        setStartLoading(true);
-                        // Helper for Promise-based Location
-                        const getPosition = (options?: PositionOptions): Promise<GeolocationPosition> => {
-                            return new Promise((resolve, reject) => {
-                                navigator.geolocation.getCurrentPosition(resolve, reject, options);
-                            });
-                        };
-
-                        try {
-                            let position: GeolocationPosition;
-                            try {
-                                // 1. Try High Accuracy (10s timeout)
-                                position = await getPosition({ enableHighAccuracy: true, timeout: 10000 });
-                            } catch (err: any) {
-                                console.warn("High Accuracy GPS failed:", err.message);
-                                // If Permission Denied (1), don't retry, just fail to show error.
-                                if (err.code === 1) throw err;
-
-                                // 2. Retry with Low Accuracy (Less restrictive, helpful indoors)
-                                console.log("Retrying with Low Accuracy...");
-                                position = await getPosition({ enableHighAccuracy: false, timeout: 10000 });
-                            }
-
-                            const userLat = position.coords.latitude;
-                            const userLng = position.coords.longitude;
-
-                            // 1. Check existing gyms (Proximity < 100m)
-                            const ALLOWED_RADIUS = 0.12; // km
-                            const nearbyGym = userGyms.find(gym => {
-                                if (!gym.lat || !gym.lng) return false;
-                                const dist = getDistanceFromLatLonInKm(userLat, userLng, gym.lat, gym.lng);
-                                return dist <= ALLOWED_RADIUS;
-                            });
-
-                            if (nearbyGym) {
-                                console.log(`📍 Gym Detected: ${nearbyGym.gym_name}`);
-
-                                // NEW: AUTO-START with Visual Feedback
-                                setAutoStartGymName(nearbyGym.gym_name);
-                                await new Promise(r => setTimeout(r, 2000)); // 2s delay to read the message
-
-                                await navigate(`/territory/${nearbyGym.gym_id}/workout`);
-                                setAutoStartGymName(null); // Reset (though we navigated away)
-                            } else {
-                                // 2. No known gym nearby -> Prompt "No Gym Detected" (Hidden: Create Base)
-                                setStartConfirmationModal({
-                                    isOpen: true,
-                                    type: 'NO_GYM',
-                                    location: { lat: userLat, lng: userLng }
-                                });
-                            }
-
-                        } catch (err: any) {
-                            console.error("Critical GPS Error:", err);
-                            setLocationError({
-                                isOpen: true,
-                                gymName: 'Ubicación',
-                                distanceMeters: null,
-                                errorType: 'GPS_ERROR'
-                            });
-                        } finally {
-                            setStartLoading(false);
-                        }
+                    onClick={() => {
+                        // LIGHTNING START: Navigate immediately to WorkoutSession
+                        // The WorkoutSession page handles GPS/Gym resolution while showing the intro animation
+                        navigate('/workout');
                     }}
                     className="group relative overflow-hidden bg-gradient-to-r from-yellow-400 to-orange-500 rounded-3xl p-1 shadow-[0_0_20px_rgba(250,204,21,0.3)] hover:shadow-[0_0_40px_rgba(250,204,21,0.6)] hover:-translate-y-1 transition-all duration-300 active:scale-95 ring-4 ring-yellow-400/20 w-full"
                 >
