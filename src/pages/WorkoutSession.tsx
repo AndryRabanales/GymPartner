@@ -1749,18 +1749,78 @@ export const WorkoutSession = () => {
                             {!isCreatingExercise && (
                                 <div className="mt-4 overflow-x-auto flex gap-2 pb-2 no-scrollbar scroll-smooth">
                                     <button
-                                        onClick={() => setActiveMuscleFilter(null)}
-                                        className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest whitespace-nowrap transition-all border ${!activeMuscleFilter ? 'bg-gym-primary text-black border-gym-primary' : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:border-neutral-700'}`}
+                                <div className="flex gap-2 overflow-x-auto py-2 px-1 no-scrollbar scroll-smooth items-center">
+                                    {/* --- RAMA: PECHO --- */}
+                                    <button
+                                        onClick={() => setActiveMuscleFilter(activeMuscleFilter === "PECHO" ? null : "PECHO")}
+                                        className={`shrink-0 px-6 py-2.5 rounded-xl text-sm font-black italic uppercase tracking-tighter transition-all border-2 ${activeMuscleFilter === "PECHO" ? 'bg-gym-primary text-black border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-neutral-900 text-gym-primary border-neutral-800'}`}
                                     >
-                                        Todos
+                                        PECHO (RAMA)
                                     </button>
-                                    {MUSCLE_GROUPS.map(muscle => (
+                                    {["PECHO", "HOMBRO", "TRÍCEPS"].map(sub => (
                                         <button
-                                            key={muscle}
-                                            onClick={() => setActiveMuscleFilter(muscle === activeMuscleFilter ? null : muscle)}
-                                            className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest whitespace-nowrap transition-all border ${activeMuscleFilter === muscle ? 'bg-gym-primary text-black border-gym-primary shadow-[0_0_15px_rgba(250,204,21,0.3)]' : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:border-neutral-700'}`}
+                                            key={sub}
+                                            onClick={() => setActiveMuscleFilter(`SUB_${sub}`)}
+                                            className={`shrink-0 px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border ${activeMuscleFilter === `SUB_${sub}` ? 'bg-white text-black border-white' : 'bg-neutral-800 text-neutral-400 border-neutral-700'}`}
                                         >
-                                            {muscle}
+                                            {sub}
+                                        </button>
+                                    ))}
+
+                                    <div className="w-px h-6 bg-neutral-800 mx-2 shrink-0" />
+
+                                    {/* --- RAMA: ESPALDA --- */}
+                                    <button
+                                        onClick={() => setActiveMuscleFilter(activeMuscleFilter === "ESPALDA" ? null : "ESPALDA")}
+                                        className={`shrink-0 px-6 py-2.5 rounded-xl text-sm font-black italic uppercase tracking-tighter transition-all border-2 ${activeMuscleFilter === "ESPALDA" ? 'bg-gym-primary text-black border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-neutral-900 text-gym-primary border-neutral-800'}`}
+                                    >
+                                        ESPALDA (RAMA)
+                                    </button>
+                                    {["ESPALDA", "BÍCEPS", "ANTEBRAZO"].map(sub => (
+                                        <button
+                                            key={sub}
+                                            onClick={() => setActiveMuscleFilter(`SUB_${sub}`)}
+                                            className={`shrink-0 px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border ${activeMuscleFilter === `SUB_${sub}` ? 'bg-white text-black border-white' : 'bg-neutral-800 text-neutral-400 border-neutral-700'}`}
+                                        >
+                                            {sub}
+                                        </button>
+                                    ))}
+
+                                    <div className="w-px h-6 bg-neutral-800 mx-2 shrink-0" />
+
+                                    {/* --- RAMA: PIERNA --- */}
+                                    <button
+                                        onClick={() => setActiveMuscleFilter(activeMuscleFilter === "PIERNA" ? null : "PIERNA")}
+                                        className={`shrink-0 px-6 py-2.5 rounded-xl text-sm font-black italic uppercase tracking-tighter transition-all border-2 ${activeMuscleFilter === "PIERNA" ? 'bg-gym-primary text-black border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-neutral-900 text-gym-primary border-neutral-800'}`}
+                                    >
+                                        PIERNA (RAMA)
+                                    </button>
+                                    {["CUÁDRICEPS", "ISQUIOTIBIALES", "GLÚTEOS", "PANTORRILLAS", "ADUCTORES"].map(sub => (
+                                        <button
+                                            key={sub}
+                                            onClick={() => setActiveMuscleFilter(`SUB_${sub}`)}
+                                            className={`shrink-0 px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border ${activeMuscleFilter === `SUB_${sub}` ? 'bg-white text-black border-white' : 'bg-neutral-800 text-neutral-400 border-neutral-700'}`}
+                                        >
+                                            {sub}
+                                        </button>
+                                    ))}
+
+                                    <div className="w-px h-6 bg-neutral-800 mx-2 shrink-0" />
+
+                                    {/* --- RAMA: CORE --- */}
+                                    <button
+                                        onClick={() => setActiveMuscleFilter(activeMuscleFilter === "CORE" ? null : "CORE")}
+                                        className={`shrink-0 px-6 py-2.5 rounded-xl text-sm font-black italic uppercase tracking-tighter transition-all border-2 ${activeMuscleFilter === "CORE" ? 'bg-gym-primary text-black border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-neutral-900 text-gym-primary border-neutral-800'}`}
+                                    >
+                                        CORE (RAMA)
+                                    </button>
+                                    {["ABDOMINALES", "LUMBARES", "CUELLO"].map(sub => (
+                                        <button
+                                            key={sub}
+                                            onClick={() => setActiveMuscleFilter(`SUB_${sub}`)}
+                                            className={`shrink-0 px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border ${activeMuscleFilter === `SUB_${sub}` ? 'bg-white text-black border-white' : 'bg-neutral-800 text-neutral-400 border-neutral-700'}`}
+                                        >
+                                            {sub}
                                         </button>
                                     ))}
                                 </div>
