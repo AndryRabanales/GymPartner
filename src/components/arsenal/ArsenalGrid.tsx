@@ -30,7 +30,7 @@ export const ArsenalGrid = ({
     const SECTION_ORDER = [
         'Pecho', 'Espalda', 'Pierna', 'Hombros', 'Bíceps', 'Tríceps', 'Antebrazo',
         'Cardio', 'Poleas / Varios', 'Peso Libre (General)', 'Otros',
-        ...userSettings.categories.map(c => c.label)
+        ...(userSettings?.categories || []).map(c => c.label)
     ];
 
     const filteredInventory = inventory.filter(item =>

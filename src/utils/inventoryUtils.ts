@@ -8,7 +8,7 @@ export const getMuscleGroup = (item: Equipment | { name: string, category: strin
     const n = normalizeText(item.name);
 
     // 1. Check Custom Categories (Safety Check for userSettings)
-    if (userSettings?.categories) {
+    if (userSettings && userSettings.categories) {
         const matchedCategory = userSettings.categories.find(c => c.id === item.category);
         if (matchedCategory) return matchedCategory.label;
     }
