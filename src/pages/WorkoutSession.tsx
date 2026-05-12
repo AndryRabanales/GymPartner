@@ -1322,17 +1322,8 @@ export const WorkoutSession = () => {
         }
     };
 
-    if (loading) return (
-        <div className="h-screen flex items-center justify-center bg-black text-yellow-500">
-            <div className="text-center">
-                <Loader className="animate-spin mx-auto mb-4" size={48} />
-                <h2 className="text-2xl font-black uppercase tracking-widest animate-pulse">Iniciando...</h2>
-            </div>
-            {/* 4. NEW: SUMMARY / MISSION COMPLETE MODAL */}
-            {/* Moved to main return */}
-
-        </div>
-    );
+    // Removed redundant loading screen to speed up startup as per user request
+    // Intro animation now covers background loading
 
     return (
         <div className="min-h-screen bg-neutral-950 text-white pb-32 relative overflow-hidden">
