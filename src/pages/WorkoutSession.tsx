@@ -2150,11 +2150,14 @@ export const WorkoutSession = () => {
                                 {routines.map((routine) => (
                                     <button
                                         key={routine.id}
-                                        onClick={async () => {
-                                            await startNewSession(); // Await to ensure session is ready
-                                            loadRoutine(routine);
-                                            setCurrentRoutineName(routine.name);
+                                        onClick={() => {
+                                            // 1. Instant UI Feedback
                                             setShowStartOptionsModal(false);
+                                            setCurrentRoutineName(routine.name);
+                                            
+                                            // 2. Background Processing
+                                            startNewSession(); // Fire and forget (don't await)
+                                            loadRoutine(routine);
                                         }}
                                         className="flex items-center justify-between p-4 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 hover:border-gym-primary/50 transition-all group"
                                     >
