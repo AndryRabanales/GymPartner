@@ -1753,7 +1753,7 @@ export const WorkoutSession = () => {
                                         onClick={() => setActiveMuscleFilter(activeMuscleFilter === "PECHO" ? null : "PECHO")}
                                         className={`shrink-0 px-6 py-2.5 rounded-xl text-sm font-black italic uppercase tracking-tighter transition-all border-2 ${activeMuscleFilter === "PECHO" ? 'bg-gym-primary text-black border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-neutral-900 text-gym-primary border-neutral-800'}`}
                                     >
-                                        PECHO (RAMA)
+                                        PECHO
                                     </button>
                                     {["PECHO", "HOMBRO", "TRÍCEPS"].map(sub => (
                                         <button
@@ -1772,7 +1772,7 @@ export const WorkoutSession = () => {
                                         onClick={() => setActiveMuscleFilter(activeMuscleFilter === "ESPALDA" ? null : "ESPALDA")}
                                         className={`shrink-0 px-6 py-2.5 rounded-xl text-sm font-black italic uppercase tracking-tighter transition-all border-2 ${activeMuscleFilter === "ESPALDA" ? 'bg-gym-primary text-black border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-neutral-900 text-gym-primary border-neutral-800'}`}
                                     >
-                                        ESPALDA (RAMA)
+                                        ESPALDA
                                     </button>
                                     {["ESPALDA", "BÍCEPS", "ANTEBRAZO"].map(sub => (
                                         <button
@@ -1791,7 +1791,7 @@ export const WorkoutSession = () => {
                                         onClick={() => setActiveMuscleFilter(activeMuscleFilter === "PIERNA" ? null : "PIERNA")}
                                         className={`shrink-0 px-6 py-2.5 rounded-xl text-sm font-black italic uppercase tracking-tighter transition-all border-2 ${activeMuscleFilter === "PIERNA" ? 'bg-gym-primary text-black border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-neutral-900 text-gym-primary border-neutral-800'}`}
                                     >
-                                        PIERNA (RAMA)
+                                        PIERNA
                                     </button>
                                     {["CUÁDRICEPS", "ISQUIOTIBIALES", "GLÚTEOS", "PANTORRILLAS", "ADUCTORES"].map(sub => (
                                         <button
@@ -1810,7 +1810,7 @@ export const WorkoutSession = () => {
                                         onClick={() => setActiveMuscleFilter(activeMuscleFilter === "CORE" ? null : "CORE")}
                                         className={`shrink-0 px-6 py-2.5 rounded-xl text-sm font-black italic uppercase tracking-tighter transition-all border-2 ${activeMuscleFilter === "CORE" ? 'bg-gym-primary text-black border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-neutral-900 text-gym-primary border-neutral-800'}`}
                                     >
-                                        CORE (RAMA)
+                                        CORE
                                     </button>
                                     {["ABDOMINALES", "LUMBARES", "CUELLO"].map(sub => (
                                         <button
