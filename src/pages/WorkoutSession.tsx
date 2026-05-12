@@ -139,6 +139,22 @@ export const WorkoutSession = () => {
 
     // NEW: Batch Selection State
     const [selectedCatalogItems, setSelectedCatalogItems] = useState<Set<string>>(new Set());
+    const [activeMuscleFilter, setActiveMuscleFilter] = useState<string | null>(null);
+
+    const MUSCLE_GROUPS = [
+        "Cuádriceps",
+        "Isquiotibiales",
+        "Espalda (Dorsales, Trapecios, Romboides)",
+        "Pecho (Pectorales)",
+        "Glúteos",
+        "Hombros (Deltoides)",
+        "Tríceps",
+        "Bíceps",
+        "Core (Abdomen, Lumbares)",
+        "Pantorrillas (Gemelos, Sóleo)",
+        "Antebrazos",
+        "Cuello"
+    ];
 
     // NEW: Rest Timer State
     const [restTimerStart, setRestTimerStart] = useState<number | null>(null); // Timestamp in ms
@@ -1828,6 +1844,27 @@ export const WorkoutSession = () => {
                                     />
                                 </div>
                             )}
+
+                            {/* Muscle Filter Bar */}
+                            {!isCreatingExercise && (
+                                <div className="mt-4 overflow-x-auto flex gap-2 pb-2 no-scrollbar scroll-smooth">
+                                    <button
+                                        onClick={() => setActiveMuscleFilter(null)}
+                                        className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest whitespace-nowrap transition-all border ${!activeMuscleFilter ? 'bg-gym-primary text-black border-gym-primary' : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:border-neutral-700'}`}
+                                    >
+                                        Todos
+                                    </button>
+                                    {MUSCLE_GROUPS.map(muscle => (
+                                        <button
+                                            key={muscle}
+                                            onClick={() => setActiveMuscleFilter(muscle === activeMuscleFilter ? null : muscle)}
+                                            className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest whitespace-nowrap transition-all border ${activeMuscleFilter === muscle ? 'bg-gym-primary text-black border-gym-primary shadow-[0_0_15px_rgba(250,204,21,0.3)]' : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:border-neutral-700'}`}
+                                        >
+                                            {muscle}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                         <div className="flex-1 overflow-y-auto min-h-0 px-2 sm:px-4 pb-32 bg-black">
@@ -1835,10 +1872,56 @@ export const WorkoutSession = () => {
                             {!isCreatingExercise ? (
                                 <div className="pt-4">
                                     <ArsenalGrid
-                                        inventory={effectiveInventory}
-                                        selectedItems={selectedCatalogItems}
-                                        userSettings={userSettings}
-                                        searchTerm={searchTerm}
+                                        inventory={effectiveInventory.filter(item => {
+                                            // 1. Filter by Search Term
+                                            const matchesSearch = normalizeText(item.name).includes(normalizeText(searchTerm));
+                                            if (!matchesSearch) return false;
+
+                                            // 2. Filter by Muscle Group
+                                            if (!activeMuscleFilter) return true;
+
+                                            const n = normalizeText(item.name);
+                                            const c = item.category;
+
+                                            if (activeMuscleFilter === "Cuádriceps") {
+                                                return n.includes('cuadricep') || n.includes('extensio') || n.includes('prensa') || n.includes('hack') || n.includes('sentadilla') || n.includes('squat');
+                                            }
+                                            if (activeMuscleFilter === "Isquiotibiales") {
+                                                return n.includes('femoral') || n.includes('isquio') || n.includes('rumano') || n.includes('peso muerto');
+                                            }
+                                            if (activeMuscleFilter === "Espalda (Dorsales, Trapecios, Romboides)") {
+                                                return c === 'BACK' || n.includes('jalon') || n.includes('remo') || n.includes('dorsal') || n.includes('trapecio') || n.includes('romboide') || n.includes('dominada') || n.includes('pull over');
+                                            }
+                                            if (activeMuscleFilter === "Pecho (Pectorales)") {
+                                                return c === 'CHEST' || n.includes('pecho') || n.includes('pectoral') || n.includes('press') || n.includes('chest') || n.includes('banca') || n.includes('apertura') || n.includes('pec deck');
+                                            }
+                                            if (activeMuscleFilter === "Glúteos") {
+                                                return c === 'GLUTES' || n.includes('gluteo') || n.includes('hip thrust') || n.includes('patada') || n.includes('abductor');
+                                            }
+                                            if (activeMuscleFilter === "Hombros (Deltoides)") {
+                                                return c === 'SHOULDERS' || n.includes('hombro') || n.includes('deltoide') || n.includes('militar') || n.includes('lateral') || n.includes('face pull') || n.includes('pajaros');
+                                            }
+                                            if (activeMuscleFilter === "Tríceps") {
+                                                return n.includes('tricep') || n.includes('copa') || n.includes('frances') || n.includes('fondos') || n.includes('extension de codo');
+                                            }
+                                            if (activeMuscleFilter === "Bíceps") {
+                                                return n.includes('bicep') || n.includes('curl') || n.includes('predicador') || n.includes('martillo');
+                                            }
+                                            if (activeMuscleFilter === "Core (Abdomen, Lumbares)") {
+                                                return n.includes('abdomen') || n.includes('core') || n.includes('abs') || n.includes('crunch') || n.includes('plancha') || n.includes('lumbar') || n.includes('oblicuo');
+                                            }
+                                            if (activeMuscleFilter === "Pantorrillas (Gemelos, Sóleo)") {
+                                                return c === 'CALVES' || n.includes('pantorrilla') || n.includes('gemelo') || n.includes('soleo') || n.includes('costurera');
+                                            }
+                                            if (activeMuscleFilter === "Antebrazos") {
+                                                return c === 'FOREARMS' || n.includes('antebrazo') || n.includes('muñeca');
+                                            }
+                                            if (activeMuscleFilter === "Cuello") {
+                                                return n.includes('cuello') || n.includes('neck');
+                                            }
+
+                                            return false;
+                                        })}
                                         onToggleSelection={(id) => {
                                             toggleCatalogItem(id);
                                         }}
