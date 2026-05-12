@@ -126,17 +126,20 @@ export const Radar = () => {
                 
                 const myHomeGymId = myProfile?.home_gym_id;
 
-                // 5. Enrich and SORT Profiles (THE ALGORITHM)
+                // 5. Enrich and SORT Profiles (THE SMART RADAR ALGORITHM V4)
                 const enriched = profiles.map((p, idx) => {
                     const settings = (p.custom_settings as any) || {};
                     const gymInfo = gymMap[p.home_gym_id || ''] || { name: "Gimnasio Partner" };
                     const isBoosted = p.boost_until && new Date(p.boost_until) > new Date();
                     const isSameGym = myHomeGymId && p.home_gym_id === myHomeGymId;
                     
-                    // NEW: Calculate if user is "New Blood" (Joined in last 7 days)
+                    // NEW: Hierarchical "New Blood" logic
                     const joinedDate = p.created_at ? new Date(p.created_at) : new Date();
-                    const daysSinceJoined = (new Date().getTime() - joinedDate.getTime()) / (1000 * 3600 * 24);
-                    const isNewBlood = daysSinceJoined <= 7;
+                    const diffMs = new Date().getTime() - joinedDate.getTime();
+                    const diffDays = diffMs / (1000 * 3600 * 24);
+                    
+                    const newBloodBonus = diffDays <= 3 ? 50000 : (diffDays <= 7 ? 25000 : 0);
+                    const isNew = diffDays <= 7;
 
                     return {
                         ...p,
@@ -153,10 +156,13 @@ export const Radar = () => {
                         distance: isBoosted ? '🔥 ELITE' : (Math.random() * 5 + 0.5).toFixed(1),
                         bio: p.description || settings.description || settings.bio || "¡Entrenando duro para subir de rango! 💪 🔥",
                         is_pro: (p.xp || 0) > 1000 || isBoosted,
-                        // Algorithm weight calculation
-                        algo_score: (isBoosted ? 10000 : 0) + 
-                                   (isNewBlood ? 7000 : 0) + 
-                                   (isSameGym ? 5000 : 0) + 
+                        is_new: isNew,
+                        // ALGORITHM V4: Popularity-Aware Scoring
+                        algo_score: (isBoosted ? 100000 : 0) + 
+                                   newBloodBonus + 
+                                   (isSameGym ? 10000 : 0) + 
+                                   ((p.matches_count || 0) * 100) - // Popularity Bonus
+                                   ((p.skips_count || 0) * 50) +    // Ignored Penalty
                                    (p.checkins_count || 0)
                     };
                 });
@@ -236,8 +242,15 @@ export const Radar = () => {
         }
     };
 
-    const handleSkip = () => {
+    const handleSkip = async () => {
+        const targetId = currentUser?.id;
         setDirection('left');
+        
+        // Track "Ignore" in background
+        if (targetId) {
+            supabase.rpc('increment_profile_skips', { u_id: targetId }).catch(() => {});
+        }
+
         setTimeout(() => {
             setCurrentIndex(prev => prev + 1);
             setDirection(null);
@@ -251,7 +264,12 @@ export const Radar = () => {
         const targetId = currentUser.id;
         const wasFollowing = currentUser.is_following;
 
-        // 1. OPTIMISTIC UPDATE: Update UI INSTANTLY (Toggle)
+        // Track "Match" in background if following
+        if (!wasFollowing) {
+            supabase.rpc('increment_profile_matches', { u_id: targetId }).catch(() => {});
+        }
+
+        // ... existing optimistic update ...
         const updatedUsers = [...nearbyUsers];
         updatedUsers[currentIndex] = { 
             ...currentUser, 
@@ -296,6 +314,9 @@ export const Radar = () => {
         try {
             const success = await notificationService.sendInvitation(currentUser.id, currentUser.username);
             if (success) {
+                // Track "Match" success
+                supabase.rpc('increment_profile_matches', { u_id: currentUser.id }).catch(() => {});
+                
                 toast.success("Desafío enviado!");
                 setDirection('right');
                 setTimeout(() => {
