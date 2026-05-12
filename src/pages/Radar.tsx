@@ -126,20 +126,14 @@ export const Radar = () => {
                 
                 const myHomeGymId = myProfile?.home_gym_id;
 
-                // 5. Enrich and SORT Profiles (THE SMART RADAR ALGORITHM V4)
+                // 5. Enrich and SORT Profiles (CHRONOLOGICAL PRIORITY V5)
                 const enriched = profiles.map((p, idx) => {
                     const settings = (p.custom_settings as any) || {};
                     const gymInfo = gymMap[p.home_gym_id || ''] || { name: "Gimnasio Partner" };
                     const isBoosted = p.boost_until && new Date(p.boost_until) > new Date();
-                    const isSameGym = myHomeGymId && p.home_gym_id === myHomeGymId;
                     
-                    // NEW: Hierarchical "New Blood" logic
-                    const joinedDate = p.created_at ? new Date(p.created_at) : new Date();
-                    const diffMs = new Date().getTime() - joinedDate.getTime();
-                    const diffDays = diffMs / (1000 * 3600 * 24);
-                    
-                    const newBloodBonus = diffDays <= 3 ? 50000 : (diffDays <= 7 ? 25000 : 0);
-                    const isNew = diffDays <= 7;
+                    // Convert created_at to timestamp for sorting
+                    const joinedTimestamp = p.created_at ? new Date(p.created_at).getTime() : 0;
 
                     return {
                         ...p,
@@ -156,18 +150,13 @@ export const Radar = () => {
                         distance: isBoosted ? '🔥 ELITE' : (Math.random() * 5 + 0.5).toFixed(1),
                         bio: p.description || settings.description || settings.bio || "¡Entrenando duro para subir de rango! 💪 🔥",
                         is_pro: (p.xp || 0) > 1000 || isBoosted,
-                        is_new: isNew,
-                        // ALGORITHM V4: Popularity-Aware Scoring
-                        algo_score: (isBoosted ? 100000 : 0) + 
-                                   newBloodBonus + 
-                                   (isSameGym ? 10000 : 0) + 
-                                   ((p.matches_count || 0) * 100) - // Popularity Bonus
-                                   ((p.skips_count || 0) * 50) +    // Ignored Penalty
-                                   (p.checkins_count || 0)
+                        // ALGORITHM V5: Chronological Dominance
+                        // Boost gives a massive 10^15 head start, then we use timestamp
+                        algo_score: (isBoosted ? 1000000000000000 : 0) + joinedTimestamp
                     };
                 });
 
-                // Final sort based on algo_score
+                // Final sort: Higher score (Newer or Boosted) first
                 const sorted = enriched.sort((a, b) => b.algo_score - a.algo_score);
                 setNearbyUsers(sorted);
             }
