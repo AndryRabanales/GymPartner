@@ -18,6 +18,7 @@ interface UserProfileCardProps {
         distance?: string;
         bio?: string;
         is_pro?: boolean;
+        gym_passport?: { id: string, name: string }[];
     };
     onClose?: () => void;
     actions?: React.ReactNode;
@@ -30,7 +31,7 @@ const FALLBACK_BANNERS = [
 ];
 
 export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose, actions }) => {
-    console.log("📸 [CARD] Recibiendo datos de perfil:", user.username, "| Seguidores:", user.followers_count, "| Siguiendo:", (user as any).is_following);
+    console.log("📸 [CARD] Recibiendo datos de perfil:", user.username, "| Pasaporte:", user.gym_passport?.length);
     return (
         <div className="flex-1 flex flex-col relative bg-black/40 backdrop-blur-3xl w-full h-full rounded-[3rem] border border-white/10 shadow-[0_30px_60px_rgba(0,0,0,0.8)] overflow-hidden select-none">
             {/* Close Button (if provided) */}
@@ -110,9 +111,29 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
                     </div>
                 </div>
 
+                {/* Gym Passport (Visited Gyms) */}
+                {user.gym_passport && user.gym_passport.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 justify-center mt-2 px-1">
+                        {user.gym_passport.slice(0, 8).map((gym, idx) => (
+                            <div 
+                                key={`${gym.id}-${idx}`}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-900/60 border border-white/5 text-[9px] font-black italic uppercase tracking-tighter text-neutral-300 hover:text-gym-primary hover:border-gym-primary/30 transition-all duration-300"
+                            >
+                                <MapPin size={10} className="text-neutral-500 group-hover:text-gym-primary" />
+                                <span>{gym.name}</span>
+                            </div>
+                        ))}
+                        {user.gym_passport.length > 8 && (
+                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-900/60 border border-white/5 text-[9px] font-black italic uppercase tracking-tighter text-neutral-400">
+                                +{user.gym_passport.length - 8} MÁS
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 {/* Base Card */}
                 <div 
-                    className="rounded-[2.5rem] border border-white/5 relative overflow-hidden group shadow-2xl min-h-[160px]"
+                    className="rounded-[2.5rem] border border-white/5 relative overflow-hidden group shadow-2xl min-h-[140px]"
                     style={{ backgroundColor: user.gym_color || '#E5FF00' }}
                 >
                     {user.gym_image && (

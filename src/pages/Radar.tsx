@@ -72,46 +72,63 @@ export const Radar = () => {
             if (pError) throw pError;
 
             if (profiles) {
-                // 2. Fetch Gym Names and IMAGES (Official) - SAFETY CHECK
+                // 2. Fetch ALL Gym Passports for these users in one batch
+                const profileIds = profiles.map(p => p.id);
+                const { data: passportsData, error: passError } = await supabase
+                    .from('user_gyms')
+                    .select(`
+                        user_id,
+                        gym_id,
+                        gyms ( id, name )
+                    `)
+                    .in('user_id', profileIds);
+
+                if (passError) console.error("🚨 [RADAR] Error fetching passports:", passError);
+
+                // Map passports by user_id
+                const passportMap: Record<string, {id: string, name: string}[]> = {};
+                if (passportsData) {
+                    passportsData.forEach((item: any) => {
+                        if (!passportMap[item.user_id]) passportMap[item.user_id] = [];
+                        if (item.gyms) {
+                            passportMap[item.user_id].push({
+                                id: item.gyms.id,
+                                name: item.gyms.name
+                            });
+                        }
+                    });
+                }
+
+                // 3. Fetch Home Gym Metadata
                 const gymIds = [...new Set(profiles.map(p => p.home_gym_id).filter(Boolean))];
-                console.log("🔍 [RADAR] IDs de gimnasios detectados:", gymIds);
-                
                 let gymMap: any = {};
                 
                 if (gymIds.length > 0) {
-                    try {
-                        const { data: gymsData, error: gError } = await supabase
-                            .from('gyms')
-                            .select('id, name')
-                            .in('id', gymIds);
+                    const { data: gymsData } = await supabase
+                        .from('gyms')
+                        .select('id, name')
+                        .in('id', gymIds);
 
-                        if (gError) {
-                            console.error("🚨 [RADAR] Error en consulta de gimnasios:", gError);
-                        } else if (gymsData) {
-                            gymMap = gymsData.reduce((acc: any, g) => {
-                                acc[g.id] = { name: g.name };
-                                return acc;
-                            }, {});
-                            console.log("✅ [RADAR] Datos de gimnasios cargados:", Object.keys(gymMap).length);
-                        }
-                    } catch (err) {
-                        console.error("🚨 [RADAR] Excepción al cargar gimnasios:", err);
+                    if (gymsData) {
+                        gymMap = gymsData.reduce((acc: any, g) => {
+                            acc[g.id] = { name: g.name };
+                            return acc;
+                        }, {});
                     }
                 }
 
-                // 3. Enrich with basic profile info (Stats will load lazily)
+                // 4. Enrich Profiles
                 const enriched = profiles.map((p, idx) => {
                     const settings = (p.custom_settings as any) || {};
-                    const gymInfo = gymMap[p.home_gym_id || ''] || { name: "Gimnasio Partner", image: null };
-                    
+                    const gymInfo = gymMap[p.home_gym_id || ''] || { name: "Gimnasio Partner" };
                     const isBoosted = p.boost_until && new Date(p.boost_until) > new Date();
 
                     return {
                         ...p,
                         gym_name: gymInfo.name,
-                        // PRIORITIZE Public Assets from Profile Table
                         gym_image: p.main_base_image || null,
                         gym_color: p.main_base_color || '#E5FF00',
+                        gym_passport: passportMap[p.id] || [],
                         banner_url: settings.banner_url || FALLBACK_BANNERS[idx % FALLBACK_BANNERS.length],
                         training_days_count: p.checkins_count || 0,
                         followers_count: 0,
