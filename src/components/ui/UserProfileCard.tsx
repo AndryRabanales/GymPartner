@@ -128,18 +128,25 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
                             <div className="w-6 h-6 rounded-full bg-gym-primary/10 flex items-center justify-center">
                                 <Sparkles size={12} className="text-gym-primary" />
                             </div>
-                            <span className="text-[10px] font-black text-white uppercase tracking-widest italic">Base Principal</span>
+                            <span className="text-[10px] font-black text-white uppercase tracking-widest italic" style={{ textShadow: '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000' }}>
+                                Base Principal
+                            </span>
                         </div>
-                        <p className="text-base font-black text-white leading-relaxed italic uppercase tracking-tight">
+                        <p 
+                            className="text-base font-black text-white leading-relaxed italic uppercase tracking-tight"
+                            style={{ textShadow: '-1.5px -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 1.5px 0 #000, 1.5px 1.5px 0 #000' }}
+                        >
                             {user.gym_name.toUpperCase()}
                         </p>
                         <div className="mt-4 flex items-center justify-between">
-                            <div className="flex items-center gap-2 text-neutral-400">
+                            <div className="flex items-center gap-2 text-white/90">
                                 <Activity size={14} className="text-gym-primary" />
-                                <span className="text-[10px] font-bold uppercase tracking-widest">Enfocado</span>
+                                <span className="text-[10px] font-bold uppercase tracking-widest" style={{ textShadow: '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000' }}>
+                                    Enfocado
+                                </span>
                             </div>
                             {user.distance && (
-                                <div className="px-3 py-1.5 bg-white/5 rounded-xl border border-white/10 text-[10px] font-mono text-neutral-400">
+                                <div className="px-3 py-1.5 bg-black/40 rounded-xl border border-white/10 text-[10px] font-mono text-white font-bold" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
                                     {user.distance} KM
                                 </div>
                             )}
