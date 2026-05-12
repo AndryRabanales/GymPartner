@@ -1874,7 +1874,8 @@ export const WorkoutSession = () => {
                                     <ArsenalGrid
                                         inventory={effectiveInventory.filter(item => {
                                             // 1. Filter by Search Term
-                                            const matchesSearch = normalizeText(item.name).includes(normalizeText(searchTerm));
+                                            const itemName = item?.name || "";
+                                            const matchesSearch = normalizeText(itemName).includes(normalizeText(searchTerm));
                                             if (!matchesSearch) return false;
 
                                             // 2. Filter by Muscle Group
