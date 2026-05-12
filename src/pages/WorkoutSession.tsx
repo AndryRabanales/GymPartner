@@ -1878,48 +1878,48 @@ export const WorkoutSession = () => {
                                             const matchesSearch = normalizeText(itemName).includes(normalizeText(searchTerm));
                                             if (!matchesSearch) return false;
 
-                                            // 2. Filter by Muscle Group
+                                            // 2. Filter by Hierarchical Muscle Group
                                             if (!activeMuscleFilter) return true;
 
                                             const n = normalizeText(itemName);
                                             const c = item.category;
 
-                                            if (activeMuscleFilter === "Cuádriceps") {
-                                                return n.includes('cuadricep') || n.includes('extensio') || n.includes('prensa') || n.includes('hack') || n.includes('sentadilla') || n.includes('squat');
+                                            // Logic for BRANCHES (Multi-muscle)
+                                            if (activeMuscleFilter === "PECHO") {
+                                                return c === 'CHEST' || c === 'SHOULDERS' || n.includes('pecho') || n.includes('pectoral') || n.includes('press') || n.includes('banca') || n.includes('hombro') || n.includes('deltoide') || n.includes('tricep');
                                             }
-                                            if (activeMuscleFilter === "Isquiotibiales") {
-                                                return n.includes('femoral') || n.includes('isquio') || n.includes('rumano') || n.includes('peso muerto');
+                                            if (activeMuscleFilter === "ESPALDA") {
+                                                return c === 'BACK' || c === 'FOREARMS' || n.includes('espalda') || n.includes('jalon') || n.includes('remo') || n.includes('dorsal') || n.includes('bicep') || n.includes('antebrazo');
                                             }
-                                            if (activeMuscleFilter === "Espalda (Dorsales, Trapecios, Romboides)") {
-                                                return c === 'BACK' || n.includes('jalon') || n.includes('remo') || n.includes('dorsal') || n.includes('trapecio') || n.includes('romboide') || n.includes('dominada') || n.includes('pull over');
+                                            if (activeMuscleFilter === "PIERNA") {
+                                                return c === 'GLUTES' || c === 'CALVES' || n.includes('pierna') || n.includes('cuadricep') || n.includes('femoral') || n.includes('isquio') || n.includes('gluteo') || n.includes('pantorrilla') || n.includes('aductor');
                                             }
-                                            if (activeMuscleFilter === "Pecho (Pectorales)") {
-                                                return c === 'CHEST' || n.includes('pecho') || n.includes('pectoral') || n.includes('press') || n.includes('chest') || n.includes('banca') || n.includes('apertura') || n.includes('pec deck');
+                                            if (activeMuscleFilter === "CORE") {
+                                                return n.includes('abdomen') || n.includes('abs') || n.includes('crunch') || n.includes('lumbar') || n.includes('cuello') || n.includes('neck');
                                             }
-                                            if (activeMuscleFilter === "Glúteos") {
-                                                return c === 'GLUTES' || n.includes('gluteo') || n.includes('hip thrust') || n.includes('patada') || n.includes('abductor');
-                                            }
-                                            if (activeMuscleFilter === "Hombros (Deltoides)") {
-                                                return c === 'SHOULDERS' || n.includes('hombro') || n.includes('deltoide') || n.includes('militar') || n.includes('lateral') || n.includes('face pull') || n.includes('pajaros');
-                                            }
-                                            if (activeMuscleFilter === "Tríceps") {
-                                                return n.includes('tricep') || n.includes('copa') || n.includes('frances') || n.includes('fondos') || n.includes('extension de codo');
-                                            }
-                                            if (activeMuscleFilter === "Bíceps") {
-                                                return n.includes('bicep') || n.includes('curl') || n.includes('predicador') || n.includes('martillo');
-                                            }
-                                            if (activeMuscleFilter === "Core (Abdomen, Lumbares)") {
-                                                return n.includes('abdomen') || n.includes('core') || n.includes('abs') || n.includes('crunch') || n.includes('plancha') || n.includes('lumbar') || n.includes('oblicuo');
-                                            }
-                                            if (activeMuscleFilter === "Pantorrillas (Gemelos, Sóleo)") {
-                                                return c === 'CALVES' || n.includes('pantorrilla') || n.includes('gemelo') || n.includes('soleo') || n.includes('costurera');
-                                            }
-                                            if (activeMuscleFilter === "Antebrazos") {
-                                                return c === 'FOREARMS' || n.includes('antebrazo') || n.includes('muñeca');
-                                            }
-                                            if (activeMuscleFilter === "Cuello") {
-                                                return n.includes('cuello') || n.includes('neck');
-                                            }
+
+                                            // Logic for SUB-BRANCHES (Specific)
+                                            // PECHO Sub
+                                            if (activeMuscleFilter === "SUB_PECHO") return c === 'CHEST' || n.includes('pecho') || n.includes('pectoral') || n.includes('press');
+                                            if (activeMuscleFilter === "SUB_HOMBRO") return c === 'SHOULDERS' || n.includes('hombro') || n.includes('deltoide') || n.includes('militar');
+                                            if (activeMuscleFilter === "SUB_TRÍCEPS") return n.includes('tricep') || n.includes('copa') || n.includes('fondos');
+                                            
+                                            // ESPALDA Sub
+                                            if (activeMuscleFilter === "SUB_ESPALDA") return c === 'BACK' || n.includes('espalda') || n.includes('jalon') || n.includes('remo') || n.includes('dorsal');
+                                            if (activeMuscleFilter === "SUB_BÍCEPS") return n.includes('bicep') || n.includes('curl') || n.includes('martillo');
+                                            if (activeMuscleFilter === "SUB_ANTEBRAZO") return c === 'FOREARMS' || n.includes('antebrazo');
+
+                                            // PIERNA Sub
+                                            if (activeMuscleFilter === "SUB_CUÁDRICEPS") return n.includes('cuadricep') || n.includes('extensio') || n.includes('prensa');
+                                            if (activeMuscleFilter === "SUB_ISQUIOTIBIALES") return n.includes('femoral') || n.includes('isquio') || n.includes('rumano');
+                                            if (activeMuscleFilter === "SUB_GLÚTEOS") return c === 'GLUTES' || n.includes('gluteo') || n.includes('hip thrust');
+                                            if (activeMuscleFilter === "SUB_PANTORRILLAS") return c === 'CALVES' || n.includes('pantorrilla') || n.includes('gemelo');
+                                            if (activeMuscleFilter === "SUB_ADUCTORES") return n.includes('aductor');
+
+                                            // CORE Sub
+                                            if (activeMuscleFilter === "SUB_ABDOMINALES") return n.includes('abdomen') || n.includes('abs') || n.includes('crunch');
+                                            if (activeMuscleFilter === "SUB_LUMBARES") return n.includes('lumbar');
+                                            if (activeMuscleFilter === "SUB_CUELLO") return n.includes('cuello') || n.includes('neck');
 
                                             return false;
                                         })}
