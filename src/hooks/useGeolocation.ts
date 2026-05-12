@@ -61,8 +61,8 @@ export const useGeolocation = (enableHighAccuracy = true) => {
 
         const options = {
             enableHighAccuracy,
-            timeout: 10000,
-            maximumAge: 5000, // Accept cached location up to 5s old
+            timeout: 15000, // Increased to 15s for better satellite acquisition
+            maximumAge: 10000, // Accept cached location up to 10s old
         };
 
         // Check if we already have permissions (modern browsers)

@@ -26,7 +26,10 @@ import { BottomNavProvider } from './context/BottomNavContext';
 
 function App() {
   return (
-    <APIProvider apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''}>
+    <APIProvider 
+      apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''} 
+      libraries={['places']}
+    >
       <BottomNavProvider>
         <BrowserRouter>
           <Routes>
