@@ -1922,7 +1922,6 @@ export const WorkoutSession = () => {
                         </div>
 
                         <div ref={catalogScrollRef} className="flex-1 overflow-y-auto min-h-0 px-2 sm:px-4 pb-32 bg-black">
-                            {/* Content Switch */}
                             {!isCreatingExercise ? (
                                 <div className="pt-4">
                                     <ArsenalGrid
@@ -1934,12 +1933,6 @@ export const WorkoutSession = () => {
                                         onOpenCatalog={() => {}}
                                         onEditItem={setEditingItem}
                                         sectionOrder={CATALOG_ORDER}
-                                    />
-                                        onEditItem={(item) => {
-                                            setEditingItem(item);
-                                            setIsCreatingExercise(true);
-                                        }}
-                                        routineConfigs={new Map()}
                                         gridClassName="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2"
                                     />
                                 </div>
