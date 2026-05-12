@@ -61,7 +61,7 @@ export const ArsenalCard = ({ item, isSelected, userSettings, onEdit, configOver
     // Find category icon
     const catId = item.category;
     const standardCat = EQUIPMENT_CATEGORIES[catId as keyof typeof EQUIPMENT_CATEGORIES];
-    const customCat = userSettings.categories.find(c => c.id === catId);
+    const customCat = (userSettings?.categories || []).find(c => c.id === catId);
 
     // Resolve Icon: Custom > Standard > Fallback string (if emoji directly stored) > Default
     // Sometimes customCategory is just the keys, sometimes dynamic.

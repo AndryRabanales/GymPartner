@@ -14,15 +14,15 @@ export const useAutoCheckin = () => {
         if (!user || !location || hasCheckedIn.current) return;
 
         const performAutoCheckin = async () => {
+            // Wait for Google Maps to be ready
+            if (!window.google || !window.google.maps || !window.google.maps.places) {
+                console.log('⏳ [AUTO-CHECKIN] Esperando a Google Maps API...');
+                return;
+            }
+
             console.log('🛰️ [AUTO-CHECKIN] Iniciando escaneo de ubicación...');
             
             try {
-                // 1. Get Google Places Library (we assume it's loaded by APIProvider in App.tsx)
-                if (!window.google || !window.google.maps || !window.google.maps.places) {
-                    console.warn('⚠️ [AUTO-CHECKIN] Google Maps API no está cargada aún.');
-                    return;
-                }
-
                 // Create a dummy div for PlacesService (it requires an element or map)
                 const dummyDiv = document.createElement('div');
                 const service = new google.maps.places.PlacesService(dummyDiv);

@@ -360,7 +360,7 @@ export const RoutineBuilder = () => {
                     </div>
                     <div className="grid grid-cols-1 gap-3 overflow-y-auto">
                         {catalog.map(ex => {
-                            const customCat = userSettings.categories.find(c => c.id === ex.muscle_group);
+                            const customCat = (userSettings?.categories || []).find(c => c.id === ex.muscle_group);
                             const label = customCat ? customCat.label : ex.muscle_group;
                             return (
                                 <button

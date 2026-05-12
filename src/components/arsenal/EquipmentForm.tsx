@@ -87,9 +87,9 @@ export const EquipmentForm = ({
             if (isCreatingCategory && newCategoryName.trim()) {
                 const newCatId = newCategoryName.toUpperCase().replace(/\s+/g, '_');
                 // Avoid duplicates
-                if (!currentSettings.categories.some(c => c.id === newCatId)) {
+                if (!(currentSettings?.categories || []).some(c => c.id === newCatId)) {
                     const newCat: CustomCategory = { id: newCatId, label: newCategoryName, icon: newCategoryIcon };
-                    currentSettings.categories = [...currentSettings.categories, newCat];
+                    currentSettings.categories = [...(currentSettings.categories || []), newCat];
                     setCustomCategory(newCat.id); // Auto-select
                     updatedSettings = true;
                 }
@@ -117,7 +117,7 @@ export const EquipmentForm = ({
             // Resolve Icon
             let resolvedIcon = '⚡';
             const standardCat = EQUIPMENT_CATEGORIES[customCategory as keyof typeof EQUIPMENT_CATEGORIES];
-            const customCat = currentSettings.categories.find(c => c.id === customCategory); // Use Latest
+            const customCat = (currentSettings?.categories || []).find(c => c.id === customCategory); // Use Latest
             // @ts-ignore
             if (standardCat) resolvedIcon = standardCat.icon;
             if (customCat) resolvedIcon = customCat.icon;
@@ -246,7 +246,7 @@ export const EquipmentForm = ({
                                         <span className="text-xs font-bold uppercase">{info.label}</span>
                                     </button>
                                 ))}
-                                {userSettings.categories.map((cat) => (
+                                {(userSettings?.categories || []).map((cat) => (
                                     <button
                                         key={cat.id}
                                         onClick={() => setCustomCategory(cat.id)}
@@ -286,7 +286,7 @@ export const EquipmentForm = ({
                                         onClick={async () => {
                                             if (!newCategoryName.trim()) return;
                                             const newCat: CustomCategory = { id: newCategoryName.toUpperCase().replace(/\s+/g, '_'), label: newCategoryName, icon: newCategoryIcon };
-                                            const newS = { ...userSettings, categories: [...userSettings.categories, newCat] };
+                                            const newS = { ...userSettings, categories: [...(userSettings?.categories || []), newCat] };
                                             await equipmentService.updateUserSettings(user.id, newS);
                                             onUpdateSettings(newS);
                                             setCustomCategory(newCat.id);
