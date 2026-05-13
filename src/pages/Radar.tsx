@@ -127,13 +127,23 @@ export const Radar = () => {
                 const myHomeGymId = myProfile?.home_gym_id;
 
                 // 5. Enrich and SORT Profiles (ELITE CHRONO V7)
+                const now = new Date();
+                console.log("⌚ [TIME] Hora actual del sistema:", now.toISOString());
+
                 const enriched = profiles.map((p, idx) => {
                     const settings = (p.custom_settings as any) || {};
                     const gymInfo = gymMap[p.home_gym_id || ''] || { name: "Gimnasio Partner" };
-                    const isBoosted = p.boost_until && new Date(p.boost_until) > new Date();
+                    
+                    // BOOST DETECTION LOGIC
+                    const boostDate = p.boost_until ? new Date(p.boost_until) : null;
+                    const isBoosted = boostDate ? boostDate > now : false;
                     
                     // Convert created_at to timestamp for sorting (Newest = Higher Number)
                     const joinedTimestamp = p.created_at ? new Date(p.created_at).getTime() : 0;
+
+                    if (idx < 5 || p.boost_until) {
+                        console.log(`👤 [USER] ${p.username} | Boost Until: ${p.boost_until || 'N/A'} | ¿Boost Activo?: ${isBoosted}`);
+                    }
 
                     return {
                         ...p,
@@ -150,13 +160,12 @@ export const Radar = () => {
                         distance: isBoosted ? '🔥 ELITE' : (Math.random() * 5 + 0.5).toFixed(1),
                         bio: p.description || settings.description || settings.bio || "¡Entrenando duro para subir de rango! 💪 🔥",
                         is_pro: isBoosted, 
-                        // ALGORITHM V7: Boost First, then Newest
-                        // Boost gives a massive lead (10^15), then we add the timestamp
+                        // ALGORITHM V7: Boost First (10^15 weight), then Newest
                         algo_score: (isBoosted ? 1000000000000000 : 0) + joinedTimestamp
                     };
                 });
 
-                // Final sort: Higher timestamp (Newer) first
+                // Final sort: Higher score first
                 const sorted = enriched.sort((a, b) => b.algo_score - a.algo_score);
                 
                 console.log("🏆 [TOP 3] Usuarios ordenados (V7: Boost + Crono):");
