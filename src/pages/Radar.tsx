@@ -61,13 +61,13 @@ export const Radar = () => {
         setLoading(true);
         try {
             console.log("🛰️ [RADAR] Escaneando guerreros...");
-            // 1. Fetch profiles - PRIORITIZE BOOSTED USERS
+            // 1. Fetch profiles - PRIORITIZE NEWEST & BOOSTED
             const { data: profiles, error: pError } = await supabase
                 .from('profiles')
                 .select('*')
                 .neq('id', authUser?.id)
-                .order('boost_until', { ascending: false, nullsFirst: false }) // BOOSTED FIRST
-                .limit(50); // Fetch a good batch
+                .order('created_at', { ascending: false }) // NEWEST FIRST (Database Level)
+                .limit(50);
 
             if (pError) throw pError;
 
