@@ -127,6 +127,7 @@ export const Radar = () => {
                 const myHomeGymId = myProfile?.home_gym_id;
 
                 // 5. Enrich and SORT Profiles (ABSOLUTE CHRONOLOGICAL V6)
+                console.log("📊 [ALGO] Calculando scores para", profiles.length, "perfiles...");
                 const enriched = profiles.map((p, idx) => {
                     const settings = (p.custom_settings as any) || {};
                     const gymInfo = gymMap[p.home_gym_id || ''] || { name: "Gimnasio Partner" };
@@ -134,6 +135,10 @@ export const Radar = () => {
                     
                     // Convert created_at to timestamp for sorting (Newest = Higher Number)
                     const joinedTimestamp = p.created_at ? new Date(p.created_at).getTime() : 0;
+                    
+                    if (idx < 5) {
+                        console.log(`👤 [USER] ${p.username} | Fecha: ${p.created_at} | Timestamp: ${joinedTimestamp}`);
+                    }
 
                     return {
                         ...p,
@@ -157,6 +162,14 @@ export const Radar = () => {
 
                 // Final sort: Higher timestamp (Newer) first
                 const sorted = enriched.sort((a, b) => b.algo_score - a.algo_score);
+                
+                console.log("🏆 [TOP 3] Usuarios ordenados:");
+                console.table(sorted.slice(0, 3).map(u => ({ 
+                    username: u.username, 
+                    score: u.algo_score, 
+                    date: u.created_at 
+                })));
+
                 setNearbyUsers(sorted);
             }
         } catch (error) {
