@@ -214,25 +214,19 @@ export const ReelsPage = () => {
             // 1. Fetch exact profile details
             const { data: profile } = await supabase
                 .from('profiles')
-                .select('id, username, avatar_url, xp, custom_settings, featured_routine_id, home_gym:gyms(name)')
+                .select('id, username, avatar_url, custom_settings, featured_routine_id, home_gym:gyms(name)')
                 .eq('id', userId)
                 .single();
 
             if (!profile) return;
 
-            // 2. Calculate Rank
-            const { count } = await supabase
-                .from('profiles')
-                .select('id', { count: 'exact', head: true })
-                .gt('xp', profile.xp || 0);
-
-            const rank = (count || 0) + 1;
+            // 2. Rank calculation based on XP is disabled
+            const rank = 0;
 
             const player = {
                 id: profile.id,
                 username: profile.username || 'Usuario',
                 avatar_url: profile.avatar_url,
-                xp: profile.xp || 0,
                 rank: rank,
                 gym_name: Array.isArray(profile.home_gym) ? profile.home_gym[0]?.name : (profile.home_gym as any)?.name,
                 banner_url: profile.custom_settings?.banner_url,

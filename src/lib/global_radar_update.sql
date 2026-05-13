@@ -35,7 +35,7 @@ BEGIN
         p.avatar_url,
         COALESCE(p.custom_settings->>'banner_url', '') as banner_url,
         p.description,
-        p.xp / 100 as checkins_count, -- Estimate checkins from XP
+        p.checkins_count as checkins_count, -- Use actual checkins count
         g.id as gym_id,
         COALESCE(g.name, 'En Busca de Gym') as gym_name,
         COALESCE(g.lat, current_lat) as gym_lat,
@@ -57,7 +57,7 @@ BEGIN
       AND p.username IS NOT NULL -- Only users with setup profile
     ORDER BY 
         (p.boost_until IS NOT NULL AND p.boost_until > now()) DESC, -- Boosted first
-        p.xp DESC -- Then by experience
+        p.checkins_count DESC -- Then by consistency
     LIMIT 50;
 END;
 $$;

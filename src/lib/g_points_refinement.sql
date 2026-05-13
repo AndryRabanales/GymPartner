@@ -32,10 +32,7 @@ BEGIN
         INSERT INTO referrals_log (referrer_id, referred_id)
         VALUES (NEW.referred_by, NEW.id);
 
-        -- 2. Award XP (250)
-        UPDATE profiles SET xp = xp + 250 WHERE id = NEW.referred_by;
-
-        -- 3. Award G-Points (100)
+        -- 2. Award G-Points (100)
         UPDATE profiles SET g_points = COALESCE(g_points, 0) + 100 WHERE id = NEW.referred_by;
 
         -- 4. Increment total referrals count
@@ -118,7 +115,7 @@ BEGIN
         p.avatar_url,
         (p.custom_settings->>'banner_url')::text as banner_url,
         COALESCE(p.custom_settings->>'description', p.description) as description,
-        p.xp as checkins_count,
+        p.checkins_count,
         gu.g_id as gym_id,
         gu.name as gym_name,
         gu.lat as gym_lat,

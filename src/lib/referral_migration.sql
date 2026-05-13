@@ -13,9 +13,9 @@ BEGIN
     -- AND the referrer is not the user themselves (prevent self-referral loop)
     IF NEW.referred_by IS NOT NULL AND (OLD.referred_by IS NULL) AND NEW.referred_by <> NEW.id THEN
         
-        -- Award 250 XP to the referrer
+        -- Award G-Points (100) instead of XP
         UPDATE profiles
-        SET xp = xp + 250
+        SET g_points = COALESCE(g_points, 0) + 100
         WHERE id = NEW.referred_by;
         
         -- Optional: We could insert into a 'notifications' table here if it existed

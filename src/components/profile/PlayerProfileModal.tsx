@@ -13,7 +13,7 @@ interface PlayerProfileModalProps {
         id: string;
         username: string;
         avatar_url: string;
-        xp: number;
+        xp?: number;
         rank: number;
         gym_name?: string;
         banner_url?: string;
@@ -166,7 +166,7 @@ export const PlayerProfileModal = ({ player, onClose }: PlayerProfileModalProps)
                             </div>
                             {/* Rank Badge Integration (Optional small badge) */}
                             <div className="absolute bottom-0 right-0 bg-black/80 backdrop-blur border border-yellow-500/50 text-yellow-500 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest shadow-lg">
-                                Lvl {Math.floor(player.xp / 1000) + 1}
+                                Guerrer@
                             </div>
                         </div>
 
@@ -262,7 +262,7 @@ export const PlayerProfileModal = ({ player, onClose }: PlayerProfileModalProps)
                                             <img src={post.media_url} alt="Post" className="w-full h-full object-cover" />
                                         )}
 
-                                        {/* Type Indicator 
+                                        {/* Type Indicator */}
                                         {post.type === 'video' && (
                                             <div className="absolute top-2 right-2">
                                                 <Film size={16} className="text-white drop-shadow-md" />

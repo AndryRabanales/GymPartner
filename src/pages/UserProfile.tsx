@@ -853,7 +853,6 @@ export const UserProfile = () => {
                             id: user.id,
                             username: profile?.username || user.user_metadata.full_name,
                             avatar_url: profile?.avatar_url || user.user_metadata.avatar_url,
-                            xp: profile?.xp || 0,
                             rank: (profile?.rank || 0) as number, // Cast if enum mismatch
                             banner_url: profile?.custom_settings?.banner_url
                         }}

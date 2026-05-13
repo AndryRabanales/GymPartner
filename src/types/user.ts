@@ -6,7 +6,7 @@ export interface User {
     description: string;
     avatarUrl: string;
     homeGymId?: string; // El gym donde es "regular"
-    xp: number;
+    xp?: number; // Legacy field (deprecated)
     rank: UserRank;
     stats: {
         totalCheckins: number;
@@ -30,6 +30,8 @@ export interface User {
 // Level 50->51: 950 XP (Approx 1 week of activity)
 // Level 99->100: 1700 XP
 
+// LEGACY: XP based ranking is deprecated in favor of follower-based ranking.
+/** @deprecated */
 export const getLevelFromXP = (xp: number): number => {
     let level = 1;
     let currentXpRequirement = 0;
@@ -47,6 +49,7 @@ export const getLevelFromXP = (xp: number): number => {
     return level;
 };
 
+/** @deprecated */
 export const getXPProgress = (xp: number): { currentLevel: number; nextLevelXp: number; levelProgress: number; progressPercent: number } => {
     let level = 1;
     let accumulatedXp = 0;
@@ -67,6 +70,7 @@ export const getXPProgress = (xp: number): { currentLevel: number; nextLevelXp: 
     }
 };
 
+/** @deprecated */
 export const getRankFromXP = (xp: number): UserRank => {
     // Adjusted for new curve
     if (xp >= 100000) return 'Gym God'; // ~Level 100+
