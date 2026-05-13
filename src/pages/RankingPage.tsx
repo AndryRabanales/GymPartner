@@ -14,7 +14,7 @@ interface RankedUser {
     id: string;
     username: string;
     avatar_url: string;
-    xp: number;
+    followers_count: number;
     rank: number;
     gym_name?: string;
     is_current_user?: boolean;
@@ -62,6 +62,7 @@ export const RankingPage = () => {
             if (!targetGym) return;
 
             try {
+                // Fetching leaderboard based on follower count within the gym
                 const { data: leaderboardData, error } = await supabase
                     .rpc('get_gym_followers_leaderboard', { gym_id_param: targetGym.gym_id });
 
@@ -72,7 +73,7 @@ export const RankingPage = () => {
                         id: p.id,
                         username: p.username || 'Usuario',
                         avatar_url: p.avatar_url,
-                        xp: p.followers_count,
+                        followers_count: p.followers_count || 0,
                         rank: index + 1,
                         gym_name: p.gym_name || targetGym.gym_name,
                         is_current_user: p.id === user.id,
@@ -137,13 +138,12 @@ export const RankingPage = () => {
                 gym_name: player.gym_name || 'Gimnasio Partner',
                 gym_image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80',
                 training_days_count: Math.floor(Math.random() * 40) + 12,
-                followers_count: player.xp || Math.floor(Math.random() * 80),
+                followers_count: player.followers_count,
                 following_count: Math.floor(Math.random() * 60),
                 distance: 'Local'
             });
         } catch (err) {
             console.error("Error loading player profile:", err);
-            // Even if query fails, show the basic info we already have from the leaderboard
             setSelectedPlayer({
                 id: player.id,
                 username: player.username,
@@ -152,7 +152,7 @@ export const RankingPage = () => {
                 gym_name: player.gym_name,
                 gym_image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80',
                 training_days_count: Math.floor(Math.random() * 40) + 12,
-                followers_count: player.xp,
+                followers_count: player.followers_count,
                 following_count: Math.floor(Math.random() * 60),
                 distance: 'Local',
                 bio: "¡Entrenando duro para subir de rango! 💪🔥"
@@ -187,8 +187,8 @@ export const RankingPage = () => {
                 icon={Trophy}
                 title="Grados de Honor"
                 description="Compite con tu comunidad local y global. Asciende en los rangos y reclama tu lugar como el Alpha de tu gimnasio."
-                benefitTitle="Ascenso Social"
-                benefitDescription="Gana XP por cada entrenamiento, conquista territorios y desbloquea insignias de prestigio."
+                benefitTitle="Influencia Social"
+                benefitDescription="Gana seguidores por cada entrenamiento y contenido compartido, conquista territorios y desbloquea insignias de prestigio."
                 iconColor="text-yellow-500"
                 bgAccent="bg-yellow-500/10"
             />
@@ -244,12 +244,13 @@ export const RankingPage = () => {
                             </div>
                         </div>
                         <div className="shrink-0 flex flex-col items-end">
-                            <span className="font-black text-white text-sm italic">{player.xp}</span>
+                            <span className="font-black text-white text-sm italic">{player.followers_count}</span>
                             <span className="text-[8px] text-neutral-500 font-bold uppercase">Seguidores</span>
                         </div>
                     </button>
                 ))}
             </div>
+         </div>
 
             {/* PREMIUM PROFILE MODAL */}
             {selectedPlayer && (

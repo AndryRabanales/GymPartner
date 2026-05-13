@@ -154,25 +154,19 @@ export const Radar = () => {
                         stats_loaded: false,
                         distance: isBoosted ? '🔥 ELITE' : (Math.random() * 5 + 0.5).toFixed(1),
                         bio: p.description || settings.description || settings.bio || "¡Entrenando duro para subir de rango! 💪 🔥",
-                        is_pro: (p.xp || 0) > 1000 || isBoosted,
+                        is_pro: isBoosted, // Now only based on Boost
                         // ALGORITHM V6: Strict time-based sorting
                         algo_score: joinedTimestamp
                     };
                 });
 
-                // Final sort: Higher timestamp (Newer) first, then XP as tie-breaker
-                const sorted = enriched.sort((a, b) => {
-                    if (b.algo_score !== a.algo_score) {
-                        return b.algo_score - a.algo_score;
-                    }
-                    return (b.xp || 0) - (a.xp || 0); // Tie-breaker: More XP first
-                });
+                // Final sort: Higher timestamp (Newer) first
+                const sorted = enriched.sort((a, b) => b.algo_score - a.algo_score);
                 
-                console.log("🏆 [TOP 3] Usuarios ordenados (con desempate XP):");
+                console.log("🏆 [TOP 3] Usuarios ordenados (Cronología Pura):");
                 console.table(sorted.slice(0, 3).map(u => ({ 
                     username: u.username, 
                     score: u.algo_score, 
-                    xp: u.xp,
                     date: u.created_at 
                 })));
 
