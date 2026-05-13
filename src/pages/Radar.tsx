@@ -126,13 +126,13 @@ export const Radar = () => {
                 
                 const myHomeGymId = myProfile?.home_gym_id;
 
-                // 5. Enrich and SORT Profiles (CHRONOLOGICAL PRIORITY V5)
+                // 5. Enrich and SORT Profiles (ABSOLUTE CHRONOLOGICAL V6)
                 const enriched = profiles.map((p, idx) => {
                     const settings = (p.custom_settings as any) || {};
                     const gymInfo = gymMap[p.home_gym_id || ''] || { name: "Gimnasio Partner" };
                     const isBoosted = p.boost_until && new Date(p.boost_until) > new Date();
                     
-                    // Convert created_at to timestamp for sorting
+                    // Convert created_at to timestamp for sorting (Newest = Higher Number)
                     const joinedTimestamp = p.created_at ? new Date(p.created_at).getTime() : 0;
 
                     return {
@@ -150,13 +150,12 @@ export const Radar = () => {
                         distance: isBoosted ? '🔥 ELITE' : (Math.random() * 5 + 0.5).toFixed(1),
                         bio: p.description || settings.description || settings.bio || "¡Entrenando duro para subir de rango! 💪 🔥",
                         is_pro: (p.xp || 0) > 1000 || isBoosted,
-                        // ALGORITHM V5: Chronological Dominance
-                        // Boost gives a massive 10^15 head start, then we use timestamp
-                        algo_score: (isBoosted ? 1000000000000000 : 0) + joinedTimestamp
+                        // ALGORITHM V6: Strict time-based sorting
+                        algo_score: joinedTimestamp
                     };
                 });
 
-                // Final sort: Higher score (Newer or Boosted) first
+                // Final sort: Higher timestamp (Newer) first
                 const sorted = enriched.sort((a, b) => b.algo_score - a.algo_score);
                 setNearbyUsers(sorted);
             }
