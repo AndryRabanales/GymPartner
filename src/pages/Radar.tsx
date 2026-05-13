@@ -160,13 +160,19 @@ export const Radar = () => {
                     };
                 });
 
-                // Final sort: Higher timestamp (Newer) first
-                const sorted = enriched.sort((a, b) => b.algo_score - a.algo_score);
+                // Final sort: Higher timestamp (Newer) first, then XP as tie-breaker
+                const sorted = enriched.sort((a, b) => {
+                    if (b.algo_score !== a.algo_score) {
+                        return b.algo_score - a.algo_score;
+                    }
+                    return (b.xp || 0) - (a.xp || 0); // Tie-breaker: More XP first
+                });
                 
-                console.log("🏆 [TOP 3] Usuarios ordenados:");
+                console.log("🏆 [TOP 3] Usuarios ordenados (con desempate XP):");
                 console.table(sorted.slice(0, 3).map(u => ({ 
                     username: u.username, 
                     score: u.algo_score, 
+                    xp: u.xp,
                     date: u.created_at 
                 })));
 
