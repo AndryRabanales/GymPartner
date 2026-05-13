@@ -292,9 +292,14 @@ class UserService {
         }
     }
 
-            // XP column is deprecated. We no longer award XP.
-            console.log(`[UserService] addXP suppressed for ${userId} (${amount} XP)`);
-            return { success: true };
+    /**
+     * Add XP to a user (DEPRECATED - Now a no-op)
+     */
+    async addXP(userId: string, amount: number): Promise<{ success: boolean; new_xp?: number; error?: string }> {
+        // XP column is deprecated. We no longer award XP.
+        console.log(`[UserService] addXP suppressed for ${userId} (${amount} XP)`);
+        return { success: true };
+    }
 
     // Get all gyms in the system (for the global map)
     async getAllGyms(): Promise<any[]> {
