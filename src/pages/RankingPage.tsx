@@ -250,7 +250,6 @@ export const RankingPage = () => {
                     </button>
                 ))}
             </div>
-         </div>
 
             {/* PREMIUM PROFILE MODAL */}
             {selectedPlayer && (
