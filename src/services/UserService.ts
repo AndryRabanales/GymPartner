@@ -563,7 +563,19 @@ class UserService {
             if (error) throw error;
             return { success: true };
         } catch (error: any) {
-            console.error('Error updating profile:', error);
+            console.error('❌ [DATABASE ERROR] Error updating profile:', error);
+            console.error('🔍 [CLUE] The database is complaining about a missing "xp" field in a trigger.');
+            console.error('🛠️ [FIX] Run this in Supabase SQL Editor to find the culprit:');
+            console.info(`
+                SELECT 
+                    trig.tgname AS trigger_name,
+                    proc.proname AS function_name,
+                    pg_get_functiondef(proc.oid) AS function_def
+                FROM pg_trigger trig
+                JOIN pg_class cls ON trig.tgrelid = cls.oid
+                JOIN pg_proc proc ON trig.tgfoid = proc.oid
+                WHERE cls.relname = 'profiles';
+            `);
             return { success: false, error: error.message };
         }
     }
