@@ -162,8 +162,14 @@ export const GymMap = () => {
     const handleUnlock = async () => {
         if (!selectedGym || !user) return;
 
-        // Distance Check REMOVED - Remote Conquest Allowed
-        // Users can now add gyms from anywhere, but must verify location to TRAIN.
+        // Distance Check: Enforce 0.1km maximum distance
+        if (selectedGym.lat && userLocation) {
+            const distance = getDistance(userLocation.lat, userLocation.lng, selectedGym.lat, selectedGym.lng);
+            if (distance > 0.1) {
+                alert(`⛔ Estás a ${distance.toFixed(2)}km de distancia. Debes estar a un máximo de 0.10km para desbloquear este gimnasio.`);
+                return;
+            }
+        }
 
         const result = await userService.addGymToPassport(user.id, {
             place_id: selectedGym.place_id,
