@@ -391,7 +391,9 @@ export default function WorkoutDetailPage() {
                                                         <div className="flex-1 min-w-[50px] font-mono font-bold text-white text-xs">
                                                             {set.completedAt ? (() => {
                                                                 const start = new Date(workout.started_at).getTime();
-                                                                const diff = set.completedAt - start;
+                                                                const completedTime = Number(set.completedAt);
+                                                                if (isNaN(completedTime)) return '-';
+                                                                const diff = completedTime - start;
                                                                 if (diff < 0) return '-';
                                                                 const mins = Math.floor(diff / 60000);
                                                                 return `T+${mins}m`;
