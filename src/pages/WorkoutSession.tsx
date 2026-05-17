@@ -885,7 +885,7 @@ export const WorkoutSession = () => {
             set.completed = true;
             set.locked = true; // Auto-lock
             // @ts-ignore
-            set.completedAt = elapsedTime;
+            set.completedAt = Date.now();
 
             // Start Rest Timer for THIS set
             set.restStatus = 'running';
