@@ -395,12 +395,17 @@ export default function WorkoutDetailPage() {
                                                                 if (isNaN(completedTime)) return '-';
                                                                 const diff = completedTime - start;
                                                                 if (diff < 0) return '-';
-                                                                const mins = Math.floor(diff / 60000);
-                                                                if (mins === 0) {
-                                                                    const secs = Math.floor(diff / 1000);
-                                                                    return `T+${secs}s`;
-                                                                }
-                                                                return `T+${mins}m`;
+                                                                const totalSeconds = Math.floor(diff / 1000);
+                                                                const h = Math.floor(totalSeconds / 3600);
+                                                                const m = Math.floor((totalSeconds % 3600) / 60);
+                                                                const s = totalSeconds % 60;
+                                                                
+                                                                let timeStr = '';
+                                                                if (h > 0) timeStr += `${h}h `;
+                                                                if (m > 0 || h > 0) timeStr += `${m}m `;
+                                                                timeStr += `${s}s`;
+                                                                
+                                                                return timeStr.trim();
                                                             })() : <span className="text-neutral-700">-</span>}
                                                         </div>
                                                     )}
