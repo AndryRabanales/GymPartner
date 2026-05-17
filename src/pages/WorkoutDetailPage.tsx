@@ -396,7 +396,11 @@ export default function WorkoutDetailPage() {
                                                                 const diff = completedTime - start;
                                                                 if (diff < 0) return '-';
                                                                 const mins = Math.floor(diff / 60000);
-                                                                return `T+${mins}m`;
+                                                                if (mins === 0) {
+                                                                    const secs = Math.floor(diff / 1000);
+                                                                    return `FIN:${secs}s`;
+                                                                }
+                                                                return `FIN:${mins}m`;
                                                             })() : <span className="text-neutral-700">-</span>}
                                                         </div>
                                                     )}
