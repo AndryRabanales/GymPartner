@@ -1713,8 +1713,16 @@ export const WorkoutSession = () => {
                                                                     {/* @ts-ignore */}
                                                                     {isCompleted && set.completedAt && (
                                                                         <span className="text-[10px] font-bold text-green-500 mt-0 tabular-nums tracking-tighter">
-                                                                            {/* @ts-ignore */}
-                                                                            {set.completedAt}
+                                                                            {(() => {
+                                                                                const completedTime = Number(set.completedAt);
+                                                                                if (isNaN(completedTime)) return '';
+                                                                                const start = startTime?.getTime() || Date.now();
+                                                                                const diff = completedTime - start;
+                                                                                if (diff < 0) return '00:00';
+                                                                                const m = Math.floor(diff / 60000);
+                                                                                const s = Math.floor((diff % 60000) / 1000);
+                                                                                return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+                                                                            })()}
                                                                         </span>
                                                                     )}
                                                                 </div>
