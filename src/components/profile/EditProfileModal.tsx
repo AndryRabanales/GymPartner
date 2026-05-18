@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Camera, Save, Loader, Swords, Trophy, Eye, EyeOff } from 'lucide-react';
+import { X, Camera, Save, Loader, Swords, Trophy, Eye, EyeOff, Users } from 'lucide-react';
 import { userService } from '../../services/UserService';
 import type { User } from '@supabase/supabase-js';
 import { Link } from 'react-router-dom';
+import { supabase } from '../../lib/supabase';
 
 interface EditProfileModalProps {
     user: User;
@@ -45,8 +46,30 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     // Fetch Routines on Mount
     useEffect(() => {
         const fetchRoutines = async () => {
-            const data = await userService.getUserRoutines(user.id);
-            setRoutines(data);
+            const routinesData = await userService.getUserRoutines(user.id);
+            try {
+                const { data: sharesData } = await supabase
+                    .from('routine_shares')
+                    .select('routine_id')
+                    .eq('shared_by', user.id);
+
+                if (sharesData) {
+                    const counts = sharesData.reduce((acc: Record<string, number>, curr: any) => {
+                        acc[curr.routine_id] = (acc[curr.routine_id] || 0) + 1;
+                        return acc;
+                    }, {});
+
+                    const enriched = routinesData.map((r: any) => ({
+                        ...r,
+                        shares_count: counts[r.id] || 0
+                    }));
+                    setRoutines(enriched);
+                    return;
+                }
+            } catch (err) {
+                console.error("Error loading routine share counts:", err);
+            }
+            setRoutines(routinesData);
         };
         fetchRoutines();
     }, [user.id]);
@@ -311,11 +334,23 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                                                 : 'bg-neutral-950/50 border-neutral-800 text-neutral-400 hover:border-neutral-700 hover:bg-neutral-950'
                                                 }`}
                                         >
-                                            <div className="flex flex-col gap-1 relative z-10">
-                                                <span className="font-black text-sm truncate">{routine.name}</span>
-                                                <span className="text-[10px] opacity-60 uppercase tracking-wider font-bold">
-                                                    {selectedRoutineId === routine.id ? '⭐ DESTACADA' : 'Normal'}
-                                                </span>
+                                            <div className="flex flex-col gap-1.5 relative z-10 w-full pr-4">
+                                                <span className="font-black text-sm text-white truncate">{routine.name}</span>
+                                                <div className="flex items-center flex-wrap gap-2">
+                                                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-black tracking-wider uppercase ${
+                                                        selectedRoutineId === routine.id 
+                                                            ? 'bg-gym-primary/20 text-gym-primary' 
+                                                            : 'bg-neutral-800 text-neutral-400'
+                                                    }`}>
+                                                        {selectedRoutineId === routine.id ? '⭐ DESTACADA' : 'NORMAL'}
+                                                    </span>
+                                                    {routine.shares_count > 0 && (
+                                                        <span className="px-1.5 py-0.5 rounded bg-gym-primary/20 text-gym-primary text-[9px] font-black uppercase tracking-wide flex items-center gap-1 border border-gym-primary/30 shrink-0">
+                                                            <Users size={10} strokeWidth={3} />
+                                                            Compartida con {routine.shares_count} {routine.shares_count === 1 ? 'persona' : 'personas'}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                             {selectedRoutineId === routine.id && (
                                                 <div className="relative z-10 flex items-center gap-2">
