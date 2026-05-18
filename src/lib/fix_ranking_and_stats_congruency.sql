@@ -55,6 +55,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- 2. UPDATE GYM LEADERBOARD RPC TO EXCLUDE DELETED PROFILES
 -- Ensures the leaderboard counts match get_profile_stats exactly.
+DROP FUNCTION IF EXISTS public.get_gym_followers_leaderboard(UUID);
 CREATE OR REPLACE FUNCTION get_gym_followers_leaderboard(gym_id_param UUID)
 RETURNS TABLE (
     id UUID,
