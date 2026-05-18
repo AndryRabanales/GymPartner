@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { X, Search, Check, Swords, Loader, Shield } from 'lucide-react';
+import { X, Search, Check, Swords, Loader2, Shield } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { workoutService } from '../../services/WorkoutService';
+import { notificationService } from '../../services/NotificationService';
 
 interface ShareRoutinesToUserModalProps {
     userId: string;
@@ -33,7 +34,7 @@ export const ShareRoutinesToUserModal = ({
                 // 1. Fetch all of my routines
                 const { data: routinesData, error: routinesError } = await supabase
                     .from('routines')
-                    .select('id, name, exercises(id)')
+                    .select('id, name, routine_exercises(id)')
                     .eq('user_id', userId);
 
                 if (routinesError) throw routinesError;
@@ -88,6 +89,15 @@ export const ShareRoutinesToUserModal = ({
     const handleConfirm = async () => {
         setSaving(true);
         try {
+            // Fetch sender profile details to get current username
+            const { data: myProfile } = await supabase
+                .from('profiles')
+                .select('username')
+                .eq('id', userId)
+                .single();
+
+            const myUsername = myProfile?.username || 'guerrero';
+
             // For each of my routines, we determine the final shared state for this specific user
             for (const r of myRoutines) {
                 const isSelected = selectedRoutineIds.has(r.id);
@@ -99,6 +109,20 @@ export const ShareRoutinesToUserModal = ({
                 if (isSelected && !hasAccess) {
                     // Grant access (Union)
                     await workoutService.shareRoutine(r.id, userId, [...currentShares, requesterId]);
+
+                    // Send Notification to recipient!
+                    await notificationService.createNotification(requesterId, {
+                        type: 'system',
+                        title: '⚔️ MAZO DE ENTRENAMIENTO RECIBIDO',
+                        content: `@${myUsername} te ha compartido su mazo: ${r.name}`,
+                        data: {
+                            type: 'routine_shared',
+                            routine_id: r.id,
+                            routine_name: r.name,
+                            sender_id: userId,
+                            sender_username: myUsername
+                        }
+                    });
                 } else if (!isSelected && hasAccess) {
                     // Revoke access
                     await workoutService.shareRoutine(r.id, userId, currentShares.filter(uid => uid !== requesterId));
@@ -139,7 +163,7 @@ export const ShareRoutinesToUserModal = ({
 
                 {loading ? (
                     <div className="h-64 flex flex-col items-center justify-center text-gym-primary gap-4">
-                        <Loader className="animate-spin" size={32} />
+                        <Loader2 className="animate-spin" size={32} />
                         <span className="text-neutral-400 font-bold">Cargando tus estrategias...</span>
                     </div>
                 ) : (
@@ -191,7 +215,7 @@ export const ShareRoutinesToUserModal = ({
                                             </div>
                                             <div className="flex flex-col truncate">
                                                 <span className="font-bold text-sm text-white truncate uppercase italic">{routine.name}</span>
-                                                <span className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider">{routine.exercises?.length || 0} cartas</span>
+                                                <span className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider">{routine.routine_exercises?.length || 0} cartas</span>
                                             </div>
                                         </div>
                                         <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 transition-colors ${
@@ -228,7 +252,7 @@ export const ShareRoutinesToUserModal = ({
                         >
                             {saving ? (
                                 <>
-                                    <Loader className="animate-spin" size={16} />
+                                    <Loader2 className="animate-spin" size={16} />
                                     GUARDANDO...
                                 </>
                             ) : (

@@ -4,9 +4,10 @@ import { supabase } from '../lib/supabase';
 import { notificationService } from '../services/NotificationService';
 import type { Notification } from '../services/NotificationService';
 import { FadeInImage } from '../components/ui/FadeInImage';
-import { Zap, UserPlus, MapPin, Check, X, Bell, History, Swords, Loader } from 'lucide-react';
+import { Zap, UserPlus, MapPin, Check, X, Bell, History, Swords, Loader, Loader2, Bookmark } from 'lucide-react';
 import { socialService } from '../services/SocialService';
 import { ShareRoutinesToUserModal } from '../components/profile/ShareRoutinesToUserModal';
+import toast from 'react-hot-toast';
 
 interface ExtendedNotification extends Notification {
     sender?: {
@@ -14,6 +15,274 @@ interface ExtendedNotification extends Notification {
         avatar_url: string | null;
     };
 }
+
+interface ExtendedNotification extends Notification {
+    sender?: {
+        username: string;
+        avatar_url: string | null;
+    };
+}
+
+// Sub-component to display and manage routine shares
+interface SharedRoutineCardProps {
+    notification: any;
+    onActionComplete: () => void;
+}
+
+const SharedRoutineCard = ({ notification, onActionComplete }: SharedRoutineCardProps) => {
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [routineDetails, setRoutineDetails] = useState<any>(null);
+    const [alreadySaved, setAlreadySaved] = useState(false);
+
+    const routineId = notification.data?.routine_id;
+    const routineName = notification.data?.routine_name;
+    const senderUsername = notification.data?.sender_username || 'guerrero';
+
+    useEffect(() => {
+        const fetchRoutine = async () => {
+            setLoading(true);
+            try {
+                const { data: routine, error: routineError } = await supabase
+                    .from('routines')
+                    .select('id, name, routine_exercises(*)')
+                    .eq('id', routineId)
+                    .maybeSingle();
+
+                if (routineError) throw routineError;
+
+                if (routine) {
+                    const exerciseIds = routine.routine_exercises?.map((e: any) => e.exercise_id) || [];
+                    let exercisesMap = new Map();
+                    if (exerciseIds.length > 0) {
+                        const { data: eqData } = await supabase
+                            .from('gym_equipment')
+                            .select('id, name')
+                            .in('id', exerciseIds);
+                        if (eqData) {
+                            eqData.forEach(ex => exercisesMap.set(ex.id, ex.name));
+                        }
+                        const missingIds = exerciseIds.filter(id => !exercisesMap.has(id));
+                        if (missingIds.length > 0) {
+                            const { data: exData } = await supabase
+                                .from('exercises')
+                                .select('id, name')
+                                .in('id', missingIds);
+                            if (exData) {
+                                exData.forEach(ex => exercisesMap.set(ex.id, ex.name));
+                            }
+                        }
+                    }
+
+                    const enrichedExercises = routine.routine_exercises?.map((e: any) => ({
+                        ...e,
+                        exercise_name: exercisesMap.get(e.exercise_id) || e.name || 'Ejercicio'
+                    })) || [];
+
+                    setRoutineDetails({
+                        ...routine,
+                        exercises: enrichedExercises
+                    });
+                }
+            } catch (err) {
+                console.error("Error loading shared routine:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (routineId) {
+            fetchRoutine();
+        }
+    }, [routineId]);
+
+    const handleSaveMazo = async () => {
+        setSaving(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const { data: newRoutine, error: routineErr } = await supabase
+                .from('routines')
+                .insert({
+                    user_id: user.id,
+                    name: `${routineDetails.name} (Copia)`,
+                    is_public: false,
+                    created_at: new Date().toISOString()
+                })
+                .select()
+                .single();
+
+            if (routineErr) throw routineErr;
+
+            if (routineDetails.exercises?.length > 0) {
+                const exerciseRows = routineDetails.exercises.map((ex: any, idx: number) => ({
+                    routine_id: newRoutine.id,
+                    exercise_id: ex.exercise_id,
+                    name: ex.exercise_name,
+                    order_index: idx,
+                    track_weight: ex.track_weight,
+                    track_reps: ex.track_reps,
+                    track_time: ex.track_time,
+                    track_distance: ex.track_distance,
+                    track_rpe: ex.track_rpe,
+                    track_pr: ex.track_pr,
+                    custom_metric: ex.custom_metric
+                }));
+
+                const { error: exercisesErr } = await supabase
+                    .from('routine_exercises')
+                    .insert(exerciseRows);
+
+                if (exercisesErr) throw exercisesErr;
+            }
+
+            toast.success("¡Mazo guardado en tu arsenal exitosamente! ⚔️");
+            setAlreadySaved(true);
+
+            const { error: notifErr } = await supabase
+                .from('notifications')
+                .update({
+                    is_read: true,
+                    data: {
+                        ...notification.data,
+                        status: 'accepted'
+                    }
+                })
+                .eq('id', notification.id);
+
+            if (notifErr) throw notifErr;
+
+            onActionComplete();
+        } catch (err) {
+            console.error("Error saving shared routine:", err);
+            toast.error("Error al guardar el mazo.");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleCancel = async () => {
+        setSaving(true);
+        try {
+            const { error: notifErr } = await supabase
+                .from('notifications')
+                .update({
+                    is_read: true,
+                    data: {
+                        ...notification.data,
+                        status: 'rejected'
+                    }
+                })
+                .eq('id', notification.id);
+
+            if (notifErr) throw notifErr;
+
+            toast.success("Mazo ignorado.");
+            onActionComplete();
+        } catch (err) {
+            console.error("Error rejecting routine share:", err);
+            toast.error("Error al descartar la notificación.");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const status = notification.data?.status;
+
+    return (
+        <div className={`bg-black/40 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] p-5 shadow-[0_15px_40px_rgba(0,0,0,0.4)] transition-all group my-2 text-left ${status ? 'opacity-60 grayscale-[0.5]' : 'hover:border-gym-primary/30'}`}>
+            <div className="flex items-start gap-4">
+                <div className="relative shrink-0">
+                    <div className="w-16 h-16 rounded-[1.5rem] bg-gym-primary/10 border border-gym-primary/20 flex items-center justify-center text-gym-primary">
+                        <Swords size={28} />
+                    </div>
+                </div>
+
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                        <h3 className={`text-xs font-black italic uppercase tracking-tight truncate ${status ? 'text-neutral-500' : 'text-gym-primary'}`}>
+                            MAZO DE ENTRENAMIENTO RECIBIDO ⚔️
+                        </h3>
+                        <span className="text-[9px] font-bold text-neutral-600 shrink-0">
+                            {new Date(notification.created_at).toLocaleDateString()}
+                        </span>
+                    </div>
+                    <p className={`text-xs font-medium leading-relaxed ${status ? 'text-neutral-600' : 'text-neutral-400'}`}>
+                        <span className="text-white font-black uppercase mr-1">@{senderUsername}</span>
+                        te ha compartido su mazo de batalla: <span className="text-gym-primary font-black italic uppercase">"{routineName}"</span>
+                    </p>
+
+                    {loading ? (
+                        <div className="mt-4 py-3 bg-neutral-900/50 rounded-2xl flex items-center justify-center gap-2 text-neutral-500">
+                            <Loader2 className="animate-spin text-gym-primary" size={14} />
+                            <span className="text-[10px] font-bold uppercase tracking-wider">Cargando mazo...</span>
+                        </div>
+                    ) : routineDetails ? (
+                        <div className="mt-4 bg-black/60 border border-white/5 rounded-2xl p-4 space-y-3">
+                            <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                                <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Cartas del Mazo</span>
+                                <span className="text-[9px] bg-gym-primary/10 text-gym-primary px-2 py-0.5 rounded-md font-black uppercase">
+                                    {routineDetails.exercises?.length || 0} EJERCICIOS
+                                </span>
+                            </div>
+                            <div className="space-y-1.5 max-h-[150px] overflow-y-auto custom-scrollbar pr-1">
+                                {routineDetails.exercises?.map((ex: any, idx: number) => (
+                                    <div key={ex.id || idx} className="flex items-center gap-2 text-left">
+                                        <span className="text-[10px] font-black text-gym-primary italic shrink-0">#{idx + 1}</span>
+                                        <span className="text-xs text-white font-bold truncate uppercase">{ex.exercise_name}</span>
+                                    </div>
+                                ))}
+                                {(!routineDetails.exercises || routineDetails.exercises.length === 0) && (
+                                    <p className="text-[10px] text-neutral-500 font-bold uppercase italic text-center py-2">Mazo vacío</p>
+                                )}
+                            </div>
+                        </div>
+                    ) : (
+                        <p className="text-[10px] text-red-500/80 font-bold uppercase italic mt-2">Error al cargar detalles del mazo.</p>
+                    )}
+                </div>
+            </div>
+
+            <div className="mt-6">
+                {status === 'accepted' || alreadySaved ? (
+                    <div className="w-full py-3 bg-gym-primary/10 border border-gym-primary/20 rounded-2xl flex items-center justify-center gap-2 text-gym-primary font-black text-[10px] uppercase tracking-widest">
+                        <Check size={14} strokeWidth={3} /> ¡MAZO GUARDADO EN ARSENAL!
+                    </div>
+                ) : status === 'rejected' ? (
+                    <div className="w-full py-3 bg-neutral-900/50 border border-neutral-800 rounded-2xl flex items-center justify-center gap-2 text-neutral-600 font-black text-[10px] uppercase tracking-widest">
+                        <X size={14} strokeWidth={3} /> RETO DESCARTADO
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={handleCancel}
+                            disabled={saving}
+                            className="flex-1 py-3 px-4 rounded-2xl bg-neutral-900 text-neutral-500 font-black text-[10px] uppercase tracking-widest border border-white/5 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 transition-all active:scale-95 flex items-center justify-center gap-2"
+                        >
+                            <X size={14} />
+                            DESCARTAR
+                        </button>
+                        <button
+                            onClick={handleSaveMazo}
+                            disabled={saving || loading}
+                            className="flex-[1.5] py-3 px-4 rounded-2xl bg-white text-black font-black text-[10px] uppercase tracking-widest hover:bg-gym-primary transition-all active:scale-95 shadow-xl flex items-center justify-center gap-2"
+                        >
+                            {saving ? (
+                                <Loader2 className="animate-spin" size={14} />
+                            ) : (
+                                <>
+                                    <Bookmark size={14} />
+                                    GUARDAR MAZO
+                                </>
+                            )}
+                        </button>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
 
 const groupNotifications = (notifs: ExtendedNotification[]) => {
     const today: ExtendedNotification[] = [];
@@ -197,6 +466,16 @@ export const NotificationsPage = () => {
 
     const renderNotification = (n: ExtendedNotification) => {
         const status = n.data?.status;
+
+        if (n.type === 'system' && n.data?.type === 'routine_shared') {
+            return (
+                <SharedRoutineCard
+                    key={n.id}
+                    notification={n}
+                    onActionComplete={loadNotifications}
+                />
+            );
+        }
 
         if (n.type === 'system' && (n.data?.type === 'request_history' || n.data?.type === 'request_routines')) {
             const isHistory = n.data.type === 'request_history';
