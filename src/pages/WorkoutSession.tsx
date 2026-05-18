@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable react-hooks/set-state-in-effect */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState, useEffect, useRef, Fragment } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -68,7 +72,9 @@ const RestTimerDisplay = ({ status, accumulated, lastStartTime }: { status: 'run
             return Math.floor(accumulated / 1000);
         };
 
-        setElapsed(calculateElapsed());
+        if (status !== 'running') {
+            setElapsed(calculateElapsed());
+        }
 
         if (status === 'running') {
             const interval = setInterval(() => {
@@ -111,17 +117,13 @@ export const WorkoutSession = () => {
     // NEW: Track Routine Name for AI Diagnosis
     const [currentRoutineName, setCurrentRoutineName] = useState<string | undefined>(undefined);
     const [originalExerciseIds, setOriginalExerciseIds] = useState<string[]>([]); // To detect changes
-    const [originalMetricsSnapshot, setOriginalMetricsSnapshot] = useState<string>(''); // To detect metric changes
     // currentGym state removed
 
     // Tutorial State
-    const [tutorialStep, setTutorialStep] = useState(0);
+    // unused tutorial state removed
 
     useEffect(() => {
-        const step = parseInt(localStorage.getItem('tutorial_step') || '0');
-        if (step === 6 || step === 7) {
-            setTutorialStep(step);
-        }
+        // Tutorial step check removed since tutorialStep state is removed
     }, []);
 
     // NEW: Start Options Modal
@@ -141,7 +143,7 @@ export const WorkoutSession = () => {
 
     const scrollToCategory = (category: string) => {
         setActiveMuscleFilter(category);
-        
+
         // Use a small timeout to ensure state update and DOM alignment
         setTimeout(() => {
             const element = document.getElementById(`category-section-${category}`);
@@ -159,7 +161,6 @@ export const WorkoutSession = () => {
     const [userSettings, setUserSettings] = useState<CustomSettings>({ categories: [], metrics: [] });
     // Arsenal Modal State
     const [searchTerm, setSearchTerm] = useState('');
-    const [activeSection, setActiveSection] = useState<string | null>(null);
     const [isCreatingExercise, setIsCreatingExercise] = useState(false);
     const [editingItem, setEditingItem] = useState<Equipment | null>(null);
 
@@ -176,23 +177,7 @@ export const WorkoutSession = () => {
         });
     };
 
-    const MUSCLE_GROUPS = [
-        "Cuádriceps",
-        "Isquiotibiales",
-        "Espalda (Dorsales, Trapecios, Romboides)",
-        "Pecho (Pectorales)",
-        "Glúteos",
-        "Hombros (Deltoides)",
-        "Tríceps",
-        "Bíceps",
-        "Core (Abdomen, Lumbares)",
-        "Pantorrillas (Gemelos, Sóleo)",
-        "Antebrazos",
-        "Cuello"
-    ];
-
     // NEW: Rest Timer State
-    const [restTimerStart, setRestTimerStart] = useState<number | null>(null); // Timestamp in ms
     const [restTimerSetKey, setRestTimerSetKey] = useState<string | null>(null); // "exerciseIdx-setIdx" to show only under specific set
 
     // NEW: Weight Unit State (Global Default Only)
@@ -314,16 +299,6 @@ export const WorkoutSession = () => {
         setSearchTerm('');
     };
 
-    // Toggle Selection Helper
-    const toggleCatalogItem = (id: string) => {
-        const newSet = new Set(selectedCatalogItems);
-        if (newSet.has(id)) {
-            newSet.delete(id);
-        } else {
-            newSet.add(id);
-        }
-        setSelectedCatalogItems(newSet);
-    };
 
     // Computed: Merge Seeds (Virtual) only if not already present by NAME in the real/global list
     const effectiveInventory = [...arsenal];
@@ -332,7 +307,7 @@ export const WorkoutSession = () => {
             effectiveInventory.push({
                 ...seed,
                 id: `virtual-${seed.name}`,
-                // @ts-ignore
+                // @ts-expect-error - ignore typing
                 gym_id: 'virtual',
                 condition: 'GOOD',
                 quantity: 1
@@ -342,7 +317,7 @@ export const WorkoutSession = () => {
 
     const catalogItems = COMMON_EQUIPMENT_SEEDS.filter(seed => {
         if (activeSection) {
-            // @ts-ignore
+            // @ts-expect-error - ignore typing
             return getMuscleGroup({ name: seed.name, category: seed.category }, userSettings) === activeSection;
         }
         return true;
@@ -398,8 +373,8 @@ export const WorkoutSession = () => {
             ]);
 
             // ALWAYS DEFAULT TO PERSONAL INVENTORY FIRST (Avoid false gym detection)
-            let targetGymId = routeGymId === 'personal' ? personalGymId : (routeGymId || personalGymId);
-            
+            const targetGymId = routeGymId === 'personal' ? personalGymId : (routeGymId || personalGymId);
+
             // Set initial name only if we have a specific route ID, otherwise empty (wait for GPS)
             if (routeGymId && routeGymId !== 'personal') {
                 const routeGym = gyms.find(g => g.gym_id === routeGymId);
@@ -407,7 +382,7 @@ export const WorkoutSession = () => {
             } else {
                 setDetectedGymName(''); // Clean start
             }
-            
+
             setResolvedGymId(targetGymId || null);
             setUserSettings(settings);
 
@@ -442,7 +417,7 @@ export const WorkoutSession = () => {
                     if (gpsPosition && !routeGymId) {
                         const userLat = gpsPosition.coords.latitude;
                         const userLng = gpsPosition.coords.longitude;
-                        
+
                         // Sort gyms by distance to pick the ABSOLUTE closest one
                         const gymsWithDistance = gyms
                             .filter(g => g.lat && g.lng)
@@ -463,13 +438,13 @@ export const WorkoutSession = () => {
                             console.log(`🎯 Precision Lock: ${nearestGym.gym_name} (${Math.round(nearestGym.dist * 1000)}m)`);
                             setDetectedGymName(nearestGym.gym_name || '');
                             setResolvedGymId(nearestGym.gym_id);
-                            
+
                             // Hot-swap inventory and routines
                             const [newItems, newRoutines] = await Promise.all([
                                 equipmentService.getInventory(nearestGym.gym_id),
                                 workoutService.getUserRoutines(userId, nearestGym.gym_id)
                             ]);
-                            
+
                             setRoutines(newRoutines);
                             setArsenal(prev => {
                                 const combined = [...newItems, ...prev];
@@ -488,7 +463,7 @@ export const WorkoutSession = () => {
             if (active) {
                 setSessionId(active.id);
                 setStartTime(new Date(active.started_at));
-                
+
                 // Hydrate from Draft or DB
                 const savedDraft = localStorage.getItem(`workout_draft_${active.id}`);
                 if (savedDraft) {
@@ -652,7 +627,7 @@ export const WorkoutSession = () => {
 
                     // Add custom metric from routine if exists
                     if (detail.custom_metric) {
-                        // @ts-ignore
+                        // @ts-expect-error - ignore typing
                         metrics[detail.custom_metric] = true;
                         console.log(`✨ Added Custom Routine Metric: ${detail.custom_metric}`);
                     }
@@ -714,7 +689,7 @@ export const WorkoutSession = () => {
 
                     // Add custom metric from routine if exists
                     if (detail.custom_metric) {
-                        // @ts-ignore
+
                         ghostMetrics[detail.custom_metric] = true;
                         console.log(`👻 Added Custom Metric to Ghost Exercise: ${detail.custom_metric}`);
                     }
@@ -723,7 +698,7 @@ export const WorkoutSession = () => {
 
                     // Initialize custom metrics
                     const customMetrics: Record<string, number> = {};
-                    // @ts-ignore
+                    // @ts-expect-error - ignore typing
                     const metricsObj = ghostMetrics as any || {};
 
                     Object.keys(metricsObj).forEach(mid => {
@@ -786,21 +761,6 @@ export const WorkoutSession = () => {
 
         setLoading(false);
     };
-    const addExercise = (equipment: Equipment) => {
-        const defaultMetrics = { weight: true, reps: true, time: false, distance: false, rpe: false };
-        const newExercise: WorkoutExercise = {
-            id: Math.random().toString(), // UI Key
-            equipmentId: equipment.id,
-            equipmentName: equipment.name,
-            metrics: (equipment.metrics || defaultMetrics) as any,
-            sets: [
-                { id: Math.random().toString(), weight: 0, reps: 0, completed: false }
-            ],
-            category: equipment.target_muscle_group || equipment.category || 'Custom'
-        };
-        setActiveExercises([...activeExercises, newExercise]);
-        setShowAddModal(false);
-    };
 
     const removeExercise = (id: string) => {
         setActiveExercises(prev => prev.filter(e => e.id !== id));
@@ -816,7 +776,7 @@ export const WorkoutSession = () => {
             }
             updated[exerciseIndex].sets[setIndex].custom![field] = isNaN(val) ? 0 : val;
         } else {
-            // @ts-ignore
+            // @ts-expect-error - ignore typing
             updated[exerciseIndex].sets[setIndex][field] = isNaN(val) ? 0 : val;
         }
 
@@ -865,7 +825,7 @@ export const WorkoutSession = () => {
         if (set.completed) {
             // UNMARKING
             set.completed = false;
-            // @ts-ignore
+            // @ts-expect-error - ignore typing
             set.completedAt = undefined;
             // Reset Timer state
             set.restStatus = undefined;
@@ -884,7 +844,7 @@ export const WorkoutSession = () => {
             // MARKING COMPLETE
             set.completed = true;
             set.locked = true; // Auto-lock
-            // @ts-ignore
+            // @ts-expect-error - ignore typing
             set.completedAt = Date.now();
 
             // Start Rest Timer for THIS set
@@ -1130,12 +1090,12 @@ export const WorkoutSession = () => {
 
         // SMART SKIP: If we have a routine name AND the exercises haven't changed, skip modal
         const currentIds = activeExercises.map(ex => ex.equipmentId);
-        
+
         // We only care about the LIST of exercises. 
         // Users can add sets, change weights, etc. - those are DATA changes, not CONFIG changes.
-        const hasChanged = currentRoutineName 
-            ? currentIds.length !== originalExerciseIds.length || 
-              !currentIds.every((id, idx) => id === originalExerciseIds[idx])
+        const hasChanged = currentRoutineName
+            ? currentIds.length !== originalExerciseIds.length ||
+            !currentIds.every((id, idx) => id === originalExerciseIds[idx])
             : true; // Always ask for Quick Start sessions
 
         if (currentRoutineName && !hasChanged) {
@@ -1322,57 +1282,53 @@ export const WorkoutSession = () => {
             for (let j = 0; j < exercise.sets.length; j++) {
                 const set = exercise.sets[j];
 
-                for (let j = 0; j < exercise.sets.length; j++) {
-                    const set = exercise.sets[j];
+                // SAVE LOGIC:
+                // 1. If it has no DB ID (not saved yet)
+                // 2. AND (It is completed OR has some data)
+                if (!set.db_id && (set.completed || set.weight > 0 || set.reps > 0 || (set.time || 0) > 0 || (set.distance || 0) > 0)) {
+                    // We need the ID now
+                    const targetId = await getExId();
 
-                    // SAVE LOGIC:
-                    // 1. If it has no DB ID (not saved yet)
-                    // 2. AND (It is completed OR has some data)
-                    if (!set.db_id && (set.completed || set.weight > 0 || set.reps > 0 || (set.time || 0) > 0 || (set.distance || 0) > 0)) {
-                        // We need the ID now
-                        const targetId = await getExId();
+                    if (targetId) {
+                        console.log(`💾 Saving set ${j + 1} for ${exercise.equipmentName}...`);
+                        // Ensure we have valid numbers
+                        const weightToSave = Number(set.weight) || 0;
+                        const repsToSave = Number(set.reps) || 0;
+                        const timeToSave = Number(set.time) || 0;
+                        const distanceToSave = Number(set.distance) || 0;
 
-                        if (targetId) {
-                            console.log(`💾 Saving set ${j + 1} for ${exercise.equipmentName}...`);
-                            // Ensure we have valid numbers
-                            const weightToSave = Number(set.weight) || 0;
-                            const repsToSave = Number(set.reps) || 0;
-                            const timeToSave = Number(set.time) || 0;
-                            const distanceToSave = Number(set.distance) || 0;
+                        // Point 4: Add Timestamps to Metrics
+                        const extendedMetrics = {
+                            ...(set.custom || {}),
+                            ...(set.completed ? { _checklist_timestamp: set.completedAt || Date.now() } : {}),
+                            ...(exercise.weightUnit === 'lb' ? { _weight_unit: 'lb' } : {}),
+                            _rest_duration_ms: set.restAccumulated || 0,
+                            // _rest_status is string, might need cast if DB expects number map, but usually metrics_data is JSONB
+                            _rest_status: set.restStatus
+                        } as any;
 
-                            // Point 4: Add Timestamps to Metrics
-                            const extendedMetrics = {
-                                ...(set.custom || {}),
-                                ...(set.completed ? { _checklist_timestamp: set.completedAt || Date.now() } : {}),
-                                ...(exercise.weightUnit === 'lb' ? { _weight_unit: 'lb' } : {}),
-                                _rest_duration_ms: set.restAccumulated || 0,
-                                // _rest_status is string, might need cast if DB expects number map, but usually metrics_data is JSONB
-                                _rest_status: set.restStatus
-                            } as any;
-
-                            savePromises.push(workoutService.logSet({
-                                session_id: sessionId,
-                                exercise_id: targetId, // Use the resolved ID
-                                set_number: j + 1,
-                                sets: 1,
-                                weight_kg: weightToSave,
-                                reps: repsToSave,
-                                time: timeToSave,
-                                distance: distanceToSave,
-                                rpe: Number(set.rpe) || undefined,
-                                metrics_data: extendedMetrics, // Save custom metrics + timestamps
-                                category_snapshot: exercise.category || 'Custom', // SNAPSHOT: Current Category
-                                is_pr: false
-                            }).then(res => {
-                                if (res.data) {
-                                    // Mark as saved in local state to avoid dupes if we were to stay on screen
-                                    set.db_id = res.data.id;
-                                }
-                            }));
-                            savedCount++;
-                        } else {
-                            console.error(`❌ Failed to resolve ID for ${exercise.equipmentName}, skipping save.`);
-                        }
+                        savePromises.push(workoutService.logSet({
+                            session_id: sessionId,
+                            exercise_id: targetId, // Use the resolved ID
+                            set_number: j + 1,
+                            sets: 1,
+                            weight_kg: weightToSave,
+                            reps: repsToSave,
+                            time: timeToSave,
+                            distance: distanceToSave,
+                            rpe: Number(set.rpe) || undefined,
+                            metrics_data: extendedMetrics, // Save custom metrics + timestamps
+                            category_snapshot: exercise.category || 'Custom', // SNAPSHOT: Current Category
+                            is_pr: false
+                        }).then(res => {
+                            if (res.data) {
+                                // Mark as saved in local state to avoid dupes if we were to stay on screen
+                                set.db_id = res.data.id;
+                            }
+                        }));
+                        savedCount++;
+                    } else {
+                        console.error(`❌ Failed to resolve ID for ${exercise.equipmentName}, skipping save.`);
                     }
                 }
             }
@@ -1710,7 +1666,7 @@ export const WorkoutSession = () => {
                                                                         )}
                                                                     </div>
                                                                     {/* Timestamp */}
-                                                                    {/* @ts-ignore */}
+                                                                    {/* @ts-expect-error - ignore typing */}
                                                                     {isCompleted && set.completedAt && (
                                                                         <span className="text-[10px] font-bold text-green-500 mt-0 tabular-nums tracking-tighter">
                                                                             {(() => {
@@ -1950,7 +1906,7 @@ export const WorkoutSession = () => {
                                         userSettings={userSettings}
                                         searchTerm={searchTerm}
                                         onToggleSelection={handleCatalogToggle}
-                                        onOpenCatalog={() => {}}
+                                        onOpenCatalog={() => { }}
                                         onEditItem={setEditingItem}
                                         sectionOrder={CATALOG_ORDER}
                                         gridClassName="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2"
@@ -2004,7 +1960,7 @@ export const WorkoutSession = () => {
                                         // Quick Add Seed from Catalog
                                         const tempId = `virtual-${seed.name}`;
                                         // Create virtual item object since it might not be in the list yet
-                                        // @ts-ignore
+                                        // @ts-expect-error - ignore typing
                                         const virtualItem: Equipment = {
                                             ...seed,
                                             id: tempId,
@@ -2173,7 +2129,7 @@ export const WorkoutSession = () => {
                                             // 1. Instant UI Feedback
                                             setShowStartOptionsModal(false);
                                             setCurrentRoutineName(routine.name);
-                                            
+
                                             // 2. Background Processing
                                             startNewSession(); // Fire and forget (don't await)
                                             loadRoutine(routine);
