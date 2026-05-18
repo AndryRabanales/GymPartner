@@ -63,57 +63,28 @@ export const RankingPage = () => {
             if (!targetGym) return;
 
             try {
-                // A. Fetch all profiles assigned to this home gym
-                const { data: gymProfiles, error: profilesError } = await supabase
-                    .from('profiles')
-                    .select('id, username, avatar_url, custom_settings')
-                    .eq('home_gym_id', targetGym.gym_id);
+                // Fetching leaderboard based on follower count within the gym
+                const { data: leaderboardData, error } = await supabase
+                    .rpc('get_gym_followers_leaderboard', { gym_id_param: targetGym.gym_id });
 
-                if (profilesError) throw profilesError;
+                if (error) console.error('Error fetching gym leaderboard:', error);
 
-                if (!gymProfiles || gymProfiles.length === 0) {
-                    setLeaderboard([]);
-                    return;
-                }
-
-                // B. Fetch all follows where the target is one of the gym members to get absolute, real-time counts
-                const profileIds = gymProfiles.map(p => p.id);
-                const { data: followsData, error: followsError } = await supabase
-                    .from('follows')
-                    .select('following_id, follower_id')
-                    .in('following_id', profileIds);
-
-                if (followsError) throw followsError;
-
-                // C. Map follows count and custom settings banner
-                const followersMap = (followsData || []).reduce((acc: Record<string, number>, follow: any) => {
-                    acc[follow.following_id] = (acc[follow.following_id] || 0) + 1;
-                    return acc;
-                }, {});
-
-                const mapped = gymProfiles.map((p: any) => {
-                    const count = followersMap[p.id] || 0;
-                    const settings = p.custom_settings || {};
-                    return {
+                if (leaderboardData) {
+                    const mapped = leaderboardData.map((p: any, index: number) => ({
                         id: p.id,
                         username: p.username || 'Usuario',
                         avatar_url: p.avatar_url || `https://ui-avatars.com/api/?name=${p.username || 'U'}&background=random`,
-                        followers_count: count,
-                        gym_name: targetGym.gym_name,
+                        followers_count: Number(p.followers_count) || 0,
+                        rank: index + 1,
+                        gym_name: p.gym_name || targetGym.gym_name,
                         is_current_user: p.id === user.id,
-                        banner_url: settings.banner_url || null,
+                        banner_url: p.banner_url || null,
                         featured_routine_id: null
-                    };
-                });
-
-                // D. Sort by followers count descending and map ranks (highest followers = #1)
-                const sorted = mapped.sort((a, b) => b.followers_count - a.followers_count);
-                const finalLeaderboard = sorted.map((p, index) => ({
-                    ...p,
-                    rank: index + 1
-                }));
-
-                setLeaderboard(finalLeaderboard);
+                    }));
+                    setLeaderboard(mapped);
+                } else {
+                    setLeaderboard([]);
+                }
             } catch (err) {
                 console.error('Error in ranking fetch:', err);
                 setLeaderboard([]);
