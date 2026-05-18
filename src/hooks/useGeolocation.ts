@@ -34,6 +34,8 @@ export const useGeolocation = (enableHighAccuracy = true) => {
             return;
         }
 
+        let watchId: number | null = null;
+
         const successHandler = (position: GeolocationPosition) => {
             const newLocation: Location = {
                 lat: position.coords.latitude,
@@ -56,16 +58,22 @@ export const useGeolocation = (enableHighAccuracy = true) => {
 
         const errorHandler = (error: GeolocationPositionError) => {
             console.warn(`[GEOLOCATION] Error: ${error.message}`);
-            setState(prev => ({ ...prev, error: error.message, loading: false }));
+            setState(prev => {
+                // Keep the cached/last known location on timeout
+                if (error.code === error.TIMEOUT && prev.location) {
+                    return { ...prev, loading: false };
+                }
+                return { ...prev, error: error.message, loading: false };
+            });
         };
 
         const options = {
             enableHighAccuracy,
-            timeout: 2000, // Reduced to 2s for maximum speed
-            maximumAge: 10000, // Accept cached location up to 10s old
+            timeout: 10000, // Increased to 10s to ensure reliable locks indoors and on slower devices
+            maximumAge: 30000, // Accept cached location up to 30s old to speed up loading
         };
 
-        // Check if we already have permissions (modern browsers)
+        // Start watching position
         if ('permissions' in navigator) {
             navigator.permissions.query({ name: 'geolocation' as any }).then((result) => {
                 if (result.state === 'denied') {
@@ -74,15 +82,24 @@ export const useGeolocation = (enableHighAccuracy = true) => {
                 }
                 
                 // If granted or prompt, start watching
-                const watchId = navigator.geolocation.watchPosition(successHandler, errorHandler, options);
-                return () => navigator.geolocation.clearWatch(watchId);
+                watchId = navigator.geolocation.watchPosition(successHandler, errorHandler, options);
+            }).catch(() => {
+                // If query fails, fall back to direct watch
+                watchId = navigator.geolocation.watchPosition(successHandler, errorHandler, options);
             });
         } else {
             // Fallback for older browsers
-            const watchId = navigator.geolocation.watchPosition(successHandler, errorHandler, options);
-            return () => navigator.geolocation.clearWatch(watchId);
+            watchId = navigator.geolocation.watchPosition(successHandler, errorHandler, options);
         }
+
+        // Return proper React cleanup to clear active GPS watchers and prevent memory leaks
+        return () => {
+            if (watchId !== null) {
+                navigator.geolocation.clearWatch(watchId);
+            }
+        };
     }, [enableHighAccuracy]);
+
 
     return state;
 };

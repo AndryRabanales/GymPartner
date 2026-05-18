@@ -51,7 +51,8 @@ export const UserProfile = () => {
 
     const [showEditProfile, setShowEditProfile] = useState(false);
     const [showSocialProfile, setShowSocialProfile] = useState(false);
-    const [skipOnboarding, setSkipOnboarding] = useState(true); // Default to TRUE: Profile is the main page
+    const [skipOnboarding, setSkipOnboarding] = useState(false); // Default to FALSE: Prompt new users to choose their base gym/location
+
     const hasSeededRef = useRef(false); // Track if we've run the seeder
 
     const navigate = useNavigate();
