@@ -697,6 +697,101 @@ class SocialService {
         }
         return profiles || [];
     }
+
+    // ============================================================================
+    // 📊 HISTORY SHARING & ACCESS SYSTEM
+    // ============================================================================
+
+    async shareHistory(sharedBy: string, sharedWithUserIds: string[]) {
+        try {
+            // First, delete any existing shares for this user so we can rewrite them cleanly
+            await supabase
+                .from('history_shares')
+                .delete()
+                .eq('shared_by', sharedBy);
+
+            if (sharedWithUserIds.length === 0) return { success: true };
+
+            const payload = sharedWithUserIds.map(userId => ({
+                shared_by: sharedBy,
+                shared_with: userId
+            }));
+
+            const { error } = await supabase
+                .from('history_shares')
+                .insert(payload);
+
+            if (error) {
+                console.error("Error sharing history:", error);
+                return { success: false, error };
+            }
+            return { success: true };
+        } catch (err) {
+            console.error("Exception sharing history:", err);
+            return { success: false, error: err };
+        }
+    }
+
+    async getHistoryShares(userId: string): Promise<string[]> {
+        try {
+            const { data, error } = await supabase
+                .from('history_shares')
+                .select('shared_with')
+                .eq('shared_by', userId);
+
+            if (error) {
+                if (error.code !== '42P01') {
+                    console.error("Error getting history shares:", error);
+                }
+                return [];
+            }
+            return data?.map(d => d.shared_with) || [];
+        } catch (err) {
+            console.error("Exception getting history shares:", err);
+            return [];
+        }
+    }
+
+    async checkHistoryAccess(sharedBy: string, sharedWith: string): Promise<boolean> {
+        try {
+            if (sharedBy === sharedWith) return true; // Own history is always accessible
+            const { data, error } = await supabase
+                .from('history_shares')
+                .select('id')
+                .eq('shared_by', sharedBy)
+                .eq('shared_with', sharedWith)
+                .maybeSingle();
+
+            if (error) {
+                console.error("Error checking history access:", error);
+                return false;
+            }
+            return !!data;
+        } catch (err) {
+            console.error("Exception checking history access:", err);
+            return false;
+        }
+    }
+
+    async grantHistoryAccess(sharedBy: string, sharedWith: string): Promise<boolean> {
+        try {
+            const { error } = await supabase
+                .from('history_shares')
+                .upsert({
+                    shared_by: sharedBy,
+                    shared_with: sharedWith
+                }, { onConflict: 'shared_by,shared_with' });
+
+            if (error) {
+                console.error("Error granting history access:", error);
+                return false;
+            }
+            return true;
+        } catch (err) {
+            console.error("Exception granting history access:", err);
+            return false;
+        }
+    }
 }
 
 export const socialService = new SocialService();

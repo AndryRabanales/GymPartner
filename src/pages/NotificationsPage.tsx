@@ -4,7 +4,9 @@ import { supabase } from '../lib/supabase';
 import { notificationService } from '../services/NotificationService';
 import type { Notification } from '../services/NotificationService';
 import { FadeInImage } from '../components/ui/FadeInImage';
-import { Zap, UserPlus, MapPin, Check, X, Bell } from 'lucide-react';
+import { Zap, UserPlus, MapPin, Check, X, Bell, History, Swords, Loader } from 'lucide-react';
+import { socialService } from '../services/SocialService';
+import { ShareRoutinesToUserModal } from '../components/profile/ShareRoutinesToUserModal';
 
 interface ExtendedNotification extends Notification {
     sender?: {
@@ -40,6 +42,14 @@ const groupNotifications = (notifs: ExtendedNotification[]) => {
 export const NotificationsPage = () => {
     const [notifications, setNotifications] = useState<ExtendedNotification[]>([]);
     const [loading, setLoading] = useState(false);
+    const [sharingRoutinesRequester, setSharingRoutinesRequester] = useState<{ id: string; username: string; notification: ExtendedNotification } | null>(null);
+    const [currentUser, setCurrentUser] = useState<any>(null);
+
+    useEffect(() => {
+        supabase.auth.getUser().then(({ data: { user } }) => {
+            setCurrentUser(user);
+        });
+    }, []);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -110,7 +120,47 @@ export const NotificationsPage = () => {
         }
     };
 
-    const handleAccept = async (notification: Notification) => {
+    const handleAccept = async (notification: ExtendedNotification) => {
+        if (notification.data?.type === 'request_history') {
+            const requesterId = notification.data?.requester_id;
+            if (!requesterId) return;
+
+            setNotifications(prev => prev.map(n =>
+                n.id === notification.id
+                    ? { ...n, data: { ...n.data, status: 'accepted' }, is_read: true }
+                    : n
+            ));
+
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    const success = await socialService.grantHistoryAccess(user.id, requesterId);
+                    if (success) {
+                        await notificationService.updateInvitationStatus(notification, 'accepted');
+                        alert(`¡Acceso al historial concedido a @${notification.data?.requester_username || 'tu aliado'}!`);
+                    } else {
+                        alert("Error al conceder acceso.");
+                        loadNotifications();
+                    }
+                }
+            } catch (error) {
+                console.error("Error accepting history request:", error);
+                loadNotifications();
+            }
+            return;
+        }
+
+        if (notification.data?.type === 'request_routines') {
+            const requesterId = notification.data?.requester_id;
+            if (!requesterId) return;
+
+            setSharingRoutinesRequester({
+                id: requesterId,
+                username: notification.data?.requester_username || 'guerrero',
+                notification
+            });
+            return;
+        }
         const senderId = notification.data?.sender_id;
         if (!senderId) return;
 
@@ -147,6 +197,102 @@ export const NotificationsPage = () => {
 
     const renderNotification = (n: ExtendedNotification) => {
         const status = n.data?.status;
+
+        if (n.type === 'system' && (n.data?.type === 'request_history' || n.data?.type === 'request_routines')) {
+            const isHistory = n.data.type === 'request_history';
+            const requesterId = n.data.requester_id;
+            const requesterUsername = n.data.requester_username || 'guerrero';
+
+            return (
+                <div 
+                    key={n.id} 
+                    className={`bg-black/40 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] p-5 shadow-[0_15px_40px_rgba(0,0,0,0.4)] transition-all group my-2 text-left ${status ? 'opacity-60 grayscale-[0.5]' : 'hover:border-gym-primary/30'}`}
+                >
+                    <div className="flex items-start gap-4">
+                        <div className="relative shrink-0">
+                            <div className="absolute -inset-1 bg-gym-primary rounded-full blur-md opacity-0 group-hover:opacity-20 transition-opacity"></div>
+                            <div className={`w-16 h-16 rounded-full p-0.5 ${status ? 'bg-neutral-800' : 'bg-gradient-to-tr from-neutral-800 to-neutral-600'}`}>
+                                <div className="w-full h-full rounded-full bg-neutral-900 overflow-hidden flex items-center justify-center border border-white/10 relative cursor-pointer" onClick={() => navigate(`/user/${requesterId}`)}>
+                                    {n.sender?.avatar_url ? (
+                                        <FadeInImage src={n.sender.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full bg-gradient-to-br from-neutral-800 to-black flex items-center justify-center">
+                                            <span className="text-xl font-black text-gym-primary italic">
+                                                {requesterUsername[0].toUpperCase()}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            {!status && (
+                                <div className={`absolute -bottom-1 -right-1 p-1 rounded-full border-2 border-black shadow-lg ${isHistory ? 'bg-yellow-500 text-black' : 'bg-gym-primary text-black'}`}>
+                                    {isHistory ? <History size={10} strokeWidth={3} /> : <Swords size={10} strokeWidth={3} />}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex-1 min-w-0 flex flex-col text-left">
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                                <h3 className={`text-xs font-black italic uppercase tracking-tight truncate ${status ? 'text-neutral-500' : 'text-gym-primary'}`}>
+                                    {isHistory ? 'SOLICITUD DE HISTORIAL 📈' : 'SOLICITUD DE RUTINAS ⚔️'}
+                                </h3>
+                                <span className="text-[9px] font-bold text-neutral-600 shrink-0">
+                                    {new Date(n.created_at).toLocaleDateString()}
+                                </span>
+                            </div>
+                            <p className={`text-xs font-medium leading-relaxed ${status ? 'text-neutral-600' : 'text-neutral-400'}`}>
+                                <span className={`${status ? 'text-neutral-500' : 'text-white'} font-black uppercase mr-1 cursor-pointer hover:text-gym-primary`} onClick={() => navigate(`/user/${requesterId}`)}>
+                                    @{requesterUsername}
+                                </span> 
+                                {isHistory 
+                                    ? 'te ha solicitado acceso a tu historial completo de entrenamientos.' 
+                                    : 'te ha solicitado acceso a tus rutinas de entrenamiento privadas.'
+                                }
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="mt-6">
+                        {status === 'accepted' ? (
+                            <div className="w-full py-3 bg-gym-primary/10 border border-gym-primary/20 rounded-2xl flex items-center justify-center gap-2 text-gym-primary font-black text-[10px] uppercase tracking-widest">
+                                <Check size={14} strokeWidth={3} /> ACCESO CONCEDIDO
+                            </div>
+                        ) : status === 'rejected' ? (
+                            <div className="w-full py-3 bg-neutral-900/50 border border-neutral-800 rounded-2xl flex items-center justify-center gap-2 text-neutral-600 font-black text-[10px] uppercase tracking-widest">
+                                <X size={14} strokeWidth={3} /> SOLICITUD RECHAZADA
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => handleReject(n)}
+                                    className="flex-1 py-3 px-4 rounded-2xl bg-neutral-900 text-neutral-500 font-black text-[10px] uppercase tracking-widest border border-white/5 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 transition-all active:scale-95 flex items-center justify-center gap-2"
+                                >
+                                    <X size={14} />
+                                    RECHAZAR
+                                </button>
+                                <button
+                                    onClick={() => handleAccept(n)}
+                                    className="flex-[1.5] py-3 px-4 rounded-2xl bg-white text-black font-black text-[10px] uppercase tracking-widest hover:bg-gym-primary transition-all active:scale-95 shadow-xl flex items-center justify-center gap-2"
+                                >
+                                    {isHistory ? (
+                                        <>
+                                            <History size={14} strokeWidth={2.5} />
+                                            COMPARTIR HISTORIAL
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Swords size={14} />
+                                            COMPARTIR RUTINAS
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+        // status is already declared at the top of renderNotification
         
         // Base layout for standard notifications (follower, gym_join, system)
         if (n.type !== 'invitation') {
@@ -340,6 +486,20 @@ export const NotificationsPage = () => {
                     </div>
                 )}
             </div>
+
+            {sharingRoutinesRequester && currentUser && (
+                <ShareRoutinesToUserModal
+                    userId={currentUser.id}
+                    requesterId={sharingRoutinesRequester.id}
+                    requesterUsername={sharingRoutinesRequester.username}
+                    onClose={() => setSharingRoutinesRequester(null)}
+                    onSuccess={async () => {
+                        await notificationService.updateInvitationStatus(sharingRoutinesRequester.notification, 'accepted');
+                        setSharingRoutinesRequester(null);
+                        loadNotifications();
+                    }}
+                />
+            )}
         </div>
     );
 };

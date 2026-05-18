@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Loader, Calendar, MapPin, Clock, Dumbbell } from 'lucide-react';
+import { Loader, Calendar, MapPin, Clock, Dumbbell, Share2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PublicTeaser } from '../components/common/PublicTeaser';
+import { ShareHistoryModal } from '../components/profile/ShareHistoryModal';
 
 interface WorkoutRecord {
     id: string;
@@ -17,6 +18,7 @@ interface WorkoutRecord {
 
 export const HistoryPage = () => {
     const { user } = useAuth();
+    const [showShareModal, setShowShareModal] = useState(false);
 
     if (!user) {
         return (
@@ -192,18 +194,37 @@ export const HistoryPage = () => {
     return (
         <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6 pb-24">
             {/* Header */}
-            <div className="text-center mb-8">
-                <h1 className="text-3xl md:text-4xl font-black text-white mb-2 tracking-tight uppercase italic">
-                    Historial de Entrenamiento
-                </h1>
-                <p className="text-neutral-400 text-sm mb-4">Registro completo de tus entrenamientos</p>
-                <button
-                    onClick={loadHistory}
-                    className="bg-gym-primary/20 hover:bg-gym-primary/30 text-gym-primary border border-gym-primary/40 px-4 py-2 rounded-xl text-sm font-bold transition-colors"
-                >
-                    🔄 Recargar Historial
-                </button>
+            <div className="text-center mb-8 space-y-4">
+                <div>
+                    <h1 className="text-3xl md:text-4xl font-black text-white mb-2 tracking-tight uppercase italic">
+                        Historial de Entrenamiento
+                    </h1>
+                    <p className="text-neutral-400 text-sm">Registro completo de tus entrenamientos</p>
+                </div>
+                <div className="flex justify-center gap-3">
+                    <button
+                        onClick={loadHistory}
+                        className="bg-neutral-800 hover:bg-neutral-700 text-white border border-neutral-700 px-4 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95 uppercase tracking-wider"
+                    >
+                        🔄 Recargar
+                    </button>
+                    <button
+                        onClick={() => setShowShareModal(true)}
+                        className="bg-gym-primary hover:bg-yellow-400 text-black px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 active:scale-95 shadow-[0_0_15px_rgba(229,255,0,0.15)] uppercase tracking-wider"
+                    >
+                        <Share2 size={14} strokeWidth={2.5} />
+                        Compartir Historial
+                    </button>
+                </div>
             </div>
+
+            {/* Share History Modal */}
+            {showShareModal && (
+                <ShareHistoryModal
+                    userId={user.id}
+                    onClose={() => setShowShareModal(false)}
+                />
+            )}
 
             {/* Timeline */}
             <div className="space-y-8">

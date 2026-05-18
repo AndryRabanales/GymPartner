@@ -1,5 +1,6 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Swords, MapPin, UserPlus, UserCheck, Star, ExternalLink } from 'lucide-react';
+import { X, Swords, MapPin, UserPlus, UserCheck, Star, ExternalLink, Lock, Calendar, Clock, Dumbbell, History, Loader } from 'lucide-react';
 import { FeedViewerOverlay } from '../social/FeedViewerOverlay';
 import { useAuth } from '../../context/AuthContext';
 import { userService } from '../../services/UserService';
@@ -7,6 +8,8 @@ import { socialService, type Post } from '../../services/SocialService';
 import { RoutineViewModal } from './RoutineViewModal';
 import { useBottomNav } from '../../context/BottomNavContext';
 import { cloudinaryService } from '../../services/CloudinaryService';
+import { notificationService } from '../../services/NotificationService';
+import { supabase } from '../../lib/supabase';
 
 interface PlayerProfileModalProps {
     player: {
@@ -32,7 +35,7 @@ export const PlayerProfileModal = ({ player, onClose }: PlayerProfileModalProps)
     const [viewedPostId, setViewedPostId] = useState<string | null>(null);
     const [isFollowing, setIsFollowing] = useState(false);
     // HIDDEN: Community Features - defaulting to routines
-    const [activeTab, setActiveTab] = useState<'grid' | 'reels' | 'routines'>('routines');
+    const [activeTab, setActiveTab] = useState<'grid' | 'reels' | 'routines' | 'history'>('routines');
 
     // Content State
     const [posts, setPosts] = useState<Post[]>([]);
@@ -40,6 +43,15 @@ export const PlayerProfileModal = ({ player, onClose }: PlayerProfileModalProps)
     const [publicGyms, setPublicGyms] = useState<any[]>([]);
     const [viewRoutine, setViewRoutine] = useState<any | null>(null);
     const [copying, setCopying] = useState(false);
+
+    // History Sharing State
+    const [hasHistoryAccess, setHasHistoryAccess] = useState(false);
+    const [historyLoading, setHistoryLoading] = useState(false);
+    const [history, setHistory] = useState<any[]>([]);
+    const [historyRequestSent, setHistoryRequestSent] = useState(false);
+    const [requestingHistory, setRequestingHistory] = useState(false);
+    const [routinesRequestSent, setRoutinesRequestSent] = useState(false);
+    const [requestingRoutines, setRequestingRoutines] = useState(false);
 
     // Hide BottomNav when modal opens, show when it closes
     useEffect(() => {
@@ -60,6 +72,10 @@ export const PlayerProfileModal = ({ player, onClose }: PlayerProfileModalProps)
             if (user && user.id !== player.id) {
                 const following = await socialService.getFollowStatus(user.id, player.id);
                 setIsFollowing(following);
+
+                // Check History Access
+                const access = await socialService.checkHistoryAccess(player.id, user.id);
+                setHasHistoryAccess(access);
             }
         };
         init();
@@ -74,8 +90,102 @@ export const PlayerProfileModal = ({ player, onClose }: PlayerProfileModalProps)
         } else if (activeTab === 'routines') {
             userService.getUserPublicRoutines(player.id, user?.id).then(setPublicRoutines);
             userService.getUserGyms(player.id).then(gyms => setPublicGyms(gyms.sort((a, b) => (a.is_home_base ? -1 : 1))));
+        } else if (activeTab === 'history') {
+            if (hasHistoryAccess) {
+                setHistoryLoading(true);
+                supabase
+                    .from('workout_sessions')
+                    .select(`
+                        id,
+                        started_at,
+                        end_time,
+                        gyms ( name, id ),
+                        workout_logs (
+                            weight_kg,
+                            reps,
+                            sets,
+                            time,
+                            distance,
+                            metrics_data,
+                            category_snapshot,
+                            equipment:exercise_id ( target_muscle_group, name )
+                        )
+                    `)
+                    .eq('user_id', player.id)
+                    .not('end_time', 'is', null)
+                    .order('started_at', { ascending: false })
+                    .then(({ data, error }) => {
+                        if (error) {
+                            console.error("Error loading player history:", error);
+                        } else {
+                            const mapped = (data || []).map((s: any) => {
+                                const muscleSet = new Set<string>();
+                                let vol = 0;
+                                
+                                const mapping: Record<string, string> = {
+                                    'chest': 'Pecho', 'pectoral': 'Pecho', 'pectorales': 'Pecho', 'pecho': 'Pecho',
+                                    'back': 'Espalda', 'dorsales': 'Espalda', 'espalda': 'Espalda',
+                                    'legs': 'Pierna', 'cuádriceps': 'Pierna', 'isquios': 'Pierna', 'glúteos': 'Pierna', 'pierna': 'Pierna', 'calves': 'Pierna', 'pantorrillas': 'Pierna', 'glutes': 'Pierna',
+                                    'shoulders': 'Hombro', 'deltoides': 'Hombro', 'hombro': 'Hombro',
+                                    'biceps': 'Bíceps', 'bíceps': 'Bíceps',
+                                    'triceps': 'Tríceps', 'tríceps': 'Tríceps',
+                                    'abs': 'Core', 'abdominales': 'Core', 'core': 'Core',
+                                    'cardio': 'Cardio'
+                                };
+                                const VALID_MUSCLES = ['Pecho', 'Espalda', 'Pierna', 'Hombro', 'Bíceps', 'Tríceps', 'Core', 'Cardio'];
+                                const IGNORED_TAGS = ['free_weight', 'strength_machine', 'cable', 'accessory', 'custom', 'other', 'unknown'];
+
+                                s.workout_logs?.forEach((l: any) => {
+                                    let category = l.category_snapshot;
+                                    const catLower = category ? category.toLowerCase() : '';
+                                    if (!category || IGNORED_TAGS.includes(catLower)) {
+                                        category = l.equipment?.target_muscle_group;
+                                    }
+                                    const currentCatLower = category ? category.toLowerCase() : '';
+                                    if ((!category || IGNORED_TAGS.includes(currentCatLower)) && l.equipment?.name) {
+                                        const name = l.equipment.name.toLowerCase();
+                                        if (name.includes('jalon') || name.includes('remo') || name.includes('dominadas') || name.includes('polea') || name.includes('pull')) category = 'Espalda';
+                                        else if (name.includes('press') || name.includes('banco') || name.includes('pec') || name.includes('cruce') || name.includes('chest')) category = 'Pecho';
+                                        else if (name.includes('sentadilla') || name.includes('prensa') || name.includes('extension') || name.includes('curl femoral') || name.includes('zancada') || name.includes('hack') || name.includes('leg') || name.includes('squat')) category = 'Pierna';
+                                        else if (name.includes('militar') || name.includes('lateral') || name.includes('hombro') || name.includes('shoulder')) category = 'Hombro';
+                                        else if (name.includes('biceps') || name.includes('bíceps') || name.includes('curl')) category = 'Bíceps';
+                                        else if (name.includes('triceps') || name.includes('tríceps') || name.includes('copa') || name.includes('fondos')) category = 'Tríceps';
+                                        else if (name.includes('abs') || name.includes('crunch') || name.includes('plancha') || name.includes('core')) category = 'Core';
+                                        else if (name.includes('correr') || name.includes('elíptica') || name.includes('bici') || name.includes('cardio')) category = 'Cardio';
+                                    }
+                                    if (category) {
+                                        const normalized = mapping[category.toLowerCase()] || category;
+                                        const standard = VALID_MUSCLES.find(m => m.toLowerCase() === normalized.toLowerCase());
+                                        if (standard) muscleSet.add(standard);
+                                    }
+
+                                    const sets = l.sets || 1;
+                                    if (l.weight_kg > 0) vol += (l.weight_kg * l.reps * sets);
+                                    else if (l.reps > 0) vol += (l.reps * 60 * sets * 0.5);
+                                    else if ((l.time || l.metrics_data?.time) > 0) vol += ((l.time || l.metrics_data?.time) * 1.5);
+                                    else if ((l.distance || l.metrics_data?.distance) > 0) vol += ((l.distance || l.metrics_data?.distance) * 0.5);
+                                });
+
+                                const start = new Date(s.started_at).getTime();
+                                const end = new Date(s.end_time).getTime();
+                                const duration = Math.round((end - start) / (1000 * 60));
+
+                                return {
+                                    id: s.id,
+                                    gym_name: s.gyms?.name || 'Gimnasio Desconocido',
+                                    started_at: s.started_at,
+                                    duration_minutes: duration,
+                                    total_volume: vol,
+                                    muscles_trained: Array.from(muscleSet)
+                                };
+                            });
+                            setHistory(mapped);
+                        }
+                        setHistoryLoading(false);
+                    });
+            }
         }
-    }, [activeTab, player.id, user?.id]);
+    }, [activeTab, player.id, user?.id, hasHistoryAccess]);
 
     const handleFollowToggle = async () => {
         if (!user) return;
@@ -104,6 +214,62 @@ export const PlayerProfileModal = ({ player, onClose }: PlayerProfileModalProps)
             alert('Error al copiar la rutina.');
         } finally {
             setCopying(false);
+        }
+    };
+
+    const handleRequestHistory = async () => {
+        if (!user || requestingHistory) return;
+        setRequestingHistory(true);
+        try {
+            const success = await notificationService.createNotification(player.id, {
+                type: 'system',
+                title: '📥 SOLICITUD DE HISTORIAL',
+                content: `@${user.user_metadata?.username || user.username || 'Un guerrero'} te ha solicitado acceso a tu historial de entrenamientos.`,
+                data: {
+                    type: 'request_history',
+                    requester_id: user.id,
+                    requester_username: user.user_metadata?.username || user.username || 'Un guerrero'
+                }
+            });
+            if (success) {
+                setHistoryRequestSent(true);
+                alert("¡Solicitud de acceso al historial enviada exitosamente! Se le ha notificado a tu aliado.");
+            } else {
+                alert("Error al enviar la solicitud.");
+            }
+        } catch (err) {
+            console.error("Error requesting history access:", err);
+            alert("Error al procesar la solicitud.");
+        } finally {
+            setRequestingHistory(false);
+        }
+    };
+
+    const handleRequestRoutines = async () => {
+        if (!user || requestingRoutines) return;
+        setRequestingRoutines(true);
+        try {
+            const success = await notificationService.createNotification(player.id, {
+                type: 'system',
+                title: '📥 SOLICITUD DE RUTINAS',
+                content: `@${user.user_metadata?.username || user.username || 'Un guerrero'} te ha solicitado acceso a tus rutinas privadas.`,
+                data: {
+                    type: 'request_routines',
+                    requester_id: user.id,
+                    requester_username: user.user_metadata?.username || user.username || 'Un guerrero'
+                }
+            });
+            if (success) {
+                setRoutinesRequestSent(true);
+                alert("¡Solicitud de acceso a rutinas enviada exitosamente! Se le ha notificado a tu aliado.");
+            } else {
+                alert("Error al enviar la solicitud.");
+            }
+        } catch (err) {
+            console.error("Error requesting routines access:", err);
+            alert("Error al procesar la solicitud.");
+        } finally {
+            setRequestingRoutines(false);
         }
     };
 
@@ -210,26 +376,6 @@ export const PlayerProfileModal = ({ player, onClose }: PlayerProfileModalProps)
 
                         {/* TABS SWITCHER */}
                         <div className="flex w-full border-b border-neutral-800 mb-4 sticky top-0 bg-neutral-900/95 backdrop-blur z-20 pt-2">
-                            {/* HIDDEN: Posts Tab
-                            <button
-                                onClick={() => setActiveTab('grid')}
-                                className={`flex-1 pb-3 text-xs font-bold uppercase tracking-widest transition-colors relative ${activeTab === 'grid' ? 'text-white' : 'text-neutral-500 hover:text-neutral-300'}`}
-                            >
-                                <Grid size={18} className="mx-auto mb-1" />
-                                Posts
-                                {activeTab === 'grid' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-yellow-500 shadow-[0_0_10px_#eab308]" />}
-                            </button>
-                            */}
-                            {/* HIDDEN: Reels Tab
-                            <button
-                                onClick={() => setActiveTab('reels')}
-                                className={`flex-1 pb-3 text-xs font-bold uppercase tracking-widest transition-colors relative ${activeTab === 'reels' ? 'text-white' : 'text-neutral-500 hover:text-neutral-300'}`}
-                            >
-                                <Film size={18} className="mx-auto mb-1" />
-                                Reels
-                                {activeTab === 'reels' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-yellow-500 shadow-[0_0_10px_#eab308]" />}
-                            </button>
-                            */}
                             <button
                                 onClick={() => setActiveTab('routines')}
                                 className={`flex-1 pb-3 text-xs font-bold uppercase tracking-widest transition-colors relative ${activeTab === 'routines' ? 'text-white' : 'text-neutral-500 hover:text-neutral-300'}`}
@@ -238,13 +384,21 @@ export const PlayerProfileModal = ({ player, onClose }: PlayerProfileModalProps)
                                 Mazos
                                 {activeTab === 'routines' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-yellow-500 shadow-[0_0_10px_#eab308]" />}
                             </button>
+                            <button
+                                onClick={() => setActiveTab('history')}
+                                className={`flex-1 pb-3 text-xs font-bold uppercase tracking-widest transition-colors relative ${activeTab === 'history' ? 'text-white' : 'text-neutral-500 hover:text-neutral-300'}`}
+                            >
+                                <History size={18} className="mx-auto mb-1" />
+                                Historial
+                                {activeTab === 'history' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-yellow-500 shadow-[0_0_10px_#eab308]" />}
+                            </button>
                         </div>
 
                         {/* TAB CONTENT (Full Width) */}
 
                         {/* 3. ROUTINES TAB (Mazos) */}
                         {activeTab === 'routines' && (
-                            <div className="grid grid-cols-1 gap-2 animate-in slide-in-from-bottom-2 fade-in duration-300">
+                            <div className="grid grid-cols-1 gap-2 animate-in slide-in-from-bottom-2 fade-in duration-300 w-full">
                                 {publicRoutines.map(routine => (
                                     <div
                                         key={routine.id}
@@ -254,12 +408,37 @@ export const PlayerProfileModal = ({ player, onClose }: PlayerProfileModalProps)
                                         <div className="w-12 h-12 bg-neutral-900 rounded-lg flex items-center justify-center text-2xl border border-white/5">
                                             <Swords size={20} className="text-gym-primary" />
                                         </div>
-                                        <div className="flex-1 min-w-0">
+                                        <div className="flex-1 min-w-0 text-left">
                                             <h3 className="font-bold text-white uppercase italic tracking-wider truncate">{routine.name}</h3>
                                             <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest">{routine.exercises?.length || 0} Cartas</p>
                                         </div>
                                     </div>
                                 ))}
+
+                                {/* Request routines button */}
+                                <button
+                                    onClick={handleRequestRoutines}
+                                    disabled={routinesRequestSent || requestingRoutines}
+                                    className={`w-full py-3.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all mt-4 border flex items-center justify-center gap-2 ${
+                                        routinesRequestSent
+                                            ? 'bg-neutral-800 border-neutral-700 text-neutral-500 cursor-not-allowed'
+                                            : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/20 active:scale-[0.98]'
+                                    }`}
+                                >
+                                    {requestingRoutines ? (
+                                        <>
+                                            <Loader className="animate-spin" size={14} />
+                                            Enviando solicitud...
+                                        </>
+                                    ) : routinesRequestSent ? (
+                                        "Solicitud de Rutinas Enviada ⏳"
+                                    ) : (
+                                        <>
+                                            <Swords size={14} />
+                                            📥 Solicitar Rutinas Privadas
+                                        </>
+                                    )}
+                                </button>
 
                                 {/* NEW: GYM PASSPORT SHOWCASE */}
                                 {publicGyms.length > 0 && (
@@ -305,6 +484,103 @@ export const PlayerProfileModal = ({ player, onClose }: PlayerProfileModalProps)
                                             <Swords size={24} />
                                         </div>
                                         <p className="text-sm font-bold uppercase tracking-wider">Sin mazos públicos</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* 4. HISTORY TAB */}
+                        {activeTab === 'history' && (
+                            <div className="animate-in slide-in-from-bottom-2 fade-in duration-300 w-full">
+                                {hasHistoryAccess ? (
+                                    historyLoading ? (
+                                        <div className="py-12 flex flex-col items-center justify-center text-gym-primary gap-3 w-full">
+                                            <Loader className="animate-spin" size={28} />
+                                            <span className="text-xs text-neutral-400 font-bold uppercase tracking-wider">Cargando bitácora...</span>
+                                        </div>
+                                    ) : history.length === 0 ? (
+                                        <div className="py-12 flex flex-col items-center justify-center text-neutral-600 space-y-3 opacity-60 w-full">
+                                            <div className="w-16 h-16 rounded-full bg-neutral-800 flex items-center justify-center">
+                                                <Calendar size={24} />
+                                            </div>
+                                            <p className="text-sm font-bold uppercase tracking-wider">Historial Vacío</p>
+                                            <p className="text-xs text-neutral-500 max-w-xs text-center">Este guerrero no ha completado entrenamientos aún.</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-3 w-full text-left">
+                                            <div className="flex items-center gap-2 border-b border-white/5 pb-2 mb-4">
+                                                <History className="text-gym-primary" size={16} />
+                                                <h3 className="text-sm font-black text-white italic uppercase tracking-tighter">Entrenamientos Completados</h3>
+                                            </div>
+                                            <div className="flex flex-col gap-2.5 max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
+                                                {history.map((session) => {
+                                                    const date = new Date(session.started_at);
+                                                    const formattedDate = date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+                                                    return (
+                                                        <div key={session.id} className="bg-neutral-800/80 border border-white/5 p-4 rounded-xl flex flex-col gap-2 relative overflow-hidden">
+                                                            <div className="flex justify-between items-start gap-2">
+                                                                <span className="text-[10px] text-neutral-400 font-bold font-mono">{formattedDate}</span>
+                                                                <div className="flex items-center gap-1.5 text-[10px] text-neutral-400 font-bold">
+                                                                    <Clock size={10} className="text-blue-500" />
+                                                                    <span>{session.duration_minutes} min</span>
+                                                                </div>
+                                                            </div>
+                                                            <h4 className="font-bold text-white text-sm truncate uppercase tracking-wide">📍 {session.gym_name}</h4>
+                                                            {session.muscles_trained.length > 0 && (
+                                                                <div className="flex flex-wrap gap-1 mt-1">
+                                                                    {session.muscles_trained.map((muscle: string) => (
+                                                                        <span key={muscle} className="bg-gym-primary/10 border border-gym-primary/20 text-gym-primary text-[8px] font-black uppercase px-2 py-0.5 rounded">
+                                                                            💪 {muscle}
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                            {session.total_volume > 0 && (
+                                                                <div className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider mt-1 flex items-center gap-1">
+                                                                    <Dumbbell size={10} className="text-gym-primary" />
+                                                                    Volumen: <span className="text-white font-black">{(session.total_volume / 1000).toFixed(1)}k kg</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )
+                                ) : (
+                                    <div className="py-12 flex flex-col items-center justify-center text-center space-y-4 bg-neutral-800/20 border border-white/5 p-6 rounded-2xl w-full">
+                                        <div className="w-16 h-16 rounded-full bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-500 animate-pulse">
+                                            <Lock size={28} />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <h3 className="text-lg font-black text-white italic uppercase tracking-wider">Historial Privado</h3>
+                                            <p className="text-xs text-neutral-400 max-w-xs leading-relaxed">
+                                                Este guerrero mantiene su bitácora de entrenamiento en privado. Solicita acceso para ver sus hazañas y progreso real.
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={handleRequestHistory}
+                                            disabled={historyRequestSent || requestingHistory}
+                                            className={`w-full max-w-xs py-3.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all border flex items-center justify-center gap-2 ${
+                                                historyRequestSent
+                                                    ? 'bg-neutral-800 border-neutral-700 text-neutral-500 cursor-not-allowed'
+                                                    : 'bg-gym-primary hover:bg-yellow-400 text-black active:scale-[0.98] shadow-[0_0_15px_rgba(229,255,0,0.15)] font-bold'
+                                            }`}
+                                        >
+                                            {requestingHistory ? (
+                                                <>
+                                                    <Loader className="animate-spin" size={14} />
+                                                    Enviando solicitud...
+                                                </>
+                                            ) : historyRequestSent ? (
+                                                "Solicitud Enviada ⏳"
+                                            ) : (
+                                                <>
+                                                    <History size={14} strokeWidth={2.5} />
+                                                    Solicitar Historial
+                                                </>
+                                            )}
+                                        </button>
                                     </div>
                                 )}
                             </div>
