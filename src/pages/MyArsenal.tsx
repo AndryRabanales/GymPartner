@@ -28,23 +28,22 @@ interface RoutineCardProps {
 const RoutineCard = ({ routine, onDelete, onEdit, onShare }: RoutineCardProps) => {
     return (
         <div 
-            onClick={() => onEdit(routine)}
-            className="group relative bg-neutral-900 border border-neutral-800 hover:border-neutral-700 rounded-2xl p-4 md:p-8 pt-16 md:pt-16 transition-all hover:bg-neutral-800/50 flex flex-col justify-between min-h-[160px] md:min-h-[280px] cursor-pointer select-none active:scale-[0.99]"
+            className="group relative bg-neutral-900 border border-neutral-800 hover:border-neutral-700 rounded-2xl p-4 md:p-8 pt-16 md:pt-16 transition-all hover:bg-neutral-800/50 flex flex-col justify-between min-h-[160px] md:min-h-[280px] select-none"
         >
             <div className="absolute top-2 right-2 md:top-0 md:right-0 md:p-8 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
                 <Swords size={40} className="md:w-[120px] md:h-[120px]" />
             </div>
 
-            {/* Actions overlay container - TOP CORNERS */}
+            {/* Actions overlay container - TOP CORNERS (Completely isolated) */}
             {/* Top-Left: Share Button */}
-            <div className="absolute top-3 left-3 z-30" onClick={(e) => e.stopPropagation()}>
+            <div className="absolute top-3 left-3 z-30">
                 <button
                     onClick={(e) => {
                         e.stopPropagation();
                         e.preventDefault();
                         onShare(routine.id, routine.name);
                     }}
-                    className="w-10 h-10 flex items-center justify-center rounded-xl bg-gym-primary/10 text-gym-primary hover:bg-gym-primary hover:text-black transition-all border border-gym-primary/20 shadow-md active:scale-95"
+                    className="w-10 h-10 flex items-center justify-center rounded-xl bg-gym-primary/10 text-gym-primary hover:bg-gym-primary hover:text-black transition-all border border-gym-primary/20 shadow-md active:scale-95 cursor-pointer"
                     title="Compartir Rutina"
                 >
                     <Share2 size={16} strokeWidth={2.5} />
@@ -52,36 +51,42 @@ const RoutineCard = ({ routine, onDelete, onEdit, onShare }: RoutineCardProps) =
             </div>
 
             {/* Top-Right: Delete Button */}
-            <div className="absolute top-3 right-3 z-30" onClick={(e) => e.stopPropagation()}>
+            <div className="absolute top-3 right-3 z-30">
                 <button
                     onClick={(e) => {
                         e.stopPropagation();
                         e.preventDefault();
                         onDelete(routine.id, routine.name);
                     }}
-                    className="w-10 h-10 flex items-center justify-center rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all border border-red-500/20 shadow-md active:scale-95"
+                    className="w-10 h-10 flex items-center justify-center rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all border border-red-500/20 shadow-md active:scale-95 cursor-pointer"
                     title="Eliminar Rutina"
                 >
                     <Trash2 size={16} />
                 </button>
             </div>
 
-            <div className="relative z-10">
-                <h3 className="font-black text-lg md:text-3xl text-white mb-1 md:mb-2 italic uppercase leading-none truncate mt-2">{routine.name}</h3>
-                <div className="flex flex-col md:flex-row md:items-center gap-1.5 md:gap-2 mt-2 md:mt-4">
-                    <span className="w-fit px-2 py-0.5 bg-neutral-800 rounded-md text-[9px] md:text-xs font-bold text-neutral-400 border border-neutral-700">
-                        {new Date(routine.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                    </span>
-                    <span className="w-fit px-2 py-0.5 bg-gym-primary/10 text-gym-primary rounded-md text-[9px] md:text-xs font-bold border border-gym-primary/20">
-                        {(routine.equipment_ids?.length || routine.routine_exercises?.length || routine.routine_items?.length || 0)} Items
-                    </span>
+            {/* Clickable Card Body & Edit Trigger */}
+            <div 
+                onClick={() => onEdit(routine)}
+                className="relative z-10 flex-1 flex flex-col justify-between cursor-pointer"
+            >
+                <div className="mt-2">
+                    <h3 className="font-black text-lg md:text-3xl text-white mb-1 md:mb-2 italic uppercase leading-none truncate group-hover:text-gym-primary transition-colors">{routine.name}</h3>
+                    <div className="flex flex-col md:flex-row md:items-center gap-1.5 md:gap-2 mt-2 md:mt-4">
+                        <span className="w-fit px-2 py-0.5 bg-neutral-800 rounded-md text-[9px] md:text-xs font-bold text-neutral-400 border border-neutral-700">
+                            {new Date(routine.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                        </span>
+                        <span className="w-fit px-2 py-0.5 bg-gym-primary/10 text-gym-primary rounded-md text-[9px] md:text-xs font-bold border border-gym-primary/20">
+                            {(routine.equipment_ids?.length || routine.routine_exercises?.length || routine.routine_items?.length || 0)} Items
+                        </span>
+                    </div>
                 </div>
-            </div>
 
-            {/* Bottom Premium Edit Button */}
-            <div className="relative z-10 w-full mt-4 bg-white/5 group-hover:bg-gym-primary group-hover:text-black text-white px-4 py-2.5 md:py-3.5 rounded-xl font-bold uppercase tracking-wide transition-colors flex items-center justify-between text-[10px] md:text-sm border border-white/10 group-hover:border-transparent">
-                <span>Editar Local</span>
-                <ChevronRight size={16} className="animate-pulse" />
+                {/* Bottom Premium Edit Button */}
+                <div className="w-full mt-6 bg-white/5 group-hover:bg-gym-primary group-hover:text-black text-white px-4 py-2.5 md:py-3.5 rounded-xl font-bold uppercase tracking-wide transition-colors flex items-center justify-between text-[10px] md:text-sm border border-white/10 group-hover:border-transparent">
+                    <span>Editar Local</span>
+                    <ChevronRight size={16} className="animate-pulse" />
+                </div>
             </div>
         </div>
     );
