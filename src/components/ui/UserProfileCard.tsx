@@ -114,9 +114,9 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
                 </div>
 
                 {/* Gym Passport (Visited Gyms) */}
-                {user.gym_passport && user.gym_passport.length > 0 && (
+                {user.gym_passport && user.gym_passport.filter(g => !g.name.includes('Arsenal Personal')).length > 0 && (
                     <div className="flex flex-wrap gap-1.5 justify-center mt-2 px-1">
-                        {user.gym_passport.slice(0, 8).map((gym, idx) => (
+                        {user.gym_passport.filter(g => !g.name.includes('Arsenal Personal')).slice(0, 8).map((gym, idx) => (
                             <div 
                                 key={`${gym.id}-${idx}`}
                                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-900/60 border border-white/5 text-[9px] font-black italic uppercase tracking-tighter text-neutral-300 hover:text-gym-primary hover:border-gym-primary/30 transition-all duration-300"
@@ -125,9 +125,9 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
                                 <span>{gym.name}</span>
                             </div>
                         ))}
-                        {user.gym_passport.length > 8 && (
+                        {user.gym_passport.filter(g => !g.name.includes('Arsenal Personal')).length > 8 && (
                             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-900/60 border border-white/5 text-[9px] font-black italic uppercase tracking-tighter text-neutral-400">
-                                +{user.gym_passport.length - 8} MÁS
+                                +{user.gym_passport.filter(g => !g.name.includes('Arsenal Personal')).length - 8} MÁS
                             </div>
                         )}
                     </div>

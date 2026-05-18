@@ -132,7 +132,10 @@ export const Radar = () => {
 
                 const enriched = profiles.map((p, idx) => {
                     const settings = (p.custom_settings as any) || {};
-                    const gymInfo = gymMap[p.home_gym_id || ''] || { name: "" };
+                    let gymInfo = gymMap[p.home_gym_id || ''] || { name: "" };
+                    if (gymInfo.name.includes('Arsenal Personal')) {
+                        gymInfo = { name: "" };
+                    }
                     
                     // BOOST DETECTION LOGIC
                     const boostDate = p.boost_until ? new Date(p.boost_until) : null;
