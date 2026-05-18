@@ -153,15 +153,58 @@ export const UserProfile = () => {
     const loadUserData = async () => {
         try {
             setLoading(true);
-            if (!supabase) return;
-            const { data, error } = await supabase
+            let { data, error } = await supabase
                 .from('profiles')
                 .select('*')
                 .eq('id', user!.id)
                 .maybeSingle();
 
             if (error) throw error;
-            if (data) setProfile(data);
+
+            let profileData = data;
+            if (!profileData) {
+                console.log("⚠️ Perfil no encontrado en base de datos. Auto-creando perfil...");
+                const defaultUsername = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'gymrat';
+                const defaultAvatar = user?.user_metadata?.avatar_url || '';
+                
+                const newProfile = {
+                    id: user!.id,
+                    username: defaultUsername,
+                    avatar_url: defaultAvatar,
+                    description: '¡Hola! Soy un nuevo atleta en GymPartner.',
+                    g_points: 0,
+                    total_referrals: 0,
+                    checkins_count: 0
+                };
+
+                const { data: insertedData, error: insertError } = await supabase
+                    .from('profiles')
+                    .insert(newProfile)
+                    .select()
+                    .single();
+
+                if (insertError) {
+                    console.error("❌ Error al auto-crear el perfil en cliente:", insertError);
+                } else {
+                    console.log("✅ Perfil auto-creado con éxito desde el cliente!");
+                    profileData = insertedData;
+                }
+            }
+
+            if (profileData) {
+                setProfile(profileData);
+            } else {
+                // Fallback mock to prevent crashing
+                setProfile({
+                    id: user!.id,
+                    username: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'gymrat',
+                    avatar_url: user?.user_metadata?.avatar_url || '',
+                    description: '¡Hola! Soy un nuevo atleta en GymPartner.',
+                    g_points: 0,
+                    total_referrals: 0,
+                    checkins_count: 0
+                });
+            }
 
             // REFERRAL CHECK: If user has a pending referral code and hasn't been referred yet
             const pendingRef = sessionStorage.getItem('gym_referral_id');
