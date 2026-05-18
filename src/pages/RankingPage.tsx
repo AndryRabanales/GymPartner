@@ -5,7 +5,8 @@ import { Trophy, Shield, MapPin, Swords, ChevronLeft, ChevronRight, Zap, UserPlu
 import { PublicTeaser } from '../components/common/PublicTeaser';
 import { userService } from '../services/UserService';
 import type { UserPrimaryGym } from '../services/UserService';
-import { UserProfileCard } from '../components/ui/UserProfileCard';
+import { PlayerProfileModal } from '../components/profile/PlayerProfileModal';
+
 import { socialService } from '../services/SocialService';
 import { notificationService } from '../services/NotificationService';
 import toast from 'react-hot-toast';
@@ -26,7 +27,7 @@ export const RankingPage = () => {
     const { user } = useAuth();
     const [leaderboard, setLeaderboard] = useState<RankedUser[]>([]);
     const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
-    const [loadingPlayer, setLoadingPlayer] = useState(false);
+
 
     // Gym Switcher State
     const [userGyms, setUserGyms] = useState<UserPrimaryGym[]>([]);
@@ -118,68 +119,10 @@ export const RankingPage = () => {
         return <div className="w-8 h-8 flex items-center justify-center text-neutral-500 font-bold">{rank}</div>;
     };
 
-    const handlePlayerClick = async (player: RankedUser) => {
-        setLoadingPlayer(true);
-        try {
-            // SAFE QUERY: Essentials only
-            const { data: profile, error } = await supabase
-                .from('profiles')
-                .select('id, username, avatar_url')
-                .eq('id', player.id)
-                .single();
-            
-            if (error) throw error;
-
-            // ENRICH with elite fallbacks
-            setSelectedPlayer({
-                ...profile,
-                banner_url: FALLBACK_BANNERS[Math.floor(Math.random() * FALLBACK_BANNERS.length)],
-                bio: "¡Enfocado en el ascenso! Entrenando para ser el mejor de la base. 💪🔥",
-                gym_name: player.gym_name?.includes('Arsenal Personal') ? '' : (player.gym_name || ''),
-                gym_image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80',
-                training_days_count: Math.floor(Math.random() * 40) + 12,
-                followers_count: player.followers_count,
-                following_count: Math.floor(Math.random() * 60),
-                distance: 'Local'
-            });
-        } catch (err) {
-            console.error("Error loading player profile:", err);
-            setSelectedPlayer({
-                id: player.id,
-                username: player.username,
-                avatar_url: player.avatar_url,
-                banner_url: player.banner_url,
-                gym_name: player.gym_name,
-                gym_image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80',
-                training_days_count: Math.floor(Math.random() * 40) + 12,
-                followers_count: player.followers_count,
-                following_count: Math.floor(Math.random() * 60),
-                distance: 'Local',
-                bio: "¡Entrenando duro para subir de rango! 💪🔥"
-            });
-        } finally {
-            setLoadingPlayer(false);
-        }
+    const handlePlayerClick = (player: RankedUser) => {
+        setSelectedPlayer(player);
     };
 
-    const handleFollow = async (targetId: string) => {
-        if (!user) return;
-        try {
-            await socialService.followUser(user.id, targetId);
-            toast.success("Siguiendo!");
-        } catch (e) {
-            toast.error("Error al seguir");
-        }
-    };
-
-    const handleInvite = async (targetId: string) => {
-        try {
-            const success = await notificationService.sendInvitation(targetId);
-            if (success) toast.success("Invitación enviada!");
-        } catch (e) {
-            toast.error("Error al enviar invitación");
-        }
-    };
 
     if (!user) {
         return (
@@ -253,38 +196,10 @@ export const RankingPage = () => {
 
             {/* PREMIUM PROFILE MODAL */}
             {selectedPlayer && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-300">
-                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setSelectedPlayer(null)}></div>
-                    <div className="relative w-full max-w-sm h-[85vh] max-h-[750px] animate-in zoom-in-95 slide-in-from-bottom-12 duration-500">
-                        <UserProfileCard 
-                            user={selectedPlayer} 
-                            onClose={() => setSelectedPlayer(null)}
-                            actions={
-                                <div className="flex gap-3">
-                                    <button 
-                                        onClick={() => handleFollow(selectedPlayer.id)}
-                                        className="flex-1 py-3 bg-neutral-900 border border-white/10 rounded-2xl text-white font-black text-[10px] uppercase tracking-widest hover:bg-neutral-800 transition-all active:scale-95 flex items-center justify-center gap-2"
-                                    >
-                                        <UserPlus size={16} /> Seguir
-                                    </button>
-                                    <button 
-                                        onClick={() => handleInvite(selectedPlayer.id)}
-                                        className="flex-1 py-3 bg-white rounded-2xl text-black font-black text-[10px] uppercase tracking-widest hover:bg-gym-primary transition-all active:scale-95 shadow-xl flex items-center justify-center gap-2"
-                                    >
-                                        <Zap size={16} fill="currentColor" /> Invitar
-                                    </button>
-                                </div>
-                            }
-                        />
-                    </div>
-                </div>
-            )}
-
-            {/* Loading Player Overlay */}
-            {loadingPlayer && (
-                <div className="fixed inset-0 z-[110] bg-black/40 backdrop-blur-md flex items-center justify-center">
-                    <div className="w-12 h-12 border-4 border-gym-primary border-t-transparent rounded-full animate-spin"></div>
-                </div>
+                <PlayerProfileModal 
+                    player={selectedPlayer} 
+                    onClose={() => setSelectedPlayer(null)}
+                />
             )}
         </div>
     );

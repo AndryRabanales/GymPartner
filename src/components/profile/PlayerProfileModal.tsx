@@ -371,15 +371,16 @@ export const PlayerProfileModal = ({ player, onClose }: PlayerProfileModalProps)
 
                     {/* Header / Banner */}
                     <div className="h-32 bg-neutral-800 relative">
-                        {player.banner_url ? (
+                        {(customSettings?.banner_url || player.banner_url) ? (
                             <img 
-                                src={cloudinaryService.getOptimizedImageUrl(player.banner_url, { width: 400, height: 150 })} 
+                                src={cloudinaryService.getOptimizedImageUrl(customSettings?.banner_url || player.banner_url, { width: 400, height: 150 })} 
                                 alt="Banner" 
                                 className="w-full h-full object-cover opacity-60" 
                             />
                         ) : (
                             <div className="absolute inset-0 bg-gradient-to-b from-neutral-800 to-neutral-900" />
                         )}
+
 
                         {/* Rank Badge */}
                         <div className="absolute top-4 left-4 z-20">
