@@ -598,28 +598,45 @@ class SocialService {
 
     async getProfileStats(userId: string): Promise<SocialProfileStats> {
         try {
-            // Parallel fetch for perf
-            const [followers, following, workouts, postsWithLikes] = await Promise.all([
-                supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', userId),
-                supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', userId),
-                supabase.from('workout_sessions').select('*', { count: 'exact', head: true }).eq('user_id', userId).or('finished_at.not.is.null,end_time.not.is.null'),
-                supabase.from('posts').select('id, post_likes(count)', { count: 'exact' }).eq('user_id', userId)
-            ]);
-
-            // Calculate Total Likes Received
-            const totalLikesReceived = postsWithLikes.data?.reduce((acc: number, post: any) => {
-                return acc + (post.post_likes?.[0]?.count || 0);
-            }, 0) || 0;
-
-            return {
-                followersCount: followers.count || 0,
-                followingCount: following.count || 0,
-                totalLikes: totalLikesReceived,
-                workoutsCount: workouts.count || 0
-            };
+            // 1. Try fetching via SECURITY DEFINER database RPC for exact, RLS-unrestricted numbers
+            const { data, error } = await supabase.rpc('get_profile_stats', { user_id_param: userId });
+            
+            if (error) throw error;
+            
+            if (data) {
+                return {
+                    followersCount: Number(data.followersCount) || 0,
+                    followingCount: Number(data.followingCount) || 0,
+                    workoutsCount: Number(data.workoutsCount) || 0,
+                    totalLikes: Number(data.totalLikes) || 0
+                };
+            }
+            throw new Error("No data returned from get_profile_stats RPC");
         } catch (e) {
-            console.error("Error fetching profile stats:", e);
-            return { followersCount: 0, followingCount: 0, totalLikes: 0, workoutsCount: 0 };
+            console.warn("RPC failed, falling back to client-side count:", e);
+            try {
+                // 2. Client-side fallback count (subject to RLS policies)
+                const [followers, following, workouts, postsWithLikes] = await Promise.all([
+                    supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', userId),
+                    supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', userId),
+                    supabase.from('workout_sessions').select('*', { count: 'exact', head: true }).eq('user_id', userId).or('finished_at.not.is.null,end_time.not.is.null'),
+                    supabase.from('posts').select('id, post_likes(count)', { count: 'exact' }).eq('user_id', userId)
+                ]);
+
+                const totalLikesReceived = postsWithLikes.data?.reduce((acc: number, post: any) => {
+                    return acc + (post.post_likes?.[0]?.count || 0);
+                }, 0) || 0;
+
+                return {
+                    followersCount: followers.count || 0,
+                    followingCount: following.count || 0,
+                    workoutsCount: workouts.count || 0,
+                    totalLikes: totalLikesReceived
+                };
+            } catch (fallbackErr) {
+                console.error("Error in fallback profile stats fetch:", fallbackErr);
+                return { followersCount: 0, followingCount: 0, totalLikes: 0, workoutsCount: 0 };
+            }
         }
     }
 
