@@ -199,6 +199,21 @@ export const RankingPage = () => {
                 <PlayerProfileModal 
                     player={selectedPlayer} 
                     onClose={() => setSelectedPlayer(null)}
+                    onFollowToggle={(newIsFollowing) => {
+                        setLeaderboard(prev => {
+                            const updated = prev.map(p => {
+                                if (p.id === selectedPlayer.id) {
+                                    return {
+                                        ...p,
+                                        followers_count: Math.max(0, p.followers_count + (newIsFollowing ? 1 : -1))
+                                    };
+                                }
+                                return p;
+                            });
+                            const sorted = [...updated].sort((a, b) => b.followers_count - a.followers_count);
+                            return sorted.map((p, idx) => ({ ...p, rank: idx + 1 }));
+                        });
+                    }}
                 />
             )}
         </div>

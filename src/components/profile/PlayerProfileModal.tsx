@@ -23,9 +23,10 @@ interface PlayerProfileModalProps {
         featured_routine_id?: string | null;
     };
     onClose: () => void;
+    onFollowToggle?: (newIsFollowing: boolean) => void;
 }
 
-export const PlayerProfileModal = ({ player, onClose }: PlayerProfileModalProps) => {
+export const PlayerProfileModal = ({ player, onClose, onFollowToggle }: PlayerProfileModalProps) => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const { hideBottomNav, showBottomNav } = useBottomNav();
@@ -270,6 +271,11 @@ export const PlayerProfileModal = ({ player, onClose }: PlayerProfileModalProps)
                 const response = await socialService.unfollowUser(user.id, player.id);
                 if (response?.error) throw response.error;
                 alert(`Has dejado de seguir a @${player.username} con éxito.`);
+            }
+            
+            // Notify parent page about the follow status change
+            if (onFollowToggle) {
+                onFollowToggle(newStatus);
             }
         } catch (error: any) {
             console.error("Error updating follow status:", error);
