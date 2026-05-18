@@ -169,8 +169,8 @@ export const MyArsenal = () => {
     const [editingRoutineId, setEditingRoutineId] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const [sharingRoutineId, setSharingRoutineId] = useState<string | null>(null);
-    const [sharingRoutineName, setSharingRoutineName] = useState<string>('');
+    const [sharingRoutineIds, setSharingRoutineIds] = useState<string[]>([]);
+    const [sharingRoutineNames, setSharingRoutineNames] = useState<string[]>([]);
     const [showShareModal, setShowShareModal] = useState(false);
 
     // Multi-Selection and Bulk Delete states
@@ -801,9 +801,23 @@ export const MyArsenal = () => {
                                 {multiSelectMode ? (
                                     <>
                                         <button
+                                            onClick={() => {
+                                                const selectedIds = Array.from(selectedRoutineIds);
+                                                const selectedNames = routines.filter(r => selectedRoutineIds.has(r.id)).map(r => r.name);
+                                                setSharingRoutineIds(selectedIds);
+                                                setSharingRoutineNames(selectedNames);
+                                                setShowShareModal(true);
+                                            }}
+                                            disabled={selectedRoutineIds.size === 0}
+                                            className="px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs bg-gym-primary hover:bg-yellow-400 text-black flex items-center gap-1.5 transition-all shadow-lg shadow-gym-primary/20 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 border border-transparent cursor-pointer"
+                                        >
+                                            <Share2 size={14} strokeWidth={2.5} />
+                                            Compartir ({selectedRoutineIds.size})
+                                        </button>
+                                        <button
                                             onClick={handleDeleteSelectedRoutines}
                                             disabled={selectedRoutineIds.size === 0}
-                                            className="px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs bg-red-650 hover:bg-red-500 text-white flex items-center gap-1.5 transition-all shadow-lg shadow-red-950/20 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 border border-red-600/30"
+                                            className="px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs bg-red-650 hover:bg-red-500 text-white flex items-center gap-1.5 transition-all shadow-lg shadow-red-950/20 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 border border-red-600/30 cursor-pointer"
                                         >
                                             <Trash2 size={14} />
                                             Eliminar ({selectedRoutineIds.size})
@@ -813,7 +827,7 @@ export const MyArsenal = () => {
                                                 setMultiSelectMode(false);
                                                 setSelectedRoutineIds(new Set());
                                             }}
-                                            className="px-5 py-2.5 rounded-xl font-bold uppercase tracking-wider text-xs bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white border border-neutral-700 transition-all active:scale-95"
+                                            className="px-5 py-2.5 rounded-xl font-bold uppercase tracking-wider text-xs bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white border border-neutral-700 transition-all active:scale-95 cursor-pointer"
                                         >
                                             Cancelar
                                         </button>
@@ -821,7 +835,7 @@ export const MyArsenal = () => {
                                 ) : (
                                     <button
                                         onClick={() => setMultiSelectMode(true)}
-                                        className="px-5 py-2.5 rounded-xl font-bold uppercase tracking-wider text-xs bg-neutral-900 hover:bg-neutral-800 text-gym-primary hover:text-yellow-400 border border-neutral-800 hover:border-gym-primary/30 transition-all flex items-center gap-1.5 active:scale-95"
+                                        className="px-5 py-2.5 rounded-xl font-bold uppercase tracking-wider text-xs bg-neutral-900 hover:bg-neutral-800 text-gym-primary hover:text-yellow-400 border border-neutral-800 hover:border-gym-primary/30 transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer"
                                     >
                                         <Check size={14} strokeWidth={3} />
                                         Seleccionar Varias
@@ -881,8 +895,8 @@ export const MyArsenal = () => {
                                     onDelete={handleDeleteRoutine}
                                     onEdit={handleEditRoutine}
                                     onShare={(id, name) => {
-                                        setSharingRoutineId(id);
-                                        setSharingRoutineName(name);
+                                        setSharingRoutineIds([id]);
+                                        setSharingRoutineNames([name]);
                                         setShowShareModal(true);
                                     }}
                                     multiSelectMode={multiSelectMode}
@@ -973,15 +987,15 @@ export const MyArsenal = () => {
                     )}
 
                     {/* ROUTINE SHARING MODAL (Rendered directly in ROUTINES view branch) */}
-                    {showShareModal && sharingRoutineId && (
+                    {showShareModal && sharingRoutineIds.length > 0 && (
                         <ShareRoutineModal
                             userId={user.id}
-                            routineId={sharingRoutineId}
-                            routineName={sharingRoutineName}
+                            routineIds={sharingRoutineIds}
+                            routineNames={sharingRoutineNames}
                             onClose={() => {
                                 setShowShareModal(false);
-                                setSharingRoutineId(null);
-                                setSharingRoutineName('');
+                                setSharingRoutineIds([]);
+                                setSharingRoutineNames([]);
                             }}
                         />
                     )}
@@ -1150,15 +1164,15 @@ export const MyArsenal = () => {
             )}
 
 
-            {showShareModal && sharingRoutineId && (
+            {showShareModal && sharingRoutineIds.length > 0 && (
                 <ShareRoutineModal
                     userId={user.id}
-                    routineId={sharingRoutineId}
-                    routineName={sharingRoutineName}
+                    routineIds={sharingRoutineIds}
+                    routineNames={sharingRoutineNames}
                     onClose={() => {
                         setShowShareModal(false);
-                        setSharingRoutineId(null);
-                        setSharingRoutineName('');
+                        setSharingRoutineIds([]);
+                        setSharingRoutineNames([]);
                     }}
                 />
             )}

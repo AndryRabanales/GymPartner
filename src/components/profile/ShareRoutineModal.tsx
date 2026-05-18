@@ -5,12 +5,12 @@ import { workoutService } from '../../services/WorkoutService';
 
 interface ShareRoutineModalProps {
     userId: string;
-    routineId: string;
-    routineName: string;
+    routineIds: string[];
+    routineNames: string[];
     onClose: () => void;
 }
 
-export const ShareRoutineModal = ({ userId, routineId, routineName, onClose }: ShareRoutineModalProps) => {
+export const ShareRoutineModal = ({ userId, routineIds, routineNames, onClose }: ShareRoutineModalProps) => {
     const [loading, setLoading] = useState(true);
     const [sharing, setSharing] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -20,6 +20,8 @@ export const ShareRoutineModal = ({ userId, routineId, routineName, onClose }: S
 
     // Selection States
     const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
+    const [initialUserRoutineShares, setInitialUserRoutineShares] = useState<Map<string, Set<string>>>(new Map());
+    const [initialAllSharedWith, setInitialAllSharedWith] = useState<Set<string>>(new Set());
 
     useEffect(() => {
         const loadRelations = async () => {
@@ -42,11 +44,34 @@ export const ShareRoutineModal = ({ userId, routineId, routineName, onClose }: S
 
                 setFollowersAndFollowing(uniqueRelations);
 
-                // Fetch existing sharing permissions for the pre-selected routine
-                const sharedWith = await workoutService.getRoutineShares(routineId);
-                if (sharedWith && sharedWith.length > 0) {
-                    setSelectedUsers(new Set(sharedWith));
-                }
+                // Fetch existing sharing permissions for all selected routines in parallel
+                const sharesPromises = routineIds.map(rid => workoutService.getRoutineShares(rid));
+                const sharesResults = await Promise.all(sharesPromises);
+                
+                const userShares = new Map<string, Set<string>>();
+                
+                routineIds.forEach((rid, index) => {
+                    const sharedWithUsers = sharesResults[index] || [];
+                    sharedWithUsers.forEach((uid: string) => {
+                        if (!userShares.has(uid)) {
+                            userShares.set(uid, new Set());
+                        }
+                        userShares.get(uid)!.add(rid);
+                    });
+                });
+
+                setInitialUserRoutineShares(userShares);
+
+                // Intersection: users who have access to ALL selected routines
+                const allSharedWith = new Set<string>();
+                userShares.forEach((routineSet, uid) => {
+                    if (routineSet.size === routineIds.length) {
+                        allSharedWith.add(uid);
+                    }
+                });
+
+                setSelectedUsers(new Set(allSharedWith));
+                setInitialAllSharedWith(allSharedWith);
             } catch (err) {
                 console.error("Error loading share relations:", err);
             } finally {
@@ -55,7 +80,7 @@ export const ShareRoutineModal = ({ userId, routineId, routineName, onClose }: S
         };
 
         loadRelations();
-    }, [userId, routineId]);
+    }, [userId, routineIds]);
 
     // Handle user toggle
     const toggleUser = (targetUserId: string) => {
@@ -75,20 +100,58 @@ export const ShareRoutineModal = ({ userId, routineId, routineName, onClose }: S
         user.username?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    // Save/Share
+    // Save/Share (Union and Revoke Logic)
     const handleShare = async () => {
         setSharing(true);
         try {
-            const userIdsArray = Array.from(selectedUsers);
+            // For each selected routine, we calculate the complete new list of user IDs who have access to it
+            for (const rid of routineIds) {
+                // Fetch the list of users currently having access to this routine
+                const currentShares = await workoutService.getRoutineShares(rid);
+                const followersSet = new Set(followersAndFollowing.map(u => u.id));
+                
+                // Preserve shared users outside of our followers/following list
+                const preservedUsers = currentShares.filter(uid => !followersSet.has(uid));
+                
+                // Calculate the new status for each of our followers:
+                const updatedFollowers: string[] = [];
+                
+                followersAndFollowing.forEach(user => {
+                    const targetUserId = user.id;
+                    const isCurrentlySelected = selectedUsers.has(targetUserId);
+                    const originallyHadAll = initialAllSharedWith.has(targetUserId);
+                    const currentRoutineShares = initialUserRoutineShares.get(targetUserId) || new Set<string>();
+                    
+                    if (isCurrentlySelected) {
+                        // Union: selected users get access to ALL selected routines
+                        updatedFollowers.push(targetUserId);
+                    } else {
+                        // Unselected users:
+                        if (originallyHadAll) {
+                            // If they originally had ALL and were unchecked, revoke access to this routine
+                        } else {
+                            // If they only had partial or no access, keep their existing access for this specific routine
+                            if (currentRoutineShares.has(rid)) {
+                                updatedFollowers.push(targetUserId);
+                            }
+                        }
+                    }
+                });
+                
+                const finalSharedUsers = [...preservedUsers, ...updatedFollowers];
+                
+                // Save to DB
+                await workoutService.shareRoutine(rid, userId, finalSharedUsers);
+            }
 
-            // Share routine with all selected users
-            await workoutService.shareRoutine(routineId, userId, userIdsArray);
-
-            alert("¡Rutina compartida exitosamente!");
+            alert(routineIds.length > 1 
+                ? `¡Las ${routineIds.length} rutinas han sido compartidas/actualizadas exitosamente!` 
+                : "¡Rutina compartida exitosamente!"
+            );
             onClose();
         } catch (err) {
             console.error("Error saving shares:", err);
-            alert("Error al compartir la rutina.");
+            alert("Error al compartir las rutinas.");
         } finally {
             setSharing(false);
         }
@@ -105,9 +168,12 @@ export const ShareRoutineModal = ({ userId, routineId, routineName, onClose }: S
                             <Share2 size={24} />
                         </div>
                         <div>
-                            <h2 className="text-xl md:text-2xl font-black italic text-white uppercase tracking-tight">Compartir Estrategia</h2>
+                            <h2 className="text-xl md:text-2xl font-black italic text-white uppercase tracking-tight">Compartir Rutinas</h2>
                             <p className="text-gym-primary text-xs md:text-sm font-bold truncate max-w-[280px] md:max-w-xs">
-                                Rutina: {routineName}
+                                {routineNames.length > 1 
+                                    ? `${routineNames.length} seleccionadas (${routineNames.slice(0, 2).join(', ')}${routineNames.length > 2 ? '...' : ''})`
+                                    : `Rutina: ${routineNames[0]}`
+                                }
                             </p>
                         </div>
                     </div>
@@ -144,6 +210,7 @@ export const ShareRoutineModal = ({ userId, routineId, routineName, onClose }: S
                         <div className="max-h-[40vh] overflow-y-auto pr-1 flex flex-col gap-2 custom-scrollbar">
                             {filteredUsers.map(user => {
                                 const isChecked = selectedUsers.has(user.id);
+                                const hasSomeButNotAll = initialUserRoutineShares.has(user.id) && !isChecked;
                                 return (
                                     <button
                                         key={user.id}
@@ -160,7 +227,14 @@ export const ShareRoutineModal = ({ userId, routineId, routineName, onClose }: S
                                                 alt={user.username}
                                                 className="w-9 h-9 rounded-full border border-neutral-800 shrink-0 object-cover"
                                             />
-                                            <span className="font-bold text-sm text-white truncate">@{user.username}</span>
+                                            <div className="flex flex-col truncate">
+                                                <span className="font-bold text-sm text-white truncate">@{user.username}</span>
+                                                {hasSomeButNotAll && (
+                                                    <span className="text-[10px] text-gym-primary/80 font-bold uppercase italic mt-0.5">
+                                                        Tiene {initialUserRoutineShares.get(user.id)?.size} de las {routineIds.length} seleccionadas 🤝
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                         <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 transition-colors ${
                                             isChecked ? 'bg-gym-primary border-transparent text-black' : 'border-neutral-700'
@@ -203,7 +277,7 @@ export const ShareRoutineModal = ({ userId, routineId, routineName, onClose }: S
                                 <>
                                     <Swords size={16} strokeWidth={3} />
                                     Compartir ({selectedUsers.size})
-                                </>
+                                 </>
                             )}
                         </button>
                     </div>
