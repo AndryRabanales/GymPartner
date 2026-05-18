@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useGeolocation } from '../../hooks/useGeolocation';
 import { InteractiveOverlay } from '../onboarding/InteractiveOverlay';
 import { userService } from '../../services/UserService';
+import { notificationService } from '../../services/NotificationService';
 import { getDistance } from '../../utils/distance';
 import type { UserPrimaryGym } from '../../services/UserService';
 import { useNavigate } from 'react-router-dom';
@@ -237,6 +238,10 @@ export const GymMap = () => {
 
             // Update current selection to reflect change immediately
             setSelectedGym(prev => prev ? { ...prev, is_home_base: true } : null);
+
+            // Notify other members of this gym
+            const userName = user.user_metadata?.full_name || user.user_metadata?.username || 'Un Agente';
+            await notificationService.notifyGymMembers(selectedGym.id, user.id, userName, selectedGym.name);
         } else {
             alert('Error al establecer sede: ' + result.error);
         }

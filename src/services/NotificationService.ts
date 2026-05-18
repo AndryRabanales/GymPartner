@@ -4,7 +4,7 @@ import { socialService } from './SocialService';
 export interface Notification {
     id: string;
     user_id: string;
-    type: 'ranking_change' | 'system' | 'reward' | 'invitation';
+    type: 'ranking_change' | 'system' | 'reward' | 'invitation' | 'follower' | 'gym_join';
     title: string;
     message: string;
     data?: any;
@@ -159,11 +159,12 @@ export const notificationService = {
                     .from('notifications')
                     .insert({
                         user_id: targetUserId,
-                        type: 'system', // or create 'new_follower' type if strict, using system for now as it's general
+                        type: 'follower', // Explicit follower type
                         title: 'NUEVO SEGUIDOR',
                         message: `${senderName} ha comenzado a seguirte.`,
                         data: {
-                            sender_id: user.id
+                            sender_id: user.id,
+                            sender_name: senderName
                         }
                     });
             }
@@ -266,5 +267,45 @@ export const notificationService = {
             return false;
         }
         return true;
+    },
+
+    /**
+     * Alert local gym members that a new user joined as their home base
+     */
+    async notifyGymMembers(gymId: string, newMemberId: string, newMemberName: string, gymName: string) {
+        try {
+            // Find all users who have this gym as home base (except the new member)
+            const { data: gymMembers, error: fetchError } = await supabase
+                .from('user_gyms')
+                .select('user_id')
+                .eq('gym_id', gymId)
+                .eq('is_home_base', true)
+                .neq('user_id', newMemberId);
+
+            if (fetchError) throw fetchError;
+            if (!gymMembers || gymMembers.length === 0) return;
+
+            // Prepare notifications batch
+            const notifications = gymMembers.map(member => ({
+                user_id: member.user_id,
+                type: 'gym_join',
+                title: 'NUEVO RECLUTA',
+                message: `¡Un nuevo recluta (${newMemberName}) ha reclamado ${gymName} como sede! Ve a revisar el Ranking.`,
+                data: {
+                    new_member_id: newMemberId,
+                    gym_id: gymId
+                }
+            }));
+
+            // Insert in batch
+            const { error: insertError } = await supabase
+                .from('notifications')
+                .insert(notifications);
+
+            if (insertError) throw insertError;
+            console.log(`[NotificationService] Sent gym_join notification to ${notifications.length} members of ${gymId}`);
+        } catch (error) {
+            console.error('[NotificationService] Error notifying gym members:', error);
+        }
     }
 };

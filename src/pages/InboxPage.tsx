@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MessageCircle, X, Check, Search, ChevronLeft, Zap } from 'lucide-react';
+import { MessageCircle, X, Check, Search, ChevronLeft, Zap, UserPlus, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { chatService } from '../services/ChatService';
@@ -8,7 +8,31 @@ import { notificationService } from '../services/NotificationService';
 import type { Notification } from '../services/NotificationService';
 import { FadeInImage } from '../components/ui/FadeInImage';
 
-type Tab = 'matches' | 'messages';
+type Tab = 'activity' | 'messages';
+
+const groupNotifications = (notifs: ExtendedNotification[]) => {
+    const today: ExtendedNotification[] = [];
+    const thisWeek: ExtendedNotification[] = [];
+    const earlier: ExtendedNotification[] = [];
+
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekStart = new Date(todayStart);
+    weekStart.setDate(weekStart.getDate() - 7);
+
+    notifs.forEach(n => {
+        const date = new Date(n.created_at);
+        if (date >= todayStart) {
+            today.push(n);
+        } else if (date >= weekStart) {
+            thisWeek.push(n);
+        } else {
+            earlier.push(n);
+        }
+    });
+
+    return { today, thisWeek, earlier };
+};
 
 interface ExtendedNotification extends Notification {
     sender?: {
@@ -18,9 +42,9 @@ interface ExtendedNotification extends Notification {
 }
 
 export const InboxPage = () => {
-    const [activeTab, setActiveTab] = useState<Tab>('matches');
+    const [activeTab, setActiveTab] = useState<Tab>('activity');
     const [chats, setChats] = useState<ChatPreview[]>([]);
-    const [invitations, setInvitations] = useState<ExtendedNotification[]>([]);
+    const [notifications, setNotifications] = useState<ExtendedNotification[]>([]);
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
@@ -29,7 +53,7 @@ export const InboxPage = () => {
         if (activeTab === 'messages') {
             loadChats();
         } else {
-            loadInvitations();
+            loadNotifications();
         }
     }, [activeTab]);
 
@@ -47,11 +71,8 @@ export const InboxPage = () => {
                     'postgres_changes',
                     { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
                     (payload) => {
-                        const newNote = payload.new as Notification;
-                        if (newNote.type === 'invitation') {
-                            // When a new invite comes in, we reload to get sender info too
-                            loadInvitations();
-                        }
+                        // When a new notification comes in, reload to get sender info too
+                        loadNotifications();
                     }
                 )
                 .subscribe();
@@ -92,14 +113,13 @@ export const InboxPage = () => {
         setLoading(false);
     };
 
-    const loadInvitations = async () => {
+    const loadNotifications = async () => {
         setLoading(true);
         try {
             const all = await notificationService.getNotifications(50);
-            const invites = all.filter(n => n.type === 'invitation');
             
-            // Fetch sender profiles for each invite
-            const senderIds = Array.from(new Set(invites.map(i => i.data?.sender_id).filter(Boolean)));
+            // Fetch sender profiles for notifications that have sender_id or new_member_id
+            const senderIds = Array.from(new Set(all.map(n => n.data?.sender_id || n.data?.new_member_id).filter(Boolean)));
             
             if (senderIds.length > 0) {
                 const { data: profiles } = await supabase
@@ -112,16 +132,16 @@ export const InboxPage = () => {
                     return acc;
                 }, {});
 
-                const extendedInvites = invites.map(i => ({
-                    ...i,
-                    sender: profileMap[i.data?.sender_id]
+                const extended = all.map(n => ({
+                    ...n,
+                    sender: profileMap[n.data?.sender_id || n.data?.new_member_id]
                 }));
-                setInvitations(extendedInvites);
+                setNotifications(extended);
             } else {
-                setInvitations(invites);
+                setNotifications(all);
             }
         } catch (error) {
-            console.error("Error loading invitations:", error);
+            console.error("Error loading notifications:", error);
         } finally {
             setLoading(false);
         }
@@ -135,7 +155,7 @@ export const InboxPage = () => {
         const senderId = notification.data?.sender_id;
         if (!senderId) return;
 
-        setInvitations(prev => prev.map(n =>
+        setNotifications(prev => prev.map(n =>
             n.id === notification.id
                 ? { ...n, data: { ...n.data, status: 'accepted' }, is_read: true }
                 : n
@@ -153,7 +173,7 @@ export const InboxPage = () => {
     };
 
     const handleReject = async (notification: Notification) => {
-        setInvitations(prev => prev.map(n =>
+        setNotifications(prev => prev.map(n =>
             n.id === notification.id
                 ? { ...n, data: { ...n.data, status: 'rejected' }, is_read: true }
                 : n
@@ -172,18 +192,18 @@ export const InboxPage = () => {
             <div className="sticky top-2 z-40 px-4 pt-1 animate-in slide-in-from-top-4 duration-700">
                 <div className="max-w-sm mx-auto bg-black/40 backdrop-blur-3xl border border-white/10 rounded-full p-1 shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex items-center gap-1">
                     <button
-                        onClick={() => setActiveTab('matches')}
+                        onClick={() => setActiveTab('activity')}
                         className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${
-                            activeTab === 'matches' 
+                            activeTab === 'activity' 
                             ? 'bg-gym-primary text-black shadow-lg scale-100' 
                             : 'text-neutral-500 hover:text-neutral-300 scale-95 opacity-70'
                         }`}
                     >
-                        <Zap size={14} fill={activeTab === 'matches' ? "currentColor" : "none"} />
-                        Matches
-                        {invitations.filter(i => !i.is_read || !i.data?.status).length > 0 && (
-                            <span className={`px-1.5 py-0.5 rounded-md text-[8px] font-black ml-1 ${activeTab === 'matches' ? 'bg-black/20' : 'bg-gym-primary/20 text-gym-primary'}`}>
-                                {invitations.filter(i => !i.is_read || !i.data?.status).length}
+                        <Zap size={14} fill={activeTab === 'activity' ? "currentColor" : "none"} />
+                        Actividad
+                        {notifications.filter(i => !i.is_read || (i.type === 'invitation' && !i.data?.status)).length > 0 && (
+                            <span className={`px-1.5 py-0.5 rounded-md text-[8px] font-black ml-1 ${activeTab === 'activity' ? 'bg-black/20' : 'bg-gym-primary/20 text-gym-primary'}`}>
+                                {notifications.filter(i => !i.is_read || (i.type === 'invitation' && !i.data?.status)).length}
                             </span>
                         )}
                     </button>
@@ -208,106 +228,189 @@ export const InboxPage = () => {
                         <div className="w-8 h-8 border-2 border-gym-primary border-t-transparent rounded-full animate-spin"></div>
                         <span className="text-[10px] font-black uppercase tracking-widest">Sincronizando...</span>
                     </div>
-                ) : activeTab === 'matches' ? (
-                    // MATCHES VIEW
-                    <div className="space-y-4 max-w-2xl mx-auto w-full">
-                        {invitations.length === 0 ? (
+                ) : activeTab === 'activity' ? (
+                    // ACTIVITY VIEW (Instagram Style)
+                    <div className="space-y-6 max-w-2xl mx-auto w-full">
+                        {notifications.length === 0 ? (
                             <div className="flex flex-col items-center justify-center p-12 text-center animate-in fade-in zoom-in-95 duration-500">
                                 <div className="w-20 h-20 bg-neutral-900 rounded-[2.5rem] flex items-center justify-center mb-6 text-neutral-700">
                                     <Zap size={40} />
                                 </div>
-                                <h3 className="text-xl font-black text-white italic mb-2 uppercase tracking-tighter">SIN DESAFÍOS</h3>
-                                <p className="text-xs text-neutral-500 max-w-xs font-medium">No tienes invitaciones de entrenamiento por ahora. ¡Ve al Radar y desafía a alguien!</p>
+                                <h3 className="text-xl font-black text-white italic mb-2 uppercase tracking-tighter">NADA POR AQUÍ</h3>
+                                <p className="text-xs text-neutral-500 max-w-xs font-medium">Cuando interactúes con otros guerreros, tus notificaciones aparecerán aquí.</p>
                                 <button onClick={() => navigate('/radar')} className="mt-8 bg-white text-black px-8 py-3 rounded-2xl font-black text-sm tracking-tighter hover:bg-gym-primary transition-all active:scale-95 shadow-xl">
                                     IR AL RADAR
                                 </button>
                             </div>
                         ) : (
-                            invitations.map(invite => {
-                                const status = invite.data?.status;
-
-                                return (
-                                    <div 
-                                        key={invite.id} 
-                                        className={`bg-black/40 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] p-5 shadow-[0_15px_40px_rgba(0,0,0,0.4)] animate-in fade-in slide-in-from-bottom-4 duration-500 transition-all group ${status ? 'opacity-60 grayscale-[0.5]' : 'hover:border-gym-primary/30'}`}
-                                    >
-                                        <div className="flex items-start gap-4">
-                                            {/* SENDER AVATAR */}
-                                            <div className="relative shrink-0">
-                                                <div className="absolute -inset-1 bg-gym-primary rounded-full blur-md opacity-0 group-hover:opacity-20 transition-opacity"></div>
-                                                <div className={`w-16 h-16 rounded-full p-0.5 ${status ? 'bg-neutral-800' : 'bg-gradient-to-tr from-neutral-800 to-neutral-600'}`}>
-                                                    <div className="w-full h-full rounded-full bg-neutral-900 overflow-hidden flex items-center justify-center border border-white/10 relative">
-                                                        {invite.sender?.avatar_url ? (
-                                                            <FadeInImage 
-                                                                src={invite.sender.avatar_url} 
-                                                                alt="Avatar" 
-                                                                className="w-full h-full object-cover"
-                                                            />
-                                                        ) : (
-                                                            <div className="w-full h-full bg-gradient-to-br from-neutral-800 to-black flex items-center justify-center">
-                                                                <span className="text-xl font-black text-gym-primary italic">
-                                                                    {invite.sender?.username?.[0].toUpperCase() || 'G'}
-                                                                </span>
-                                                            </div>
-                                                        )}
+                            (() => {
+                                const { today, thisWeek, earlier } = groupNotifications(notifications);
+                                
+                                const renderNotification = (n: ExtendedNotification) => {
+                                    const status = n.data?.status;
+                                    
+                                    // Base layout for standard notifications (follower, gym_join, system)
+                                    if (n.type !== 'invitation') {
+                                        return (
+                                            <div key={n.id} className="flex items-center gap-4 py-3 group">
+                                                <div className="relative shrink-0">
+                                                    <div className="w-12 h-12 rounded-full p-0.5 bg-gradient-to-tr from-neutral-800 to-neutral-600">
+                                                        <div className="w-full h-full rounded-full bg-neutral-900 overflow-hidden flex items-center justify-center border border-white/10 relative cursor-pointer" onClick={() => navigate(`/user/${n.data?.sender_id || n.data?.new_member_id || ''}`)}>
+                                                            {n.sender?.avatar_url ? (
+                                                                <FadeInImage src={n.sender.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                <div className="w-full h-full bg-gradient-to-br from-neutral-800 to-black flex items-center justify-center">
+                                                                    <span className="text-lg font-black text-gym-primary italic">
+                                                                        {n.sender?.username?.[0].toUpperCase() || 'G'}
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
+                                                    {n.type === 'follower' && (
+                                                        <div className="absolute -bottom-1 -right-1 bg-blue-500 text-white p-1 rounded-full border-2 border-black shadow-lg">
+                                                            <UserPlus size={10} strokeWidth={3} />
+                                                        </div>
+                                                    )}
+                                                    {n.type === 'gym_join' && (
+                                                        <div className="absolute -bottom-1 -right-1 bg-red-500 text-white p-1 rounded-full border-2 border-black shadow-lg">
+                                                            <MapPin size={10} strokeWidth={3} />
+                                                        </div>
+                                                    )}
                                                 </div>
-                                                {!status && (
-                                                    <div className="absolute -bottom-1 -right-1 bg-gym-primary text-black p-1 rounded-full border-2 border-black shadow-lg">
-                                                        <Zap size={10} fill="currentColor" />
+                                                <div className="flex-1 min-w-0 pr-2">
+                                                    <p className="text-xs text-neutral-300 font-medium leading-tight">
+                                                        <span className="font-bold text-white mr-1 cursor-pointer hover:text-gym-primary" onClick={() => navigate(`/user/${n.data?.sender_id || n.data?.new_member_id || ''}`)}>
+                                                            {n.sender?.username || n.data?.sender_name || 'Alguien'}
+                                                        </span>
+                                                        {n.type === 'follower' && 'ha comenzado a seguirte.'}
+                                                        {n.type === 'gym_join' && `se ha unido a tu sede.`}
+                                                        {n.type === 'system' && n.message}
+                                                    </p>
+                                                    <span className="text-[10px] text-neutral-600 font-bold mt-0.5 block">{new Date(n.created_at).toLocaleDateString()}</span>
+                                                </div>
+                                                {n.type === 'follower' && (
+                                                    <button onClick={() => navigate(`/user/${n.data?.sender_id}`)} className="shrink-0 bg-neutral-900 border border-white/10 text-white text-[10px] font-black uppercase tracking-wider px-4 py-2 rounded-xl hover:bg-white/10 transition-colors">
+                                                        Ver Perfil
+                                                    </button>
+                                                )}
+                                                {n.type === 'gym_join' && (
+                                                    <button onClick={() => navigate(`/territory/${n.data?.gym_id}`)} className="shrink-0 bg-gym-primary/20 text-gym-primary border border-gym-primary/30 text-[10px] font-black uppercase tracking-wider px-4 py-2 rounded-xl hover:bg-gym-primary hover:text-black transition-colors">
+                                                        Ranking
+                                                    </button>
+                                                )}
+                                            </div>
+                                        );
+                                    }
+
+                                    // Render for invitations (matches)
+                                    return (
+                                        <div 
+                                            key={n.id} 
+                                            className={`bg-black/40 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] p-5 shadow-[0_15px_40px_rgba(0,0,0,0.4)] transition-all group my-2 ${status ? 'opacity-60 grayscale-[0.5]' : 'hover:border-gym-primary/30'}`}
+                                        >
+                                            <div className="flex items-start gap-4">
+                                                <div className="relative shrink-0">
+                                                    <div className="absolute -inset-1 bg-gym-primary rounded-full blur-md opacity-0 group-hover:opacity-20 transition-opacity"></div>
+                                                    <div className={`w-16 h-16 rounded-full p-0.5 ${status ? 'bg-neutral-800' : 'bg-gradient-to-tr from-neutral-800 to-neutral-600'}`}>
+                                                        <div className="w-full h-full rounded-full bg-neutral-900 overflow-hidden flex items-center justify-center border border-white/10 relative">
+                                                            {n.sender?.avatar_url ? (
+                                                                <FadeInImage src={n.sender.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                <div className="w-full h-full bg-gradient-to-br from-neutral-800 to-black flex items-center justify-center">
+                                                                    <span className="text-xl font-black text-gym-primary italic">
+                                                                        {n.sender?.username?.[0].toUpperCase() || 'G'}
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    {!status && (
+                                                        <div className="absolute -bottom-1 -right-1 bg-gym-primary text-black p-1 rounded-full border-2 border-black shadow-lg">
+                                                            <Zap size={10} fill="currentColor" />
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center justify-between gap-2 mb-1">
+                                                        <h3 className={`text-xs font-black italic uppercase tracking-tight truncate ${status ? 'text-neutral-500' : 'text-white'}`}>
+                                                            DESAFÍO DE ENTRENAMIENTO
+                                                        </h3>
+                                                        <span className="text-[9px] font-bold text-neutral-600 shrink-0">
+                                                            {new Date(n.created_at).toLocaleDateString()}
+                                                        </span>
+                                                    </div>
+                                                    <p className={`text-xs font-medium leading-relaxed ${status ? 'text-neutral-600' : 'text-neutral-400'}`}>
+                                                        <span className={`${status ? 'text-neutral-500' : 'text-gym-primary'} font-black uppercase italic mr-1 cursor-pointer`} onClick={() => navigate(`/user/${n.data?.sender_id}`)}>
+                                                            @{n.sender?.username || 'guerrero'}
+                                                        </span> 
+                                                        te ha enviado un reto de gimnasio. ¿Entrenamos?
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-6">
+                                                {status === 'accepted' ? (
+                                                    <div className="w-full py-3 bg-gym-primary/10 border border-gym-primary/20 rounded-2xl flex items-center justify-center gap-2 text-gym-primary font-black text-[10px] uppercase tracking-widest">
+                                                        <Check size={14} strokeWidth={3} /> RETO ACEPTADO
+                                                    </div>
+                                                ) : status === 'rejected' ? (
+                                                    <div className="w-full py-3 bg-neutral-900/50 border border-neutral-800 rounded-2xl flex items-center justify-center gap-2 text-neutral-600 font-black text-[10px] uppercase tracking-widest">
+                                                        <X size={14} strokeWidth={3} /> RETO IGNORADO
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center gap-3">
+                                                        <button
+                                                            onClick={() => handleReject(n)}
+                                                            className="flex-1 py-3 px-4 rounded-2xl bg-neutral-900 text-neutral-500 font-black text-[10px] uppercase tracking-widest border border-white/5 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 transition-all active:scale-95 flex items-center justify-center gap-2"
+                                                        >
+                                                            <X size={14} />
+                                                            IGNORAR
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleAccept(n)}
+                                                            className="flex-[1.5] py-3 px-4 rounded-2xl bg-white text-black font-black text-[10px] uppercase tracking-widest hover:bg-gym-primary transition-all active:scale-95 shadow-xl flex items-center justify-center gap-2"
+                                                        >
+                                                            <Zap size={14} fill="currentColor" />
+                                                            ACEPTAR RETO
+                                                        </button>
                                                     </div>
                                                 )}
                                             </div>
+                                        </div>
+                                    );
+                                };
 
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center justify-between gap-2 mb-1">
-                                                    <h3 className={`text-xs font-black italic uppercase tracking-tight truncate ${status ? 'text-neutral-500' : 'text-white'}`}>
-                                                        DESAFÍO DE ENTRENAMIENTO
-                                                    </h3>
-                                                    <span className="text-[9px] font-bold text-neutral-600 shrink-0">
-                                                        {new Date(invite.created_at).toLocaleDateString()}
-                                                    </span>
+                                return (
+                                    <>
+                                        {today.length > 0 && (
+                                            <div className="mb-8">
+                                                <h2 className="text-sm font-black text-white px-2 mb-4">Hoy</h2>
+                                                <div className="flex flex-col gap-2">
+                                                    {today.map(renderNotification)}
                                                 </div>
-                                                <p className={`text-xs font-medium leading-relaxed ${status ? 'text-neutral-600' : 'text-neutral-400'}`}>
-                                                    <span className={`${status ? 'text-neutral-500' : 'text-gym-primary'} font-black uppercase italic mr-1`}>
-                                                        @{invite.sender?.username || 'guerrero'}
-                                                    </span> 
-                                                    te ha enviado un reto de gimnasio. ¿Entrenamos?
-                                                </p>
                                             </div>
-                                        </div>
-
-                                        <div className="mt-6">
-                                            {status === 'accepted' ? (
-                                                <div className="w-full py-3 bg-gym-primary/10 border border-gym-primary/20 rounded-2xl flex items-center justify-center gap-2 text-gym-primary font-black text-[10px] uppercase tracking-widest">
-                                                    <Check size={14} strokeWidth={3} /> RETO ACEPTADO
+                                        )}
+                                        {thisWeek.length > 0 && (
+                                            <div className="mb-8">
+                                                <h2 className="text-sm font-black text-white px-2 mb-4">Esta semana</h2>
+                                                <div className="flex flex-col gap-2">
+                                                    {thisWeek.map(renderNotification)}
                                                 </div>
-                                            ) : status === 'rejected' ? (
-                                                <div className="w-full py-3 bg-neutral-900/50 border border-neutral-800 rounded-2xl flex items-center justify-center gap-2 text-neutral-600 font-black text-[10px] uppercase tracking-widest">
-                                                    <X size={14} strokeWidth={3} /> RETO IGNORADO
+                                            </div>
+                                        )}
+                                        {earlier.length > 0 && (
+                                            <div className="mb-8">
+                                                <h2 className="text-sm font-black text-white px-2 mb-4">Anteriores</h2>
+                                                <div className="flex flex-col gap-2">
+                                                    {earlier.map(renderNotification)}
                                                 </div>
-                                            ) : (
-                                                <div className="flex items-center gap-3">
-                                                    <button
-                                                        onClick={() => handleReject(invite)}
-                                                        className="flex-1 py-3 px-4 rounded-2xl bg-neutral-900 text-neutral-500 font-black text-[10px] uppercase tracking-widest border border-white/5 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 transition-all active:scale-95 flex items-center justify-center gap-2"
-                                                    >
-                                                        <X size={14} />
-                                                        IGNORAR
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleAccept(invite)}
-                                                        className="flex-[1.5] py-3 px-4 rounded-2xl bg-white text-black font-black text-[10px] uppercase tracking-widest hover:bg-gym-primary transition-all active:scale-95 shadow-xl flex items-center justify-center gap-2"
-                                                    >
-                                                        <Zap size={14} fill="currentColor" />
-                                                        ACEPTAR RETO
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
+                                            </div>
+                                        )}
+                                    </>
                                 );
-                            })
+                            })()
                         )}
                     </div>
                 ) : (
