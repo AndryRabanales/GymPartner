@@ -149,11 +149,8 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
                         
                         <div className="relative z-10 p-5">
                             <div className="flex items-center gap-2 mb-2">
-                                <div className="w-6 h-6 rounded-full bg-gym-primary/10 flex items-center justify-center">
-                                    <Sparkles size={12} className="text-gym-primary" />
-                                </div>
                                 <span className="text-[10px] font-black text-white uppercase tracking-widest italic" style={{ textShadow: '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000' }}>
-                                    Base Principal
+                                    GIMNASIO PRINCIPAL
                                 </span>
                             </div>
                             <p 
@@ -162,14 +159,6 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
                             >
                                 {user.gym_name.toUpperCase()}
                             </p>
-                            <div className="mt-4 flex items-center justify-between">
-                                <div className="flex items-center gap-2 text-white/90">
-                                    <Activity size={14} className="text-gym-primary" />
-                                    <span className="text-[10px] font-bold uppercase tracking-widest" style={{ textShadow: '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000' }}>
-                                        Enfocado
-                                    </span>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 )}
