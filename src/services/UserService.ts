@@ -523,25 +523,56 @@ class UserService {
     }
 
     // Get all public routines for a user (Profile Inspector - All Decks)
-    async getUserPublicRoutines(userId: string): Promise<any[]> {
+    async getUserPublicRoutines(userId: string, currentUserId?: string): Promise<any[]> {
         // Safety check for Bots or invalid IDs
         if (!userId || userId.startsWith('bot-')) return [];
 
         try {
-            // 1. Get routine IDs
+            // 1. Get all routine IDs for this user
             const { data: routines, error } = await supabase
                 .from('routines')
-                .select('id')
+                .select('id, is_public')
                 .eq('user_id', userId)
-                .eq('is_public', true)
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
             if (!routines || routines.length === 0) return [];
 
-            // 2. Fetch full details for each routine (includes exercises with icons/images)
+            let allowedRoutines = routines.filter(r => r.is_public);
+
+            // If we have a currentUserId, we can also fetch private routines shared with them
+            if (currentUserId && currentUserId !== userId) {
+                try {
+                    const { data: shares, error: shareError } = await supabase
+                        .from('routine_shares')
+                        .select('routine_id')
+                        .eq('shared_with', currentUserId)
+                        .eq('shared_by', userId);
+
+                    if (!shareError && shares && shares.length > 0) {
+                        const sharedIds = new Set(shares.map(s => s.routine_id));
+                        const sharedRoutines = routines.filter(r => sharedIds.has(r.id));
+                        
+                        // Merge allowed public routines and private shared routines
+                        const mergedSet = new Set([
+                            ...allowedRoutines.map(r => r.id),
+                            ...sharedRoutines.map(r => r.id)
+                        ]);
+                        allowedRoutines = routines.filter(r => mergedSet.has(r.id));
+                    }
+                } catch (shareErr) {
+                    console.warn("Could not check routine shares (migration might not be applied yet):", shareErr);
+                }
+            } else if (currentUserId === userId) {
+                // The owner looking at their own profile can see all of them!
+                allowedRoutines = routines;
+            }
+
+            if (allowedRoutines.length === 0) return [];
+
+            // 2. Fetch full details for each allowed routine (includes exercises with icons/images)
             const detailedRoutines = await Promise.all(
-                routines.map(r => this.getRoutineDetails(r.id))
+                allowedRoutines.map(r => this.getRoutineDetails(r.id))
             );
 
             // Filter out any null results

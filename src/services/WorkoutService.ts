@@ -633,6 +633,63 @@ class WorkoutService {
         }
     }
 
+    // Share a routine with multiple users
+    async shareRoutine(routineId: string, sharedBy: string, sharedWithUserIds: string[]) {
+        if (sharedWithUserIds.length === 0) return { success: true };
+
+        try {
+            // First, delete any existing shares for this routine so we can rewrite them cleanly
+            await supabase
+                .from('routine_shares')
+                .delete()
+                .eq('routine_id', routineId);
+
+            const payload = sharedWithUserIds.map(userId => ({
+                routine_id: routineId,
+                shared_by: sharedBy,
+                shared_with: userId
+            }));
+
+            const { error } = await supabase
+                .from('routine_shares')
+                .insert(payload);
+
+            if (error) {
+                console.error("Error sharing routine:", error);
+                if (error.code === '42P01') { // Relation does not exist
+                    alert("⚠️ Para poder compartir rutinas, debes ejecutar el script SQL de migración 'routine_shares_migration.sql' en tu panel de Supabase.");
+                }
+                return { success: false, error };
+            }
+            return { success: true };
+        } catch (err) {
+            console.error("Exception sharing routine:", err);
+            return { success: false, error: err };
+        }
+    }
+
+    // Get list of user IDs a routine is currently shared with
+    async getRoutineShares(routineId: string): Promise<string[]> {
+        try {
+            const { data, error } = await supabase
+                .from('routine_shares')
+                .select('shared_with')
+                .eq('routine_id', routineId);
+
+            if (error) {
+                if (error.code === '42P01') {
+                    console.warn("routine_shares table does not exist yet.");
+                } else {
+                    console.error("Error getting routine shares:", error);
+                }
+                return [];
+            }
+            return data?.map(d => d.shared_with) || [];
+        } catch (err) {
+            console.error("Exception getting routine shares:", err);
+            return [];
+        }
+    }
 }
 
 export const workoutService = new WorkoutService();

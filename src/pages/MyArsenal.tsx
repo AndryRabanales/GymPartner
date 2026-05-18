@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Plus, Search, ChevronRight, Check, Swords, Loader, Trash2, Dumbbell, Save, Edit2, X } from 'lucide-react';
+import { ArrowLeft, Plus, Search, ChevronRight, Check, Swords, Loader, Trash2, Dumbbell, Save, Edit2, X, Share2 } from 'lucide-react';
 import { userService } from '../services/UserService';
 
 import type { Equipment } from '../services/GymEquipmentService';
@@ -13,8 +13,83 @@ import { PublicTeaser } from '../components/common/PublicTeaser';
 import { normalizeText, getMuscleGroup } from '../utils/inventoryUtils';
 import { ArsenalGrid } from '../components/arsenal/ArsenalGrid';
 import { EquipmentForm } from '../components/arsenal/EquipmentForm';
+import { useLongPress } from '../hooks/useLongPress';
+import { ShareRoutineModal } from '../components/profile/ShareRoutineModal';
 
 // Local constants removed in favor of Service imports
+
+
+interface RoutineCardProps {
+    routine: any;
+    onDelete: (id: string, name: string) => void;
+    onEdit: (routine: any) => void;
+    onShare: (id: string) => void;
+}
+
+const RoutineCard = ({ routine, onDelete, onEdit, onShare }: RoutineCardProps) => {
+    const longPressProps = useLongPress(
+        () => {
+            onShare(routine.id);
+        },
+        () => {
+            onEdit(routine);
+        }
+    );
+
+    return (
+        <div 
+            {...longPressProps}
+            className="group relative bg-neutral-900 border border-neutral-800 hover:border-neutral-700 rounded-2xl p-4 md:p-8 transition-all hover:bg-neutral-800/50 flex flex-col justify-between min-h-[140px] md:min-h-[280px] cursor-pointer select-none active:scale-[0.99] touch-none"
+        >
+            <div className="absolute top-2 right-2 md:top-0 md:right-0 md:p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+                <Swords size={40} className="md:w-[120px] md:h-[120px]" />
+            </div>
+
+            {/* Actions overlay container */}
+            <div className="absolute top-2 right-2 z-20 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                {/* Share Button (Easy Access) */}
+                <button
+                    onClick={() => onShare(routine.id)}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg bg-gym-primary/10 text-gym-primary hover:bg-gym-primary hover:text-black transition-all border border-gym-primary/20"
+                    title="Compartir Rutina"
+                >
+                    <Share2 size={13} />
+                </button>
+
+                {/* Delete Button */}
+                <button
+                    onClick={() => onDelete(routine.id, routine.name)}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all border border-red-500/20"
+                    title="Eliminar Rutina"
+                >
+                    <Trash2 size={13} />
+                </button>
+            </div>
+
+            <div className="relative z-10">
+                <h3 className="font-black text-lg md:text-3xl text-white mb-1 md:mb-2 italic uppercase leading-none truncate">{routine.name}</h3>
+                <div className="flex flex-col md:flex-row md:items-center gap-1.5 md:gap-2 mt-2 md:mt-4">
+                    <span className="w-fit px-2 py-0.5 bg-neutral-800 rounded-md text-[9px] md:text-xs font-bold text-neutral-400 border border-neutral-700">
+                        {new Date(routine.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    </span>
+                    <span className="w-fit px-2 py-0.5 bg-gym-primary/10 text-gym-primary rounded-md text-[9px] md:text-xs font-bold border border-gym-primary/20">
+                        {(routine.equipment_ids?.length || routine.routine_exercises?.length || routine.routine_items?.length || 0)} Items
+                    </span>
+                </div>
+            </div>
+
+            <div className="relative z-10 w-full mt-3 md:mt-8 bg-white/5 group-hover:bg-gym-primary group-hover:text-black text-white px-3 md:px-6 py-2 md:py-4 rounded-lg md:rounded-xl font-bold uppercase tracking-wide transition-colors flex items-center justify-between text-[10px] md:text-base border border-white/10 group-hover:border-transparent">
+                <span>Editar Local</span>
+                <ChevronRight size={14} className="md:w-5 md:h-5 animate-pulse" />
+            </div>
+            
+            {/* Mobile tooltip indicator */}
+            <span className="absolute bottom-1 right-3 text-[8px] text-neutral-600 font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity hidden md:inline">
+                Mantén presionado para compartir ⚔️
+            </span>
+        </div>
+    );
+};
 
 
 export const MyArsenal = () => {
@@ -52,6 +127,8 @@ export const MyArsenal = () => {
     const [editingRoutineId, setEditingRoutineId] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [sharingRoutineId, setSharingRoutineId] = useState<string | null>(null);
+    const [showShareModal, setShowShareModal] = useState(false);
 
 
 
@@ -621,7 +698,7 @@ export const MyArsenal = () => {
             <div className="min-h-screen bg-black text-white p-4 md:p-12 pb-24 font-sans selection:bg-gym-primary selection:text-black">
                 <div className="max-w-7xl mx-auto">
                     {/* Header - Compact */}
-                    <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6 md:mb-12">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 md:mb-12 border-b border-neutral-900 pb-6">
                         <div className="flex items-center gap-3">
                             <Link to="/" className="w-8 h-8 md:w-12 md:h-12 flex items-center justify-center bg-neutral-900 rounded-full hover:bg-neutral-800 hover:text-gym-primary transition-all border border-neutral-800 shrink-0">
                                 <ArrowLeft size={16} className="md:w-6 md:h-6" />
@@ -633,6 +710,18 @@ export const MyArsenal = () => {
                                 </p>
                             </div>
                         </div>
+
+                        {/* Global Multi-Sharing Strategy Button */}
+                        <button
+                            onClick={() => {
+                                setSharingRoutineId(null); // No pre-selected routine; lets them choose any
+                                setShowShareModal(true);
+                            }}
+                            className="bg-gym-primary hover:bg-yellow-400 text-black px-6 py-3.5 rounded-xl font-black tracking-wide uppercase italic transition-all flex items-center gap-2 hover:shadow-[0_0_20px_rgba(250,204,21,0.4)] hover:scale-105 shrink-0 self-start md:self-center text-xs md:text-sm shadow-lg border border-transparent"
+                        >
+                            <Share2 size={16} strokeWidth={3} />
+                            <span>Compartir Estrategias ⚔️</span>
+                        </button>
                     </div>
 
                     <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
@@ -677,37 +766,16 @@ export const MyArsenal = () => {
                         {/* Existing Routines */}
                         {
                             routines.map(routine => (
-                                <div key={routine.id} className="group relative bg-neutral-900 border border-neutral-800 hover:border-neutral-700 rounded-2xl p-4 md:p-8 transition-all hover:bg-neutral-800/50 flex flex-col justify-between min-h-[140px] md:min-h-[280px]">
-                                    <div className="absolute top-2 right-2 md:top-0 md:right-0 md:p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-                                        <Swords size={40} className="md:w-[120px] md:h-[120px]" />
-                                    </div>
-
-                                    {/* Delete Button */}
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); handleDeleteRoutine(routine.id, routine.name); }}
-                                        className="absolute top-2 right-2 z-20 w-8 h-8 flex items-center justify-center rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all border border-red-500/20"
-                                        title="Eliminar Rutina"
-                                    >
-                                        <Trash2 size={14} className="md:w-5 md:h-5" />
-                                    </button>
-
-                                    <div className="relative z-10">
-                                        <h3 className="font-black text-lg md:text-3xl text-white mb-1 md:mb-2 italic uppercase leading-none truncate">{routine.name}</h3>
-                                        <div className="flex flex-col md:flex-row md:items-center gap-1.5 md:gap-2 mt-2 md:mt-4">
-                                            <span className="w-fit px-2 py-0.5 bg-neutral-800 rounded-md text-[9px] md:text-xs font-bold text-neutral-400 border border-neutral-700">
-                                                {new Date(routine.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                                            </span>
-                                            <span className="w-fit px-2 py-0.5 bg-gym-primary/10 text-gym-primary rounded-md text-[9px] md:text-xs font-bold border border-gym-primary/20">
-                                                {(routine.equipment_ids?.length || routine.routine_exercises?.length || routine.routine_items?.length || 0)} Items
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <button onClick={() => handleEditRoutine(routine)} className="relative z-10 w-full mt-3 md:mt-8 bg-white/5 hover:bg-gym-primary hover:text-black text-white px-3 md:px-6 py-2 md:py-4 rounded-lg md:rounded-xl font-bold uppercase tracking-wide transition-colors flex items-center justify-between text-[10px] md:text-base border border-white/10 hover:border-transparent">
-                                        <span>Editar Local</span>
-                                        <ChevronRight size={14} className="md:w-5 md:h-5" />
-                                    </button>
-                                </div>
+                                <RoutineCard
+                                    key={routine.id}
+                                    routine={routine}
+                                    onDelete={handleDeleteRoutine}
+                                    onEdit={handleEditRoutine}
+                                    onShare={(id) => {
+                                        setSharingRoutineId(id);
+                                        setShowShareModal(true);
+                                    }}
+                                />
                             ))}
 
                         {/* CEO Empty State: Mission Briefing */}
@@ -955,6 +1023,17 @@ export const MyArsenal = () => {
             )}
 
 
+            {showShareModal && (
+                <ShareRoutineModal
+                    userId={user.id}
+                    preSelectedRoutineId={sharingRoutineId}
+                    allRoutines={routines}
+                    onClose={() => {
+                        setShowShareModal(false);
+                        setSharingRoutineId(null);
+                    }}
+                />
+            )}
         </div>
     );
 };

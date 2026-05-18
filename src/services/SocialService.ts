@@ -655,6 +655,48 @@ class SocialService {
             .select('*, profiles!fk_comments_profiles(username, avatar_url)')
             .single();
     }
+
+    async getFollowers(userId: string): Promise<any[]> {
+        const { data, error } = await supabase
+            .from('follows')
+            .select('follower_id')
+            .eq('following_id', userId);
+
+        if (error || !data || data.length === 0) return [];
+        const followerIds = data.map(d => d.follower_id);
+
+        const { data: profiles, error: pError } = await supabase
+            .from('profiles')
+            .select('id, username, avatar_url')
+            .in('id', followerIds);
+
+        if (pError) {
+            console.error("Error fetching followers profiles:", pError);
+            return [];
+        }
+        return profiles || [];
+    }
+
+    async getFollowing(userId: string): Promise<any[]> {
+        const { data, error } = await supabase
+            .from('follows')
+            .select('following_id')
+            .eq('follower_id', userId);
+
+        if (error || !data || data.length === 0) return [];
+        const followingIds = data.map(d => d.following_id);
+
+        const { data: profiles, error: pError } = await supabase
+            .from('profiles')
+            .select('id, username, avatar_url')
+            .in('id', followingIds);
+
+        if (pError) {
+            console.error("Error fetching following profiles:", pError);
+            return [];
+        }
+        return profiles || [];
+    }
 }
 
 export const socialService = new SocialService();

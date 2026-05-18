@@ -72,7 +72,7 @@ export const PlayerProfileModal = ({ player, onClose }: PlayerProfileModalProps)
         } else if (activeTab === 'reels') {
             socialService.getUserPosts(player.id, 'video', user?.id).then(setPosts);
         } else if (activeTab === 'routines') {
-            userService.getUserPublicRoutines(player.id).then(setPublicRoutines);
+            userService.getUserPublicRoutines(player.id, user?.id).then(setPublicRoutines);
             userService.getUserGyms(player.id).then(gyms => setPublicGyms(gyms.sort((a, b) => (a.is_home_base ? -1 : 1))));
         }
     }, [activeTab, player.id, user?.id]);
