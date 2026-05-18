@@ -135,7 +135,7 @@ export const RankingPage = () => {
                 ...profile,
                 banner_url: FALLBACK_BANNERS[Math.floor(Math.random() * FALLBACK_BANNERS.length)],
                 bio: "¡Enfocado en el ascenso! Entrenando para ser el mejor de la base. 💪🔥",
-                gym_name: player.gym_name || 'Gimnasio Partner',
+                gym_name: player.gym_name || '',
                 gym_image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80',
                 training_days_count: Math.floor(Math.random() * 40) + 12,
                 followers_count: player.followers_count,

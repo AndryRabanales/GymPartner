@@ -132,7 +132,7 @@ export const Radar = () => {
 
                 const enriched = profiles.map((p, idx) => {
                     const settings = (p.custom_settings as any) || {};
-                    const gymInfo = gymMap[p.home_gym_id || ''] || { name: "Gimnasio Partner" };
+                    const gymInfo = gymMap[p.home_gym_id || ''] || { name: "" };
                     
                     // BOOST DETECTION LOGIC
                     const boostDate = p.boost_until ? new Date(p.boost_until) : null;
@@ -157,7 +157,6 @@ export const Radar = () => {
                         following_count: 0,
                         is_following: false,
                         stats_loaded: false,
-                        distance: isBoosted ? '🔥 ELITE' : (Math.random() * 5 + 0.5).toFixed(1),
                         bio: p.description || settings.description || settings.bio || "¡Entrenando duro para subir de rango! 💪 🔥",
                         is_pro: isBoosted, 
                         // ALGORITHM V7: Boost First (10^15 weight), then Newest

@@ -86,9 +86,11 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
                     <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase leading-tight drop-shadow-lg px-4">
                         {user.username.replace('_', ' ')}
                     </h2>
-                    <p className="text-[10px] font-bold text-neutral-500 mt-1 flex items-center justify-center gap-1.5 uppercase tracking-widest">
-                        <MapPin size={10} className="text-gym-primary" /> {user.gym_name}
-                    </p>
+                    {user.gym_name && (
+                        <p className="text-[10px] font-bold text-neutral-500 mt-1 flex items-center justify-center gap-1.5 uppercase tracking-widest">
+                            <MapPin size={10} className="text-gym-primary" /> {user.gym_name}
+                        </p>
+                    )}
                 </div>
             </div>
 
@@ -132,48 +134,45 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
                 )}
 
                 {/* Base Card */}
-                <div 
-                    className="rounded-[2.5rem] border border-white/5 relative overflow-hidden group shadow-2xl min-h-[140px]"
-                    style={{ backgroundColor: user.gym_color || '#E5FF00' }}
-                >
-                    {user.gym_image && (
-                        <div className="absolute inset-0 opacity-100">
-                            <img src={user.gym_image} alt="Gym" className="w-full h-full object-cover" />
-                        </div>
-                    )}
-                    {/* Subtle Bottom Overlay only for Text Readability */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-                    
-                    <div className="relative z-10 p-5">
-                        <div className="flex items-center gap-2 mb-2">
-                            <div className="w-6 h-6 rounded-full bg-gym-primary/10 flex items-center justify-center">
-                                <Sparkles size={12} className="text-gym-primary" />
+                {user.gym_name && (
+                    <div 
+                        className="rounded-[2.5rem] border border-white/5 relative overflow-hidden group shadow-2xl min-h-[140px]"
+                        style={{ backgroundColor: user.gym_color || '#E5FF00' }}
+                    >
+                        {user.gym_image && (
+                            <div className="absolute inset-0 opacity-100">
+                                <img src={user.gym_image} alt="Gym" className="w-full h-full object-cover" />
                             </div>
-                            <span className="text-[10px] font-black text-white uppercase tracking-widest italic" style={{ textShadow: '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000' }}>
-                                Base Principal
-                            </span>
-                        </div>
-                        <p 
-                            className="text-base font-black text-white leading-relaxed italic uppercase tracking-tight"
-                            style={{ textShadow: '-1.5px -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 1.5px 0 #000, 1.5px 1.5px 0 #000' }}
-                        >
-                            {user.gym_name.toUpperCase()}
-                        </p>
-                        <div className="mt-4 flex items-center justify-between">
-                            <div className="flex items-center gap-2 text-white/90">
-                                <Activity size={14} className="text-gym-primary" />
-                                <span className="text-[10px] font-bold uppercase tracking-widest" style={{ textShadow: '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000' }}>
-                                    Enfocado
+                        )}
+                        {/* Subtle Bottom Overlay only for Text Readability */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                        
+                        <div className="relative z-10 p-5">
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className="w-6 h-6 rounded-full bg-gym-primary/10 flex items-center justify-center">
+                                    <Sparkles size={12} className="text-gym-primary" />
+                                </div>
+                                <span className="text-[10px] font-black text-white uppercase tracking-widest italic" style={{ textShadow: '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000' }}>
+                                    Base Principal
                                 </span>
                             </div>
-                            {user.distance && (
-                                <div className="px-3 py-1.5 bg-black/40 rounded-xl border border-white/10 text-[10px] font-mono text-white font-bold" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
-                                    {user.distance} KM
+                            <p 
+                                className="text-base font-black text-white leading-relaxed italic uppercase tracking-tight"
+                                style={{ textShadow: '-1.5px -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 1.5px 0 #000, 1.5px 1.5px 0 #000' }}
+                            >
+                                {user.gym_name.toUpperCase()}
+                            </p>
+                            <div className="mt-4 flex items-center justify-between">
+                                <div className="flex items-center gap-2 text-white/90">
+                                    <Activity size={14} className="text-gym-primary" />
+                                    <span className="text-[10px] font-bold uppercase tracking-widest" style={{ textShadow: '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000' }}>
+                                        Enfocado
+                                    </span>
                                 </div>
-                            )}
+                            </div>
                         </div>
                     </div>
-                </div>
+                )}
 
                 {/* Bio Text */}
                 {user.bio && (
