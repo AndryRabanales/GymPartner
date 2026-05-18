@@ -262,12 +262,24 @@ export const PlayerProfileModal = ({ player, onClose }: PlayerProfileModalProps)
         setIsFollowing(newStatus);
         setStats(prev => ({ ...prev, followersCount: prev.followersCount + (newStatus ? 1 : -1) }));
 
-        if (newStatus) {
-            await socialService.followUser(user.id, player.id);
-        } else {
-            await socialService.unfollowUser(user.id, player.id);
+        try {
+            if (newStatus) {
+                const response = await socialService.followUser(user.id, player.id);
+                if (response?.error) throw response.error;
+            } else {
+                const response = await socialService.unfollowUser(user.id, player.id);
+                if (response?.error) throw response.error;
+                alert(`Has dejado de seguir a @${player.username} con éxito.`);
+            }
+        } catch (error: any) {
+            console.error("Error updating follow status:", error);
+            // Revert UI on failure
+            setIsFollowing(!newStatus);
+            setStats(prev => ({ ...prev, followersCount: prev.followersCount + (newStatus ? -1 : 1) }));
+            alert("No se pudo actualizar el estado de seguimiento en el servidor. Revisa tu conexión.");
         }
     };
+
 
     const handleCopyRoutine = async () => {
         if (!user || !viewRoutine) return;
