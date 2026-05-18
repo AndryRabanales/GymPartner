@@ -31,6 +31,7 @@ interface UserProfileCardProps {
     };
     onClose?: () => void;
     actions?: React.ReactNode;
+    hidePermissions?: boolean;
 }
 
 const FALLBACK_BANNERS = [
@@ -39,7 +40,7 @@ const FALLBACK_BANNERS = [
     'https://images.unsplash.com/photo-1571902258032-783ec5ad6dfc?auto=format&fit=crop&q=80'
 ];
 
-export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose, actions }) => {
+export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose, actions, hidePermissions = false }) => {
     console.log("📸 [CARD] Recibiendo datos de perfil:", user.username, "| Pasaporte:", user.gym_passport?.length);
     
     const { user: authUser } = useAuth();
@@ -312,7 +313,7 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
                 )}
 
                 {/* ACCESOS & PERMISOS PANEL */}
-                {authUser && authUser.id !== user.id && (
+                {authUser && authUser.id !== user.id && !hidePermissions && (
                     <div className="bg-white/[0.03] backdrop-blur-md rounded-[2rem] border border-white/10 p-5 space-y-4 shadow-xl">
                         <div className="flex items-center gap-2 border-b border-white/5 pb-2.5">
                             <Shield className="text-gym-primary" size={16} />

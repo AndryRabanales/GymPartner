@@ -402,6 +402,7 @@ export const Radar = () => {
                     >
                         <UserProfileCard 
                             user={currentUser}
+                            hidePermissions={true}
                             actions={
                                 <div className="flex items-center justify-between gap-2 px-2 mt-auto pb-4">
                                     {/* 1. CANCELAR (SALTA A LA IZQUIERDA) */}
