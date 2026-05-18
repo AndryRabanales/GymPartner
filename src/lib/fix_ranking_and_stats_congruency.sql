@@ -36,7 +36,7 @@ BEGIN
     -- Count total likes received on posts
     SELECT COALESCE(SUM(pl_count), 0) INTO likes_count
     FROM (
-        SELECT COUNT(pl.id) as pl_count
+        SELECT COUNT(*) as pl_count
         FROM public.posts po
         LEFT JOIN public.post_likes pl ON po.id = pl.post_id
         WHERE po.user_id = user_id_param
@@ -89,13 +89,15 @@ BEGIN
         COALESCE(uf.count, 0) AS followers_count,
         RANK() OVER (ORDER BY COALESCE(uf.count, 0) DESC) AS rank
     FROM 
-        public.profiles p
-    LEFT JOIN 
-        public.gyms g ON p.home_gym_id::uuid = g.id
+        public.user_gyms ug
+    JOIN 
+        public.profiles p ON ug.user_id = p.id
+    JOIN 
+        public.gyms g ON ug.gym_id = g.id
     LEFT JOIN 
         user_followers uf ON p.id = uf.user_id
     WHERE 
-        p.home_gym_id::uuid = gym_id_param
+        ug.gym_id = gym_id_param
     ORDER BY 
         followers_count DESC
     LIMIT 100;
