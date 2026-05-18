@@ -13,7 +13,6 @@ import { PublicTeaser } from '../components/common/PublicTeaser';
 import { normalizeText, getMuscleGroup } from '../utils/inventoryUtils';
 import { ArsenalGrid } from '../components/arsenal/ArsenalGrid';
 import { EquipmentForm } from '../components/arsenal/EquipmentForm';
-import { useLongPress } from '../hooks/useLongPress';
 import { ShareRoutineModal } from '../components/profile/ShareRoutineModal';
 
 // Local constants removed in favor of Service imports
@@ -23,23 +22,14 @@ interface RoutineCardProps {
     routine: any;
     onDelete: (id: string, name: string) => void;
     onEdit: (routine: any) => void;
-    onShare: (id: string) => void;
+    onShare: (id: string, name: string) => void;
 }
 
 const RoutineCard = ({ routine, onDelete, onEdit, onShare }: RoutineCardProps) => {
-    const longPressProps = useLongPress(
-        () => {
-            onShare(routine.id);
-        },
-        () => {
-            onEdit(routine);
-        }
-    );
-
     return (
         <div 
-            {...longPressProps}
-            className="group relative bg-neutral-900 border border-neutral-800 hover:border-neutral-700 rounded-2xl p-4 md:p-8 transition-all hover:bg-neutral-800/50 flex flex-col justify-between min-h-[140px] md:min-h-[280px] cursor-pointer select-none active:scale-[0.99] touch-none"
+            onClick={() => onEdit(routine)}
+            className="group relative bg-neutral-900 border border-neutral-800 hover:border-neutral-700 rounded-2xl p-4 md:p-8 transition-all hover:bg-neutral-800/50 flex flex-col justify-between min-h-[140px] md:min-h-[280px] cursor-pointer select-none active:scale-[0.99]"
         >
             <div className="absolute top-2 right-2 md:top-0 md:right-0 md:p-8 opacity-5 group-hover:opacity-10 transition-opacity">
                 <Swords size={40} className="md:w-[120px] md:h-[120px]" />
@@ -47,15 +37,6 @@ const RoutineCard = ({ routine, onDelete, onEdit, onShare }: RoutineCardProps) =
 
             {/* Actions overlay container */}
             <div className="absolute top-2 right-2 z-20 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                {/* Share Button (Easy Access) */}
-                <button
-                    onClick={() => onShare(routine.id)}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg bg-gym-primary/10 text-gym-primary hover:bg-gym-primary hover:text-black transition-all border border-gym-primary/20"
-                    title="Compartir Rutina"
-                >
-                    <Share2 size={13} />
-                </button>
-
                 {/* Delete Button */}
                 <button
                     onClick={() => onDelete(routine.id, routine.name)}
@@ -78,15 +59,22 @@ const RoutineCard = ({ routine, onDelete, onEdit, onShare }: RoutineCardProps) =
                 </div>
             </div>
 
-            <div className="relative z-10 w-full mt-3 md:mt-8 bg-white/5 group-hover:bg-gym-primary group-hover:text-black text-white px-3 md:px-6 py-2 md:py-4 rounded-lg md:rounded-xl font-bold uppercase tracking-wide transition-colors flex items-center justify-between text-[10px] md:text-base border border-white/10 group-hover:border-transparent">
-                <span>Editar Local</span>
-                <ChevronRight size={14} className="md:w-5 md:h-5 animate-pulse" />
+            {/* Premium action buttons side-by-side */}
+            <div className="relative z-10 w-full mt-3 md:mt-8 flex gap-2" onClick={(e) => e.stopPropagation()}>
+                <button
+                    onClick={() => onEdit(routine)}
+                    className="flex-1 bg-white/5 hover:bg-white/10 text-white py-2.5 md:py-3.5 rounded-lg md:rounded-xl font-bold uppercase tracking-wide transition-colors flex items-center justify-center gap-1 text-[10px] md:text-xs border border-white/10"
+                >
+                    <span>Editar</span>
+                </button>
+                <button
+                    onClick={() => onShare(routine.id, routine.name)}
+                    className="flex-1 bg-gym-primary hover:bg-yellow-400 text-black py-2.5 md:py-3.5 rounded-lg md:rounded-xl font-black uppercase italic tracking-wide transition-all flex items-center justify-center gap-1.5 text-[10px] md:text-xs"
+                >
+                    <Share2 size={13} strokeWidth={2.5} />
+                    <span>Compartir ⚔️</span>
+                </button>
             </div>
-            
-            {/* Mobile tooltip indicator */}
-            <span className="absolute bottom-1 right-3 text-[8px] text-neutral-600 font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity hidden md:inline">
-                Mantén presionado para compartir ⚔️
-            </span>
         </div>
     );
 };
@@ -128,6 +116,7 @@ export const MyArsenal = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [sharingRoutineId, setSharingRoutineId] = useState<string | null>(null);
+    const [sharingRoutineName, setSharingRoutineName] = useState<string>('');
     const [showShareModal, setShowShareModal] = useState(false);
 
 
@@ -698,7 +687,7 @@ export const MyArsenal = () => {
             <div className="min-h-screen bg-black text-white p-4 md:p-12 pb-24 font-sans selection:bg-gym-primary selection:text-black">
                 <div className="max-w-7xl mx-auto">
                     {/* Header - Compact */}
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 md:mb-12 border-b border-neutral-900 pb-6">
+                    <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6 md:mb-12 border-b border-neutral-900 pb-6">
                         <div className="flex items-center gap-3">
                             <Link to="/" className="w-8 h-8 md:w-12 md:h-12 flex items-center justify-center bg-neutral-900 rounded-full hover:bg-neutral-800 hover:text-gym-primary transition-all border border-neutral-800 shrink-0">
                                 <ArrowLeft size={16} className="md:w-6 md:h-6" />
@@ -710,18 +699,6 @@ export const MyArsenal = () => {
                                 </p>
                             </div>
                         </div>
-
-                        {/* Global Multi-Sharing Strategy Button */}
-                        <button
-                            onClick={() => {
-                                setSharingRoutineId(null); // No pre-selected routine; lets them choose any
-                                setShowShareModal(true);
-                            }}
-                            className="bg-gym-primary hover:bg-yellow-400 text-black px-6 py-3.5 rounded-xl font-black tracking-wide uppercase italic transition-all flex items-center gap-2 hover:shadow-[0_0_20px_rgba(250,204,21,0.4)] hover:scale-105 shrink-0 self-start md:self-center text-xs md:text-sm shadow-lg border border-transparent"
-                        >
-                            <Share2 size={16} strokeWidth={3} />
-                            <span>Compartir Estrategias ⚔️</span>
-                        </button>
                     </div>
 
                     <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
@@ -771,8 +748,9 @@ export const MyArsenal = () => {
                                     routine={routine}
                                     onDelete={handleDeleteRoutine}
                                     onEdit={handleEditRoutine}
-                                    onShare={(id) => {
+                                    onShare={(id, name) => {
                                         setSharingRoutineId(id);
+                                        setSharingRoutineName(name);
                                         setShowShareModal(true);
                                     }}
                                 />
@@ -1023,14 +1001,15 @@ export const MyArsenal = () => {
             )}
 
 
-            {showShareModal && (
+            {showShareModal && sharingRoutineId && (
                 <ShareRoutineModal
                     userId={user.id}
-                    preSelectedRoutineId={sharingRoutineId}
-                    allRoutines={routines}
+                    routineId={sharingRoutineId}
+                    routineName={sharingRoutineName}
                     onClose={() => {
                         setShowShareModal(false);
                         setSharingRoutineId(null);
+                        setSharingRoutineName('');
                     }}
                 />
             )}
