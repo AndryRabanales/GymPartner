@@ -836,6 +836,7 @@ export const UserProfile = () => {
                         currentBannerUrl={profile.custom_settings?.banner_url}
                         currentFeaturedRoutineId={profile.featured_routine_id}
                         currentDescription={(profile.custom_settings as any)?.description || ''}
+                        currentSettings={profile.custom_settings}
                         onClose={() => {
                             setShowEditProfile(false);
                             showBottomNav();

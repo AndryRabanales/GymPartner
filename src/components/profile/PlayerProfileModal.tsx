@@ -61,25 +61,92 @@ export const PlayerProfileModal = ({ player, onClose }: PlayerProfileModalProps)
         };
     }, [hideBottomNav, showBottomNav]);
 
+    const [customSettings, setCustomSettings] = useState<any>(null);
+    const [loadingAccess, setLoadingAccess] = useState(true);
+
     // Initial Load
     useEffect(() => {
         const init = async () => {
+            setLoadingAccess(true);
             // 1. Fetch Social Stats
             const s = await socialService.getProfileStats(player.id);
             setStats(s);
 
-            // 2. Check Follow Status
+            // 2. Fetch Player Profile custom settings
+            try {
+                const { data: profileData } = await supabase
+                    .from('profiles')
+                    .select('custom_settings')
+                    .eq('id', player.id)
+                    .single();
+                if (profileData) {
+                    setCustomSettings(profileData.custom_settings);
+                }
+            } catch (err) {
+                console.error("Error fetching player custom settings:", err);
+            }
+
+            // 3. Check Follow Status
             if (user && user.id !== player.id) {
                 const following = await socialService.getFollowStatus(user.id, player.id);
                 setIsFollowing(following);
-
-                // Check History Access
-                const access = await socialService.checkHistoryAccess(player.id, user.id);
-                setHasHistoryAccess(access);
             }
         };
         init();
     }, [player, user]);
+
+    // Check History Access dynamically
+    useEffect(() => {
+        const checkAccess = async () => {
+            if (!user) return;
+            if (user.id === player.id) {
+                setHasHistoryAccess(true);
+                setLoadingAccess(false);
+                return;
+            }
+
+            try {
+                // If history is public, grant immediate access
+                if (customSettings?.is_history_public === true) {
+                    setHasHistoryAccess(true);
+                } else {
+                    const access = await socialService.checkHistoryAccess(player.id, user.id);
+                    setHasHistoryAccess(access);
+                }
+
+                // Check Pending History Request
+                const { data: histReq } = await supabase
+                    .from('notifications')
+                    .select('id')
+                    .eq('user_id', player.id)
+                    .eq('type', 'system')
+                    .eq('data->>type', 'request_history')
+                    .eq('data->>requester_id', user.id)
+                    .maybeSingle();
+
+                setHistoryRequestSent(!!histReq);
+
+                // Check Pending Routines Request
+                const { data: routReq } = await supabase
+                    .from('notifications')
+                    .select('id')
+                    .eq('user_id', player.id)
+                    .eq('type', 'system')
+                    .eq('data->>type', 'request_routines')
+                    .eq('data->>requester_id', user.id)
+                    .maybeSingle();
+
+                setRoutinesRequestSent(!!routReq);
+
+            } catch (err) {
+                console.error("Error evaluating history access in PlayerProfileModal:", err);
+            } finally {
+                setLoadingAccess(false);
+            }
+        };
+
+        checkAccess();
+    }, [player.id, user, customSettings]);
 
     // Fetch Posts/Routines when tab changes
     useEffect(() => {
@@ -371,6 +438,108 @@ export const PlayerProfileModal = ({ player, onClose }: PlayerProfileModalProps)
                                 <span className="text-[8px] text-neutral-500 font-bold uppercase tracking-widest">Entrenos</span>
                             </div>
                         </div>
+
+                        {/* Bio Text */}
+                        {customSettings?.description && (
+                            <div className="px-2 mb-6 -mt-2">
+                                <p className="text-sm font-medium text-neutral-400 italic leading-relaxed text-center">
+                                    "{customSettings.description}"
+                                </p>
+                            </div>
+                        )}
+
+                        {/* ACCESOS & PERMISOS PANEL */}
+                        {user && user.id !== player.id && (
+                            <div className="w-full bg-white/[0.03] backdrop-blur-md rounded-2xl border border-white/10 p-4 mb-6 space-y-3 shadow-xl">
+                                <div className="flex items-center gap-2 border-b border-white/5 pb-2">
+                                    <Lock className="text-gym-primary" size={14} />
+                                    <h3 className="text-[10px] font-black text-white italic uppercase tracking-wider">
+                                        Conexión & Permisos
+                                    </h3>
+                                </div>
+
+                                {loadingAccess ? (
+                                    <div className="py-2 flex items-center justify-center gap-2 text-neutral-500">
+                                        <Loader className="animate-spin text-gym-primary" size={12} />
+                                        <span className="text-[9px] font-bold uppercase tracking-wider animate-pulse">Sincronizando...</span>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {/* Historial Row */}
+                                        <div className="flex items-center justify-between gap-3 bg-black/20 p-2.5 rounded-xl border border-white/5">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <div className="w-7 h-7 rounded bg-neutral-950 flex items-center justify-center shrink-0">
+                                                    <History size={14} className="text-blue-400" />
+                                                </div>
+                                                <div className="text-left min-w-0">
+                                                    <p className="text-[9px] font-black text-white uppercase tracking-wide truncate">Historial</p>
+                                                    <p className="text-[7px] font-bold text-neutral-500 uppercase tracking-widest truncate">
+                                                        {customSettings?.is_history_public ? '🔓 Público' : '🔒 Solo aliados'}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            {hasHistoryAccess ? (
+                                                <div className="bg-green-500/10 border border-green-500/30 text-green-500 px-2 py-1 rounded text-[8px] font-black uppercase tracking-wider flex items-center gap-0.5 shrink-0">
+                                                    Concedido ✅
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    onClick={handleRequestHistory}
+                                                    disabled={historyRequestSent || requestingHistory}
+                                                    className={`px-2 py-1.5 rounded text-[8px] font-black uppercase tracking-widest transition-all shrink-0 border flex items-center gap-0.5 ${
+                                                        historyRequestSent
+                                                            ? 'bg-neutral-850 border-neutral-800 text-neutral-500 cursor-not-allowed'
+                                                            : 'bg-gym-primary hover:bg-yellow-400 text-black border-transparent shadow-[0_0_10px_rgba(229,255,0,0.1)] active:scale-95'
+                                                    }`}
+                                                >
+                                                    {requestingHistory ? (
+                                                        <Loader className="animate-spin" size={8} />
+                                                    ) : historyRequestSent ? (
+                                                        'Solicitado ⏳'
+                                                    ) : (
+                                                        'Solicitar 📈'
+                                                    )}
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {/* Rutinas Row */}
+                                        <div className="flex items-center justify-between gap-3 bg-black/20 p-2.5 rounded-xl border border-white/5">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <div className="w-7 h-7 rounded bg-neutral-950 flex items-center justify-center shrink-0">
+                                                    <Swords size={14} className="text-yellow-500" />
+                                                </div>
+                                                <div className="text-left min-w-0">
+                                                    <p className="text-[9px] font-black text-white uppercase tracking-wide truncate">Rutinas Arsenal</p>
+                                                    <p className="text-[7px] font-bold text-neutral-500 uppercase tracking-widest truncate">
+                                                        👁️ {publicRoutines.length} Públicas
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <button
+                                                onClick={handleRequestRoutines}
+                                                disabled={routinesRequestSent || requestingRoutines}
+                                                className={`px-2 py-1.5 rounded text-[8px] font-black uppercase tracking-widest transition-all shrink-0 border flex items-center gap-0.5 ${
+                                                    routinesRequestSent
+                                                        ? 'bg-neutral-850 border-neutral-800 text-neutral-500 cursor-not-allowed'
+                                                        : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/20 active:scale-95'
+                                                }`}
+                                            >
+                                                {requestingRoutines ? (
+                                                    <Loader className="animate-spin" size={8} />
+                                                ) : routinesRequestSent ? (
+                                                    'Solicitado ⏳'
+                                                ) : (
+                                                    'Solicitar 📥'
+                                                )}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         {/* Follow Button - MOVED TO BOTTOM */}
 

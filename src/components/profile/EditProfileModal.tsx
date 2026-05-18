@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Camera, Save, Loader, Swords, Trophy, Eye, EyeOff, Users } from 'lucide-react';
+import { X, Camera, Save, Loader, Swords, Trophy, Eye, EyeOff, Users, History } from 'lucide-react';
 import { userService } from '../../services/UserService';
 import type { User } from '@supabase/supabase-js';
 import { Link } from 'react-router-dom';
@@ -12,6 +12,7 @@ interface EditProfileModalProps {
     currentBannerUrl?: string;
     currentFeaturedRoutineId?: string;
     currentDescription?: string;
+    currentSettings?: any;
     onClose: () => void;
     onUpdate: () => void;
 }
@@ -23,6 +24,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     currentBannerUrl,
     currentFeaturedRoutineId,
     currentDescription,
+    currentSettings,
     onClose,
     onUpdate
 }) => {
@@ -38,6 +40,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     // Battle Deck State
     const [routines, setRoutines] = useState<any[]>([]);
     const [selectedRoutineId, setSelectedRoutineId] = useState<string | null>(currentFeaturedRoutineId || null);
+    const [isHistoryPublic, setIsHistoryPublic] = useState<boolean>(currentSettings?.is_history_public ?? false);
 
     const [loading, setLoading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -118,8 +121,10 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                 username: username,
                 avatar_url: newAvatarUrl,
                 custom_settings: {
+                    ...currentSettings,
                     banner_url: newBannerUrl,
-                    description: description.trim() // Save description here
+                    description: description.trim(), // Save description here
+                    is_history_public: isHistoryPublic
                 },
                 featured_routine_id: selectedRoutineId // Save selected routine
             });
@@ -268,6 +273,44 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                         <p className="text-[10px] text-neutral-600 ml-1 leading-relaxed">
                             💡 Otros usuarios verán esto en el Radar cuando busquen compañeros de gimnasio.
                         </p>
+                    </div>
+
+                    {/* PRIVACIDAD DEL HISTORIAL */}
+                    <div className="space-y-4 pt-6 border-t border-neutral-800/50">
+                        <label className="text-sm font-black text-gym-primary uppercase tracking-wide flex items-center gap-2">
+                            <History size={16} className="animate-pulse text-yellow-500" /> Privacidad del Historial
+                        </label>
+                        <div className="grid grid-cols-2 gap-4">
+                            <button
+                                type="button"
+                                onClick={() => setIsHistoryPublic(true)}
+                                className={`flex flex-col items-center justify-center p-5 rounded-2xl border-2 transition-all gap-2 ${isHistoryPublic
+                                    ? 'bg-green-500/10 border-green-500 text-white shadow-[0_0_20px_rgba(34,197,94,0.15)] scale-[1.02]'
+                                    : 'bg-neutral-950/40 border-neutral-800 text-neutral-500 hover:border-neutral-700'
+                                }`}
+                            >
+                                <Eye size={22} className={isHistoryPublic ? 'text-green-500' : 'text-neutral-500'} />
+                                <span className="font-black text-xs uppercase tracking-wider">Historial Público 🔓</span>
+                                <span className="text-[9px] font-bold text-center text-neutral-500 leading-normal max-w-[130px]">
+                                    Cualquiera que visite tu perfil podrá ver tus entrenamientos
+                                </span>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => setIsHistoryPublic(false)}
+                                className={`flex flex-col items-center justify-center p-5 rounded-2xl border-2 transition-all gap-2 ${!isHistoryPublic
+                                    ? 'bg-yellow-500/10 border-yellow-500 text-white shadow-[0_0_20px_rgba(234,179,8,0.15)] scale-[1.02]'
+                                    : 'bg-neutral-950/40 border-neutral-800 text-neutral-500 hover:border-neutral-700'
+                                }`}
+                            >
+                                <EyeOff size={22} className={!isHistoryPublic ? 'text-yellow-500' : 'text-neutral-500'} />
+                                <span className="font-black text-xs uppercase tracking-wider">Solo Compartidos 🔒</span>
+                                <span className="text-[9px] font-bold text-center text-neutral-500 leading-normal max-w-[130px]">
+                                    Solo aliados autorizados o con solicitud aceptada
+                                </span>
+                            </button>
+                        </div>
                     </div>
 
                     {/* BATTLE DECK SELECTOR (With Privacy Toggle) */}

@@ -1,7 +1,11 @@
-import React from 'react';
-import { Shield, MapPin, Zap, Sparkles, Activity, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Shield, MapPin, Zap, Sparkles, Activity, X, History, Eye, EyeOff, Lock, Unlock, Swords, Loader2, CheckCircle2 } from 'lucide-react';
 import { FadeInImage } from './FadeInImage';
 import { cloudinaryService } from '../../services/CloudinaryService';
+import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../lib/supabase';
+import { socialService } from '../../services/SocialService';
+import { notificationService } from '../../services/NotificationService';
 
 interface UserProfileCardProps {
     user: {
@@ -19,6 +23,11 @@ interface UserProfileCardProps {
         bio?: string;
         is_pro?: boolean;
         gym_passport?: { id: string, name: string }[];
+        custom_settings?: {
+            is_history_public?: boolean;
+            description?: string;
+            banner_url?: string;
+        };
     };
     onClose?: () => void;
     actions?: React.ReactNode;
@@ -32,6 +41,136 @@ const FALLBACK_BANNERS = [
 
 export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose, actions }) => {
     console.log("📸 [CARD] Recibiendo datos de perfil:", user.username, "| Pasaporte:", user.gym_passport?.length);
+    
+    const { user: authUser } = useAuth();
+    const [hasHistoryAccess, setHasHistoryAccess] = useState(false);
+    const [historyRequestSent, setHistoryRequestSent] = useState(false);
+    const [requestingHistory, setRequestingHistory] = useState(false);
+    const [routinesRequestSent, setRoutinesRequestSent] = useState(false);
+    const [requestingRoutines, setRequestingRoutines] = useState(false);
+    const [publicRoutinesCount, setPublicRoutinesCount] = useState(0);
+    const [loadingAccess, setLoadingAccess] = useState(true);
+
+    useEffect(() => {
+        const checkAccess = async () => {
+            if (!authUser) {
+                setLoadingAccess(false);
+                return;
+            }
+            if (authUser.id === user.id) {
+                setHasHistoryAccess(true);
+                setLoadingAccess(false);
+                return;
+            }
+
+            setLoadingAccess(true);
+            try {
+                // 1. Check History Access (Public or Shared)
+                const isHistoryPublic = user.custom_settings?.is_history_public === true;
+                if (isHistoryPublic) {
+                    setHasHistoryAccess(true);
+                } else {
+                    const shared = await socialService.checkHistoryAccess(user.id, authUser.id);
+                    setHasHistoryAccess(shared);
+                }
+
+                // 2. Check Pending History Request
+                const { data: histReq } = await supabase
+                    .from('notifications')
+                    .select('id')
+                    .eq('user_id', user.id)
+                    .eq('type', 'system')
+                    .eq('data->>type', 'request_history')
+                    .eq('data->>requester_id', authUser.id)
+                    .maybeSingle();
+
+                setHistoryRequestSent(!!histReq);
+
+                // 3. Check Pending Routines Request
+                const { data: routReq } = await supabase
+                    .from('notifications')
+                    .select('id')
+                    .eq('user_id', user.id)
+                    .eq('type', 'system')
+                    .eq('data->>type', 'request_routines')
+                    .eq('data->>requester_id', authUser.id)
+                    .maybeSingle();
+
+                setRoutinesRequestSent(!!routReq);
+
+                // 4. Get public routines count
+                const { count } = await supabase
+                    .from('routines')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('user_id', user.id)
+                    .eq('is_public', true);
+                
+                setPublicRoutinesCount(count || 0);
+
+            } catch (err) {
+                console.error("Error checking profile card access state:", err);
+            } finally {
+                setLoadingAccess(false);
+            }
+        };
+
+        checkAccess();
+    }, [user.id, authUser, user.custom_settings]);
+
+    const handleRequestHistory = async () => {
+        if (!authUser || requestingHistory) return;
+        setRequestingHistory(true);
+        try {
+            const success = await notificationService.createNotification(user.id, {
+                type: 'system',
+                title: '📥 SOLICITUD DE HISTORIAL',
+                content: `@${authUser.user_metadata?.username || authUser.username || 'Un guerrero'} te ha solicitado acceso a tu historial de entrenamientos.`,
+                data: {
+                    type: 'request_history',
+                    requester_id: authUser.id,
+                    requester_username: authUser.user_metadata?.username || authUser.username || 'Un guerrero'
+                }
+            });
+            if (success) {
+                setHistoryRequestSent(true);
+                alert("¡Solicitud de acceso al historial enviada! Se le notificará a tu aliado.");
+            } else {
+                alert("Error al enviar la solicitud.");
+            }
+        } catch (err) {
+            console.error("Error requesting history:", err);
+        } finally {
+            setRequestingHistory(false);
+        }
+    };
+
+    const handleRequestRoutines = async () => {
+        if (!authUser || requestingRoutines) return;
+        setRequestingRoutines(true);
+        try {
+            const success = await notificationService.createNotification(user.id, {
+                type: 'system',
+                title: '📥 SOLICITUD DE RUTINAS',
+                content: `@${authUser.user_metadata?.username || authUser.username || 'Un guerrero'} te ha solicitado acceso a tus rutinas privadas.`,
+                data: {
+                    type: 'request_routines',
+                    requester_id: authUser.id,
+                    requester_username: authUser.user_metadata?.username || authUser.username || 'Un guerrero'
+                }
+            });
+            if (success) {
+                setRoutinesRequestSent(true);
+                alert("¡Solicitud de acceso a rutinas enviada! Se le notificará a tu aliado.");
+            } else {
+                alert("Error al enviar la solicitud.");
+            }
+        } catch (err) {
+            console.error("Error requesting routines:", err);
+        } finally {
+            setRequestingRoutines(false);
+        }
+    };
+
     return (
         <div className="flex-1 flex flex-col relative bg-black/40 backdrop-blur-3xl w-full h-full rounded-[3rem] border border-white/10 shadow-[0_30px_60px_rgba(0,0,0,0.8)] overflow-hidden select-none">
             {/* Close Button (if provided) */}
@@ -169,6 +308,99 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
                         <p className="text-sm font-medium text-neutral-400 italic leading-relaxed text-center">
                             "{user.bio}"
                         </p>
+                    </div>
+                )}
+
+                {/* ACCESOS & PERMISOS PANEL */}
+                {authUser && authUser.id !== user.id && (
+                    <div className="bg-white/[0.03] backdrop-blur-md rounded-[2rem] border border-white/10 p-5 space-y-4 shadow-xl">
+                        <div className="flex items-center gap-2 border-b border-white/5 pb-2.5">
+                            <Shield className="text-gym-primary" size={16} />
+                            <h3 className="text-xs font-black text-white italic uppercase tracking-wider">
+                                Conexión & Permisos
+                            </h3>
+                        </div>
+
+                        {loadingAccess ? (
+                            <div className="py-4 flex items-center justify-center gap-2 text-neutral-500">
+                                <Loader2 className="animate-spin text-gym-primary" size={16} />
+                                <span className="text-[10px] font-bold uppercase tracking-wider animate-pulse">Sincronizando...</span>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {/* Historial Row */}
+                                <div className="flex items-center justify-between gap-3 bg-black/20 p-3 rounded-2xl border border-white/5">
+                                    <div className="flex items-center gap-2.5 min-w-0">
+                                        <div className="w-8 h-8 rounded-lg bg-neutral-950 flex items-center justify-center shrink-0">
+                                            <History size={16} className="text-blue-400" />
+                                        </div>
+                                        <div className="text-left min-w-0">
+                                            <p className="text-[10px] font-black text-white uppercase tracking-wide truncate">Historial</p>
+                                            <p className="text-[8px] font-bold text-neutral-500 uppercase tracking-widest truncate">
+                                                {user.custom_settings?.is_history_public ? '🔓 Público' : '🔒 Solo aliados'}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {hasHistoryAccess ? (
+                                        <div className="bg-green-500/10 border border-green-500/30 text-green-500 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider flex items-center gap-1 shrink-0">
+                                            <CheckCircle2 size={10} /> Concedido
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={handleRequestHistory}
+                                            disabled={historyRequestSent || requestingHistory}
+                                            className={`px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all shrink-0 border flex items-center gap-1 ${
+                                                historyRequestSent
+                                                    ? 'bg-neutral-800 border-neutral-700 text-neutral-500 cursor-not-allowed'
+                                                    : 'bg-gym-primary hover:bg-yellow-400 text-black border-transparent shadow-[0_0_10px_rgba(229,255,0,0.1)] active:scale-95'
+                                            }`}
+                                        >
+                                            {requestingHistory ? (
+                                                <Loader2 className="animate-spin" size={10} />
+                                            ) : historyRequestSent ? (
+                                                'Solicitado ⏳'
+                                            ) : (
+                                                'Solicitar 📈'
+                                            )}
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Rutinas Row */}
+                                <div className="flex items-center justify-between gap-3 bg-black/20 p-3 rounded-2xl border border-white/5">
+                                    <div className="flex items-center gap-2.5 min-w-0">
+                                        <div className="w-8 h-8 rounded-lg bg-neutral-950 flex items-center justify-center shrink-0">
+                                            <Swords size={16} className="text-yellow-500" />
+                                        </div>
+                                        <div className="text-left min-w-0">
+                                            <p className="text-[10px] font-black text-white uppercase tracking-wide truncate">Rutinas Arsenal</p>
+                                            <p className="text-[8px] font-bold text-neutral-500 uppercase tracking-widest truncate">
+                                                👁️ {publicRoutinesCount} Públicas
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        onClick={handleRequestRoutines}
+                                        disabled={routinesRequestSent || requestingRoutines}
+                                        className={`px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all shrink-0 border flex items-center gap-1 ${
+                                            routinesRequestSent
+                                                ? 'bg-neutral-800 border-neutral-700 text-neutral-500 cursor-not-allowed'
+                                                : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/20 active:scale-95'
+                                        }`}
+                                    >
+                                        {requestingRoutines ? (
+                                            <Loader2 className="animate-spin" size={10} />
+                                        ) : routinesRequestSent ? (
+                                            'Solicitado ⏳'
+                                        ) : (
+                                            'Solicitar 📥'
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
