@@ -23,55 +23,92 @@ interface RoutineCardProps {
     onDelete: (id: string, name: string) => void;
     onEdit: (routine: any) => void;
     onShare: (id: string, name: string) => void;
+    multiSelectMode?: boolean;
+    isSelected?: boolean;
+    onToggleSelect?: (id: string) => void;
 }
 
-const RoutineCard = ({ routine, onDelete, onEdit, onShare }: RoutineCardProps) => {
+const RoutineCard = ({ 
+    routine, 
+    onDelete, 
+    onEdit, 
+    onShare,
+    multiSelectMode = false,
+    isSelected = false,
+    onToggleSelect
+}: RoutineCardProps) => {
     return (
         <div 
-            className="group relative bg-neutral-900 border border-neutral-800 hover:border-neutral-700 rounded-2xl p-4 md:p-8 pt-16 md:pt-16 transition-all hover:bg-neutral-800/50 flex flex-col justify-between min-h-[160px] md:min-h-[280px] select-none"
+            onClick={() => {
+                if (multiSelectMode && onToggleSelect) {
+                    onToggleSelect(routine.id);
+                } else {
+                    onEdit(routine);
+                }
+            }}
+            className={`group relative bg-neutral-900 border rounded-2xl p-4 md:p-8 pt-16 md:pt-16 transition-all hover:bg-neutral-800/55 flex flex-col justify-between min-h-[160px] md:min-h-[280px] select-none cursor-pointer ${
+                isSelected 
+                    ? 'border-gym-primary shadow-lg shadow-gym-primary/10 bg-gym-primary/5 scale-[1.01]' 
+                    : 'border-neutral-800 hover:border-neutral-700'
+            }`}
         >
             <div className="absolute top-2 right-2 md:top-0 md:right-0 md:p-8 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
                 <Swords size={40} className="md:w-[120px] md:h-[120px]" />
             </div>
 
-            {/* Actions overlay container - TOP CORNERS (Completely isolated) */}
-            {/* Top-Left: Share Button */}
-            <div className="absolute top-3 left-3 z-30">
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        onShare(routine.id, routine.name);
-                    }}
-                    className="w-10 h-10 flex items-center justify-center rounded-xl bg-gym-primary/10 text-gym-primary hover:bg-gym-primary hover:text-black transition-all border border-gym-primary/20 shadow-md active:scale-95 cursor-pointer"
-                    title="Compartir Rutina"
-                >
-                    <Share2 size={16} strokeWidth={2.5} />
-                </button>
-            </div>
+            {/* Actions overlay container - TOP CORNERS */}
+            {multiSelectMode ? (
+                // Multi-select mode: Checkbox in Top-Left
+                <div className="absolute top-3 left-3 z-30">
+                    <div className={`w-9 h-9 rounded-xl border-2 flex items-center justify-center transition-all ${
+                        isSelected 
+                            ? 'bg-gym-primary border-transparent text-black scale-110 shadow-lg shadow-gym-primary/20' 
+                            : 'border-neutral-700 bg-neutral-950/70'
+                    }`}>
+                        {isSelected && <Check size={18} strokeWidth={3.5} />}
+                    </div>
+                </div>
+            ) : (
+                // Normal mode: Share and Delete buttons
+                <>
+                    {/* Top-Left: Share Button */}
+                    <div className="absolute top-3 left-3 z-30">
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                onShare(routine.id, routine.name);
+                            }}
+                            className="w-10 h-10 flex items-center justify-center rounded-xl bg-gym-primary/10 text-gym-primary hover:bg-gym-primary hover:text-black transition-all border border-gym-primary/20 shadow-md active:scale-95 cursor-pointer"
+                            title="Compartir Rutina"
+                        >
+                            <Share2 size={16} strokeWidth={2.5} />
+                        </button>
+                    </div>
 
-            {/* Top-Right: Delete Button */}
-            <div className="absolute top-3 right-3 z-30">
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        onDelete(routine.id, routine.name);
-                    }}
-                    className="w-10 h-10 flex items-center justify-center rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all border border-red-500/20 shadow-md active:scale-95 cursor-pointer"
-                    title="Eliminar Rutina"
-                >
-                    <Trash2 size={16} />
-                </button>
-            </div>
+                    {/* Top-Right: Delete Button */}
+                    <div className="absolute top-3 right-3 z-30">
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                onDelete(routine.id, routine.name);
+                            }}
+                            className="w-10 h-10 flex items-center justify-center rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all border border-red-500/20 shadow-md active:scale-95 cursor-pointer"
+                            title="Eliminar Rutina"
+                        >
+                            <Trash2 size={16} />
+                        </button>
+                    </div>
+                </>
+            )}
 
             {/* Clickable Card Body & Edit Trigger */}
-            <div 
-                onClick={() => onEdit(routine)}
-                className="relative z-10 flex-1 flex flex-col justify-between cursor-pointer"
-            >
+            <div className="relative z-10 flex-1 flex flex-col justify-between">
                 <div className="mt-2">
-                    <h3 className="font-black text-lg md:text-3xl text-white mb-1 md:mb-2 italic uppercase leading-none truncate group-hover:text-gym-primary transition-colors">{routine.name}</h3>
+                    <h3 className={`font-black text-lg md:text-3xl mb-1 md:mb-2 italic uppercase leading-none truncate transition-colors ${
+                        isSelected ? 'text-gym-primary' : 'text-white group-hover:text-gym-primary'
+                    }`}>{routine.name}</h3>
                     <div className="flex flex-col md:flex-row md:items-center gap-1.5 md:gap-2 mt-2 md:mt-4">
                         <span className="w-fit px-2 py-0.5 bg-neutral-800 rounded-md text-[9px] md:text-xs font-bold text-neutral-400 border border-neutral-700">
                             {new Date(routine.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
@@ -83,8 +120,12 @@ const RoutineCard = ({ routine, onDelete, onEdit, onShare }: RoutineCardProps) =
                 </div>
 
                 {/* Bottom Premium Edit Button */}
-                <div className="w-full mt-6 bg-white/5 group-hover:bg-gym-primary group-hover:text-black text-white px-4 py-2.5 md:py-3.5 rounded-xl font-bold uppercase tracking-wide transition-colors flex items-center justify-between text-[10px] md:text-sm border border-white/10 group-hover:border-transparent">
-                    <span>Editar Local</span>
+                <div className={`w-full mt-6 px-4 py-2.5 md:py-3.5 rounded-xl font-bold uppercase tracking-wide transition-colors flex items-center justify-between text-[10px] md:text-sm border ${
+                    multiSelectMode 
+                        ? 'bg-neutral-800/30 text-neutral-500 border-neutral-800/50'
+                        : 'bg-white/5 group-hover:bg-gym-primary group-hover:text-black text-white border-white/10 group-hover:border-transparent'
+                }`}>
+                    <span>{multiSelectMode ? (isSelected ? 'Seleccionada' : 'Seleccionar') : 'Editar Local'}</span>
                     <ChevronRight size={16} className="animate-pulse" />
                 </div>
             </div>
@@ -131,6 +172,10 @@ export const MyArsenal = () => {
     const [sharingRoutineId, setSharingRoutineId] = useState<string | null>(null);
     const [sharingRoutineName, setSharingRoutineName] = useState<string>('');
     const [showShareModal, setShowShareModal] = useState(false);
+
+    // Multi-Selection and Bulk Delete states
+    const [multiSelectMode, setMultiSelectMode] = useState(false);
+    const [selectedRoutineIds, setSelectedRoutineIds] = useState<Set<string>>(new Set());
 
 
 
@@ -435,6 +480,43 @@ export const MyArsenal = () => {
         initialize(); // Refresh routines
     };
 
+    const toggleRoutineSelection = (id: string) => {
+        setSelectedRoutineIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) {
+                next.delete(id);
+            } else {
+                next.add(id);
+            }
+            return next;
+        });
+    };
+
+    const handleDeleteSelectedRoutines = async () => {
+        if (selectedRoutineIds.size === 0) return;
+
+        const count = selectedRoutineIds.size;
+        if (!confirm(`¿Eliminar las ${count} rutinas seleccionadas permanentemente?`)) return;
+
+        setLoading(true);
+        try {
+            const idsToDelete = Array.from(selectedRoutineIds);
+            
+            // Delete all selected routines in parallel
+            await Promise.all(idsToDelete.map(id => workoutService.deleteRoutine(id)));
+
+            alert(`¡Se eliminaron ${count} rutinas exitosamente!`);
+            setSelectedRoutineIds(new Set());
+            setMultiSelectMode(false);
+            await initialize(); // Refresh
+        } catch (err) {
+            console.error("Error bulk deleting routines:", err);
+            alert("Error al eliminar algunas rutinas.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const [globalInventory, setGlobalInventory] = useState<Equipment[]>([]);
 
     // --- Merge Real Inventory with Global & Seeds ---
@@ -699,8 +781,8 @@ export const MyArsenal = () => {
         return (
             <div className="min-h-screen bg-black text-white p-4 md:p-12 pb-24 font-sans selection:bg-gym-primary selection:text-black">
                 <div className="max-w-7xl mx-auto">
-                    {/* Header - Compact */}
-                    <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6 md:mb-12 border-b border-neutral-900 pb-6">
+                    {/* Header - Compact with Bulk Selection Manager */}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 md:mb-12 border-b border-neutral-900 pb-6">
                         <div className="flex items-center gap-3">
                             <Link to="/" className="w-8 h-8 md:w-12 md:h-12 flex items-center justify-center bg-neutral-900 rounded-full hover:bg-neutral-800 hover:text-gym-primary transition-all border border-neutral-800 shrink-0">
                                 <ArrowLeft size={16} className="md:w-6 md:h-6" />
@@ -712,43 +794,80 @@ export const MyArsenal = () => {
                                 </p>
                             </div>
                         </div>
+
+                        {/* Bulk/Multi Selection Controls */}
+                        {routines.length > 0 && (
+                            <div className="flex items-center gap-3 self-end sm:self-auto">
+                                {multiSelectMode ? (
+                                    <>
+                                        <button
+                                            onClick={handleDeleteSelectedRoutines}
+                                            disabled={selectedRoutineIds.size === 0}
+                                            className="px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs bg-red-650 hover:bg-red-500 text-white flex items-center gap-1.5 transition-all shadow-lg shadow-red-950/20 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 border border-red-600/30"
+                                        >
+                                            <Trash2 size={14} />
+                                            Eliminar ({selectedRoutineIds.size})
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setMultiSelectMode(false);
+                                                setSelectedRoutineIds(new Set());
+                                            }}
+                                            className="px-5 py-2.5 rounded-xl font-bold uppercase tracking-wider text-xs bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white border border-neutral-700 transition-all active:scale-95"
+                                        >
+                                            Cancelar
+                                        </button>
+                                    </>
+                                ) : (
+                                    <button
+                                        onClick={() => setMultiSelectMode(true)}
+                                        className="px-5 py-2.5 rounded-xl font-bold uppercase tracking-wider text-xs bg-neutral-900 hover:bg-neutral-800 text-gym-primary hover:text-yellow-400 border border-neutral-800 hover:border-gym-primary/30 transition-all flex items-center gap-1.5 active:scale-95"
+                                    >
+                                        <Check size={14} strokeWidth={3} />
+                                        Seleccionar Varias
+                                    </button>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
                         {/* CREATE / IMPORT CARD */}
-                        {!routeGymId ? (
-                            // GLOBAL: Create New Master
-                            <button
-                                onClick={handleCreateNew}
-                                className="bg-neutral-900 border border-neutral-800 hover:border-gym-primary/50 hover:bg-neutral-800 p-6 rounded-2xl flex flex-col items-center justify-center gap-4 group transition-all h-[200px]"
-                            >
-                                <div className="w-16 h-16 rounded-full bg-gym-primary/10 flex items-center justify-center group-hover:bg-gym-primary group-hover:text-black transition-colors text-gym-primary">
-                                    <Plus size={32} />
-                                </div>
-                                <span className="font-black italic uppercase tracking-wider text-neutral-400 group-hover:text-white">Nueva Rutina Global</span>
-                            </button>
-                        ) : (
-                            // GYM: Create OR Import
-                            <div className="flex gap-2 h-[200px]">
+                        {!multiSelectMode && (
+                            !routeGymId ? (
+                                // GLOBAL: Create New Master
                                 <button
                                     onClick={handleCreateNew}
-                                    className="flex-1 bg-neutral-900 border border-neutral-800 hover:border-gym-primary/50 hover:bg-neutral-800 p-4 rounded-2xl flex flex-col items-center justify-center gap-2 group transition-all"
+                                    className="bg-neutral-900 border border-neutral-800 hover:border-gym-primary/50 hover:bg-neutral-800 p-6 rounded-2xl flex flex-col items-center justify-center gap-4 group transition-all h-[200px]"
                                 >
-                                    <div className="w-12 h-12 rounded-full bg-gym-primary/10 flex items-center justify-center group-hover:bg-gym-primary group-hover:text-black transition-colors text-gym-primary">
-                                        <Plus size={24} />
+                                    <div className="w-16 h-16 rounded-full bg-gym-primary/10 flex items-center justify-center group-hover:bg-gym-primary group-hover:text-black transition-colors text-gym-primary">
+                                        <Plus size={32} />
                                     </div>
-                                    <span className="font-bold text-xs uppercase text-neutral-400 group-hover:text-white">Crear</span>
+                                    <span className="font-black italic uppercase tracking-wider text-neutral-400 group-hover:text-white">Nueva Rutina Global</span>
                                 </button>
-                                <button
-                                    onClick={() => setImportingMode(true)}
-                                    className="flex-1 bg-neutral-900 border border-neutral-800 hover:border-blue-500/50 hover:bg-neutral-800 p-4 rounded-2xl flex flex-col items-center justify-center gap-2 group transition-all"
-                                >
-                                    <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center group-hover:bg-blue-500 group-hover:text-black transition-colors text-blue-500">
-                                        <Dumbbell size={24} />
-                                    </div>
-                                    <span className="font-bold text-xs uppercase text-neutral-400 group-hover:text-white">Importar</span>
-                                </button>
-                            </div>
+                            ) : (
+                                // GYM: Create OR Import
+                                <div className="flex gap-2 h-[200px]">
+                                    <button
+                                        onClick={handleCreateNew}
+                                        className="flex-1 bg-neutral-900 border border-neutral-800 hover:border-gym-primary/50 hover:bg-neutral-800 p-4 rounded-2xl flex flex-col items-center justify-center gap-2 group transition-all"
+                                    >
+                                        <div className="w-12 h-12 rounded-full bg-gym-primary/10 flex items-center justify-center group-hover:bg-gym-primary group-hover:text-black transition-colors text-gym-primary">
+                                            <Plus size={24} />
+                                        </div>
+                                        <span className="font-bold text-xs uppercase text-neutral-400 group-hover:text-white">Crear</span>
+                                    </button>
+                                    <button
+                                        onClick={() => setImportingMode(true)}
+                                        className="flex-1 bg-neutral-900 border border-neutral-800 hover:border-blue-500/50 hover:bg-neutral-800 p-4 rounded-2xl flex flex-col items-center justify-center gap-2 group transition-all"
+                                    >
+                                        <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center group-hover:bg-blue-500 group-hover:text-black transition-colors text-blue-500">
+                                            <Dumbbell size={24} />
+                                        </div>
+                                        <span className="font-bold text-xs uppercase text-neutral-400 group-hover:text-white">Importar</span>
+                                    </button>
+                                </div>
+                            )
                         )}
 
 
@@ -766,6 +885,9 @@ export const MyArsenal = () => {
                                         setSharingRoutineName(name);
                                         setShowShareModal(true);
                                     }}
+                                    multiSelectMode={multiSelectMode}
+                                    isSelected={selectedRoutineIds.has(routine.id)}
+                                    onToggleSelect={toggleRoutineSelection}
                                 />
                             ))}
 
@@ -848,6 +970,20 @@ export const MyArsenal = () => {
                                 </div>
                             </div>
                         </div>
+                    )}
+
+                    {/* ROUTINE SHARING MODAL (Rendered directly in ROUTINES view branch) */}
+                    {showShareModal && sharingRoutineId && (
+                        <ShareRoutineModal
+                            userId={user.id}
+                            routineId={sharingRoutineId}
+                            routineName={sharingRoutineName}
+                            onClose={() => {
+                                setShowShareModal(false);
+                                setSharingRoutineId(null);
+                                setSharingRoutineName('');
+                            }}
+                        />
                     )}
                 </div>
             </div>
