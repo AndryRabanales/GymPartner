@@ -809,6 +809,46 @@ class SocialService {
             return false;
         }
     }
+
+    async getHistorySharedWithProfiles(userId: string): Promise<any[]> {
+        try {
+            const { data: shares, error: sharesError } = await supabase
+                .from('history_shares')
+                .select('shared_with')
+                .eq('shared_by', userId);
+            
+            if (sharesError) throw sharesError;
+            if (!shares || shares.length === 0) return [];
+            
+            const sharedWithIds = shares.map(s => s.shared_with);
+            
+            const { data: profiles, error: profilesError } = await supabase
+                .from('profiles')
+                .select('id, username, avatar_url')
+                .in('id', sharedWithIds);
+                
+            if (profilesError) throw profilesError;
+            return profiles || [];
+        } catch (err) {
+            console.error("Error getting history shares profiles:", err);
+            return [];
+        }
+    }
+
+    async revokeHistoryAccess(sharedBy: string, sharedWith: string): Promise<boolean> {
+        try {
+            const { error } = await supabase
+                .from('history_shares')
+                .delete()
+                .eq('shared_by', sharedBy)
+                .eq('shared_with', sharedWith);
+            if (error) throw error;
+            return true;
+        } catch (err) {
+            console.error("Error revoking history access:", err);
+            return false;
+        }
+    }
 }
 
 export const socialService = new SocialService();

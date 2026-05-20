@@ -4,6 +4,7 @@ import { userService } from '../../services/UserService';
 import type { User } from '@supabase/supabase-js';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { socialService } from '../../services/SocialService';
 
 interface EditProfileModalProps {
     user: User;
@@ -41,6 +42,9 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     const [routines, setRoutines] = useState<any[]>([]);
     const [selectedRoutineId, setSelectedRoutineId] = useState<string | null>(currentFeaturedRoutineId || null);
     const [isHistoryPublic, setIsHistoryPublic] = useState<boolean>(currentSettings?.is_history_public ?? false);
+    const [sharedHistoryProfiles, setSharedHistoryProfiles] = useState<any[]>([]);
+    const [loadingSharedProfiles, setLoadingSharedProfiles] = useState(false);
+    const [revokingProfileId, setRevokingProfileId] = useState<string | null>(null);
 
     const [loading, setLoading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -76,6 +80,29 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
         };
         fetchRoutines();
     }, [user.id]);
+
+    useEffect(() => {
+        if (!isHistoryPublic) {
+            const fetchSharedProfiles = async () => {
+                setLoadingSharedProfiles(true);
+                const profiles = await socialService.getHistorySharedWithProfiles(user.id);
+                setSharedHistoryProfiles(profiles);
+                setLoadingSharedProfiles(false);
+            };
+            fetchSharedProfiles();
+        }
+    }, [isHistoryPublic, user.id]);
+
+    const handleRevokeAccess = async (sharedWithId: string) => {
+        setRevokingProfileId(sharedWithId);
+        const success = await socialService.revokeHistoryAccess(user.id, sharedWithId);
+        if (success) {
+            setSharedHistoryProfiles(prev => prev.filter(p => p.id !== sharedWithId));
+        } else {
+            alert('Error al remover el acceso.');
+        }
+        setRevokingProfileId(null);
+    };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -311,6 +338,45 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                                 </span>
                             </button>
                         </div>
+                        
+                        {!isHistoryPublic && (
+                            <div className="mt-4 bg-neutral-900/50 rounded-2xl border border-neutral-800 p-4">
+                                <h4 className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                    <Users size={14} className="text-gym-primary" /> Aliados Autorizados
+                                </h4>
+                                {loadingSharedProfiles ? (
+                                    <div className="flex justify-center py-4">
+                                        <Loader className="animate-spin text-gym-primary" size={20} />
+                                    </div>
+                                ) : sharedHistoryProfiles.length === 0 ? (
+                                    <p className="text-[10px] text-neutral-500 text-center py-2">
+                                        Nadie tiene acceso a tu historial por ahora.
+                                    </p>
+                                ) : (
+                                    <div className="space-y-2 max-h-40 overflow-y-auto custom-scrollbar pr-2">
+                                        {sharedHistoryProfiles.map(profile => (
+                                            <div key={profile.id} className="flex items-center justify-between bg-neutral-950/50 p-2.5 rounded-xl border border-neutral-800/50">
+                                                <div className="flex items-center gap-2.5 min-w-0">
+                                                    <img 
+                                                        src={profile.avatar_url || `https://ui-avatars.com/api/?name=${profile.username}&background=random`} 
+                                                        alt={profile.username} 
+                                                        className="w-8 h-8 rounded-full border border-neutral-700 object-cover shrink-0"
+                                                    />
+                                                    <span className="font-bold text-white text-xs truncate">{profile.username}</span>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleRevokeAccess(profile.id)}
+                                                    disabled={revokingProfileId === profile.id}
+                                                    className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border border-red-500/30 flex items-center gap-1"
+                                                >
+                                                    {revokingProfileId === profile.id ? <Loader size={12} className="animate-spin" /> : 'Remover'}
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     {/* BATTLE DECK SELECTOR (With Privacy Toggle) */}
