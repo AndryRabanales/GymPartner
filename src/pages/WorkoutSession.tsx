@@ -17,7 +17,7 @@ import { normalizeText, getMuscleGroup } from '../utils/inventoryUtils';
 
 // Interface NumpadTarget removed
 // BattleTimer removed
-import { Loader2, ArrowLeft, Image as ImageIcon, MapPin, Search, Plus, Save, Activity, Layers, Tag, Battery, MapIcon, Check, Settings as SettingsIcon } from 'lucide-react';
+import { Loader2, ArrowLeft, Image as ImageIcon, MapPin, Search, Plus, Save, Activity, Layers, Tag, Battery, MapIcon, Check, Settings as SettingsIcon, Swords, Trash2, X, RotateCcw, Lock, Play, Loader } from 'lucide-react';
 import { getCurrentPosition } from '../utils/geolocationUtils';
 import type { GymPlace, Database } from '../types/database';
 import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
