@@ -53,7 +53,7 @@ export const LocationAccessModal: React.FC<LocationAccessModalProps> = ({
                                 <p className="text-neutral-400 text-sm">
                                     El sistema GPS confirma que <strong>NO estás en el gimnasio.</strong>
                                     <br />
-                                    Debes estar dentro del rango para iniciar.
+                                    Acércate más a la zona para interactuar.
                                 </p>
                                 <div className="bg-neutral-950/50 p-3 rounded-xl border border-white/5 flex flex-col gap-1">
                                     <span className="text-white font-bold text-sm flex items-center justify-center gap-2">
@@ -84,19 +84,21 @@ export const LocationAccessModal: React.FC<LocationAccessModalProps> = ({
                         {errorType === 'GPS_ERROR' && (
                             <p className="text-neutral-400 text-sm">
                                 📡 <strong>Fallo de Satélite:</strong><br />
-                                No pudimos obtener tu ubicación. Verifica que el GPS esté activo y tengas permisos permitidos.
+                                No pudimos obtener tu ubicación exacta. Por favor, activa el GPS o camina a una zona descubierta para jugar.
                             </p>
                         )}
                     </div>
 
-                    {/* Action Button */}
-                    <button
-                        onClick={onClose}
-                        className="w-full bg-red-600 hover:bg-red-500 text-white font-black py-4 rounded-xl shadow-lg shadow-red-900/20 transition-all uppercase tracking-widest text-sm flex items-center justify-center gap-2 mt-2"
-                    >
-                        <Navigation size={18} />
-                        <span>ENTENDIDO</span>
-                    </button>
+                    {/* Action Buttons */}
+                    <div className="flex flex-col gap-2 w-full mt-4">
+                        <button
+                            onClick={onClose}
+                            className="w-full bg-red-600 hover:bg-red-500 text-white font-black py-4 rounded-xl shadow-lg shadow-red-900/20 transition-all uppercase tracking-widest text-sm flex items-center justify-center gap-2"
+                        >
+                            <Navigation size={18} />
+                            <span>ENTENDIDO</span>
+                        </button>
+                    </div>
 
                 </div>
 

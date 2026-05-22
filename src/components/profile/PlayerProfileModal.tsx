@@ -705,28 +705,56 @@ export const PlayerProfileModal = ({ player, onClose, onFollowToggle }: PlayerPr
                                                     const date = new Date(session.started_at);
                                                     const formattedDate = date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
                                                     return (
-                                                        <div key={session.id} className="bg-neutral-800/80 border border-white/5 p-4 rounded-xl flex flex-col gap-2 relative overflow-hidden">
+                                                        <div 
+                                                            key={session.id} 
+                                                            onClick={() => {
+                                                                onClose();
+                                                                navigate(`/workout-session/${session.id}`);
+                                                            }}
+                                                            className="bg-neutral-800/80 hover:bg-neutral-700/80 border border-white/5 p-4 rounded-xl flex flex-col gap-2 relative overflow-hidden cursor-pointer transition-colors group"
+                                                        >
                                                             <div className="flex justify-between items-start gap-2">
-                                                                <span className="text-[10px] text-neutral-400 font-bold font-mono">{formattedDate}</span>
+                                                                <span className="text-[10px] text-neutral-400 font-bold font-mono group-hover:text-white transition-colors">{formattedDate}</span>
                                                                 <div className="flex items-center gap-1.5 text-[10px] text-neutral-400 font-bold">
                                                                     <Clock size={10} className="text-blue-500" />
-                                                                    <span>{session.duration_minutes} min</span>
+                                                                    <span className="group-hover:text-white transition-colors">{session.duration_minutes} min</span>
                                                                 </div>
                                                             </div>
-                                                            <h4 className="font-bold text-white text-sm truncate uppercase tracking-wide">📍 {session.gym_name}</h4>
-                                                            {session.muscles_trained.length > 0 && (
-                                                                <div className="flex flex-wrap gap-1 mt-1">
-                                                                    {session.muscles_trained.map((muscle: string) => (
-                                                                        <span key={muscle} className="bg-gym-primary/10 border border-gym-primary/20 text-gym-primary text-[8px] font-black uppercase px-2 py-0.5 rounded">
-                                                                            💪 {muscle}
-                                                                        </span>
-                                                                    ))}
+                                                            <div className="flex justify-between items-center mt-1">
+                                                                <h4 className="font-bold text-white text-sm truncate uppercase tracking-wide group-hover:text-gym-primary transition-colors">
+                                                                    {session.gym_name && session.gym_name !== 'Gimnasio Desconocido' 
+                                                                        ? `📍 ${session.gym_name}` 
+                                                                        : '🏋️ Sesión de Entrenamiento'}
+                                                                </h4>
+                                                                <ExternalLink size={14} className="text-neutral-500 group-hover:text-gym-primary transition-colors" />
+                                                            </div>
+                                                            
+                                                            {(session.muscles_trained.length > 0 || session.total_volume > 0) && (
+                                                                <div className="mt-2 space-y-2">
+                                                                    {session.muscles_trained.length > 0 && (
+                                                                        <div className="flex flex-wrap gap-1">
+                                                                            {session.muscles_trained.map((muscle: string) => (
+                                                                                <span key={muscle} className="bg-gym-primary/10 border border-gym-primary/20 text-gym-primary text-[8px] font-black uppercase px-2 py-0.5 rounded">
+                                                                                    {muscle}
+                                                                                </span>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                    {session.total_volume > 0 && (
+                                                                        <div className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                                                                            <Dumbbell size={10} className="text-gym-primary" />
+                                                                            Volumen: <span className="text-white font-black">{(session.total_volume / 1000).toFixed(1)}k kg</span>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             )}
-                                                            {session.total_volume > 0 && (
-                                                                <div className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider mt-1 flex items-center gap-1">
-                                                                    <Dumbbell size={10} className="text-gym-primary" />
-                                                                    Volumen: <span className="text-white font-black">{(session.total_volume / 1000).toFixed(1)}k kg</span>
+                                                            
+                                                            {/* Empty state when no data exists but the session was logged */}
+                                                            {session.muscles_trained.length === 0 && session.total_volume === 0 && (
+                                                                <div className="mt-2">
+                                                                    <p className="text-[10px] text-neutral-500 font-bold italic">
+                                                                        Clic para ver detalles de la misión...
+                                                                    </p>
                                                                 </div>
                                                             )}
                                                         </div>

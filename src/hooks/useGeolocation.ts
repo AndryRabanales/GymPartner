@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { Geolocation, PositionOptions } from '@capacitor/geolocation';
+import { Capacitor } from '@capacitor/core';
 
 export interface Location {
     lat: number;
@@ -29,74 +31,95 @@ export const useGeolocation = (enableHighAccuracy = true) => {
     });
 
     useEffect(() => {
-        if (!navigator.geolocation) {
-            setState(prev => ({ ...prev, error: 'Geolocation not supported', loading: false }));
-            return;
-        }
+        const startWatching = async () => {
+            if (Capacitor.isNativePlatform()) {
+                // NATIVE CAPACITOR IMPLEMENTATION (Using highly accurate device APIs)
+                try {
+                    const permission = await Geolocation.checkPermissions();
+                    if (permission.location !== 'granted') {
+                        const request = await Geolocation.requestPermissions();
+                        if (request.location !== 'granted') {
+                            setState(prev => ({ ...prev, error: 'Permiso de ubicación denegado.', loading: false }));
+                            return;
+                        }
+                    }
 
-        let watchId: number | null = null;
-
-        const successHandler = (position: GeolocationPosition) => {
-            const newLocation: Location = {
-                lat: position.coords.latitude,
-                lng: position.coords.longitude,
-                accuracy: position.coords.accuracy,
-                heading: position.coords.heading,
-                speed: position.coords.speed,
-                timestamp: position.timestamp
-            };
-            
-            setState({
-                location: newLocation,
-                error: null,
-                loading: false,
-            });
-
-            // Persist for future sessions (Remembering the user's choice/location)
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(newLocation));
-        };
-
-        const errorHandler = (error: GeolocationPositionError) => {
-            console.warn(`[GEOLOCATION] Error: ${error.message}`);
-            setState(prev => {
-                // Keep the cached/last known location on timeout
-                if (error.code === error.TIMEOUT && prev.location) {
-                    return { ...prev, loading: false };
+                    const capWatchId = await Geolocation.watchPosition(
+                        { enableHighAccuracy: enableHighAccuracy, timeout: 15000, maximumAge: 0 },
+                        (position, err) => {
+                            if (err) {
+                                console.warn(`[NATIVE GEOLOCATION] Error: ${err.message}`);
+                                errorHandler(err as any);
+                                return;
+                            }
+                            if (position) {
+                                // Simulate GeolocationPosition shape for our handler
+                                const mockPos: any = {
+                                    coords: {
+                                        latitude: position.coords.latitude,
+                                        longitude: position.coords.longitude,
+                                        accuracy: position.coords.accuracy,
+                                        heading: position.coords.heading,
+                                        speed: position.coords.speed
+                                    },
+                                    timestamp: position.timestamp
+                                };
+                                successHandler(mockPos);
+                            }
+                        }
+                    );
+                    
+                    // Cleanup function specifically for Capacitor
+                    return () => {
+                        Geolocation.clearWatch({ id: capWatchId });
+                    };
+                } catch (e: any) {
+                    errorHandler(e);
+                    return () => {};
                 }
-                return { ...prev, error: error.message, loading: false };
-            });
-        };
-
-        const options = {
-            enableHighAccuracy,
-            timeout: 10000, // Increased to 10s to ensure reliable locks indoors and on slower devices
-            maximumAge: 30000, // Accept cached location up to 30s old to speed up loading
-        };
-
-        // Start watching position
-        if ('permissions' in navigator) {
-            navigator.permissions.query({ name: 'geolocation' as any }).then((result) => {
-                if (result.state === 'denied') {
-                    setState(prev => ({ ...prev, error: 'Permiso de ubicación denegado.', loading: false }));
-                    return;
+            } else {
+                // WEB BROWSER FALLBACK IMPLEMENTATION
+                if (!navigator.geolocation) {
+                    setState(prev => ({ ...prev, error: 'Geolocation not supported', loading: false }));
+                    return () => {};
                 }
-                
-                // If granted or prompt, start watching
-                watchId = navigator.geolocation.watchPosition(successHandler, errorHandler, options);
-            }).catch(() => {
-                // If query fails, fall back to direct watch
-                watchId = navigator.geolocation.watchPosition(successHandler, errorHandler, options);
-            });
-        } else {
-            // Fallback for older browsers
-            watchId = navigator.geolocation.watchPosition(successHandler, errorHandler, options);
-        }
+
+                const options = {
+                    enableHighAccuracy,
+                    timeout: 15000,
+                    maximumAge: 0,
+                };
+
+                if ('permissions' in navigator) {
+                    navigator.permissions.query({ name: 'geolocation' as any }).then((result) => {
+                        if (result.state === 'denied') {
+                            setState(prev => ({ ...prev, error: 'Permiso de ubicación denegado.', loading: false }));
+                            return;
+                        }
+                        watchId = navigator.geolocation.watchPosition(successHandler, errorHandler, options);
+                    }).catch(() => {
+                        watchId = navigator.geolocation.watchPosition(successHandler, errorHandler, options);
+                    });
+                } else {
+                    watchId = navigator.geolocation.watchPosition(successHandler, errorHandler, options);
+                }
+
+                return () => {
+                    if (watchId !== null) {
+                        navigator.geolocation.clearWatch(watchId);
+                    }
+                };
+            }
+        };
+
+        let cleanupFn = () => {};
+        startWatching().then(fn => {
+            if (fn) cleanupFn = fn;
+        });
 
         // Return proper React cleanup to clear active GPS watchers and prevent memory leaks
         return () => {
-            if (watchId !== null) {
-                navigator.geolocation.clearWatch(watchId);
-            }
+            cleanupFn();
         };
     }, [enableHighAccuracy]);
 

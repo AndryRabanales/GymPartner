@@ -168,10 +168,10 @@ export const GymMap = () => {
             return;
         }
 
-        // Distance Check: Enforce 0.1km maximum distance
+        // Distance Check: Enforce strict 0.25km (250m) maximum distance (Pokemon GO style)
         const distance = getDistance(userLocation.lat, userLocation.lng, selectedGym.lat, selectedGym.lng);
-        if (distance > 0.1) {
-            alert(`⛔ Estás a ${distance.toFixed(2)}km de distancia. Debes estar a un máximo de 0.10km para desbloquear este gimnasio.`);
+        if (distance > 0.25) {
+            alert(`⛔ Estás muy lejos para interactuar. Acércate más al gimnasio (Max 250m). Distancia actual: ${distance.toFixed(2)}km.`);
             return;
         }
 

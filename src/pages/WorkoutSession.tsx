@@ -316,9 +316,9 @@ export const WorkoutSession = () => {
     });
 
     const catalogItems = COMMON_EQUIPMENT_SEEDS.filter(seed => {
-        if (activeSection) {
+        if (activeMuscleFilter) {
             // @ts-expect-error - ignore typing
-            return getMuscleGroup({ name: seed.name, category: seed.category }, userSettings) === activeSection;
+            return getMuscleGroup({ name: seed.name, category: seed.category }, userSettings) === activeMuscleFilter;
         }
         return true;
     });
@@ -372,13 +372,17 @@ export const WorkoutSession = () => {
                 userService.ensurePersonalGym(userId),
             ]);
 
-            // ALWAYS DEFAULT TO PERSONAL INVENTORY FIRST (Avoid false gym detection)
-            const targetGymId = routeGymId === 'personal' ? personalGymId : (routeGymId || personalGymId);
+            // ALWAYS DEFAULT TO HOME BASE FIRST (Graceful degradation for GPS)
+            const homeBase = gyms.find(g => g.is_home_base)?.gym_id;
+            const targetGymId = routeGymId === 'personal' ? personalGymId : (routeGymId || homeBase || personalGymId);
 
             // Set initial name only if we have a specific route ID, otherwise empty (wait for GPS)
             if (routeGymId && routeGymId !== 'personal') {
                 const routeGym = gyms.find(g => g.gym_id === routeGymId);
                 if (routeGym) setDetectedGymName(routeGym.gym_name || '');
+            } else if (!routeGymId && homeBase) {
+                const homeGym = gyms.find(g => g.gym_id === homeBase);
+                if (homeGym) setDetectedGymName(homeGym.gym_name || '');
             } else {
                 setDetectedGymName(''); // Clean start
             }
@@ -429,7 +433,7 @@ export const WorkoutSession = () => {
                                 const dist = (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
                                 return { ...g, dist };
                             })
-                            .filter(g => g.dist <= 0.15) // 150m radius for better indoor coverage
+                            .filter(g => g.dist <= 3.0) // 3km radius for extremely bouncy indoor GPS
                             .sort((a, b) => a.dist - b.dist);
 
                         const nearestGym = gymsWithDistance[0];
@@ -1954,7 +1958,7 @@ export const WorkoutSession = () => {
                                             setSearchTerm('');
                                         }
                                     }}
-                                    activeSection={activeSection || 'CHEST'}
+                                    activeSection={activeMuscleFilter || 'CHEST'}
                                     catalogItems={catalogItems}
                                     onQuickAdd={(seed) => {
                                         // Quick Add Seed from Catalog
