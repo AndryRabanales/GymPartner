@@ -1,5 +1,6 @@
 // Updated for final deployment trigger
 
+import React, { useState, useEffect } from 'react';
 import { Shield, MapPin, Zap, Sparkles, Activity, X, History, Eye, EyeOff, Lock, Unlock, Swords, Loader2, CheckCircle2, Heart } from 'lucide-react';
 import { FadeInImage } from './FadeInImage';
 import { cloudinaryService } from '../../services/CloudinaryService';
