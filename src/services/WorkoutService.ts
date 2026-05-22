@@ -46,6 +46,56 @@ class WorkoutService {
             console.error('Error starting session:', error);
             return { error };
         }
+
+        // Notify allies that the session has started
+        try {
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('username, full_name')
+                .eq('id', userId)
+                .single();
+
+            const displayName = profile?.full_name || profile?.username || "Tu amigo";
+
+            let gymLabel = "un Gimnasio";
+            if (gymId) {
+                const { data: gym } = await supabase
+                    .from('gyms')
+                    .select('name')
+                    .eq('id', gymId)
+                    .maybeSingle();
+                if (gym?.name) {
+                    gymLabel = gym.name;
+                }
+            }
+
+            const { data: shares } = await supabase
+                .from('history_shares')
+                .select('shared_with')
+                .eq('shared_by', userId);
+
+            if (shares && shares.length > 0) {
+                const notificationsPayload = shares.map(share => ({
+                    user_id: share.shared_with,
+                    type: 'system',
+                    title: '🔴 EN VIVO - ENTRENANDO AHORA',
+                    message: `¡${displayName} comenzó a entrenar en ${gymLabel}!`,
+                    data: {
+                        sender_id: userId,
+                        sender_name: displayName,
+                        session_id: data.id,
+                        gym_name: gymLabel,
+                        status: 'started',
+                        started_at: data.started_at
+                    }
+                }));
+
+                await supabase.from('notifications').insert(notificationsPayload);
+            }
+        } catch (notifyErr) {
+            console.error('Error sending start live notification:', notifyErr);
+        }
+
         return { data };
     }
 
@@ -83,6 +133,94 @@ class WorkoutService {
             }
         } catch (e) {
             console.warn('Could not award G-Points for workout:', e);
+        }
+
+        // Notify allies that the session has finished
+        try {
+            const { data: session } = await supabase
+                .from('workout_sessions')
+                .select('user_id, gym_id, started_at')
+                .eq('id', sessionId)
+                .single();
+
+            if (session) {
+                const userId = session.user_id;
+
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('username, full_name')
+                    .eq('id', userId)
+                    .single();
+
+                const displayName = profile?.full_name || profile?.username || "Tu amigo";
+
+                let gymLabel = "un Gimnasio";
+                if (session.gym_id) {
+                    const { data: gym } = await supabase
+                        .from('gyms')
+                        .select('name')
+                        .eq('id', session.gym_id)
+                        .maybeSingle();
+                    if (gym?.name) {
+                        gymLabel = gym.name;
+                    }
+                }
+
+                const logs = await this.getSessionLogs(sessionId);
+                let totalVolume = 0;
+                const exercisesSet = new Set<string>();
+                const musclesSet = new Set<string>();
+
+                logs.forEach((log: any) => {
+                    const weight = log.weight_kg || 0;
+                    const reps = log.reps || 0;
+                    totalVolume += weight * reps;
+
+                    if (log.exercise?.name) {
+                        exercisesSet.add(log.exercise.name);
+                    }
+                    if (log.category_snapshot) {
+                        musclesSet.add(log.category_snapshot);
+                    } else if (log.exercise?.target_muscle_group) {
+                        musclesSet.add(log.exercise.target_muscle_group);
+                    }
+                });
+
+                const duration = Math.max(1, Math.round((new Date(now).getTime() - new Date(session.started_at).getTime()) / 60000));
+                const exercisesList = Array.from(exercisesSet);
+                const musclesList = Array.from(musclesSet);
+
+                const { data: shares } = await supabase
+                    .from('history_shares')
+                    .select('shared_with')
+                    .eq('shared_by', userId);
+
+                if (shares && shares.length > 0) {
+                    const notificationsPayload = shares.map(share => ({
+                        user_id: share.shared_with,
+                        type: 'system',
+                        title: '✅ ENTRENAMIENTO FINALIZADO',
+                        message: `¡${displayName} terminó su entrenamiento en ${gymLabel}! Duración: ${duration} min.`,
+                        data: {
+                            sender_id: userId,
+                            sender_name: displayName,
+                            session_id: sessionId,
+                            gym_name: gymLabel,
+                            status: 'finished',
+                            started_at: session.started_at,
+                            finished_at: now,
+                            duration: duration,
+                            volume: Math.round(totalVolume),
+                            exercises: exercisesList,
+                            muscles: musclesList
+                        }
+                    }));
+
+                    await supabase.from('notifications').insert(notificationsPayload);
+                }
+            }
+        } catch (notifyErr) {
+            console.error('Error sending finish live notification:', notifyErr);
         }
 
         return { success: true };

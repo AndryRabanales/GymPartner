@@ -10,6 +10,7 @@ import { useBottomNav } from '../../context/BottomNavContext';
 import { cloudinaryService } from '../../services/CloudinaryService';
 import { notificationService } from '../../services/NotificationService';
 import { supabase } from '../../lib/supabase';
+import { workoutService } from '../../services/WorkoutService';
 
 interface PlayerProfileModalProps {
     player: {
@@ -53,6 +54,113 @@ export const PlayerProfileModal = ({ player, onClose, onFollowToggle }: PlayerPr
     const [requestingHistory, setRequestingHistory] = useState(false);
     const [routinesRequestSent, setRoutinesRequestSent] = useState(false);
     const [requestingRoutines, setRequestingRoutines] = useState(false);
+
+    // Live Workout Tracking States
+    const [liveSession, setLiveSession] = useState<any | null>(null);
+    const [liveGymName, setLiveGymName] = useState<string>('');
+    const [liveDuration, setLiveDuration] = useState<string>('00:00');
+
+    // Fetch Live Training Status if has history access
+    useEffect(() => {
+        const checkLiveSession = async () => {
+            if (!hasHistoryAccess) {
+                setLiveSession(null);
+                setLiveGymName('');
+                return;
+            }
+            try {
+                const { data: activeSession } = await workoutService.getActiveSession(player.id);
+                if (activeSession) {
+                    setLiveSession(activeSession);
+                    if (activeSession.gym_id) {
+                        const { data: gym } = await supabase
+                            .from('gyms')
+                            .select('name')
+                            .eq('id', activeSession.gym_id)
+                            .maybeSingle();
+                        if (gym?.name) {
+                            setLiveGymName(gym.name);
+                        }
+                    }
+                } else {
+                    setLiveSession(null);
+                    setLiveGymName('');
+                }
+            } catch (err) {
+                console.error("Error checking live session in PlayerProfileModal:", err);
+            }
+        };
+
+        checkLiveSession();
+    }, [hasHistoryAccess, player.id]);
+
+    // Live Session Timer tick
+    useEffect(() => {
+        if (!liveSession?.started_at) return;
+
+        const tick = () => {
+            const start = new Date(liveSession.started_at).getTime();
+            const now = Date.now();
+            const diff = Math.max(0, now - start);
+            
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+            if (hours > 0) {
+                setLiveDuration(`${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+            } else {
+                setLiveDuration(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+            }
+        };
+
+        const interval = setInterval(tick, 1000);
+        tick();
+        return () => clearInterval(interval);
+    }, [liveSession]);
+
+    // Supabase Realtime channel for player session updates
+    useEffect(() => {
+        if (!hasHistoryAccess) return;
+
+        console.log("⚡ Subscribing to player workout session updates...", player.id);
+        const channel = supabase
+            .channel(`player-session-realtime:${player.id}`)
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'workout_sessions',
+                filter: `user_id=eq.${player.id}`
+            }, async (payload) => {
+                console.log("⚡ Player session real-time update in PlayerProfileModal:", payload);
+                try {
+                    const { data: activeSession } = await workoutService.getActiveSession(player.id);
+                    if (activeSession) {
+                        setLiveSession(activeSession);
+                        if (activeSession.gym_id) {
+                            const { data: gym } = await supabase
+                                .from('gyms')
+                                .select('name')
+                                .eq('id', activeSession.gym_id)
+                                .maybeSingle();
+                            if (gym?.name) {
+                                setLiveGymName(gym.name);
+                            }
+                        }
+                    } else {
+                        setLiveSession(null);
+                        setLiveGymName('');
+                    }
+                } catch (err) {
+                    console.error("Error updating live session in real-time:", err);
+                }
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [hasHistoryAccess, player.id]);
 
     // Hide BottomNav when modal opens, show when it closes
     useEffect(() => {
@@ -495,6 +603,31 @@ export const PlayerProfileModal = ({ player, onClose, onFollowToggle }: PlayerPr
                                 </div>
                             )}
                         </div>
+
+                        {/* Live Workout Banner */}
+                        {liveSession && (
+                            <div className="w-[90%] max-w-sm bg-red-950/40 border border-red-500/30 rounded-2xl p-4 mb-6 shadow-[0_0_25px_rgba(239,68,68,0.2)] animate-pulse flex flex-col items-center select-none relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/10 rounded-full blur-2xl pointer-events-none"></div>
+                                <div className="flex items-center gap-2 mb-2 relative z-10">
+                                    <span className="relative flex h-2.5 w-2.5">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                                    </span>
+                                    <span className="text-[10px] font-black text-red-400 uppercase tracking-[0.2em] italic">🔴 EN VIVO - ENTRENANDO AHORA</span>
+                                </div>
+                                <div className="space-y-1.5 text-center relative z-10 w-full">
+                                    {liveGymName && (
+                                        <p className="text-xs font-black text-white uppercase tracking-wider flex items-center justify-center gap-1">
+                                            <MapPin size={13} className="text-red-400 shrink-0" />
+                                            {liveGymName}
+                                        </p>
+                                    )}
+                                    <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest flex items-center justify-center gap-2">
+                                        ⏱️ DURACIÓN: <span className="text-red-400 font-mono text-sm font-black tracking-normal">{liveDuration}</span>
+                                    </p>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Social Stats Row */}
                         <div className="flex items-center justify-center gap-6 mb-8 w-full border-y border-white/5 py-4 bg-white/[0.02]">

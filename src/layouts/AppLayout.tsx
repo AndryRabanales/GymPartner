@@ -1,5 +1,5 @@
 import { MapPin, LogIn, LogOut } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { UploadModal } from '../components/social/UploadModal';
@@ -12,6 +12,8 @@ import { GPointsDisplay } from '../components/gamification/GPointsDisplay';
 import { ActiveWorkoutBubble } from '../components/workout/ActiveWorkoutBubble';
 import { useAutoCheckin } from '../hooks/useAutoCheckin';
 import { GlobalGPSGuard } from '../components/GlobalGPSGuard';
+import { supabase } from '../lib/supabase';
+import toast, { Toaster } from 'react-hot-toast';
 
 export const AppLayout = () => {
     useAutoCheckin();
@@ -20,6 +22,91 @@ export const AppLayout = () => {
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const location = useLocation();
+
+    // Subscribe to real-time live workout notifications
+    useEffect(() => {
+        if (!user) return;
+
+        console.log("🔔 Subscribing to real-time notifications for live workouts...");
+        const channel = supabase
+            .channel(`user-notifications:${user.id}`)
+            .on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'notifications',
+                filter: `user_id=eq.${user.id}`
+            }, (payload) => {
+                const newNotification = payload.new;
+                console.log("🔔 Real-time notification received:", newNotification);
+                
+                if (newNotification.type === 'system' && newNotification.title?.includes('EN VIVO')) {
+                    toast.custom((t) => (
+                        <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-neutral-950/95 backdrop-blur-2xl border border-red-500/40 shadow-[0_20px_50px_rgba(239,68,68,0.2)] rounded-3xl pointer-events-auto flex p-4`}>
+                            <div className="flex-1 w-0">
+                                <div className="flex items-center">
+                                    <div className="shrink-0">
+                                        <div className="w-10 h-10 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center text-red-500 animate-pulse font-black text-[9px] tracking-widest">
+                                            LIVE
+                                        </div>
+                                    </div>
+                                    <div className="ml-3 flex-1">
+                                        <p className="text-sm font-black text-white uppercase tracking-wider italic">
+                                            {newNotification.title}
+                                        </p>
+                                        <p className="mt-0.5 text-xs text-neutral-300 font-bold uppercase leading-normal">
+                                            {newNotification.message}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="ml-4 shrink-0 flex items-center">
+                                <button
+                                    onClick={() => toast.dismiss(t.id)}
+                                    className="border border-white/10 hover:bg-white/5 rounded-xl px-3 py-1.5 text-[9px] font-black text-neutral-400 hover:text-white transition-colors uppercase tracking-widest"
+                                >
+                                    Cerrar
+                                </button>
+                            </div>
+                        </div>
+                    ), { duration: 6000 });
+                } else if (newNotification.type === 'system' && newNotification.title?.includes('FINALIZADO')) {
+                    toast.custom((t) => (
+                        <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-neutral-950/95 backdrop-blur-2xl border border-green-500/40 shadow-[0_20px_50px_rgba(34,197,94,0.2)] rounded-3xl pointer-events-auto flex p-4`}>
+                            <div className="flex-1 w-0">
+                                <div className="flex items-center">
+                                    <div className="shrink-0">
+                                        <div className="w-10 h-10 rounded-full bg-green-500/20 border border-green-500/30 flex items-center justify-center text-green-500 font-black text-[9px] tracking-widest">
+                                            FIN
+                                        </div>
+                                    </div>
+                                    <div className="ml-3 flex-1">
+                                        <p className="text-sm font-black text-white uppercase tracking-wider italic">
+                                            {newNotification.title}
+                                        </p>
+                                        <p className="mt-0.5 text-xs text-neutral-300 font-bold uppercase leading-normal">
+                                            {newNotification.message}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="ml-4 shrink-0 flex items-center">
+                                <button
+                                    onClick={() => toast.dismiss(t.id)}
+                                    className="border border-white/10 hover:bg-white/5 rounded-xl px-3 py-1.5 text-[9px] font-black text-neutral-400 hover:text-white transition-colors uppercase tracking-widest"
+                                >
+                                    Cerrar
+                                </button>
+                            </div>
+                        </div>
+                    ), { duration: 6000 });
+                }
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [user]);
     
     // Pages where the global header should be hidden
     const isRadarPage = location.pathname === '/radar';
@@ -159,6 +246,7 @@ export const AppLayout = () => {
             {isUploadModalOpen && <UploadModal onClose={() => setIsUploadModalOpen(false)} onSuccess={() => setIsUploadModalOpen(false)} />}
             <ActiveWorkoutBubble />
             {shouldShowBottomNav && <BottomNav onUploadClick={() => setIsUploadModalOpen(true)} />}
+            <Toaster position="top-center" reverseOrder={false} />
 
         </div>
     );

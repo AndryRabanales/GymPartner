@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import { notificationService } from '../services/NotificationService';
 import type { Notification } from '../services/NotificationService';
 import { FadeInImage } from '../components/ui/FadeInImage';
-import { Zap, UserPlus, MapPin, Check, X, Bell, History, Swords, Loader, Loader2, Bookmark } from 'lucide-react';
+import { Zap, UserPlus, MapPin, Check, X, Bell, History, Swords, Loader, Loader2, Bookmark, Activity } from 'lucide-react';
 import { socialService } from '../services/SocialService';
 import { ShareRoutinesToUserModal } from '../components/profile/ShareRoutinesToUserModal';
 import toast from 'react-hot-toast';
@@ -470,6 +470,100 @@ export const NotificationsPage = () => {
 
     const renderNotification = (n: ExtendedNotification) => {
         const status = n.data?.status;
+
+        if (n.type === 'system' && (n.data?.status === 'started' || n.data?.status === 'finished')) {
+            const isLive = n.data.status === 'started';
+            const gymLabel = n.data.gym_name || 'un Gimnasio';
+            const muscles = n.data.muscles || [];
+            const duration = n.data.duration;
+            const volume = n.data.volume;
+
+            return (
+                <div 
+                    key={n.id} 
+                    className={`bg-black/40 backdrop-blur-2xl border rounded-[2rem] p-5 shadow-[0_15px_40px_rgba(0,0,0,0.4)] transition-all group my-3 text-left ${isLive ? 'border-red-500/20 hover:border-red-500/40 bg-red-950/5' : 'border-green-500/20 hover:border-green-500/40 bg-green-950/5'}`}
+                >
+                    <div className="flex items-start gap-4">
+                        <div className="relative shrink-0">
+                            <div className={`absolute -inset-1 rounded-full blur-md opacity-0 group-hover:opacity-20 transition-opacity ${isLive ? 'bg-red-500' : 'bg-green-500'}`}></div>
+                            <div className="w-14 h-14 rounded-full p-0.5 bg-gradient-to-tr from-neutral-800 to-neutral-600">
+                                <div className="w-full h-full rounded-full bg-neutral-900 overflow-hidden flex items-center justify-center border border-white/10 relative cursor-pointer" onClick={() => navigate(`/user/${n.data?.sender_id}`)}>
+                                    {n.sender?.avatar_url ? (
+                                        <FadeInImage src={n.sender.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full bg-gradient-to-br from-neutral-800 to-black flex items-center justify-center">
+                                            <span className="text-lg font-black text-gym-primary italic">
+                                                {n.sender?.username?.[0].toUpperCase() || 'G'}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <div className={`absolute -bottom-1 -right-1 p-1 rounded-full border-2 border-black shadow-lg ${isLive ? 'bg-red-500 text-white animate-pulse' : 'bg-green-500 text-black'}`}>
+                                <Activity size={10} strokeWidth={3} />
+                            </div>
+                        </div>
+
+                        <div className="flex-1 min-w-0 flex flex-col text-left">
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                                <span className={`text-[9px] font-black italic uppercase tracking-wider px-2 py-0.5 rounded-full ${isLive ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-green-500/20 text-green-400 border border-green-500/30'}`}>
+                                    {isLive ? '🔴 EN VIVO' : '✅ COMPLETADO'}
+                                </span>
+                                <span className="text-[9px] font-bold text-neutral-600 shrink-0">
+                                    {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                            </div>
+                            
+                            <p className="text-xs font-bold leading-normal text-white mt-1">
+                                <span className="text-gym-primary font-black uppercase mr-1 cursor-pointer hover:underline" onClick={() => navigate(`/user/${n.data?.sender_id}`)}>
+                                    @{n.sender?.username || n.data?.sender_name || 'Tu amigo'}
+                                </span>
+                                {isLive ? `comenzó a entrenar en ${gymLabel}` : `finalizó su entrenamiento en ${gymLabel}`}
+                            </p>
+
+                            <div className="mt-3 bg-black/30 border border-white/5 rounded-xl p-3 space-y-2">
+                                <div className="flex items-center gap-1.5 text-[10px] text-neutral-400 font-bold uppercase">
+                                    <MapPin size={10} className="text-gym-primary" />
+                                    <span className="truncate">{gymLabel}</span>
+                                </div>
+
+                                {!isLive && (
+                                    <div className="flex flex-wrap gap-x-4 gap-y-1.5 border-t border-white/5 pt-2">
+                                        {duration && (
+                                            <div className="flex items-center gap-1 text-[10px] font-black text-blue-400 uppercase">
+                                                ⏱️ {duration} MIN
+                                            </div>
+                                        )}
+                                        {volume && volume > 0 && (
+                                            <div className="flex items-center gap-1 text-[10px] font-black text-yellow-500 uppercase">
+                                                💪 {volume.toLocaleString()} KG VOL
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {muscles.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-2">
+                                        {muscles.map((muscle: string, idx: number) => {
+                                            const emojiMap: Record<string, string> = {
+                                                'Pecho': '💪', 'Espalda': '🦅', 'Pierna': '🦵', 'Hombro': '🛡️',
+                                                'Bíceps': '🔥', 'Tríceps': '⚡', 'Core': '🛡️', 'Cardio': '🏃'
+                                            };
+                                            const emoji = emojiMap[muscle] || '🏋️';
+                                            return (
+                                                <span key={idx} className="bg-neutral-800 border border-white/5 text-neutral-300 text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded">
+                                                    {emoji} {muscle.toUpperCase()}
+                                                </span>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
 
         if (n.type === 'system' && n.data?.type === 'routine_shared') {
             return (
