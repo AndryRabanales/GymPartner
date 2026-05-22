@@ -22,7 +22,7 @@ interface UserProfileCardProps {
         distance?: string;
         bio?: string;
         is_pro?: boolean;
-        gym_passport?: { id: string, name: string }[];
+        gym_passport?: { id: string, name: string, is_favorite?: boolean, is_home_base?: boolean }[];
         custom_settings?: {
             is_history_public?: boolean;
             description?: string;
@@ -254,24 +254,34 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
                 </div>
 
                 {/* Gym Passport (Visited Gyms) */}
-                {user.gym_passport && user.gym_passport.filter(g => !g.name.includes('Arsenal Personal')).length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 justify-center mt-2 px-1">
-                        {user.gym_passport.filter(g => !g.name.includes('Arsenal Personal')).slice(0, 8).map((gym, idx) => (
-                            <div 
-                                key={`${gym.id}-${idx}`}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-900/60 border border-white/5 text-[9px] font-black italic uppercase tracking-tighter text-neutral-300 hover:text-gym-primary hover:border-gym-primary/30 transition-all duration-300"
-                            >
-                                <MapPin size={10} className="text-neutral-500 group-hover:text-gym-primary" />
-                                <span>{gym.name}</span>
-                            </div>
-                        ))}
-                        {user.gym_passport.filter(g => !g.name.includes('Arsenal Personal')).length > 8 && (
-                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-900/60 border border-white/5 text-[9px] font-black italic uppercase tracking-tighter text-neutral-400">
-                                +{user.gym_passport.filter(g => !g.name.includes('Arsenal Personal')).length - 8} MÁS
+                        {user.gym_passport && user.gym_passport.filter(g => !g.name.includes('Arsenal Personal')).length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 justify-center mt-2 px-1">
+                                {user.gym_passport.filter(g => !g.name.includes('Arsenal Personal')).slice(0, 8).map((gym, idx) => {
+                                    // Determine colors based on status
+                                    const isFav = gym.is_favorite;
+                                    const isHome = gym.is_home_base;
+                                    const borderColor = isFav ? 'border-red-500/50 hover:border-red-500' : isHome ? 'border-yellow-500/50 hover:border-yellow-500' : 'border-white/5 hover:border-white/10';
+                                    const textColor = isFav ? 'text-red-400 hover:text-red-300' : isHome ? 'text-yellow-400 hover:text-yellow-300' : 'text-neutral-300 hover:text-white';
+                                    const bgColor = isFav ? 'bg-red-500/10 hover:bg-red-500/20' : isHome ? 'bg-yellow-500/10 hover:bg-yellow-500/20' : 'bg-neutral-900/60 hover:bg-neutral-900/70';
+                                    const iconColor = isFav ? 'text-red-500' : isHome ? 'text-yellow-500' : 'text-neutral-500';
+                                    const shadow = 'hover:shadow-[0_0_15px_rgba(0,0,0,0.2)]';
+                                    return (
+                                        <div
+                                            key={`${gym.id}-${idx}`}
+                                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full ${bgColor} border ${borderColor} ${textColor} ${shadow}`}
+                                        >
+                                            <MapPin size={10} className={iconColor} />
+                                            <span>{gym.name}</span>
+                                        </div>
+                                    );
+                                })}
+                                {user.gym_passport.filter(g => !g.name.includes('Arsenal Personal')).length > 8 && (
+                                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-900/60 border border-white/5 text-[9px] font-black italic uppercase tracking-tighter text-neutral-400">
+                                        +{user.gym_passport.filter(g => !g.name.includes('Arsenal Personal')).length - 8} MÁS
+                                    </div>
+                                )}
                             </div>
                         )}
-                    </div>
-                )}
 
                 {/* Base Card */}
                 {user.gym_name && (

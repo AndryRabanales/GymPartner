@@ -75,6 +75,8 @@ export const Radar = () => {
                     .select(`
                         user_id,
                         gym_id,
+                        is_favorite,
+                        is_home_base,
                         gyms ( id, name )
                     `)
                     .in('user_id', profileIds);
@@ -82,14 +84,16 @@ export const Radar = () => {
                 if (passError) console.error("🚨 [RADAR] Error fetching passports:", passError);
 
                 // Map passports by user_id
-                const passportMap: Record<string, {id: string, name: string}[]> = {};
+                const passportMap: Record<string, {id: string, name: string, is_favorite?: boolean, is_home_base?: boolean}[]> = {};
                 if (passportsData) {
                     passportsData.forEach((item: any) => {
                         if (!passportMap[item.user_id]) passportMap[item.user_id] = [];
                         if (item.gyms) {
                             passportMap[item.user_id].push({
                                 id: item.gyms.id,
-                                name: item.gyms.name
+                                name: item.gyms.name,
+                                is_favorite: item.is_favorite,
+                                is_home_base: item.is_home_base
                             });
                         }
                     });
