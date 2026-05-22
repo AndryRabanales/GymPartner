@@ -175,10 +175,10 @@ export const GymMap = () => {
             return;
         }
 
-        // Distance Check: Enforce strict 0.25km (250m) maximum distance (Pokemon GO style)
+        // Distance Check: Enforce strict 0.16km (160m) maximum distance (Pokemon GO style)
         const distance = getDistance(userLocation.lat, userLocation.lng, selectedGym.lat, selectedGym.lng);
-        if (distance > 0.25) {
-            alert(`⛔ Estás muy lejos para interactuar. Acércate más al gimnasio (Max 250m). Distancia actual: ${distance.toFixed(2)}km.`);
+        if (distance > 0.16) {
+            alert(`⛔ Estás muy lejos para interactuar. Acércate más al gimnasio (Max 160m). Distancia actual: ${distance.toFixed(2)}km.`);
             return;
         }
 
@@ -748,9 +748,9 @@ export const GymMap = () => {
                                     </div>
                                 )}
 
-                                {selectedGym.lat && userLocation && getDistance(userLocation.lat, userLocation.lng, selectedGym.lat, selectedGym.lng) > 0.1 && !selectedGym.is_unlocked && (
+                                {selectedGym.lat && userLocation && getDistance(userLocation.lat, userLocation.lng, selectedGym.lat, selectedGym.lng) > 0.16 && !selectedGym.is_unlocked && (
                                     <p className="text-red-500 text-xs text-center font-bold mt-2">
-                                        ⛔ A {getDistance(userLocation.lat, userLocation.lng, selectedGym.lat, selectedGym.lng).toFixed(2)}km (Max 0.1km)
+                                        ⛔ A {getDistance(userLocation.lat, userLocation.lng, selectedGym.lat, selectedGym.lng).toFixed(2)}km (Max 0.16km)
                                     </p>
                                 )}
                             </div>
