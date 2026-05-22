@@ -265,16 +265,34 @@ export const WorkoutSession = () => {
     const handleBatchAdd = async () => {
         if (selectedCatalogItems.size === 0) return;
 
+        let activeArsenal = arsenal;
+
         // 1. Start Session if needed (Delayed Start)
         if (!sessionId) {
             console.log("🚀 Auto-starting session on first exercise add...");
-            await startNewSession();
+            const result = await startNewSession();
+            if (result && result.freshArsenal) {
+                activeArsenal = result.freshArsenal;
+            }
         }
+
+        const effectiveInv = [...activeArsenal];
+        COMMON_EQUIPMENT_SEEDS.forEach(seed => {
+            if (!effectiveInv.some(i => normalizeText(i.name) === normalizeText(seed.name))) {
+                effectiveInv.push({
+                    id: seed.id,
+                    name: seed.name,
+                    category: seed.category,
+                    target_muscle_group: seed.category,
+                    metrics: seed.metrics
+                } as any);
+            }
+        });
 
         // 2. Add All Selected Items
         const itemsToAdd: Equipment[] = [];
         selectedCatalogItems.forEach(id => {
-            const item = effectiveInventory.find(i => i.id === id);
+            const item = effectiveInv.find(i => i.id === id);
             if (item) itemsToAdd.push(item);
         });
 
@@ -589,11 +607,101 @@ export const WorkoutSession = () => {
         }
     };
 
-    const startNewSession = async () => {
-        if (!user) return;
+    const getClosestGymIdFromGPS = async (userId: string): Promise<{ id: string; name: string } | null> => {
+        try {
+            console.log("🎯 Adquiriendo GPS en tiempo real para inicio de entrenamiento...");
+            const gpsPosition = await getCurrentPosition({ enableHighAccuracy: true, timeout: 4000 })
+                .catch(async () => {
+                    console.log("⚠️ GPS de alta precisión falló o timeout, intentando rápido...");
+                    return await getCurrentPosition({ enableHighAccuracy: false, timeout: 2000 });
+                });
+
+            if (!gpsPosition) {
+                console.warn("❌ GPS no disponible.");
+                return null;
+            }
+
+            const userLat = gpsPosition.lat;
+            const userLng = gpsPosition.lng;
+
+            // Fetch user gyms and all system gyms
+            const [gyms, allGyms] = await Promise.all([
+                userService.getUserGyms(userId),
+                userService.getAllGyms()
+            ]);
+
+            // Calculate distance to all gyms using Haversine
+            const gymsWithDistance = allGyms
+                .filter(g => g.lat && g.lng)
+                .map(g => {
+                    const R = 6371;
+                    const dLat = (g.lat - userLat) * (Math.PI / 180);
+                    const dLon = (g.lng - userLng) * (Math.PI / 180);
+                    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(userLat * (Math.PI / 180)) * Math.cos(g.lat * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                    const dist = (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+                    return { ...g, dist };
+                })
+                .filter(g => g.dist <= 0.5) // Strict 500m radius
+                .sort((a, b) => a.dist - b.dist);
+
+            if (gymsWithDistance.length > 0) {
+                const closestGym = gymsWithDistance[0];
+                console.log(`🎯 Ubicación confirmada en: ${closestGym.name} (${Math.round(closestGym.dist * 1000)}m)`);
+
+                // Auto-add to passport if not already registered
+                if (!gyms.some(g => g.gym_id === closestGym.id)) {
+                    console.log(`✈️ Agregando ${closestGym.name} al pasaporte de forma automática...`);
+                    await userService.addGymToPassport(userId, {
+                        place_id: closestGym.place_id,
+                        name: closestGym.name,
+                        address: closestGym.address || '',
+                        location: { lat: closestGym.lat, lng: closestGym.lng }
+                    });
+                }
+
+                return { id: closestGym.id, name: closestGym.name };
+            }
+        } catch (e) {
+            console.error("Error in getClosestGymIdFromGPS:", e);
+        }
+        return null;
+    };
+
+    const startNewSession = async (customGymId?: string): Promise<{ gymId: string | null; freshArsenal?: any[] }> => {
+        if (!user) return { gymId: null };
+        setLoading(true);
         try {
             console.log("🚀 Starting NEW Session explicitly...");
-            const { data: newSession, error: startError } = await workoutService.startSession(user.id, resolvedGymId || undefined);
+            
+            let finalGymId = customGymId || resolvedGymId;
+            let freshArsenal: any[] | undefined = undefined;
+
+            // 1. Fresh GPS check (only if not locked to routeGymId and no customGymId was chosen)
+            if (!routeGymId && !customGymId) {
+                const freshGym = await getClosestGymIdFromGPS(user.id);
+                if (freshGym) {
+                    finalGymId = freshGym.id;
+                    setResolvedGymId(freshGym.id);
+                    setDetectedGymName(freshGym.name);
+
+                    // Fetch latest inventory for this gym immediately to avoid state delays
+                    console.log(`🔄 Fetching fresh inventory for gym: ${freshGym.name}`);
+                    const [newItems, newRoutines] = await Promise.all([
+                        equipmentService.getInventory(freshGym.id),
+                        workoutService.getUserRoutines(user.id, freshGym.id)
+                    ]);
+                    
+                    freshArsenal = newItems;
+                    setRoutines(newRoutines);
+                    setArsenal(prev => {
+                        const combined = [...newItems, ...prev];
+                        const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
+                        return unique;
+                    });
+                }
+            }
+
+            const { data: newSession, error: startError } = await workoutService.startSession(user.id, finalGymId || undefined);
             if (startError) throw startError;
 
             // Clear local backup on success
@@ -606,16 +714,22 @@ export const WorkoutSession = () => {
                 setIsFinished(false);
                 console.log('✅ Session started:', newSession.id);
             }
+
+            return { gymId: finalGymId, freshArsenal };
         } catch (err) {
             console.error("Error starting session:", err);
             alert("Error al iniciar sesión. Intenta nuevamente.");
+            return { gymId: null };
+        } finally {
+            setLoading(false);
         }
     };
 
-    const loadRoutine = async (routine: any) => {
+    const loadRoutine = async (routine: any, freshArsenal?: any[]) => {
         if (!routine.equipment_ids || routine.equipment_ids.length === 0) return;
 
         setLoading(true); // Show loading while preparing routine
+        const activeArsenal = freshArsenal || arsenal;
 
         // Map Routine IDs to Actual Inventory Items
         const exercisesToAdd: WorkoutExercise[] = [];
@@ -640,18 +754,18 @@ export const WorkoutSession = () => {
         if (details.length > 0) {
             details.sort((a: any, b: any) => (a.order_index || 0) - (b.order_index || 0)).forEach((detail: any) => {
                 // 1. Try Strict ID Match
-                let item = arsenal.find(i => i.id === detail.exercise_id);
+                let item = activeArsenal.find(i => i.id === detail.exercise_id);
 
                 // 2. Fallback: Normalized Name Match
                 if (!item && detail.equipment?.name) {
                     const targetName = normalizeName(detail.equipment.name);
-                    item = arsenal.find(i => normalizeName(i.name) === targetName);
+                    item = activeArsenal.find(i => normalizeName(i.name) === targetName);
                 }
 
                 // 3. Fallback: Partial Name Match (fuzzy)
                 if (!item && detail.equipment?.name) {
                     const targetName = normalizeName(detail.equipment.name);
-                    item = arsenal.find(i => {
+                    item = activeArsenal.find(i => {
                         const itemName = normalizeName(i.name);
                         return itemName.includes(targetName) || targetName.includes(itemName);
                     });
@@ -792,7 +906,7 @@ export const WorkoutSession = () => {
         } else {
             // Fallback IDs only
             routine.equipment_ids.forEach((eqId: string) => {
-                const item = arsenal.find(i => i.id === eqId);
+                const item = activeArsenal.find(i => i.id === eqId);
                 if (item) {
                     exercisesToAdd.push({
                         id: Math.random().toString(),
@@ -1090,11 +1204,7 @@ export const WorkoutSession = () => {
                 }))
             })));
 
-            const { data: newSession } = await workoutService.startSession(user!.id, resolvedGymId || undefined);
-            if (newSession) {
-                setSessionId(newSession.id);
-                setStartTime(new Date());
-            }
+            await startNewSession();
 
             setLoading(false);
             setShowExitMenu(false);
@@ -2132,9 +2242,11 @@ export const WorkoutSession = () => {
                                             setShowStartOptionsModal(false);
                                             setCurrentRoutineName(routine.name);
 
-                                            // 2. Background Processing
-                                            startNewSession(); // Fire and forget (don't await)
-                                            loadRoutine(routine);
+                                            // 2. Sequential Async Setup
+                                            (async () => {
+                                                const result = await startNewSession();
+                                                await loadRoutine(routine, result?.freshArsenal);
+                                            })();
                                         }}
                                         className="flex items-center justify-between p-4 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 hover:border-gym-primary/50 transition-all group"
                                     >
