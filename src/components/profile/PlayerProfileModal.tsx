@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, Swords, MapPin, UserPlus, UserCheck, Star, ExternalLink, Lock, Calendar, Clock, Dumbbell, History, Loader } from 'lucide-react';
 import { FeedViewerOverlay } from '../social/FeedViewerOverlay';
@@ -64,6 +64,23 @@ export const PlayerProfileModal = ({ player, onClose, onFollowToggle }: PlayerPr
 
     const [customSettings, setCustomSettings] = useState<any>(null);
     const [loadingAccess, setLoadingAccess] = useState(true);
+    const [selectedDate, setSelectedDate] = useState<string | null>(null);
+    const [selectedDaySessions, setSelectedDaySessions] = useState<any[]>([]);
+    const gridScrollRef = useRef<HTMLDivElement>(null);
+
+    // Scroll contribution grid to rightmost end on load/tab switch
+    useEffect(() => {
+        if (activeTab === 'history' && gridScrollRef.current) {
+            // Delay slightly to ensure layout is fully rendered
+            const timer = setTimeout(() => {
+                if (gridScrollRef.current) {
+                    gridScrollRef.current.scrollLeft = gridScrollRef.current.scrollWidth;
+                }
+            }, 100);
+            return () => clearTimeout(timer);
+        }
+    }, [activeTab, historyLoading]);
+
 
     // Initial Load
     useEffect(() => {
@@ -358,9 +375,48 @@ export const PlayerProfileModal = ({ player, onClose, onFollowToggle }: PlayerPr
         }
     };
 
-    // Routine handlers removed
+    // Generate GitHub-style contribution data (last 24 weeks)
+    const getContributionData = () => {
+        const today = new Date();
+        const endOfWeek = new Date(today);
+        // Align to the end of the current week (Saturday)
+        endOfWeek.setDate(today.getDate() + (6 - today.getDay()));
+        
+        const days: Date[] = [];
+        const totalDays = 24 * 7; // 24 weeks
+        
+        const startDate = new Date(endOfWeek);
+        startDate.setDate(endOfWeek.getDate() - totalDays + 1);
+        
+        for (let i = 0; i < totalDays; i++) {
+            const d = new Date(startDate);
+            d.setDate(startDate.getDate() + i);
+            days.push(d);
+        }
+        
+        const weeks: Date[][] = [];
+        for (let i = 0; i < days.length; i += 7) {
+            weeks.push(days.slice(i, i + 7));
+        }
+        
+        return { weeks };
+    };
+
+    const { weeks } = getContributionData();
+
+    // Map sessions by date (YYYY-MM-DD)
+    const sessionsByDate: Record<string, any[]> = {};
+    history.forEach(session => {
+        if (!session.started_at) return;
+        const dateStr = new Date(session.started_at).toISOString().split('T')[0];
+        if (!sessionsByDate[dateStr]) {
+            sessionsByDate[dateStr] = [];
+        }
+        sessionsByDate[dateStr].push(session);
+    });
 
     return (
+
         <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-end md:justify-center p-0 md:p-4 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="bg-neutral-900 border-l md:border border-neutral-800 w-full md:max-w-sm h-full md:h-auto md:rounded-3xl overflow-hidden relative shadow-2xl animate-in slide-in-from-right duration-300 flex flex-col md:max-h-[90vh]">
 
@@ -679,7 +735,7 @@ export const PlayerProfileModal = ({ player, onClose, onFollowToggle }: PlayerPr
 
                         {/* 4. HISTORY TAB */}
                         {activeTab === 'history' && (
-                            <div className="animate-in slide-in-from-bottom-2 fade-in duration-300 w-full">
+                            <div className="animate-in slide-in-from-bottom-2 fade-in duration-300 w-full space-y-4">
                                 {hasHistoryAccess ? (
                                     historyLoading ? (
                                         <div className="py-12 flex flex-col items-center justify-center text-gym-primary gap-3 w-full">
@@ -695,13 +751,99 @@ export const PlayerProfileModal = ({ player, onClose, onFollowToggle }: PlayerPr
                                             <p className="text-xs text-neutral-500 max-w-xs text-center">Este guerrero no ha completado entrenamientos aún.</p>
                                         </div>
                                     ) : (
-                                        <div className="space-y-3 w-full text-left">
-                                            <div className="flex items-center gap-2 border-b border-white/5 pb-2 mb-4">
+                                        <div className="space-y-4 w-full text-left">
+                                            <div className="flex items-center gap-2 border-b border-white/5 pb-2">
                                                 <History className="text-gym-primary" size={16} />
-                                                <h3 className="text-sm font-black text-white italic uppercase tracking-tighter">Entrenamientos Completados</h3>
+                                                <h3 className="text-sm font-black text-white italic uppercase tracking-tighter">Bitácora de Actividad</h3>
                                             </div>
-                                            <div className="flex flex-col gap-2.5 max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
-                                                {history.map((session) => {
+
+                                            {/* GitHub-style Heatmap Grid */}
+                                            <div className="bg-neutral-800/40 border border-white/5 p-3 rounded-2xl w-full">
+                                                <div className="flex items-center justify-between mb-2 px-1">
+                                                    <span className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">Entrenamientos Recientes</span>
+                                                    <span className="text-[8px] font-bold text-gym-primary bg-gym-primary/10 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                                        {history.length} completados
+                                                    </span>
+                                                </div>
+                                                
+                                                {/* Grid Container */}
+                                                <div className="flex gap-1 overflow-x-auto pb-2 pt-1 custom-scrollbar justify-start" ref={gridScrollRef}>
+                                                    {weeks.map((week, wIdx) => (
+                                                        <div key={wIdx} className="flex flex-col gap-1 shrink-0">
+                                                            {week.map((day, dIdx) => {
+                                                                const dateStr = day.toISOString().split('T')[0];
+                                                                const daySessions = sessionsByDate[dateStr] || [];
+                                                                const count = daySessions.length;
+                                                                
+                                                                // Color codes matching gym-primary (neon yellow-green)
+                                                                let bgClass = "bg-neutral-800/60 hover:bg-neutral-700/60";
+                                                                if (count === 1) bgClass = "bg-yellow-500/20 hover:bg-yellow-500/35 border border-yellow-500/10";
+                                                                if (count === 2) bgClass = "bg-yellow-500/50 hover:bg-yellow-500/65 border border-yellow-500/20";
+                                                                if (count >= 3) bgClass = "bg-yellow-500 text-black shadow-[0_0_8px_rgba(234,179,8,0.4)] hover:scale-105 border border-white/20";
+                                                                
+                                                                const isSelected = selectedDate === dateStr;
+                                                                const selectedBorder = isSelected ? "ring-2 ring-white scale-110 z-10" : "";
+                                                                
+                                                                return (
+                                                                    <button
+                                                                        key={dIdx}
+                                                                        onClick={() => {
+                                                                            if (count > 0) {
+                                                                                setSelectedDate(dateStr);
+                                                                                setSelectedDaySessions(daySessions);
+                                                                            } else {
+                                                                                setSelectedDate(null);
+                                                                                setSelectedDaySessions([]);
+                                                                            }
+                                                                        }}
+                                                                        className={`w-3 h-3 rounded-sm transition-all duration-150 relative shrink-0 ${bgClass} ${selectedBorder}`}
+                                                                        title={`${day.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}: ${count} entreno(s)`}
+                                                                    />
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                
+                                                {/* Legend / Months labels */}
+                                                <div className="flex items-center justify-between mt-1 px-1 text-[8px] font-bold text-neutral-500 uppercase tracking-widest">
+                                                    <span>Hace 6 meses</span>
+                                                    <div className="flex items-center gap-1">
+                                                        <span>Menos</span>
+                                                        <div className="w-2 h-2 rounded-sm bg-neutral-800/60" />
+                                                        <div className="w-2 h-2 rounded-sm bg-yellow-500/20" />
+                                                        <div className="w-2 h-2 rounded-sm bg-yellow-500/50" />
+                                                        <div className="w-2 h-2 rounded-sm bg-yellow-500" />
+                                                        <span>Más</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Subtitle / Day filter header */}
+                                            <div className="flex justify-between items-center px-1">
+                                                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">
+                                                    {selectedDate ? (
+                                                        <>Filtrado: <span className="text-gym-primary">{new Date(selectedDate).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</span></>
+                                                    ) : (
+                                                        'Todos los entrenamientos'
+                                                    )}
+                                                </span>
+                                                {selectedDate && (
+                                                    <button
+                                                        onClick={() => {
+                                                            setSelectedDate(null);
+                                                            setSelectedDaySessions([]);
+                                                        }}
+                                                        className="text-[9px] font-bold text-red-400 hover:text-red-300 uppercase tracking-widest bg-red-500/10 px-2 py-0.5 rounded-full"
+                                                    >
+                                                        Limpiar
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            {/* Workout Sessions List */}
+                                            <div className="flex flex-col gap-2.5 max-h-[40vh] overflow-y-auto pr-1 custom-scrollbar">
+                                                {(selectedDate ? selectedDaySessions : history).map((session) => {
                                                     const date = new Date(session.started_at);
                                                     const formattedDate = date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
                                                     return (
@@ -709,7 +851,7 @@ export const PlayerProfileModal = ({ player, onClose, onFollowToggle }: PlayerPr
                                                             key={session.id} 
                                                             onClick={() => {
                                                                 onClose();
-                                                                navigate(`/workout-session/${session.id}`);
+                                                                navigate(`/history/${session.id}`);
                                                             }}
                                                             className="bg-neutral-800/80 hover:bg-neutral-700/80 border border-white/5 p-4 rounded-xl flex flex-col gap-2 relative overflow-hidden cursor-pointer transition-colors group"
                                                         >
@@ -764,6 +906,7 @@ export const PlayerProfileModal = ({ player, onClose, onFollowToggle }: PlayerPr
                                         </div>
                                     )
                                 ) : (
+
                                     <div className="py-12 flex flex-col items-center justify-center text-center space-y-4 bg-neutral-800/20 border border-white/5 p-6 rounded-2xl w-full">
                                         <div className="w-16 h-16 rounded-full bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-500 animate-pulse">
                                             <Lock size={28} />
