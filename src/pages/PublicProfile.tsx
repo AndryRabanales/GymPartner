@@ -170,7 +170,7 @@ export const PublicProfile = () => {
                 
                 {/* Close/Back Button */}
                 <button 
-                    onClick={() => navigate(-1)}
+                    onClick={() => navigate('/')}
                     className="absolute -top-12 right-0 flex items-center gap-2 text-neutral-500 hover:text-white transition-all group"
                 >
                     <span className="text-[10px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Cerrar</span>
@@ -184,26 +184,32 @@ export const PublicProfile = () => {
                     actions={
                         <div className="flex gap-3">
                             {authUser ? (
-                                <>
-                                    <button 
-                                        onClick={handleFollow}
-                                        className={`flex-1 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${
-                                            isFollowing 
-                                            ? 'bg-neutral-800 text-neutral-400 border border-white/5' 
-                                            : 'bg-neutral-900 text-white border border-white/10 hover:bg-neutral-800 shadow-xl'
-                                        }`}
-                                    >
-                                        {isFollowing ? <UserCheck size={16} /> : <UserPlus size={16} />}
-                                        {isFollowing ? 'SIGUIENDO' : 'SEGUIR'}
-                                    </button>
-                                    <button 
-                                        onClick={handleInvite}
-                                        className="flex-[1.5] py-4 bg-white text-black font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-gym-primary transition-all active:scale-95 shadow-[0_10px_30px_rgba(255,255,255,0.2)] flex items-center justify-center gap-2"
-                                    >
-                                        <Swords size={18} fill="currentColor" />
-                                        DESAFIAR
-                                    </button>
-                                </>
+                                authUser.id === profile.id ? (
+                                    <div className="w-full py-4 bg-white/5 border border-white/10 text-neutral-500 font-bold text-[10px] uppercase tracking-[0.2em] rounded-2xl flex items-center justify-center">
+                                        ESTA ES TU VISTA PÚBLICA
+                                    </div>
+                                ) : (
+                                    <>
+                                        <button 
+                                            onClick={handleFollow}
+                                            className={`flex-1 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${
+                                                isFollowing 
+                                                ? 'bg-neutral-800 text-neutral-400 border border-white/5' 
+                                                : 'bg-neutral-900 text-white border border-white/10 hover:bg-neutral-800 shadow-xl'
+                                            }`}
+                                        >
+                                            {isFollowing ? <UserCheck size={16} /> : <UserPlus size={16} />}
+                                            {isFollowing ? 'SIGUIENDO' : 'SEGUIR'}
+                                        </button>
+                                        <button 
+                                            onClick={handleInvite}
+                                            className="flex-[1.5] py-4 bg-white text-black font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-gym-primary transition-all active:scale-95 shadow-[0_10px_30px_rgba(255,255,255,0.2)] flex items-center justify-center gap-2"
+                                        >
+                                            <Swords size={18} fill="currentColor" />
+                                            DESAFIAR
+                                        </button>
+                                    </>
+                                )
                             ) : (
                                 <button 
                                     onClick={() => navigate('/login')}
