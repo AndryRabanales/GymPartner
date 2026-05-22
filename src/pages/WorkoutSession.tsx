@@ -456,19 +456,18 @@ export const WorkoutSession = () => {
 
                                 setRoutines(newRoutines);
                                 setArsenal(prev => {
-                                    const combined = [...newItems, ...prev];
-                                    const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
-                                    return unique;
-                                });
-                            }
-                        };
-
                         if (gymsWithDistance.length > 0) {
-                            const homeGym = gymsWithDistance.find(g => gyms.some(ug => ug.gym_id === g.id && ug.is_home_base));
-                            if (homeGym) {
-                                await applyPrecisionGym(homeGym);
+                            // Find which of these nearby gyms are predeterminados
+                            const nearbyPredeterminados = gymsWithDistance.filter(g => gyms.some(ug => ug.gym_id === g.id && ug.is_home_base));
+                            
+                            if (nearbyPredeterminados.length === 1) {
+                                // User is near exactly one predeterminado. Auto-select it.
+                                await applyPrecisionGym(nearbyPredeterminados[0]);
+                            } else if (nearbyPredeterminados.length > 1) {
+                                // User is near MULTIPLE predeterminados. Ask them to choose.
+                                setAmbiguousGyms(nearbyPredeterminados);
                             } else {
-                                // AMBIGUITY OR NOT HOME BASE: let user choose
+                                // User is near 0 predeterminados. Ask them to choose from all nearby gyms.
                                 setAmbiguousGyms(gymsWithDistance);
                             }
                         }
@@ -481,7 +480,7 @@ export const WorkoutSession = () => {
             const handleSelectAmbiguousGym = async (gym: any) => {
                 try {
                     // Make it home base since they picked it
-                    await userService.setHomeBase(user!.id, gym.id);
+                    await userService.toggleHomeBase(user!.id, gym.id, true);
 
                     // Ensure it's in passport
                     if (!gyms.some(g => g.gym_id === gym.id)) {

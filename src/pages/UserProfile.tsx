@@ -797,11 +797,7 @@ export const UserProfile = () => {
                                         title={gym.is_home_base ? "Quitar de Sede Principal" : "Hacer Sede Principal"}
                                         onClick={async (e) => {
                                             e.stopPropagation();
-                                            if (!gym.is_home_base) {
-                                                await userService.setHomeBase(user!.id, gym.gym_id);
-                                            } else {
-                                                await userService.setHomeBase(user!.id, '');
-                                            }
+                                            await userService.toggleHomeBase(user!.id, gym.gym_id, !gym.is_home_base);
                                             loadUserData();
                                         }}
                                     >

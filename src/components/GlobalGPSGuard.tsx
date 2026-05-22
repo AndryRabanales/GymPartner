@@ -41,8 +41,17 @@ export const GlobalGPSGuard = () => {
                     .sort((a, b) => a.dist - b.dist);
 
                 if (gymsWithDistance.length > 0) {
-                    const homeGym = gymsWithDistance.find(g => myGyms.some(ug => ug.gym_id === g.id && ug.is_home_base));
-                    if (!homeGym) {
+                    // Find which of these nearby gyms are predeterminados
+                    const nearbyPredeterminados = gymsWithDistance.filter(g => myGyms.some(ug => ug.gym_id === g.id && ug.is_home_base));
+                    
+                    if (nearbyPredeterminados.length === 1) {
+                        // User is near exactly one predeterminado. Do nothing (invisible, fluid).
+                        return;
+                    } else if (nearbyPredeterminados.length > 1) {
+                        // User is near MULTIPLE predeterminados. Ask them to choose between these.
+                        setAmbiguousGyms(nearbyPredeterminados);
+                    } else {
+                        // User is near 0 predeterminados. Ask them to choose from all nearby gyms.
                         setAmbiguousGyms(gymsWithDistance);
                     }
                 }
@@ -61,7 +70,7 @@ export const GlobalGPSGuard = () => {
 
     const handleSelectAmbiguousGym = async (gym: any) => {
         try {
-            await userService.setHomeBase(user!.id, gym.id);
+            await userService.toggleHomeBase(user!.id, gym.id, true);
             const myGyms = await userService.getUserGyms(user!.id);
             if (!myGyms.some(g => g.gym_id === gym.id)) {
                 await userService.addGymToPassport(user!.id, {
