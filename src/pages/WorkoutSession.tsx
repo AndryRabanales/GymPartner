@@ -456,6 +456,13 @@ export const WorkoutSession = () => {
 
                                 setRoutines(newRoutines);
                                 setArsenal(prev => {
+                                    const combined = [...newItems, ...prev];
+                                    const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
+                                    return unique;
+                                });
+                            }
+                        };
+
                         if (gymsWithDistance.length > 0) {
                             // Find which of these nearby gyms are predeterminados
                             const nearbyPredeterminados = gymsWithDistance.filter(g => gyms.some(ug => ug.gym_id === g.id && ug.is_home_base));
