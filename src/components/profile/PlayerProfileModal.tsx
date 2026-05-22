@@ -989,38 +989,35 @@ export const PlayerProfileModal = ({ player, onClose, onFollowToggle }: PlayerPr
                                                                 onClose();
                                                                 navigate(`/history/${session.id}`);
                                                             }}
-                                                            className="block bg-neutral-900 border border-neutral-800 rounded-2xl p-3.5 hover:border-gym-primary/50 transition-all group relative overflow-hidden cursor-pointer"
+                                                            className="flex items-center justify-between bg-neutral-900 border border-neutral-800 rounded-2xl p-4 hover:border-gym-primary/50 transition-all group relative overflow-hidden cursor-pointer min-h-[85px]"
                                                         >
                                                             <div className="absolute inset-0 bg-gradient-to-r from-gym-primary/0 via-gym-primary/5 to-gym-primary/0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
 
-                                                            <div className="flex gap-3 relative z-10 text-left">
+                                                            <div className="flex items-center gap-4 relative z-10 text-left w-full">
                                                                 {/* Date Badge */}
                                                                 <div className="shrink-0">
-                                                                    <div className="bg-neutral-800 border border-neutral-700 rounded-xl w-14 h-14 flex flex-col items-center justify-center group-hover:border-gym-primary/50 transition-colors">
-                                                                        <span className="text-[8px] font-bold text-neutral-500 uppercase">{dayName}</span>
-                                                                        <span className="text-lg font-black text-white leading-none my-0.5">{dayNum}</span>
-                                                                        <span className="text-[8px] font-bold text-neutral-500 uppercase">{monthShort}</span>
+                                                                    <div className="bg-neutral-800 border border-neutral-700 rounded-xl w-14 h-14 flex flex-col items-center justify-center group-hover:border-gym-primary/50 transition-colors shrink-0">
+                                                                        <span className="text-[8px] font-black text-neutral-400 uppercase tracking-widest leading-none mb-0.5">{dayName}</span>
+                                                                        <span className="text-base font-black text-white leading-none my-0.5">{dayNum}</span>
+                                                                        <span className="text-[8px] font-black text-neutral-400 uppercase tracking-widest leading-none mt-0.5">{monthShort}</span>
                                                                     </div>
                                                                 </div>
 
                                                                 {/* Details */}
-                                                                <div className="flex-1 min-w-0 space-y-2">
-                                                                    {/* Gym Name & External Link */}
-                                                                    <div className="flex items-center justify-between gap-1.5 w-full">
-                                                                        <div className="flex items-center gap-1.5 text-white font-bold text-xs group-hover:text-gym-primary transition-colors truncate">
-                                                                            <MapPin size={12} className="text-neutral-400 shrink-0" />
-                                                                            <span className="truncate">
-                                                                                {session.gym_name && session.gym_name !== 'Gimnasio Desconocido' 
-                                                                                    ? session.gym_name 
-                                                                                    : 'Sesión de Entrenamiento'}
-                                                                            </span>
-                                                                        </div>
-                                                                        <ExternalLink size={12} className="text-neutral-500 group-hover:text-gym-primary transition-colors shrink-0" />
+                                                                <div className="flex-1 min-w-0 flex flex-col justify-center py-0.5">
+                                                                    {/* Gym Name */}
+                                                                    <div className="flex items-center gap-1.5 text-white font-bold text-xs group-hover:text-gym-primary transition-colors truncate">
+                                                                        <MapPin size={12} className="text-neutral-400 shrink-0" />
+                                                                        <span className="truncate">
+                                                                            {session.gym_name && session.gym_name !== 'Gimnasio Desconocido' 
+                                                                                ? session.gym_name 
+                                                                                : 'Sesión de Entrenamiento'}
+                                                                        </span>
                                                                     </div>
 
                                                                     {/* Muscles Trained */}
                                                                     {session.muscles_trained && session.muscles_trained.length > 0 && (
-                                                                        <div className="flex flex-wrap gap-1">
+                                                                        <div className="flex flex-wrap gap-1 mt-1.5">
                                                                             {session.muscles_trained.map((muscle: string) => (
                                                                                 <span
                                                                                     key={muscle}
@@ -1033,7 +1030,7 @@ export const PlayerProfileModal = ({ player, onClose, onFollowToggle }: PlayerPr
                                                                     )}
 
                                                                     {/* Metrics Row */}
-                                                                    <div className="flex items-center gap-3 text-[10px]">
+                                                                    <div className="flex items-center gap-3 text-[10px] mt-1.5">
                                                                         <div className="flex items-center gap-1 text-neutral-400">
                                                                             <Clock size={11} className="text-blue-500" />
                                                                             <span className="font-bold">{session.duration_minutes} min</span>
@@ -1045,6 +1042,11 @@ export const PlayerProfileModal = ({ player, onClose, onFollowToggle }: PlayerPr
                                                                             </span>
                                                                         </div>
                                                                     </div>
+                                                                </div>
+
+                                                                {/* External Link Arrow */}
+                                                                <div className="shrink-0 ml-auto pr-1">
+                                                                    <ExternalLink size={12} className="text-neutral-500 group-hover:text-gym-primary transition-colors" />
                                                                 </div>
                                                             </div>
                                                         </div>
