@@ -67,6 +67,24 @@ export const useGeolocation = (enableHighAccuracy = true) => {
                         }
                     }
 
+                    // FORCE FRESH IMMEDIATE READ FIRST
+                    try {
+                        const freshPos = await Geolocation.getCurrentPosition({ enableHighAccuracy, timeout: 5000, maximumAge: 0 });
+                        const mockPos: any = {
+                            coords: {
+                                latitude: freshPos.coords.latitude,
+                                longitude: freshPos.coords.longitude,
+                                accuracy: freshPos.coords.accuracy,
+                                heading: freshPos.coords.heading,
+                                speed: freshPos.coords.speed
+                            },
+                            timestamp: freshPos.timestamp
+                        };
+                        successHandler(mockPos);
+                    } catch(e) {
+                        console.warn("[NATIVE GEOLOCATION] Immediate fetch failed, relying on watch.", e);
+                    }
+
                     capWatchId = await Geolocation.watchPosition(
                         { enableHighAccuracy, timeout: 10000, maximumAge: 0 },
                         (position, err) => {
@@ -107,11 +125,14 @@ export const useGeolocation = (enableHighAccuracy = true) => {
                             setState(prev => ({ ...prev, error: 'Permiso de ubicación denegado.', loading: false }));
                             return;
                         }
+                        navigator.geolocation.getCurrentPosition(successHandler, (e) => console.warn("Immediate web fetch failed", e), options);
                         watchId = navigator.geolocation.watchPosition(successHandler, errorHandler, options);
                     }).catch(() => {
+                        navigator.geolocation.getCurrentPosition(successHandler, (e) => console.warn("Immediate web fetch failed", e), options);
                         watchId = navigator.geolocation.watchPosition(successHandler, errorHandler, options);
                     });
                 } else {
+                    navigator.geolocation.getCurrentPosition(successHandler, (e) => console.warn("Immediate web fetch failed", e), options);
                     watchId = navigator.geolocation.watchPosition(successHandler, errorHandler, options);
                 }
             }
