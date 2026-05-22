@@ -845,7 +845,10 @@ export const PlayerProfileModal = ({ player, onClose, onFollowToggle }: PlayerPr
                                             <div className="flex flex-col gap-2.5 max-h-[40vh] overflow-y-auto pr-1 custom-scrollbar">
                                                 {(selectedDate ? selectedDaySessions : history).map((session) => {
                                                     const date = new Date(session.started_at);
-                                                    const formattedDate = date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+                                                    const dayName = date.toLocaleDateString('es-ES', { weekday: 'short' });
+                                                    const dayNum = date.getDate();
+                                                    const monthShort = date.toLocaleDateString('es-ES', { month: 'short' });
+
                                                     return (
                                                         <div 
                                                             key={session.id} 
@@ -853,52 +856,64 @@ export const PlayerProfileModal = ({ player, onClose, onFollowToggle }: PlayerPr
                                                                 onClose();
                                                                 navigate(`/history/${session.id}`);
                                                             }}
-                                                            className="bg-neutral-800/80 hover:bg-neutral-700/80 border border-white/5 p-4 rounded-xl flex flex-col gap-2 relative overflow-hidden cursor-pointer transition-colors group"
+                                                            className="block bg-neutral-900 border border-neutral-800 rounded-2xl p-3.5 hover:border-gym-primary/50 transition-all group relative overflow-hidden cursor-pointer"
                                                         >
-                                                            <div className="flex justify-between items-start gap-2">
-                                                                <span className="text-[10px] text-neutral-400 font-bold font-mono group-hover:text-white transition-colors">{formattedDate}</span>
-                                                                <div className="flex items-center gap-1.5 text-[10px] text-neutral-400 font-bold">
-                                                                    <Clock size={10} className="text-blue-500" />
-                                                                    <span className="group-hover:text-white transition-colors">{session.duration_minutes} min</span>
+                                                            <div className="absolute inset-0 bg-gradient-to-r from-gym-primary/0 via-gym-primary/5 to-gym-primary/0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+
+                                                            <div className="flex gap-3 relative z-10 text-left">
+                                                                {/* Date Badge */}
+                                                                <div className="shrink-0">
+                                                                    <div className="bg-neutral-800 border border-neutral-700 rounded-xl w-14 h-14 flex flex-col items-center justify-center group-hover:border-gym-primary/50 transition-colors">
+                                                                        <span className="text-[8px] font-bold text-neutral-500 uppercase">{dayName}</span>
+                                                                        <span className="text-lg font-black text-white leading-none my-0.5">{dayNum}</span>
+                                                                        <span className="text-[8px] font-bold text-neutral-500 uppercase">{monthShort}</span>
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                            <div className="flex justify-between items-center mt-1">
-                                                                <h4 className="font-bold text-white text-sm truncate uppercase tracking-wide group-hover:text-gym-primary transition-colors">
-                                                                    {session.gym_name && session.gym_name !== 'Gimnasio Desconocido' 
-                                                                        ? `📍 ${session.gym_name}` 
-                                                                        : '🏋️ Sesión de Entrenamiento'}
-                                                                </h4>
-                                                                <ExternalLink size={14} className="text-neutral-500 group-hover:text-gym-primary transition-colors" />
-                                                            </div>
-                                                            
-                                                            {(session.muscles_trained.length > 0 || session.total_volume > 0) && (
-                                                                <div className="mt-2 space-y-2">
-                                                                    {session.muscles_trained.length > 0 && (
+
+                                                                {/* Details */}
+                                                                <div className="flex-1 min-w-0 space-y-2">
+                                                                    {/* Gym Name & External Link */}
+                                                                    <div className="flex items-center justify-between gap-1.5 w-full">
+                                                                        <div className="flex items-center gap-1.5 text-white font-bold text-xs group-hover:text-gym-primary transition-colors truncate">
+                                                                            <MapPin size={12} className="text-neutral-400 shrink-0" />
+                                                                            <span className="truncate">
+                                                                                {session.gym_name && session.gym_name !== 'Gimnasio Desconocido' 
+                                                                                    ? session.gym_name 
+                                                                                    : 'Sesión de Entrenamiento'}
+                                                                            </span>
+                                                                        </div>
+                                                                        <ExternalLink size={12} className="text-neutral-500 group-hover:text-gym-primary transition-colors shrink-0" />
+                                                                    </div>
+
+                                                                    {/* Muscles Trained */}
+                                                                    {session.muscles_trained && session.muscles_trained.length > 0 && (
                                                                         <div className="flex flex-wrap gap-1">
                                                                             {session.muscles_trained.map((muscle: string) => (
-                                                                                <span key={muscle} className="bg-gym-primary/10 border border-gym-primary/20 text-gym-primary text-[8px] font-black uppercase px-2 py-0.5 rounded">
-                                                                                    {muscle}
+                                                                                <span
+                                                                                    key={muscle}
+                                                                                    className="bg-gym-primary/10 border border-gym-primary/20 text-gym-primary px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wide flex items-center gap-0.5"
+                                                                                >
+                                                                                    💪 {muscle}
                                                                                 </span>
                                                                             ))}
                                                                         </div>
                                                                     )}
-                                                                    {session.total_volume > 0 && (
-                                                                        <div className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                                                                            <Dumbbell size={10} className="text-gym-primary" />
-                                                                            Volumen: <span className="text-white font-black">{(session.total_volume / 1000).toFixed(1)}k kg</span>
+
+                                                                    {/* Metrics Row */}
+                                                                    <div className="flex items-center gap-3 text-[10px]">
+                                                                        <div className="flex items-center gap-1 text-neutral-400">
+                                                                            <Clock size={11} className="text-blue-500" />
+                                                                            <span className="font-bold">{session.duration_minutes} min</span>
                                                                         </div>
-                                                                    )}
+                                                                        <div className="flex items-center gap-1 text-neutral-400">
+                                                                            <Dumbbell size={11} className="text-gym-primary" />
+                                                                            <span className="font-bold">
+                                                                                {session.total_volume > 0 ? `${(session.total_volume / 1000).toFixed(1)}k kg` : '0 kg'}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
-                                                            )}
-                                                            
-                                                            {/* Empty state when no data exists but the session was logged */}
-                                                            {session.muscles_trained.length === 0 && session.total_volume === 0 && (
-                                                                <div className="mt-2">
-                                                                    <p className="text-[10px] text-neutral-500 font-bold italic">
-                                                                        Clic para ver detalles de la misión...
-                                                                    </p>
-                                                                </div>
-                                                            )}
+                                                            </div>
                                                         </div>
                                                     );
                                                 })}
