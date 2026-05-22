@@ -73,31 +73,50 @@ export const Radar = () => {
                 const { data: passportsData, error: passError } = await supabase
                     .from('user_gyms')
                     .select(`
-                        user_id,
-                        gym_id,
-                        is_favorite,
-                        is_home_base,
-                        gyms ( id, name )
-                    `)
+    user_id,
+    gym_id,
+    is_home_base,
+    gyms ( id, name )
+`)
                     .in('user_id', profileIds);
 
                 if (passError) console.error("🚨 [RADAR] Error fetching passports:", passError);
 
                 // Map passports by user_id
-                const passportMap: Record<string, {id: string, name: string, is_favorite?: boolean, is_home_base?: boolean}[]> = {};
-                if (passportsData) {
-                    passportsData.forEach((item: any) => {
-                        if (!passportMap[item.user_id]) passportMap[item.user_id] = [];
-                        if (item.gyms) {
-                            passportMap[item.user_id].push({
-                                id: item.gyms.id,
-                                name: item.gyms.name,
-                                is_favorite: item.is_favorite,
-                                is_home_base: item.is_home_base
-                            });
-                        }
-                    });
-                }
+const passportMap: Record<string, {id: string, name: string, is_favorite?: boolean, is_home_base?: boolean}[]> = {};
+if (passportsData) {
+    passportsData.forEach((item: any) => {
+        if (!passportMap[item.user_id]) passportMap[item.user_id] = [];
+        if (item.gyms) {
+            passportMap[item.user_id].push({
+                id: item.gyms.id,
+                name: item.gyms.name,
+                is_favorite: false, // placeholder, will set later
+                is_home_base: item.is_home_base
+            });
+        }
+    });
+}
+// Fetch favorites to set is_favorite flag
+const { data: favData, error: favError } = await supabase
+    .from('gym_favorites')
+    .select('user_id, gym_id')
+    .in('user_id', profileIds);
+if (favError) console.error('🚨 [RADAR] Error fetching favorites:', favError);
+const favSet = new Set<string>();
+if (favData) {
+    favData.forEach((f: any) => {
+        favSet.add(`${f.user_id}-${f.gym_id}`);
+    });
+}
+// Apply favorite flag
+Object.entries(passportMap).forEach(([uid, gyms]) => {
+    gyms.forEach(g => {
+        if (favSet.has(`${uid}-${g.id}`)) {
+            g.is_favorite = true;
+        }
+    });
+});
 
                 // 3. Fetch Home Gym Metadata
                 const gymIds = [...new Set(profiles.map(p => p.home_gym_id).filter(Boolean))];

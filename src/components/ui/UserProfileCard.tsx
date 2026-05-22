@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, MapPin, Zap, Sparkles, Activity, X, History, Eye, EyeOff, Lock, Unlock, Swords, Loader2, CheckCircle2 } from 'lucide-react';
+import { Shield, MapPin, Zap, Sparkles, Activity, X, History, Eye, EyeOff, Lock, Unlock, Swords, Loader2, CheckCircle2, Heart } from 'lucide-react';
 import { FadeInImage } from './FadeInImage';
 import { cloudinaryService } from '../../services/CloudinaryService';
 import { useAuth } from '../../context/AuthContext';
@@ -271,6 +271,7 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
                                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full ${bgColor} border ${borderColor} ${textColor} ${shadow}`}
                                         >
                                             <MapPin size={10} className={iconColor} />
+                                            {isFav && <Heart size={10} className="text-red-500 ml-1" />}
                                             <span>{gym.name}</span>
                                         </div>
                                     );
