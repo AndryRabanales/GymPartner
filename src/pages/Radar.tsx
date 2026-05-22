@@ -61,13 +61,9 @@ export const Radar = () => {
         setLoading(true);
         try {
             console.log("🛰️ [RADAR] Escaneando guerreros...");
-            // 1. Fetch profiles - PRIORITIZE NEWEST & BOOSTED
+            // 1. Fetch profiles - PRIORITIZE NEWEST & BOOSTED VIA RPC
             const { data: profiles, error: pError } = await supabase
-                .from('profiles')
-                .select('*')
-                .neq('id', authUser?.id)
-                .order('created_at', { ascending: false }) // NEWEST FIRST (Database Level)
-                .limit(50);
+                .rpc('get_radar_profiles_prioritized', { current_user_id: authUser?.id });
 
             if (pError) throw pError;
 
