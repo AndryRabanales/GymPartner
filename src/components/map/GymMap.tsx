@@ -644,7 +644,7 @@ export const GymMap = () => {
 
             {/* Unlock/Enter Modal - CEO Glassmorphism Upgrade */}
             {selectedGym && (
-                <div className="absolute inset-0 z-50 flex items-end sm:items-center justify-center p-0 pb-24 sm:p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
+                <div className="absolute inset-0 z-50 flex items-end sm:items-center justify-center p-0 pb-32 sm:p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
                     <div className="bg-neutral-900/90 border-t sm:border border-white/10 w-full max-w-sm sm:rounded-3xl rounded-t-3xl overflow-hidden shadow-[0_-10px_40px_rgba(0,0,0,0.8)] animate-in slide-in-from-bottom-10 duration-300 relative">
 
                         {/* Decorative Top Line */}
