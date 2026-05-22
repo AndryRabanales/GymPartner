@@ -31,9 +31,32 @@ export const useGeolocation = (enableHighAccuracy = true) => {
     });
 
     useEffect(() => {
+        let watchId: number | null = null;
+        let capWatchId: string | null = null;
+
+        const successHandler = (position: GeolocationPosition) => {
+            const loc: Location = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude,
+                accuracy: position.coords.accuracy,
+                heading: position.coords.heading,
+                speed: position.coords.speed,
+                timestamp: position.timestamp,
+            };
+            
+            // Cache latest location for instantaneous loads
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(loc));
+            setState({ location: loc, error: null, loading: false });
+        };
+
+        const errorHandler = (error: GeolocationPositionError | Error) => {
+            console.error('Error getting location:', error);
+            // Don't wipe last known location on error, just show error state
+            setState(prev => ({ ...prev, error: error.message, loading: false }));
+        };
+
         const startWatching = async () => {
             if (Capacitor.isNativePlatform()) {
-                // NATIVE CAPACITOR IMPLEMENTATION (Using highly accurate device APIs)
                 try {
                     const permission = await Geolocation.checkPermissions();
                     if (permission.location !== 'granted') {
@@ -44,8 +67,8 @@ export const useGeolocation = (enableHighAccuracy = true) => {
                         }
                     }
 
-                    const capWatchId = await Geolocation.watchPosition(
-                        { enableHighAccuracy: enableHighAccuracy, timeout: 10000, maximumAge: 0 },
+                    capWatchId = await Geolocation.watchPosition(
+                        { enableHighAccuracy, timeout: 10000, maximumAge: 0 },
                         (position, err) => {
                             if (err) {
                                 console.warn(`[NATIVE GEOLOCATION] Error: ${err.message}`);
@@ -53,7 +76,6 @@ export const useGeolocation = (enableHighAccuracy = true) => {
                                 return;
                             }
                             if (position) {
-                                // Simulate GeolocationPosition shape for our handler
                                 const mockPos: any = {
                                     coords: {
                                         latitude: position.coords.latitude,
@@ -68,27 +90,16 @@ export const useGeolocation = (enableHighAccuracy = true) => {
                             }
                         }
                     );
-                    
-                    // Cleanup function specifically for Capacitor
-                    return () => {
-                        Geolocation.clearWatch({ id: capWatchId });
-                    };
                 } catch (e: any) {
                     errorHandler(e);
-                    return () => {};
                 }
             } else {
-                // WEB BROWSER FALLBACK IMPLEMENTATION
                 if (!navigator.geolocation) {
                     setState(prev => ({ ...prev, error: 'Geolocation not supported', loading: false }));
-                    return () => {};
+                    return;
                 }
 
-                const options = {
-                    enableHighAccuracy,
-                    timeout: 10000,
-                    maximumAge: 0,
-                };
+                const options = { enableHighAccuracy, timeout: 10000, maximumAge: 0 };
 
                 if ('permissions' in navigator) {
                     navigator.permissions.query({ name: 'geolocation' as any }).then((result) => {
@@ -103,26 +114,20 @@ export const useGeolocation = (enableHighAccuracy = true) => {
                 } else {
                     watchId = navigator.geolocation.watchPosition(successHandler, errorHandler, options);
                 }
-
-                return () => {
-                    if (watchId !== null) {
-                        navigator.geolocation.clearWatch(watchId);
-                    }
-                };
             }
         };
 
-        let cleanupFn = () => {};
-        startWatching().then(fn => {
-            if (fn) cleanupFn = fn;
-        });
+        startWatching();
 
-        // Return proper React cleanup to clear active GPS watchers and prevent memory leaks
         return () => {
-            cleanupFn();
+            if (capWatchId !== null && Capacitor.isNativePlatform()) {
+                Geolocation.clearWatch({ id: capWatchId });
+            }
+            if (watchId !== null) {
+                navigator.geolocation.clearWatch(watchId);
+            }
         };
     }, [enableHighAccuracy]);
-
 
     return state;
 };
