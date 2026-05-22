@@ -203,6 +203,39 @@ class UserService {
         }
     }
 
+    // Remove a gym from the user's passport
+    async removeGymFromPassport(userId: string, gymId: string): Promise<{ success: boolean; error?: string }> {
+        try {
+            // Check if it's the home base
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('home_gym_id')
+                .eq('id', userId)
+                .single();
+
+            // Delete from user_gyms
+            const { error: deleteError } = await supabase
+                .from('user_gyms')
+                .delete()
+                .match({ user_id: userId, gym_id: gymId });
+
+            if (deleteError) throw deleteError;
+
+            // Nullify home_gym_id if we just deleted the home base
+            if (profile?.home_gym_id === gymId) {
+                await supabase
+                    .from('profiles')
+                    .update({ home_gym_id: null, main_base_image: null, main_base_color: null })
+                    .eq('id', userId);
+            }
+
+            return { success: true };
+        } catch (error: any) {
+            console.error('Error removing gym from passport:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
     /**
      * Process a referral reward (+250 XP)
      * Called when a new user registers with a ?ref=CODE
@@ -661,13 +694,27 @@ class UserService {
 
             if (resetError) throw resetError;
 
-            // 2. Set the target gym to true
-            const { error: updateError } = await supabase
-                .from('user_gyms')
-                .update({ is_home_base: true })
-                .match({ user_id: userId, gym_id: gymId });
+            if (gymId) {
+                // 2. Set the target gym to true
+                const { error: updateError } = await supabase
+                    .from('user_gyms')
+                    .update({ is_home_base: true })
+                    .match({ user_id: userId, gym_id: gymId });
 
-            if (updateError) throw updateError;
+                if (updateError) throw updateError;
+                
+                // 3. Update Profiles
+                await supabase
+                    .from('profiles')
+                    .update({ home_gym_id: gymId })
+                    .eq('id', userId);
+            } else {
+                // Remove home base from profiles
+                await supabase
+                    .from('profiles')
+                    .update({ home_gym_id: null })
+                    .eq('id', userId);
+            }
 
             return { success: true };
         } catch (error: any) {

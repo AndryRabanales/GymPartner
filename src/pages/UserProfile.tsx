@@ -18,6 +18,9 @@ import { BoostModal } from '../components/profile/BoostModal';
 import { userService } from '../services/UserService';
 import type { UserPrimaryGym } from '../services/UserService';
 import { socialService } from '../services/SocialService';
+import { EquipmentForm } from '../components/arsenal/EquipmentForm';
+import { getCurrentPosition } from '../utils/geolocationUtils';
+import { normalizeText, getMuscleGroup } from '../utils/inventoryUtils';
 import { StreakFlame } from '../components/gamification/StreakFlame';
 import { alphaService } from '../services/AlphaService';
 import { useBottomNav } from '../context/BottomNavContext';
@@ -789,6 +792,34 @@ export const UserProfile = () => {
 
                                 {/* Customization Controls (Visible on Hover/Focus) */}
                                 <div className="relative z-10 flex gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                                    <button
+                                        className={`p-2 bg-black/50 hover:bg-black/80 backdrop-blur-sm rounded-full text-white border transition-all relative overflow-hidden ${gym.is_home_base ? 'border-yellow-500 text-yellow-500' : 'border-white/10 hover:border-yellow-500/50'}`}
+                                        title={gym.is_home_base ? "Quitar de Sede Principal" : "Hacer Sede Principal"}
+                                        onClick={async (e) => {
+                                            e.stopPropagation();
+                                            if (!gym.is_home_base) {
+                                                await userService.setHomeBase(user!.id, gym.gym_id);
+                                            } else {
+                                                await userService.setHomeBase(user!.id, '');
+                                            }
+                                            loadUserData();
+                                        }}
+                                    >
+                                        <Star size={16} fill={gym.is_home_base ? "currentColor" : "none"} />
+                                    </button>
+                                    <button
+                                        className="p-2 bg-black/50 hover:bg-red-500/80 backdrop-blur-sm rounded-full text-white border border-white/10 hover:border-red-500/50 transition-all relative overflow-hidden group/delete"
+                                        title="Abandonar Gimnasio"
+                                        onClick={async (e) => {
+                                            e.stopPropagation();
+                                            if (confirm(`¿Estás seguro de que quieres abandonar ${gym.gym_name}? Se borrará de tu pasaporte.`)) {
+                                                await userService.removeGymFromPassport(user!.id, gym.gym_id);
+                                                loadUserData();
+                                            }
+                                        }}
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
                                     <button
                                         className="p-2 bg-black/50 hover:bg-black/80 backdrop-blur-sm rounded-full text-white border border-white/10 hover:border-gym-primary/50 transition-all relative overflow-hidden"
                                         title="Cambiar Fondo"

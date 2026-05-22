@@ -11,6 +11,7 @@ import { GPointsDisplay } from '../components/gamification/GPointsDisplay';
 
 import { ActiveWorkoutBubble } from '../components/workout/ActiveWorkoutBubble';
 import { useAutoCheckin } from '../hooks/useAutoCheckin';
+import { GlobalGPSGuard } from '../components/GlobalGPSGuard';
 
 export const AppLayout = () => {
     useAutoCheckin();
@@ -144,6 +145,8 @@ export const AppLayout = () => {
                     </nav>
                 </header>
             )}
+
+            <GlobalGPSGuard />
 
             <main 
                 key={location.pathname} 

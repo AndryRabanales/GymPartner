@@ -45,7 +45,7 @@ export const useGeolocation = (enableHighAccuracy = true) => {
                     }
 
                     const capWatchId = await Geolocation.watchPosition(
-                        { enableHighAccuracy: enableHighAccuracy, timeout: 15000, maximumAge: 0 },
+                        { enableHighAccuracy: enableHighAccuracy, timeout: 10000, maximumAge: 0 },
                         (position, err) => {
                             if (err) {
                                 console.warn(`[NATIVE GEOLOCATION] Error: ${err.message}`);
@@ -86,7 +86,7 @@ export const useGeolocation = (enableHighAccuracy = true) => {
 
                 const options = {
                     enableHighAccuracy,
-                    timeout: 15000,
+                    timeout: 10000,
                     maximumAge: 0,
                 };
 

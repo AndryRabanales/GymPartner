@@ -1,21 +1,52 @@
--- Script para borrar todos los gimnasios personales
--- Se eliminarán solo de la tabla gyms. Si hay entrenamientos vinculados, el ON DELETE CASCADE 
--- de la clave foránea podría borrarlos si no está como SET NULL. 
--- Espera, debemos asegurarnos de que `workout_sessions` no se borre. 
--- Si `gym_id` en `workout_sessions` tiene ON DELETE CASCADE, esto borraría los entrenamientos!
--- Solución: Primero poner gym_id = NULL en los entrenamientos, y luego borrar el gym.
+-- Script para borrar todos los gimnasios personales y bases personalizadas
+-- Maneja las dependencias de claves foráneas antes de eliminar los registros
 
+-- 1. Desvincular de perfiles (home_gym_id)
+UPDATE public.profiles
+SET home_gym_id = NULL
+WHERE home_gym_id IN (
+    SELECT id::text FROM public.gyms 
+    WHERE place_id LIKE 'personal_arsenal_%' 
+       OR place_id LIKE 'custom_base_%'
+       OR place_id LIKE 'custom_loc_%'
+       OR place_id = 'virtual'
+);
+
+-- 2. Eliminar del pasaporte de usuario (user_gyms)
+DELETE FROM public.user_gyms
+WHERE gym_id IN (
+    SELECT id FROM public.gyms 
+    WHERE place_id LIKE 'personal_arsenal_%' 
+       OR place_id LIKE 'custom_base_%'
+       OR place_id LIKE 'custom_loc_%'
+       OR place_id = 'virtual'
+);
+
+-- 3. Desvincular entrenamientos
 UPDATE public.workout_sessions
 SET gym_id = NULL
 WHERE gym_id IN (
-    SELECT id FROM public.gyms WHERE place_id LIKE 'personal_arsenal_%'
+    SELECT id FROM public.gyms 
+    WHERE place_id LIKE 'personal_arsenal_%' 
+       OR place_id LIKE 'custom_base_%'
+       OR place_id LIKE 'custom_loc_%'
+       OR place_id = 'virtual'
 );
 
-UPDATE public.workout_sessions
+-- 4. Desvincular items del inventario (para que pasen a ser globales nulos)
+UPDATE public.gym_equipment
 SET gym_id = NULL
 WHERE gym_id IN (
-    SELECT id FROM public.gyms WHERE type = 'PERSONAL'
+    SELECT id FROM public.gyms 
+    WHERE place_id LIKE 'personal_arsenal_%' 
+       OR place_id LIKE 'custom_base_%'
+       OR place_id LIKE 'custom_loc_%'
+       OR place_id = 'virtual'
 );
 
+-- 5. Finalmente, borrar los gimnasios falsos/personalizados
 DELETE FROM public.gyms
-WHERE place_id LIKE 'personal_arsenal_%' OR type = 'PERSONAL';
+WHERE place_id LIKE 'personal_arsenal_%' 
+   OR place_id LIKE 'custom_base_%'
+   OR place_id LIKE 'custom_loc_%'
+   OR place_id = 'virtual';

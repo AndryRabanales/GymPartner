@@ -17,7 +17,9 @@ import { normalizeText, getMuscleGroup } from '../utils/inventoryUtils';
 
 // Interface NumpadTarget removed
 // BattleTimer removed
-import { Plus, Swords, Trash2, Check, ArrowLeft, MoreVertical, X, RotateCcw, Search, Loader, Map as MapIcon, Lock, LockOpen, Pause, Play } from 'lucide-react';
+import { Loader2, ArrowLeft, Image as ImageIcon, MapPin, Search, Plus, Save, Activity, Layers, Tag, Battery, MapIcon, Check, Settings as SettingsIcon } from 'lucide-react';
+import { getCurrentPosition } from '../utils/geolocationUtils';
+import type { GymPlace, Database } from '../types/database';
 import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
@@ -326,6 +328,7 @@ export const WorkoutSession = () => {
 
     // Timer State (RESTORED)
     const [elapsedTime, setElapsedTime] = useState("00:00");
+    const [ambiguousGyms, setAmbiguousGyms] = useState<any[]>([]);
     const [isFinished, setIsFinished] = useState(false);
 
     // Timer Effect (RESTORED)
@@ -367,9 +370,10 @@ export const WorkoutSession = () => {
             setTimeout(() => setShowIntroAnim(false), 1200);
 
             // 1. PHASE 1: Instant Data Fetch (Settings & Gyms)
-            const [gyms, settings] = await Promise.all([
+            const [gyms, settings, allGyms] = await Promise.all([
                 userService.getUserGyms(userId),
-                equipmentService.getUserSettings(userId)
+                equipmentService.getUserSettings(userId),
+                userService.getAllGyms()
             ]);
 
             // ALWAYS DEFAULT TO HOME BASE FIRST (Graceful degradation for GPS)
@@ -405,25 +409,17 @@ export const WorkoutSession = () => {
             // 3. PHASE 3: High-Precision Background GPS Resolution
             (async () => {
                 try {
-                    const getPosition = (options?: PositionOptions): Promise<GeolocationPosition> => {
-                        return new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, options));
-                    };
-
-                    // Try to get a stable position
-                    const gpsPosition = await Promise.race([
-                        getPosition({ enableHighAccuracy: true, timeout: 3500 }),
-                        new Promise<null>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3500))
-                    ]).catch(async () => {
-                        // Immediate fallback to low accuracy if high accuracy fails
-                        return await getPosition({ enableHighAccuracy: false, timeout: 2000 }).catch(() => null);
-                    });
+                    const gpsPosition = await getCurrentPosition({ enableHighAccuracy: true, timeout: 3500 })
+                        .catch(async () => {
+                            return await getCurrentPosition({ enableHighAccuracy: false, timeout: 2000 });
+                        });
 
                     if (gpsPosition && !routeGymId) {
-                        const userLat = gpsPosition.coords.latitude;
-                        const userLng = gpsPosition.coords.longitude;
+                        const userLat = gpsPosition.lat;
+                        const userLng = gpsPosition.lng;
 
-                        // Sort gyms by distance to pick the ABSOLUTE closest one
-                        const gymsWithDistance = gyms
+                        // Sort all gyms by distance to pick the absolute closest ones
+                        const gymsWithDistance = allGyms
                             .filter(g => g.lat && g.lng)
                             .map(g => {
                                 const R = 6371;
@@ -433,34 +429,93 @@ export const WorkoutSession = () => {
                                 const dist = (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
                                 return { ...g, dist };
                             })
-                            .filter(g => g.dist <= 3.0) // 3km radius for extremely bouncy indoor GPS
+                            .filter(g => g.dist <= 0.5) // 500m radius for strict checking
                             .sort((a, b) => a.dist - b.dist);
 
-                        const nearestGym = gymsWithDistance[0];
+                        const applyPrecisionGym = async (nearestGym: any) => {
+                            if (nearestGym && nearestGym.id !== targetGymId) {
+                                console.log(`🎯 Precision Lock: ${nearestGym.name} (${Math.round(nearestGym.dist * 1000)}m)`);
+                                setDetectedGymName(nearestGym.name || '');
+                                setResolvedGymId(nearestGym.id);
 
-                        if (nearestGym && nearestGym.gym_id !== targetGymId) {
-                            console.log(`🎯 Precision Lock: ${nearestGym.gym_name} (${Math.round(nearestGym.dist * 1000)}m)`);
-                            setDetectedGymName(nearestGym.gym_name || '');
-                            setResolvedGymId(nearestGym.gym_id);
+                                // Ensure it's in user's passport
+                                if (!gyms.some(g => g.gym_id === nearestGym.id)) {
+                                    await userService.addGymToPassport(userId, {
+                                        place_id: nearestGym.place_id,
+                                        name: nearestGym.name,
+                                        address: nearestGym.address || '',
+                                        location: { lat: nearestGym.lat, lng: nearestGym.lng }
+                                    });
+                                }
 
-                            // Hot-swap inventory and routines
-                            const [newItems, newRoutines] = await Promise.all([
-                                equipmentService.getInventory(nearestGym.gym_id),
-                                workoutService.getUserRoutines(userId, nearestGym.gym_id)
-                            ]);
+                                // Hot-swap inventory and routines
+                                const [newItems, newRoutines] = await Promise.all([
+                                    equipmentService.getInventory(nearestGym.id),
+                                    workoutService.getUserRoutines(userId, nearestGym.id)
+                                ]);
 
-                            setRoutines(newRoutines);
-                            setArsenal(prev => {
-                                const combined = [...newItems, ...prev];
-                                const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
-                                return unique;
-                            });
+                                setRoutines(newRoutines);
+                                setArsenal(prev => {
+                                    const combined = [...newItems, ...prev];
+                                    const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
+                                    return unique;
+                                });
+                            }
+                        };
+
+                        if (gymsWithDistance.length > 0) {
+                            const homeGym = gymsWithDistance.find(g => gyms.some(ug => ug.gym_id === g.id && ug.is_home_base));
+                            if (homeGym) {
+                                await applyPrecisionGym(homeGym);
+                            } else {
+                                // AMBIGUITY OR NOT HOME BASE: let user choose
+                                setAmbiguousGyms(gymsWithDistance);
+                            }
                         }
                     }
                 } catch (err) {
                     console.warn("Precision GPS failed:", err);
                 }
             })();
+
+            const handleSelectAmbiguousGym = async (gym: any) => {
+                try {
+                    // Make it home base since they picked it
+                    await userService.setHomeBase(user!.id, gym.id);
+
+                    // Ensure it's in passport
+                    if (!gyms.some(g => g.gym_id === gym.id)) {
+                        await userService.addGymToPassport(user!.id, {
+                            place_id: gym.place_id,
+                            name: gym.name,
+                            address: gym.address || '',
+                            location: { lat: gym.lat, lng: gym.lng }
+                        });
+                    }
+
+                    setDetectedGymName(gym.name || '');
+                    setResolvedGymId(gym.id);
+                    setAmbiguousGyms([]);
+
+                    // Hot-swap inventory and routines
+                    const [newItems, newRoutines] = await Promise.all([
+                        equipmentService.getInventory(gym.id),
+                        workoutService.getUserRoutines(user!.id, gym.id)
+                    ]);
+
+                    setRoutines(newRoutines);
+                    setArsenal(prev => {
+                        const combined = [...newItems, ...prev];
+                        const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
+                        return unique;
+                    });
+                } catch (err) {
+                    console.error("Error setting ambiguous gym", err);
+                }
+            };
+
+            // Attach to window or state for the JSX to access
+            (window as any).__handleSelectAmbiguousGym = handleSelectAmbiguousGym;
 
             // 3. Restore or Start Logic
             const active = activeResult.data;
@@ -1319,6 +1374,36 @@ export const WorkoutSession = () => {
 
     return (
         <div className="min-h-screen bg-neutral-950 text-white pb-32 relative overflow-hidden">
+
+            {/* AMBIGUOUS GYMS MODAL */}
+            {ambiguousGyms.length > 0 && (
+                <div className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-4 animate-in fade-in zoom-in duration-300">
+                    <div className="bg-neutral-900 border border-white/10 p-6 md:p-8 rounded-[2rem] w-full max-w-sm text-center shadow-2xl relative overflow-hidden">
+                        <div className="w-16 h-16 bg-gym-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-gym-primary/20">
+                            <MapIcon className="text-gym-primary w-8 h-8" />
+                        </div>
+                        <h2 className="text-2xl font-black text-white italic uppercase tracking-tighter mb-2">Selecciona tu Base</h2>
+                        <p className="text-neutral-400 text-sm mb-6">Hemos detectado varios gimnasios cerca de ti. Selecciona en cuál estás entrenando.</p>
+                        
+                        <div className="space-y-3 max-h-[40vh] overflow-y-auto">
+                            {ambiguousGyms.map(gym => (
+                                <button
+                                    key={gym.id}
+                                    onClick={() => (window as any).__handleSelectAmbiguousGym?.(gym)}
+                                    className="w-full bg-black hover:bg-neutral-800 border border-white/10 hover:border-gym-primary/50 rounded-xl p-4 flex items-center justify-between group transition-all text-left"
+                                >
+                                    <div>
+                                        <div className="text-white font-bold text-sm group-hover:text-gym-primary transition-colors">{gym.name}</div>
+                                        <div className="text-neutral-500 text-xs">A {Math.round(gym.dist * 1000)}m de ti</div>
+                                    </div>
+                                    <Check className="text-gym-primary opacity-0 group-hover:opacity-100 transition-opacity" size={20} />
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* 0. INTRO ANIMATION (Matching Image Reference) */}
             {showIntroAnim && (
                 <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center animate-out fade-out duration-300 delay-700">
