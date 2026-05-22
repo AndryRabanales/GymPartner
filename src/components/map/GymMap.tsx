@@ -9,7 +9,7 @@ import { notificationService } from '../../services/NotificationService';
 import { getDistance } from '../../utils/distance';
 import type { UserPrimaryGym } from '../../services/UserService';
 import { useNavigate } from 'react-router-dom';
-import { Lock, Star, Search, Loader, MapPin } from 'lucide-react';
+import { Lock, Star, Search, Loader, MapPin, Heart } from 'lucide-react';
 import { PlayerProfileModal } from '../profile/PlayerProfileModal';
 
 interface GymMarker {
@@ -46,6 +46,11 @@ export const GymMap = () => {
     const [isSearching, setIsSearching] = useState(false);
     const [suggestions, setSuggestions] = useState<google.maps.places.AutocompletePrediction[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
+
+    // Favorites State
+    const [isFavorite, setIsFavorite] = useState(false);
+    const [favoriteCount, setFavoriteCount] = useState(0);
+
     // TUTORIAL STATE
     const [tutorialStep, setTutorialStep] = useState(0);
 
@@ -224,19 +229,19 @@ export const GymMap = () => {
     const handleSetHomeBase = async () => {
         if (!selectedGym || !user || !selectedGym.id) return;
 
-        const result = await userService.setHomeBase(user.id, selectedGym.id);
+        const result = await userService.toggleHomeBase(user.id, selectedGym.id, true);
 
         if (result.success) {
             // Update local state
             setUserGyms(prev => prev.map(g => ({
                 ...g,
-                is_home_base: g.gym_id === selectedGym.id // Only this one is true
+                is_home_base: g.gym_id === selectedGym.id ? true : g.is_home_base
             })));
 
             // Update markers
             setDisplayGyms(prev => prev.map(g => ({
                 ...g,
-                is_home_base: g.id === selectedGym.id
+                is_home_base: g.id === selectedGym.id ? true : g.is_home_base
             })));
 
             // Update current selection to reflect change immediately
@@ -249,6 +254,37 @@ export const GymMap = () => {
             alert('Error al establecer sede: ' + result.error);
         }
     };
+
+    const handleToggleFavorite = async () => {
+        if (!selectedGym || !user || !selectedGym.id) return;
+
+        const newFavState = !isFavorite;
+        setIsFavorite(newFavState);
+        setFavoriteCount(prev => newFavState ? prev + 1 : Math.max(0, prev - 1));
+
+        const result = await userService.toggleFavoriteGym(user.id, selectedGym.id, newFavState);
+        if (!result.success) {
+            // Revert on failure
+            setIsFavorite(!newFavState);
+            setFavoriteCount(prev => !newFavState ? prev + 1 : Math.max(0, prev - 1));
+            console.error('Error al actualizar favorito:', result.error);
+        }
+    };
+
+    useEffect(() => {
+        const fetchFavoriteData = async () => {
+            if (selectedGym && selectedGym.id && user) {
+                const count = await userService.getGymFavoritesCount(selectedGym.id);
+                const isFav = await userService.checkIsFavorite(user.id, selectedGym.id);
+                setFavoriteCount(count);
+                setIsFavorite(isFav);
+            } else {
+                setFavoriteCount(0);
+                setIsFavorite(false);
+            }
+        };
+        fetchFavoriteData();
+    }, [selectedGym, user]);
 
     // Handle autocomplete suggestions
     const handleAutocomplete = (query: string) => {
@@ -682,6 +718,24 @@ export const GymMap = () => {
                                         AÑADIR A MI MAPA
                                     </button>
                                 )}
+
+                                {/* FAVORITE SECTION (Always Visible) */}
+                                {selectedGym.id && (
+                                    <div className="pt-2 border-t border-white/10 flex items-center justify-between">
+                                        <div className="flex items-center gap-2 text-xs text-neutral-400">
+                                            <Heart size={14} className={isFavorite ? "text-pink-500 fill-pink-500" : ""} />
+                                            <span>{favoriteCount} {favoriteCount === 1 ? 'persona lo prefiere' : 'personas lo prefieren'}</span>
+                                        </div>
+                                        <button 
+                                            onClick={handleToggleFavorite}
+                                            className={`p-2 rounded-full border transition-all ${isFavorite ? 'bg-pink-500/10 border-pink-500/50 text-pink-500 hover:bg-pink-500/20' : 'bg-white/5 border-white/10 text-white hover:bg-white/10'}`}
+                                            title={isFavorite ? "Quitar de Favoritos" : "Añadir a Favoritos"}
+                                        >
+                                            <Heart size={16} fill={isFavorite ? "currentColor" : "none"} />
+                                        </button>
+                                    </div>
+                                )}
+
                                 {selectedGym.lat && userLocation && getDistance(userLocation.lat, userLocation.lng, selectedGym.lat, selectedGym.lng) > 0.1 && !selectedGym.is_unlocked && (
                                     <p className="text-red-500 text-xs text-center font-bold mt-2">
                                         ⛔ A {getDistance(userLocation.lat, userLocation.lng, selectedGym.lat, selectedGym.lng).toFixed(2)}km (Max 0.1km)

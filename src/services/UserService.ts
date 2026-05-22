@@ -8,6 +8,7 @@ export interface UserPrimaryGym {
     gym_name: string;
     since: string;
     is_home_base?: boolean;
+    is_favorite?: boolean;
     lat?: number;
     lng?: number;
     equipment_count?: number;
@@ -20,36 +21,44 @@ class UserService {
     // Get all gyms associated with the user (Passport)
     async getUserGyms(userId: string): Promise<UserPrimaryGym[]> {
         try {
-            const { data, error } = await supabase
-                .from('user_gyms')
-                .select(`
-                    gym_id,
-                    since,
-                    is_home_base,
-                    custom_bg_url,
-                    custom_color,
-                    gyms (
-                        id,
-                        name,
-                        address,
-                        place_id,
-                        lat,
-                        lng,
-                        gym_equipment(count)
-                    )
-                `)
-                .eq('user_id', userId);
+            const [gymsResponse, favoritesResponse] = await Promise.all([
+                supabase
+                    .from('user_gyms')
+                    .select(`
+                        gym_id,
+                        since,
+                        is_home_base,
+                        custom_bg_url,
+                        custom_color,
+                        gyms (
+                            id,
+                            name,
+                            address,
+                            place_id,
+                            lat,
+                            lng,
+                            gym_equipment(count)
+                        )
+                    `)
+                    .eq('user_id', userId),
+                supabase
+                    .from('gym_favorites')
+                    .select('gym_id')
+                    .eq('user_id', userId)
+            ]);
 
-            if (error) throw error;
+            if (gymsResponse.error) throw gymsResponse.error;
+            if (!gymsResponse.data) return [];
 
-            if (!data) return [];
+            const favoriteGymIds = new Set(favoritesResponse.data?.map(f => f.gym_id) || []);
 
-            return data.map((item: any) => ({
+            return gymsResponse.data.map((item: any) => ({
                 gym_id: item.gyms.id,
                 google_place_id: item.gyms.place_id || 'mock_id',
                 gym_name: item.gyms.name,
                 since: item.since,
                 is_home_base: item.is_home_base,
+                is_favorite: favoriteGymIds.has(item.gyms.id),
                 lat: item.gyms.lat,
                 lng: item.gyms.lng,
                 equipment_count: item.gyms.gym_equipment?.[0]?.count || 0,
@@ -715,6 +724,61 @@ class UserService {
         } catch (error: any) {
             console.error('Error toggling home base:', error);
             return { success: false, error: error.message };
+        }
+    }
+
+    // Toggle a gym as Favorite (Heart)
+    async toggleFavoriteGym(userId: string, gymId: string, isFavorite: boolean): Promise<{ success: boolean; error?: string }> {
+        try {
+            if (isFavorite) {
+                const { error } = await supabase
+                    .from('gym_favorites')
+                    .upsert({ user_id: userId, gym_id: gymId });
+                if (error) throw error;
+            } else {
+                const { error } = await supabase
+                    .from('gym_favorites')
+                    .delete()
+                    .match({ user_id: userId, gym_id: gymId });
+                if (error) throw error;
+            }
+            return { success: true };
+        } catch (error: any) {
+            console.error('Error toggling favorite gym:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    // Get count of favorites for a gym
+    async getGymFavoritesCount(gymId: string): Promise<number> {
+        try {
+            const { count, error } = await supabase
+                .from('gym_favorites')
+                .select('*', { count: 'exact', head: true })
+                .eq('gym_id', gymId);
+            
+            if (error) throw error;
+            return count || 0;
+        } catch (error) {
+            console.error('Error getting gym favorites count:', error);
+            return 0;
+        }
+    }
+
+    // Check if user has favorited a gym
+    async checkIsFavorite(userId: string, gymId: string): Promise<boolean> {
+        try {
+            const { data, error } = await supabase
+                .from('gym_favorites')
+                .select('gym_id')
+                .match({ user_id: userId, gym_id: gymId })
+                .maybeSingle();
+            
+            if (error) throw error;
+            return !!data;
+        } catch (error) {
+            console.error('Error checking if gym is favorite:', error);
+            return false;
         }
     }
 

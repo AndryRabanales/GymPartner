@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { MapPin, Edit2, LogIn, Loader, Swords, Dumbbell, LineChart, History, Star, Search, ArrowLeft, ArrowRight, Crown, Map as MapIcon, Image as ImageIcon, Palette, Dices, Coins, Share2, Trash2 } from 'lucide-react'; // Added Dices, Share2, Trash2
+import { MapPin, Edit2, LogIn, Loader, Swords, Dumbbell, LineChart, History, Star, Search, ArrowLeft, ArrowRight, Crown, Map as MapIcon, Image as ImageIcon, Palette, Dices, Coins, Share2, Trash2, Heart } from 'lucide-react'; // Added Dices, Share2, Trash2
 // import { UserPlus, Grid } from 'lucide-react'; // UNUSED: Hidden Community Features
 // import { Grid } from 'lucide-react'; // UNUSED: Hidden Community Features
 import { Link, useNavigate } from 'react-router-dom';
@@ -802,6 +802,17 @@ export const UserProfile = () => {
                                         }}
                                     >
                                         <Star size={16} fill={gym.is_home_base ? "currentColor" : "none"} />
+                                    </button>
+                                    <button
+                                        className={`p-2 bg-black/50 hover:bg-black/80 backdrop-blur-sm rounded-full text-white border transition-all relative overflow-hidden ${gym.is_favorite ? 'border-pink-500 text-pink-500' : 'border-white/10 hover:border-pink-500/50'}`}
+                                        title={gym.is_favorite ? "Quitar de Favoritos" : "Añadir a Favoritos"}
+                                        onClick={async (e) => {
+                                            e.stopPropagation();
+                                            await userService.toggleFavoriteGym(user!.id, gym.gym_id, !gym.is_favorite);
+                                            loadUserData();
+                                        }}
+                                    >
+                                        <Heart size={16} fill={gym.is_favorite ? "currentColor" : "none"} />
                                     </button>
                                     <button
                                         className="p-2 bg-black/50 hover:bg-red-500/80 backdrop-blur-sm rounded-full text-white border border-white/10 hover:border-red-500/50 transition-all relative overflow-hidden group/delete"
