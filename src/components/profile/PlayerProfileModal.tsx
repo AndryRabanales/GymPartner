@@ -606,25 +606,25 @@ export const PlayerProfileModal = ({ player, onClose, onFollowToggle }: PlayerPr
 
                         {/* Live Workout Banner */}
                         {liveSession && (
-                            <div className="w-[85%] max-w-xs bg-red-950/40 border border-red-500/30 rounded-xl py-2 px-4 mb-5 shadow-[0_0_20px_rgba(239,68,68,0.15)] animate-pulse flex items-center justify-between select-none relative overflow-hidden group">
-                                <div className="absolute top-0 right-0 w-16 h-16 bg-red-500/5 rounded-full blur-xl pointer-events-none"></div>
-                                <div className="flex items-center gap-2 relative z-10 shrink-0">
-                                    <span className="relative flex h-2 w-2">
+                            <div className="w-[90%] max-w-sm bg-red-950/40 border border-red-500/30 rounded-2xl p-4 mb-6 shadow-[0_0_25px_rgba(239,68,68,0.2)] animate-pulse flex flex-col items-center select-none relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/10 rounded-full blur-2xl pointer-events-none"></div>
+                                <div className="flex items-center gap-2 mb-2 relative z-10">
+                                    <span className="relative flex h-2.5 w-2.5">
                                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
                                     </span>
-                                    <div className="flex flex-col text-left">
-                                        <span className="text-[8px] font-black text-red-400 uppercase tracking-widest italic leading-none mb-0.5">🔴 EN VIVO</span>
-                                        {liveGymName && (
-                                            <span className="text-[10px] font-bold text-white uppercase truncate max-w-[130px]">
-                                                {liveGymName}
-                                            </span>
-                                        )}
-                                    </div>
+                                    <span className="text-[10px] font-black text-red-400 uppercase tracking-[0.2em] italic">🔴 EN VIVO - ENTRENANDO AHORA</span>
                                 </div>
-                                <div className="text-right relative z-10 shrink-0 flex items-center gap-1 bg-black/30 px-2 py-0.5 rounded-lg border border-white/5">
-                                    <span className="text-[8px] font-black text-neutral-500 uppercase">⏱️</span>
-                                    <span className="text-red-400 font-mono text-xs font-black tracking-normal">{liveDuration}</span>
+                                <div className="space-y-1.5 text-center relative z-10 w-full">
+                                    {liveGymName && (
+                                        <p className="text-xs font-black text-white uppercase tracking-wider flex items-center justify-center gap-1">
+                                            <MapPin size={13} className="text-red-400 shrink-0" />
+                                            {liveGymName}
+                                        </p>
+                                    )}
+                                    <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest flex items-center justify-center gap-2">
+                                        ⏱️ DURACIÓN: <span className="text-red-400 font-mono text-sm font-black tracking-normal">{liveDuration}</span>
+                                    </p>
                                 </div>
                             </div>
                         )}

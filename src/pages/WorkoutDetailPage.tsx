@@ -37,7 +37,7 @@ interface ExerciseDetail {
 interface WorkoutDetail {
     id: string;
     started_at: string;
-    end_time: string | null;
+    end_time: string;
     gym_name: string;
     gym_id: string;
     duration_minutes: number;
@@ -56,25 +56,6 @@ export default function WorkoutDetailPage() {
             loadWorkoutDetail(sessionId);
         }
     }, [sessionId]);
-
-    // Live timer ticking effect for active sessions
-    useEffect(() => {
-        if (!workout || workout.end_time) return;
-
-        const interval = setInterval(() => {
-            setWorkout(prev => {
-                if (!prev) return null;
-                const start = new Date(prev.started_at).getTime();
-                const duration = Math.round((Date.now() - start) / (1000 * 60));
-                return {
-                    ...prev,
-                    duration_minutes: duration
-                };
-            });
-        }, 15000); // Ticks every 15 seconds
-
-        return () => clearInterval(interval);
-    }, [workout]);
 
     const loadWorkoutDetail = async (id: string) => {
         try {
@@ -176,7 +157,7 @@ export default function WorkoutDetailPage() {
             });
 
             const start = new Date(session.started_at).getTime();
-            const end = session.end_time ? new Date(session.end_time).getTime() : Date.now();
+            const end = new Date(session.end_time).getTime();
             const duration = Math.round((end - start) / (1000 * 60));
 
             // Fix gym access (handle array or object)
@@ -258,7 +239,7 @@ export default function WorkoutDetailPage() {
                     <div className="flex items-center gap-2 text-xs font-mono font-bold text-neutral-500 ml-6">
                         {new Date(workout.started_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         <span>-</span>
-                        {workout.end_time ? new Date(workout.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'EN CURSO'}
+                        {workout.end_time ? new Date(workout.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '???'}
                     </div>
                 </div>
 
@@ -274,31 +255,19 @@ export default function WorkoutDetailPage() {
 
                 {/* Stats */}
                 <div className="flex gap-6 mt-4">
-                    {workout.end_time ? (
-                        <>
-                            <div className="flex items-center gap-2">
-                                <Clock size={18} className="text-blue-500" />
-                                <span className="font-bold">{workout.duration_minutes} min</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Dumbbell size={18} className="text-gym-primary" />
-                                <span className="font-bold">
-                                    {workout.total_volume >= 1000
-                                        ? `${(workout.total_volume / 1000).toFixed(1)}k`
-                                        : workout.total_volume
-                                    } kg
-                                </span>
-                            </div>
-                        </>
-                    ) : (
-                        <div className="flex items-center gap-2.5 bg-red-500/10 border border-red-500/20 px-3 py-1.5 rounded-xl text-red-400 animate-pulse">
-                            <span className="relative flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                            </span>
-                            <span className="text-[10px] font-black uppercase tracking-wider italic">Sesión en Vivo - {workout.duration_minutes} min entrenando</span>
-                        </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                        <Clock size={18} className="text-blue-500" />
+                        <span className="font-bold">{workout.duration_minutes} min</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Dumbbell size={18} className="text-gym-primary" />
+                        <span className="font-bold">
+                            {workout.total_volume >= 1000
+                                ? `${(workout.total_volume / 1000).toFixed(1)}k`
+                                : workout.total_volume
+                            } kg
+                        </span>
+                    </div>
                 </div>
             </div>
 
@@ -330,20 +299,11 @@ export default function WorkoutDetailPage() {
                                     </span>
                                 </div>
                                 <div className="text-right">
-                                    {workout.end_time ? (
-                                        <>
-                                            <div className="text-2xl font-black text-gym-primary font-mono tracking-tighter">
-                                                {exercise.sets.reduce((sum, set) => sum + (set.weight_kg * set.reps), 0).toFixed(0)}
-                                                <span className="text-xs text-neutral-500 ml-1 font-sans font-bold">KG</span>
-                                            </div>
-                                            <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Volumen Total</div>
-                                        </>
-                                    ) : (
-                                        <div className="flex flex-col items-end">
-                                            <span className="text-xs font-bold text-red-400 animate-pulse tracking-wide uppercase italic">Sesión Activa</span>
-                                            <span className="text-[9px] text-neutral-500 font-bold uppercase tracking-widest">{exercise.sets.length} series registradas</span>
-                                        </div>
-                                    )}
+                                    <div className="text-2xl font-black text-gym-primary font-mono tracking-tighter">
+                                        {exercise.sets.reduce((sum, set) => sum + (set.weight_kg * set.reps), 0).toFixed(0)}
+                                        <span className="text-xs text-neutral-500 ml-1 font-sans font-bold">KG</span>
+                                    </div>
+                                    <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Volumen Total</div>
                                 </div>
                             </div>
 
@@ -368,7 +328,7 @@ export default function WorkoutDetailPage() {
                                                 </div>
                                             ))}
                                             {/* Total Volume Column only if we have weight/reps */}
-                                            {(exercise.metrics?.hasWeight && exercise.metrics?.hasReps && workout.end_time) && <div className="flex-1 min-w-[50px] text-right">Vol</div>}
+                                            {(exercise.metrics?.hasWeight && exercise.metrics?.hasReps) && <div className="flex-1 min-w-[50px] text-right">Vol</div>}
                                         </div>
 
                                         {/* Dynamic Rows */}
@@ -470,7 +430,7 @@ export default function WorkoutDetailPage() {
                                                     ))}
 
                                                     {/* Volume (Calculated) */}
-                                                    {(exercise.metrics?.hasWeight && exercise.metrics?.hasReps && workout.end_time) && (
+                                                    {(exercise.metrics?.hasWeight && exercise.metrics?.hasReps) && (
                                                         <div className="flex-1 min-w-[50px] text-right font-mono font-black text-neutral-600 text-[10px]">
                                                             {set.weight_kg > 0 && set.reps > 0
                                                                 ? (set.weight_kg * set.reps).toFixed(0)

@@ -1148,9 +1148,11 @@ export const WorkoutSession = () => {
     const [routineName, setRoutineName] = useState('');
     const [locationName, setLocationName] = useState('');
     const [isSavingFlow, setIsSavingFlow] = useState(false);
+    const [isFinalizing, setIsFinalizing] = useState(false);
 
     // 1. Triggered by UI Button
     const handleFinishRequest = async () => {
+        if (isFinalizing) return;
         setIsFinished(true); // Stop timer
 
         // SMART SKIP: If we have a routine name AND the exercises haven't changed, skip modal
@@ -1253,10 +1255,13 @@ export const WorkoutSession = () => {
 
     // 5. Finalize (The original handleFinish)
     const handleFinalizeSession = async () => {
+        if (isFinalizing) return;
+        setIsFinalizing(true);
         // setIsFinished(true); // Already stopped
         if (!sessionId) {
             console.error('❌ No sessionId found!');
             setIsFinished(false);
+            setIsFinalizing(false);
             return;
         }
 
@@ -1366,12 +1371,14 @@ export const WorkoutSession = () => {
                 // alert('❌ Error guardando entrenamiento: ' + JSON.stringify(result.error));
                 setLoading(false);
                 setIsFinished(false); // Resume timer if failed
+                setIsFinalizing(false);
             }
         } catch (error) {
             console.error('❌ Exception terminando sesión:', error);
             // alert('❌ Error inesperado: ' + error);
             setLoading(false);
             setIsFinished(false);
+            setIsFinalizing(false);
         }
     };
 
@@ -1761,9 +1768,17 @@ export const WorkoutSession = () => {
                                                 <div className="pt-8 pb-4">
                                                     <button
                                                         onClick={handleFinishRequest}
-                                                        className="w-full bg-gradient-to-br from-yellow-400 to-orange-500 text-black font-black uppercase tracking-[0.2em] py-5 rounded-xl shadow-[0_0_30px_rgba(250,204,21,0.5)] hover:shadow-[0_0_50px_rgba(250,204,21,0.7)] text-lg hover:-translate-y-1 active:scale-95 transition-all duration-300 relative overflow-hidden group border border-yellow-300/50"
+                                                        disabled={isFinalizing}
+                                                        className="w-full bg-gradient-to-br from-yellow-400 to-orange-500 text-black font-black uppercase tracking-[0.2em] py-5 rounded-xl shadow-[0_0_30px_rgba(250,204,21,0.5)] hover:shadow-[0_0_50px_rgba(250,204,21,0.7)] text-lg hover:-translate-y-1 active:scale-95 transition-all duration-300 relative overflow-hidden group border border-yellow-300/50 disabled:opacity-50 disabled:cursor-not-allowed"
                                                     >
-                                                        <span className="relative z-10">Finalizar Entrenamiento</span>
+                                                        {isFinalizing ? (
+                                                            <span className="relative z-10 flex items-center justify-center gap-2">
+                                                                <Loader2 className="animate-spin" size={20} />
+                                                                Guardando...
+                                                            </span>
+                                                        ) : (
+                                                            <span className="relative z-10">Finalizar Entrenamiento</span>
+                                                        )}
                                                         <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 blur-md" />
                                                     </button>
                                                 </div>
@@ -2063,17 +2078,17 @@ export const WorkoutSession = () => {
 
                                 <button
                                     onClick={() => onSaveRoutine(routineName)}
-                                    disabled={isSavingFlow || !routineName.trim()}
+                                    disabled={isSavingFlow || isFinalizing || !routineName.trim()}
                                     className="w-full bg-gym-primary text-black font-black uppercase py-4 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-yellow-400 transition-colors flex items-center justify-center gap-2"
                                 >
-                                    {isSavingFlow ? <Loader className="animate-spin" size={20} /> : <Check size={20} strokeWidth={3} />}
+                                    {(isSavingFlow || isFinalizing) ? <Loader className="animate-spin" size={20} /> : <Check size={20} strokeWidth={3} />}
                                     GUARDAR RUTINA
                                 </button>
 
                                 <button
                                     onClick={onSkipRoutine}
-                                    disabled={isSavingFlow}
-                                    className="w-full bg-transparent border border-neutral-800 text-neutral-400 font-bold uppercase py-3 rounded-xl hover:text-white hover:border-white transition-colors"
+                                    disabled={isSavingFlow || isFinalizing}
+                                    className="w-full bg-transparent border border-neutral-800 text-neutral-400 font-bold uppercase py-3 rounded-xl hover:text-white hover:border-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     NO GUARDAR
                                 </button>
@@ -2192,6 +2207,33 @@ export const WorkoutSession = () => {
                     </div>
                 )
             }
+            {/* FULL-SCREEN PREMIUM FINALIZING OVERLAY */}
+            {isFinalizing && !showSummary && (
+                <div className="fixed inset-0 z-[300] bg-black/85 backdrop-blur-md flex flex-col items-center justify-center p-6 animate-in fade-in duration-300">
+                    <div className="flex flex-col items-center gap-6 text-center max-w-xs relative">
+                        {/* Pulse Ambient Effect */}
+                        <div className="absolute inset-0 bg-gym-primary/10 blur-3xl rounded-full scale-150 animate-pulse pointer-events-none" />
+
+                        {/* Custom Rotating Loader with Swords / Activity Icons */}
+                        <div className="relative flex items-center justify-center w-24 h-24">
+                            <Loader2 className="text-gym-primary animate-spin w-20 h-20" strokeWidth={1.5} />
+                            <div className="absolute flex items-center justify-center w-12 h-12 bg-neutral-900 border border-white/10 rounded-full shadow-lg">
+                                <Activity className="text-gym-primary w-6 h-6 animate-pulse" />
+                            </div>
+                        </div>
+
+                        {/* Title and Progress message */}
+                        <div className="space-y-2 mt-4 relative z-10">
+                            <h2 className="text-2xl font-black italic uppercase tracking-tighter text-white">
+                                GUARDANDO BATALLA
+                            </h2>
+                            <p className="text-neutral-400 font-medium text-sm animate-pulse">
+                                Persistiendo tus récords y notificando a tus aliados...
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div >
     );
 }
