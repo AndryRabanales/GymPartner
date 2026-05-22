@@ -21,6 +21,7 @@ interface GymMarker {
     is_database: boolean; // true if it exists in our gyms table
     is_unlocked: boolean; // true if user has this gym in passport
     is_home_base: boolean;
+    favorites_count?: number;
     rating?: number;
     address?: string;
     photoUrl?: string;
@@ -156,6 +157,7 @@ export const GymMap = () => {
                 is_database: !!existingDbGym,
                 is_unlocked: !!existingUserGym,
                 is_home_base: existingUserGym?.is_home_base || false,
+                favorites_count: existingDbGym?.gym_favorites?.[0]?.count || 0,
                 rating: place.rating,
                 address: place.vicinity,
                 photoUrl: photoUrl
@@ -618,12 +620,22 @@ export const GymMap = () => {
                                     borderColor={'#000'}
                                 />
                                 {gym.is_home_base && <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-yellow-500 text-black text-[10px] font-bold px-1.5 py-0.5 rounded shadow-lg animate-bounce">SEDE</div>}
+                                {(gym.favorites_count && gym.favorites_count > 0) ? (
+                                    <div className={`absolute ${gym.is_home_base ? '-top-12' : '-top-6'} left-1/2 -translate-x-1/2 bg-neutral-900 border border-red-500 text-red-500 text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-lg flex items-center gap-1 z-20 transition-all group-hover:scale-110`}>
+                                        <Heart size={10} fill="currentColor" /> {gym.favorites_count}
+                                    </div>
+                                ) : null}
                             </div>
                         ) : (
                             <div className="relative group">
                                 <div className={`bg-neutral-900/90 p-1.5 rounded-full border border-neutral-700 shadow-xl hover:scale-110 transition-transform cursor-pointer ${tutorialStep === 5 ? 'ring-2 ring-yellow-500 animate-pulse shadow-yellow-500/50' : ''}`}>
                                     <Lock size={16} className={`text-neutral-500 ${tutorialStep === 5 ? 'text-yellow-500 animate-bounce' : ''}`} />
                                 </div>
+                                {(gym.favorites_count && gym.favorites_count > 0) ? (
+                                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-neutral-900 border border-red-500 text-red-500 text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-lg flex items-center gap-1 z-20 transition-all group-hover:scale-110">
+                                        <Heart size={10} fill="currentColor" /> {gym.favorites_count}
+                                    </div>
+                                ) : null}
                             </div>
                         )}
                     </AdvancedMarker>
@@ -723,12 +735,12 @@ export const GymMap = () => {
                                 {selectedGym.id && (
                                     <div className="pt-2 border-t border-white/10 flex items-center justify-between">
                                         <div className="flex items-center gap-2 text-xs text-neutral-400">
-                                            <Heart size={14} className={isFavorite ? "text-pink-500 fill-pink-500" : ""} />
+                                            <Heart size={14} className={isFavorite ? "text-red-500 fill-red-500" : ""} />
                                             <span>{favoriteCount} {favoriteCount === 1 ? 'persona lo prefiere' : 'personas lo prefieren'}</span>
                                         </div>
                                         <button 
                                             onClick={handleToggleFavorite}
-                                            className={`p-2 rounded-full border transition-all ${isFavorite ? 'bg-pink-500/10 border-pink-500/50 text-pink-500 hover:bg-pink-500/20' : 'bg-white/5 border-white/10 text-white hover:bg-white/10'}`}
+                                            className={`p-2 rounded-full border transition-all ${isFavorite ? 'bg-red-500/10 border-red-500/50 text-red-500 hover:bg-red-500/20' : 'bg-white/5 border-white/10 text-white hover:bg-white/10'}`}
                                             title={isFavorite ? "Quitar de Favoritos" : "Añadir a Favoritos"}
                                         >
                                             <Heart size={16} fill={isFavorite ? "currentColor" : "none"} />

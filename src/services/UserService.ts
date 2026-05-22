@@ -347,7 +347,10 @@ class UserService {
     async getAllGyms(): Promise<any[]> {
         const { data, error } = await supabase
             .from('gyms')
-            .select('*');
+            .select(`
+                *,
+                gym_favorites(count)
+            `);
 
         if (error) {
             console.error('Error fetching all gyms:', error);
