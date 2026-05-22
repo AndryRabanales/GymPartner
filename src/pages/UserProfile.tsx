@@ -653,28 +653,34 @@ export const UserProfile = () => {
 
                         {/* Gym Tags - DYNAMIC COLORS BASED ON STATUS */}
                         {userGyms.map(gym => {
-                            let borderColor = "border-neutral-700 hover:border-white/50";
                             let textColor = "text-neutral-300 hover:text-white";
                             let iconColor = "text-neutral-500";
                             let bgColor = "bg-neutral-800 hover:bg-neutral-700";
+                            let borderColor = "border-neutral-700/50 hover:border-neutral-500";
                             let shadow = "hover:shadow-sm";
 
                             if (gym.is_favorite) {
+                                // Favorite (red)
                                 borderColor = "border-red-500/50 hover:border-red-500";
                                 textColor = "text-red-400 hover:text-red-300";
                                 iconColor = "text-red-500";
                                 bgColor = "bg-red-500/10 hover:bg-red-500/20";
                                 shadow = "hover:shadow-[0_0_15px_rgba(239,68,68,0.2)]";
                             } else if (gym.is_home_base) {
+                                // Predeterminado (yellow)
                                 borderColor = "border-yellow-500/50 hover:border-yellow-500";
                                 textColor = "text-yellow-400 hover:text-yellow-300";
                                 iconColor = "text-yellow-500";
                                 bgColor = "bg-yellow-500/10 hover:bg-yellow-500/20";
-                                shadow = "hover:shadow-[0_0_15px_rgba(250,204,21,0.2)]";
+                                shadow = "hover:shadow-[0_0_15px_rgba(234,179,8,0.2)]";
                             }
 
                             return (
-                                <Link key={gym.gym_id} to={`/territory/${gym.gym_id}`} className={`px-2 py-1 rounded-full flex items-center gap-1.5 text-[10px] sm:text-xs transition-all no-underline border ${borderColor} ${textColor} ${bgColor} ${shadow}`}>
+                                <Link
+                                    key={gym.gym_id}
+                                    to={`/territory/${gym.gym_id}`}
+                                    className={`px-2 py-1 rounded-full flex items-center gap-1.5 text-[10px] sm:text-xs transition-all no-underline border ${borderColor} ${textColor} ${bgColor} ${shadow}`}
+                                >
                                     <MapPin size={12} className={`sm:w-4 sm:h-4 ${iconColor}`} />
                                     <span className="truncate max-w-[90px] sm:max-w-[120px]">{gym.gym_name}</span>
                                 </Link>
