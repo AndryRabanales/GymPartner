@@ -117,6 +117,7 @@ export const WorkoutSession = () => {
     // NEW: Track Routine Name for AI Diagnosis
     const [currentRoutineName, setCurrentRoutineName] = useState<string | undefined>(undefined);
     const [originalExerciseIds, setOriginalExerciseIds] = useState<string[]>([]); // To detect changes
+    const [originalMetricsSnapshot, setOriginalMetricsSnapshot] = useState<string | null>(null); // To detect changes in routine targets
     // currentGym state removed
 
     // Tutorial State
