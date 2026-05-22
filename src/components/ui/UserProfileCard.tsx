@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+// Updated for final deployment trigger
+
 import { Shield, MapPin, Zap, Sparkles, Activity, X, History, Eye, EyeOff, Lock, Unlock, Swords, Loader2, CheckCircle2, Heart } from 'lucide-react';
 import { FadeInImage } from './FadeInImage';
 import { cloudinaryService } from '../../services/CloudinaryService';
@@ -238,26 +239,26 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
             <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pt-4 pb-8 space-y-6">
                 
                 {/* Stats Grid */}
-                <div className="grid grid-cols-3 gap-2 w-full">
-                    <div className="bg-white/5 backdrop-blur-md rounded-2xl p-3 border border-white/5 text-center">
-                        <p className="text-lg font-black text-gym-primary leading-none italic">{user.training_days_count}</p>
-                        <p className="text-[8px] text-neutral-500 font-bold uppercase tracking-widest mt-1">Entrenos</p>
+                <div className="grid grid-cols-3 gap-1 w-full">
+                    <div className="bg-white/5 backdrop-blur-md rounded-2xl p-2 border border-white/5 text-center">
+                        <p className="text-sm font-black text-gym-primary leading-none italic">{user.training_days_count}</p>
+                        <p className="text-[7px] text-neutral-500 font-bold uppercase tracking-widest mt-0.5">Entrenos</p>
                     </div>
-                    <div className="bg-white/5 backdrop-blur-md rounded-2xl p-3 border border-white/5 text-center">
-                        <p className="text-lg font-black text-white leading-none italic">{user.followers_count}</p>
-                        <p className="text-[8px] text-neutral-500 font-bold uppercase tracking-widest mt-1">Seguidores</p>
+                    <div className="bg-white/5 backdrop-blur-md rounded-2xl p-2 border border-white/5 text-center">
+                        <p className="text-sm font-black text-white leading-none italic">{user.followers_count}</p>
+                        <p className="text-[7px] text-neutral-500 font-bold uppercase tracking-widest mt-0.5">Seguidores</p>
                     </div>
-                    <div className="bg-white/5 backdrop-blur-md rounded-2xl p-3 border border-white/5 text-center">
-                        <p className="text-lg font-black text-white leading-none italic">{user.following_count}</p>
-                        <p className="text-[8px] text-neutral-500 font-bold uppercase tracking-widest mt-1">Seguidos</p>
+                    <div className="bg-white/5 backdrop-blur-md rounded-2xl p-2 border border-white/5 text-center">
+                        <p className="text-sm font-black text-white leading-none italic">{user.following_count}</p>
+                        <p className="text-[7px] text-neutral-500 font-bold uppercase tracking-widest mt-0.5">Seguidos</p>
                     </div>
                 </div>
 
+
                 {/* Gym Passport (Visited Gyms) */}
                         {user.gym_passport && user.gym_passport.filter(g => !g.name.includes('Arsenal Personal')).length > 0 && (
-                            <div className="flex flex-wrap gap-1.5 justify-center mt-2 px-1">
+                            <div className="flex flex-wrap gap-0.5 justify-center mt-1 px-0.5">
                                 {user.gym_passport.filter(g => !g.name.includes('Arsenal Personal')).slice(0, 8).map((gym, idx) => {
-                                    // Determine colors based on status
                                     const isFav = gym.is_favorite;
                                     const isHome = gym.is_home_base;
                                     const borderColor = isFav ? 'border-red-500/50 hover:border-red-500' : isHome ? 'border-yellow-500/50 hover:border-yellow-500' : 'border-white/5 hover:border-white/10';
@@ -268,16 +269,16 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
                                     return (
                                         <div
                                             key={`${gym.id}-${idx}`}
-                                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full ${bgColor} border ${borderColor} ${textColor} ${shadow}`}
+                                            className={`flex items-center gap-0.5 px-2 py-1 rounded-full ${bgColor} border ${borderColor} ${textColor} ${shadow} text-xs`}
                                         >
-                                            <MapPin size={10} className={iconColor} />
-                                            {isFav && <Heart size={10} className="text-red-500 ml-1" />}
+                                            <MapPin size={9} className={iconColor} />
+                                            {isFav && <Heart size={9} className="text-red-500 ml-0.5" />}
                                             <span>{gym.name}</span>
                                         </div>
                                     );
                                 })}
                                 {user.gym_passport.filter(g => !g.name.includes('Arsenal Personal')).length > 8 && (
-                                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-900/60 border border-white/5 text-[9px] font-black italic uppercase tracking-tighter text-neutral-400">
+                                    <div className="flex items-center gap-0.5 px-2 py-1 rounded-full bg-neutral-900/60 border border-white/5 text-[8px] font-black italic uppercase tracking-tighter text-neutral-400">
                                         +{user.gym_passport.filter(g => !g.name.includes('Arsenal Personal')).length - 8} MÁS
                                     </div>
                                 )}
