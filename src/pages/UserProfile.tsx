@@ -979,51 +979,8 @@ export const UserProfile = () => {
 
                                         if (type === 'GYM_FOUND' && gymData) {
                                             navigate(`/territory/${gymData.gym_id}/workout`);
-                                        } else if (type === 'NO_GYM' && location) {
-                                            // Handle "Strategic Base" creation silently
-                                            try {
-                                                const timestamp = new Date().getTime();
-                                                const customPlace = {
-                                                    place_id: `custom_base_${timestamp}`,
-                                                    name: "Gimnasio Personalizado",
-                                                    address: "Ubicación Clasificada",
-                                                    location: location,
-                                                    types: ['gym', 'point_of_interest']
-                                                };
-
-                                                // Add to passport (creates gym if needed)
-                                                const result = await userService.addGymToPassport(user!.id, customPlace);
-
-                                                if (result.success && result.gym_id) {
-                                                    // Optimistic object for immediate start
-                                                    const newGym: UserPrimaryGym = {
-                                                        gym_id: result.gym_id,
-                                                        google_place_id: customPlace.place_id,
-                                                        gym_name: customPlace.name,
-                                                        since: new Date().toISOString(),
-                                                        is_home_base: false,
-                                                        lat: location.lat,
-                                                        lng: location.lng,
-                                                        equipment_count: 0
-                                                    };
-                                                    navigate(`/territory/${newGym.gym_id}/workout`);
-                                                } else {
-                                                    setLocationError({
-                                                        isOpen: true,
-                                                        gymName: 'Base',
-                                                        distanceMeters: null,
-                                                        errorType: 'GPS_ERROR' // Reuse generic error
-                                                    });
-                                                }
-                                            } catch (err) {
-                                                console.error("Error creating base:", err);
-                                                setLocationError({
-                                                    isOpen: true,
-                                                    gymName: 'Base',
-                                                    distanceMeters: null,
-                                                    errorType: 'GPS_ERROR'
-                                                });
-                                            }
+                                        } else if (type === 'NO_GYM') {
+                                            navigate('/workout');
                                         }
                                     }}
                                     className="flex-1 bg-gym-primary hover:bg-yellow-400 text-black font-black py-3 rounded-xl transition-colors uppercase tracking-widest text-xs shadow-[0_0_15px_rgba(250,204,21,0.3)]"

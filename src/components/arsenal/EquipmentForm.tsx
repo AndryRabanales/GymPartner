@@ -132,9 +132,6 @@ export const EquipmentForm = ({
                 // The original code tried to ensurePersonalGym.
             };
 
-            // Ensure Personal Gym for Custom Items so they are Global
-            const personalGymId = await import('../../services/UserService').then(m => m.userService.ensurePersonalGym(user.id));
-
             let resultItem: Equipment;
 
             // Check if it's a "Virtual" item (from seeds) that is being "Start"ed/Modified for real use
@@ -149,7 +146,7 @@ export const EquipmentForm = ({
                 // CREATE (Fresh or Instantiating Virtual Item)
                 // If it was virtual, we effectively "clone" it into a real DB item
                 // @ts-ignore
-                resultItem = await equipmentService.addEquipment({ ...payload, gym_id: personalGymId }, user.id);
+                resultItem = await equipmentService.addEquipment({ ...payload, gym_id: null }, user.id);
                 onSuccess(resultItem, false);
             }
             onClose();

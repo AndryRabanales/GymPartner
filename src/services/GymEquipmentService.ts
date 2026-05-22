@@ -172,10 +172,24 @@ class GymEquipmentService {
 
     // Get inventory for a specific gym
     async getInventory(gymId: string): Promise<Equipment[]> {
+        if (!gymId) return [];
         const { data, error } = await supabase
             .from('gym_equipment')
             .select('*')
             .eq('gym_id', gymId)
+            .order('name');
+
+        if (error) throw error;
+        return data || [];
+    }
+
+    // Get personal inventory (gym_id is null, verified_by user)
+    async getPersonalInventory(userId: string): Promise<Equipment[]> {
+        const { data, error } = await supabase
+            .from('gym_equipment')
+            .select('*')
+            .is('gym_id', null)
+            .eq('verified_by', userId)
             .order('name');
 
         if (error) throw error;

@@ -367,28 +367,27 @@ export const WorkoutSession = () => {
             setTimeout(() => setShowIntroAnim(false), 1200);
 
             // 1. PHASE 1: Instant Data Fetch (Settings & Gyms)
-            const [gyms, settings, personalGymId] = await Promise.all([
+            const [gyms, settings] = await Promise.all([
                 userService.getUserGyms(userId),
-                equipmentService.getUserSettings(userId),
-                userService.ensurePersonalGym(userId),
+                equipmentService.getUserSettings(userId)
             ]);
 
             // ALWAYS DEFAULT TO HOME BASE FIRST (Graceful degradation for GPS)
             const homeBase = gyms.find(g => g.is_home_base)?.gym_id;
-            const targetGymId = routeGymId === 'personal' ? personalGymId : (routeGymId || homeBase || personalGymId);
+            const targetGymId = routeGymId || homeBase || null;
 
             // Set initial name only if we have a specific route ID, otherwise empty (wait for GPS)
-            if (routeGymId && routeGymId !== 'personal') {
+            if (routeGymId) {
                 const routeGym = gyms.find(g => g.gym_id === routeGymId);
                 if (routeGym) setDetectedGymName(routeGym.gym_name || '');
-            } else if (!routeGymId && homeBase) {
+            } else if (homeBase) {
                 const homeGym = gyms.find(g => g.gym_id === homeBase);
                 if (homeGym) setDetectedGymName(homeGym.gym_name || '');
             } else {
                 setDetectedGymName(''); // Clean start
             }
 
-            setResolvedGymId(targetGymId || null);
+            setResolvedGymId(targetGymId);
             setUserSettings(settings);
 
             // 2. PHASE 2: Fetch Inventory and Routines using predicted gym
@@ -396,7 +395,7 @@ export const WorkoutSession = () => {
                 equipmentService.getInventory(targetGymId || ''),
                 workoutService.getUserRoutines(userId, targetGymId || ''),
                 workoutService.getActiveSession(userId),
-                targetGymId !== personalGymId ? equipmentService.getInventory(personalGymId || '') : Promise.resolve([])
+                equipmentService.getPersonalInventory(userId)
             ]);
 
             setRoutines(localRoutines);
@@ -1125,7 +1124,7 @@ export const WorkoutSession = () => {
                 if (finalId.startsWith('virtual-')) {
                     // It's a seed item. Check if it exists in the current gym by name first.
                     const seedName = ex.equipmentName; // Should match the seed name
-                    const targetGym = resolvedGymId === 'personal' || !resolvedGymId ? await userService.ensurePersonalGym(user!.id) : resolvedGymId;
+                    const targetGym = resolvedGymId;
 
                     try {
                         // Check if already exists in target gym (by name)
@@ -1178,76 +1177,12 @@ export const WorkoutSession = () => {
         checkLocationStep();
     }
 
-    // 3. Check if we need to save location
+    // 3. Skip location prompt, go straight to finalize
     const checkLocationStep = async () => {
-        // Fetch current gym details to see if it's "Personal" (dummy)
-        if (!resolvedGymId) {
-            handleFinalizeSession();
-            return;
-        }
-
-        const { data: gym } = await supabase.from('gyms').select('place_id').eq('id', resolvedGymId).single();
-
-        // If it's the Personal Arsenal (virtual/home), prompt to save location
-        if (gym && (gym.place_id.startsWith('personal_arsenal') || gym.place_id === 'virtual')) {
-            setShowLocationModal(true);
-        } else {
-            handleFinalizeSession();
-        }
+        handleFinalizeSession();
     };
 
-    // 4. Save Location (Optional)
-    const onSaveLocation = async (name: string) => {
-        if (name.trim()) {
-            setIsSavingFlow(true);
-            // Get GPS
-            if ('geolocation' in navigator) {
-                navigator.geolocation.getCurrentPosition(async (position) => {
-                    const { latitude, longitude } = position.coords;
-                    const placeId = `custom_loc_${Date.now()}`; // Unique ID
-
-                    // Create Gym
-                    const gymPlace = {
-                        place_id: placeId,
-                        name: name,
-                        address: "Ubicación Personalizada",
-                        location: { lat: latitude, lng: longitude },
-                        types: ['gym'],
-                        rating: 5,
-                        user_ratings_total: 1
-                    };
-
-                    const result = await userService.addGymToPassport(user!.id, gymPlace as any);
-
-                    if (result.success && result.gym_id && sessionId) {
-                        // Update the current session to point to this NEW gym
-                        await supabase.from('workout_sessions').update({ gym_id: result.gym_id }).eq('id', sessionId);
-                        console.log('📍 Session moved to new gym:', result.gym_id);
-                    }
-
-                    setIsSavingFlow(false);
-                    setShowLocationModal(false);
-                    handleFinalizeSession();
-
-                }, (err) => {
-                    console.error("GPS Error", err);
-                    alert("No se pudo obtener la ubicación. Guardando sin ubicación nueva.");
-                    setIsSavingFlow(false);
-                    setShowLocationModal(false);
-                    handleFinalizeSession();
-                });
-            } else {
-                alert("Geolocalización no soportada.");
-                setIsSavingFlow(false);
-                setShowLocationModal(false);
-                handleFinalizeSession();
-            }
-        } else {
-            // Empty name? Just skip
-            setShowLocationModal(false);
-            handleFinalizeSession();
-        }
-    };
+    // (onSaveLocation removed as it is no longer needed)
 
     const onSkipLocation = () => {
         setShowLocationModal(false);
@@ -2057,51 +1992,7 @@ export const WorkoutSession = () => {
                 )
             }
 
-            {/* 2. Save Location Modal */}
-            {
-                showLocationModal && (
-                    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-4">
-                        <div className="bg-neutral-900 border border-neutral-800 p-6 rounded-2xl w-full max-w-sm shadow-2xl relative">
-                            <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-yellow-500 text-black px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest shadow-[0_0_20px_rgba(234,179,8,0.5)]">
-                                ¡Nueva Ubicación!
-                            </div>
-                            <h3 className="text-xl font-black italic uppercase text-white mb-2 text-center mt-2">¿Guardar Ubicación?</h3>
-                            <p className="text-neutral-400 text-sm mb-6 text-center">Parece que estás en un lugar nuevo. ¿Quieres guardarlo como un gimnasio personalizado?</p>
 
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="text-xs font-bold text-neutral-500 uppercase block mb-2">Nombre del Lugar</label>
-                                    <input
-                                        type="text"
-                                        autoFocus
-                                        placeholder="Ej. Parque de Calistenia Norte"
-                                        value={locationName}
-                                        onChange={(e) => setLocationName(e.target.value)}
-                                        className="w-full bg-black border border-neutral-700 rounded-lg p-3 text-white font-bold focus:border-gym-primary outline-none transition-colors"
-                                    />
-                                </div>
-
-                                <button
-                                    onClick={() => onSaveLocation(locationName)}
-                                    disabled={isSavingFlow || !locationName.trim()}
-                                    className="w-full bg-white text-black font-black uppercase py-4 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 transition-transform flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(255,255,255,0.2)]"
-                                >
-                                    {isSavingFlow ? <Loader className="animate-spin" size={20} /> : <MapIcon size={20} strokeWidth={3} />}
-                                    GUARDAR UBICACIÓN
-                                </button>
-
-                                <button
-                                    onClick={onSkipLocation}
-                                    disabled={isSavingFlow}
-                                    className="w-full bg-transparent border border-neutral-800 text-neutral-400 font-bold uppercase py-3 rounded-xl hover:text-white hover:border-white transition-colors"
-                                >
-                                    NO, SOLO FINALIZAR
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )
-            }
 
 
             {/* 3. NEW: Start Options Modal (Routine vs Quick Start) */}

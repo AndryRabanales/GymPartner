@@ -216,36 +216,29 @@ export const MyArsenal = () => {
                 setMasterRoutines(masters);
             }
 
-            // Inventory Logic (Target Gym, Home Base, or Personal Virtual)
+            // Inventory Logic (Target Gym, Home Base)
             let targetGymId = await resolveTargetGymId();
 
-            if (!targetGymId) {
-                // Fallback to Personal Gym for Global Mode to ensure we see Custom Items
+            // ALWAYS Fetch Personal Inventory Logic (Custom Exercises)
+            let personalItems: Equipment[] = [];
+            try {
+                personalItems = await equipmentService.getPersonalInventory(user.id);
+                console.log('🔗 Loaded Personal Inventory:', personalItems.length, 'items');
+            } catch (e) { 
+                console.warn('Could not fetch personal inventory', e); 
+            }
+
+            let gymItems: Equipment[] = [];
+            if (targetGymId) {
                 try {
-                    targetGymId = await userService.ensurePersonalGym(user.id);
+                    gymItems = await equipmentService.getInventory(targetGymId);
                 } catch (e) {
-                    console.warn("Could not load personal gym");
+                    console.warn('Could not fetch gym inventory', e);
                 }
             }
 
-            if (targetGymId) {
-                const items = await equipmentService.getInventory(targetGymId);
-
-                // [FIX] ALWAYS Fetch Personal Inventory Logic
-                // If the target gym is NOT the personal gym, we must ALSO fetch personal items
-                // so the user has access to their "Global Custom Exercises" everywhere.
-                let personalItems: Equipment[] = [];
-                try {
-                    const personalGymId = await userService.ensurePersonalGym(user.id);
-                    if (personalGymId && personalGymId !== targetGymId) {
-                        personalItems = await equipmentService.getInventory(personalGymId);
-                        console.log('🔗 Merged Personal Inventory:', personalItems.length, 'items');
-                    }
-                } catch (e) { console.warn('Could not fetch personal inventory linkage', e); }
-
-                // Merge: Personal Items + Gym Items (Gym items take precedence if ID conflict, although IDs should be unique)
-                setInventory([...personalItems, ...items]);
-            }
+            // Merge: Personal Items + Gym Items
+            setInventory([...personalItems, ...gymItems]);
 
             // NEW: Fetch Global Exercises to match cloned routine IDs
             const { data: globalExs } = await supabase
@@ -612,14 +605,12 @@ export const MyArsenal = () => {
                 if (ghostItem) {
                     finalName = ghostItem.name;
                     // We need to REALIFY this ghost:
-                    // Check if we already have a real item with this name in Personal Gym
-                    const personalGymId = await userService.ensurePersonalGym(user.id);
-
-                    // Try to find existing by Name in Personal Gym to avoid dupes
+                    // Try to find existing by Name in Personal Inventory to avoid dupes
                     let { data: existingReal } = await supabase
                         .from('gym_equipment')
                         .select('id, name')
-                        .eq('gym_id', personalGymId)
+                        .is('gym_id', null)
+                        .eq('verified_by', user.id)
                         .ilike('name', ghostItem.name) // Case insensitive match
                         .maybeSingle();
 
@@ -627,12 +618,12 @@ export const MyArsenal = () => {
                         console.log(`[Ghost] Linking to existing local item: ${existingReal.name}`);
                         finalId = existingReal.id;
                     } else {
-                        console.log(`[Ghost] CLONING item to Personal Gym: ${ghostItem.name}`);
+                        console.log(`[Ghost] CLONING item to Personal Inventory: ${ghostItem.name}`);
                         // CLONE IT
                         const newEq = await equipmentService.addEquipment({
                             name: ghostItem.name,
                             category: ghostItem.category,
-                            gym_id: personalGymId,
+                            gym_id: null,
                             quantity: 1,
                             condition: 'GOOD',
                             icon: ghostItem.icon
@@ -672,15 +663,14 @@ export const MyArsenal = () => {
                             }
                         } else {
                             // Personal/Global Fallback
-                            const personalGymId = await userService.ensurePersonalGym(user.id);
-                            let { data: globalItem } = await supabase.from('gym_equipment').select('id').eq('gym_id', personalGymId).eq('name', seedName).maybeSingle();
+                            let { data: globalItem } = await supabase.from('gym_equipment').select('id').is('gym_id', null).eq('verified_by', user.id).eq('name', seedName).maybeSingle();
 
                             if (!globalItem) {
                                 const { targetMuscle, ...cleanSeed } = seedData as any;
                                 const newItem = await equipmentService.addEquipment({
                                     name: cleanSeed.name,
                                     category: cleanSeed.category,
-                                    gym_id: personalGymId,
+                                    gym_id: null,
                                     quantity: 1,
                                     condition: 'GOOD',
                                     icon: (cleanSeed as any).icon
