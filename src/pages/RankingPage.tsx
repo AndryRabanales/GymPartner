@@ -16,6 +16,7 @@ interface RankedUser {
     username: string;
     avatar_url: string;
     followers_count: number;
+    is_boosted?: boolean;
     rank: number;
     gym_name?: string;
     is_current_user?: boolean;
@@ -75,6 +76,7 @@ export const RankingPage = () => {
                         username: p.username || 'Usuario',
                         avatar_url: p.avatar_url || `https://ui-avatars.com/api/?name=${p.username || 'U'}&background=random`,
                         followers_count: Number(p.followers_count) || 0,
+                        is_boosted: p.is_boosted || false,
                         rank: index + 1,
                         gym_name: p.gym_name || targetGym.gym_name,
                         is_current_user: p.id === user.id,
@@ -180,8 +182,9 @@ export const RankingPage = () => {
                             <img src={player.avatar_url} alt={player.username} className="w-full h-full object-cover" />
                         </div>
                         <div className="flex-1 min-w-0">
-                            <h3 className="font-black text-sm text-white truncate uppercase italic tracking-tight">
+                            <h3 className="font-black text-sm text-white truncate uppercase italic tracking-tight flex items-center gap-1">
                                 {player.username}
+                                {player.is_boosted && <Zap size={14} className="text-yellow-400 fill-yellow-400 drop-shadow-[0_0_5px_rgba(250,204,21,0.8)]" />}
                             </h3>
                             <div className="flex items-center gap-1 text-[10px] text-neutral-500 font-bold uppercase tracking-widest">
                                 <MapPin size={10} /> {player.gym_name}
@@ -211,7 +214,12 @@ export const RankingPage = () => {
                                 }
                                 return p;
                             });
-                            const sorted = [...updated].sort((a, b) => b.followers_count - a.followers_count);
+                            const sorted = [...updated].sort((a, b) => {
+                                if (a.is_boosted !== b.is_boosted) {
+                                    return a.is_boosted ? -1 : 1;
+                                }
+                                return b.followers_count - a.followers_count;
+                            });
                             return sorted.map((p, idx) => ({ ...p, rank: idx + 1 }));
                         });
                     }}

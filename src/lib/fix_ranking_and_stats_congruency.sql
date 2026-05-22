@@ -64,6 +64,7 @@ RETURNS TABLE (
     gym_name TEXT,
     banner_url TEXT,
     followers_count BIGINT,
+    is_boosted BOOLEAN,
     rank BIGINT
 ) AS $$
 BEGIN
@@ -87,7 +88,8 @@ BEGIN
         g.name AS gym_name,
         p.custom_settings->>'banner_url' AS banner_url,
         COALESCE(uf.count, 0) AS followers_count,
-        RANK() OVER (ORDER BY (p.boost_until IS NOT NULL AND p.boost_until > NOW()) DESC, COALESCE(uf.count, 0) DESC) AS rank
+        (p.boost_until IS NOT NULL AND p.boost_until > NOW()) AS is_boosted,
+        RANK() OVER (ORDER BY (p.boost_until IS NOT NULL AND p.boost_until > NOW()) DESC, COALESCE(uf.count, 0) DESC, p.created_at ASC) AS rank
     FROM 
         public.user_gyms ug
     JOIN 
@@ -100,7 +102,8 @@ BEGIN
         ug.gym_id = gym_id_param
     ORDER BY 
         (p.boost_until IS NOT NULL AND p.boost_until > NOW()) DESC,
-        followers_count DESC
+        followers_count DESC,
+        p.created_at ASC
     LIMIT 100;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
