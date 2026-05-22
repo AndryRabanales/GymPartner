@@ -481,13 +481,14 @@ export const NotificationsPage = () => {
             return (
                 <div 
                     key={n.id} 
-                    className={`bg-black/40 backdrop-blur-2xl border rounded-[2rem] p-5 shadow-[0_15px_40px_rgba(0,0,0,0.4)] transition-all group my-3 text-left ${isLive ? 'border-red-500/20 hover:border-red-500/40 bg-red-950/5' : 'border-green-500/20 hover:border-green-500/40 bg-green-950/5'}`}
+                    className={`bg-black/40 backdrop-blur-2xl border rounded-[2rem] p-5 shadow-[0_15px_40px_rgba(0,0,0,0.4)] transition-all group my-3 text-left cursor-pointer hover:scale-[1.01] hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)] ${isLive ? 'border-red-500/20 hover:border-red-500/40 bg-red-950/5' : 'border-green-500/20 hover:border-green-500/40 bg-green-950/5'}`}
+                    onClick={() => n.data?.session_id && navigate(`/history/${n.data.session_id}`)}
                 >
                     <div className="flex items-start gap-4">
                         <div className="relative shrink-0">
                             <div className={`absolute -inset-1 rounded-full blur-md opacity-0 group-hover:opacity-20 transition-opacity ${isLive ? 'bg-red-500' : 'bg-green-500'}`}></div>
                             <div className="w-14 h-14 rounded-full p-0.5 bg-gradient-to-tr from-neutral-800 to-neutral-600">
-                                <div className="w-full h-full rounded-full bg-neutral-900 overflow-hidden flex items-center justify-center border border-white/10 relative cursor-pointer" onClick={() => navigate(`/user/${n.data?.sender_id}`)}>
+                                <div className="w-full h-full rounded-full bg-neutral-900 overflow-hidden flex items-center justify-center border border-white/10 relative cursor-pointer" onClick={(e) => { e.stopPropagation(); navigate(`/user/${n.data?.sender_id}`); }}>
                                     {n.sender?.avatar_url ? (
                                         <FadeInImage src={n.sender.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                                     ) : (
@@ -515,7 +516,7 @@ export const NotificationsPage = () => {
                             </div>
                             
                             <p className="text-xs font-bold leading-normal text-white mt-1">
-                                <span className="text-gym-primary font-black uppercase mr-1 cursor-pointer hover:underline" onClick={() => navigate(`/user/${n.data?.sender_id}`)}>
+                                <span className="text-gym-primary font-black uppercase mr-1 cursor-pointer hover:underline" onClick={(e) => { e.stopPropagation(); navigate(`/user/${n.data?.sender_id}`); }}>
                                     @{n.sender?.username || n.data?.sender_name || 'Tu amigo'}
                                 </span>
                                 {isLive ? `comenzó a entrenar en ${gymLabel}` : `finalizó su entrenamiento en ${gymLabel}`}

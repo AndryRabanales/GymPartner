@@ -35,31 +35,75 @@ export const AppLayout = () => {
                 schema: 'public',
                 table: 'notifications',
                 filter: `user_id=eq.${user.id}`
-            }, (payload) => {
+            }, async (payload) => {
                 const newNotification = payload.new;
                 console.log("🔔 Real-time notification received:", newNotification);
                 
-                if (newNotification.type === 'system' && newNotification.title?.includes('EN VIVO')) {
+                if (newNotification.type === 'system' && (newNotification.title?.includes('EN VIVO') || newNotification.title?.includes('FINALIZADO'))) {
+                    const isLive = newNotification.title?.includes('EN VIVO');
+                    const senderId = newNotification.data?.sender_id;
+                    let avatarUrl = null;
+                    let displayName = newNotification.data?.sender_name || 'Tu amigo';
+
+                    if (senderId) {
+                        try {
+                            const { data: profile } = await supabase
+                                .from('profiles')
+                                .select('username, full_name, avatar_url')
+                                .eq('id', senderId)
+                                .maybeSingle();
+                            if (profile) {
+                                avatarUrl = profile.avatar_url;
+                                displayName = profile.full_name || profile.username || displayName;
+                            }
+                        } catch (err) {
+                            console.error("Error retrieving sender profile for toast:", err);
+                        }
+                    }
+
                     toast.custom((t) => (
-                        <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-neutral-950/95 backdrop-blur-2xl border border-red-500/40 shadow-[0_20px_50px_rgba(239,68,68,0.2)] rounded-3xl pointer-events-auto flex p-4`}>
+                        <div 
+                            className={`${t.visible ? 'gp-toast-enter' : 'gp-toast-leave'} max-w-sm w-full bg-neutral-950/95 backdrop-blur-2xl border ${isLive ? 'border-red-500/40 shadow-[0_20px_50px_rgba(239,68,68,0.25)]' : 'border-green-500/40 shadow-[0_20px_50px_rgba(34,197,94,0.25)]'} rounded-3xl pointer-events-auto flex p-4 cursor-pointer hover:scale-[1.02] active:scale-95 transition-all duration-300`}
+                            onClick={() => {
+                                toast.dismiss(t.id);
+                                if (newNotification.data?.session_id) {
+                                    window.location.href = `/history/${newNotification.data.session_id}`;
+                                }
+                            }}
+                        >
                             <div className="flex-1 w-0">
-                                <div className="flex items-center">
-                                    <div className="shrink-0">
-                                        <div className="w-10 h-10 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center text-red-500 animate-pulse font-black text-[9px] tracking-widest">
-                                            LIVE
+                                <div className="flex items-center gap-3">
+                                    <div className="shrink-0 relative">
+                                        {avatarUrl ? (
+                                            <img src={avatarUrl} alt={displayName} className="w-11 h-11 rounded-full object-cover border border-white/10" />
+                                        ) : (
+                                            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-neutral-800 to-black flex items-center justify-center border border-white/10">
+                                                <span className="text-sm font-black text-gym-primary italic">
+                                                    {displayName?.[0]?.toUpperCase() || 'G'}
+                                                </span>
+                                            </div>
+                                        )}
+                                        <div className={`absolute -bottom-1 -right-1 p-0.5 rounded-full border border-black ${isLive ? 'bg-red-500 text-white animate-pulse' : 'bg-green-500 text-black'}`}>
+                                            <div className="w-2 h-2 rounded-full bg-current" />
                                         </div>
                                     </div>
-                                    <div className="ml-3 flex-1">
-                                        <p className="text-sm font-black text-white uppercase tracking-wider italic">
-                                            {newNotification.title}
+                                    <div className="flex-1 min-w-0 text-left">
+                                        <p className="text-[9px] font-black text-neutral-400 uppercase tracking-widest leading-none mb-1">
+                                            {isLive ? '🔴 EN VIVO' : '✅ COMPLETADO'}
                                         </p>
-                                        <p className="mt-0.5 text-xs text-neutral-300 font-bold uppercase leading-normal">
-                                            {newNotification.message}
+                                        <p className="text-xs font-bold text-white leading-tight truncate">
+                                            @{displayName}
+                                        </p>
+                                        <p className="text-[10px] text-neutral-300 font-medium leading-tight mt-0.5 truncate">
+                                            {isLive 
+                                                ? `Empezó a entrenar en ${newNotification.data?.gym_name || 'un Gimnasio'}` 
+                                                : `Terminó su entrenamiento en ${newNotification.data?.gym_name || 'un Gimnasio'}`
+                                            }
                                         </p>
                                     </div>
                                 </div>
                             </div>
-                            <div className="ml-4 shrink-0 flex items-center">
+                            <div className="ml-4 shrink-0 flex items-center" onClick={(e) => e.stopPropagation()}>
                                 <button
                                     onClick={() => toast.dismiss(t.id)}
                                     className="border border-white/10 hover:bg-white/5 rounded-xl px-3 py-1.5 text-[9px] font-black text-neutral-400 hover:text-white transition-colors uppercase tracking-widest"
@@ -68,37 +112,7 @@ export const AppLayout = () => {
                                 </button>
                             </div>
                         </div>
-                    ), { duration: 6000 });
-                } else if (newNotification.type === 'system' && newNotification.title?.includes('FINALIZADO')) {
-                    toast.custom((t) => (
-                        <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-neutral-950/95 backdrop-blur-2xl border border-green-500/40 shadow-[0_20px_50px_rgba(34,197,94,0.2)] rounded-3xl pointer-events-auto flex p-4`}>
-                            <div className="flex-1 w-0">
-                                <div className="flex items-center">
-                                    <div className="shrink-0">
-                                        <div className="w-10 h-10 rounded-full bg-green-500/20 border border-green-500/30 flex items-center justify-center text-green-500 font-black text-[9px] tracking-widest">
-                                            FIN
-                                        </div>
-                                    </div>
-                                    <div className="ml-3 flex-1">
-                                        <p className="text-sm font-black text-white uppercase tracking-wider italic">
-                                            {newNotification.title}
-                                        </p>
-                                        <p className="mt-0.5 text-xs text-neutral-300 font-bold uppercase leading-normal">
-                                            {newNotification.message}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="ml-4 shrink-0 flex items-center">
-                                <button
-                                    onClick={() => toast.dismiss(t.id)}
-                                    className="border border-white/10 hover:bg-white/5 rounded-xl px-3 py-1.5 text-[9px] font-black text-neutral-400 hover:text-white transition-colors uppercase tracking-widest"
-                                >
-                                    Cerrar
-                                </button>
-                            </div>
-                        </div>
-                    ), { duration: 6000 });
+                    ), { duration: 5000, position: 'top-right' });
                 }
             })
             .subscribe();
@@ -123,6 +137,22 @@ export const AppLayout = () => {
 
     return (
         <div className="h-[100dvh] text-white flex flex-col overflow-hidden relative">
+            <style>{`
+                @keyframes gpSlideInRight {
+                    from { transform: translateX(120%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+                @keyframes gpSlideOutRight {
+                    from { transform: translateX(0); opacity: 1; }
+                    to { transform: translateX(120%); opacity: 0; }
+                }
+                .gp-toast-enter {
+                    animation: gpSlideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                }
+                .gp-toast-leave {
+                    animation: gpSlideOutRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                }
+            `}</style>
             {/* Texture overlay for more depth */}
             <div className="fixed inset-0 bg-black/20 pointer-events-none z-0"></div>
             

@@ -53,6 +53,7 @@ function App() {
               <Route path="inbox" element={<InboxPage />} />
               <Route path="chat/:chatId" element={<ChatPage />} />
               <Route path="player/:username" element={<PublicProfile />} />
+              <Route path="user/:username" element={<PublicProfile />} />
               <Route path="history" element={<HistoryPage />} />
               <Route path="history/:sessionId" element={<WorkoutDetailPage />} />
               <Route path="territory/:gymId/arsenal" element={<MyArsenal />} />
