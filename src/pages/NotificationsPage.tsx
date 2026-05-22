@@ -37,7 +37,7 @@ const SharedRoutineCard = ({ notification, onActionComplete }: SharedRoutineCard
 
     const routineId = notification.data?.routine_id;
     const routineName = notification.data?.routine_name;
-    const senderUsername = notification.data?.sender_username || 'guerrero';
+    const senderUsername = notification.sender?.username || notification.data?.sender_username || 'guerrero';
 
     useEffect(() => {
         const fetchRoutine = async () => {
@@ -355,7 +355,11 @@ export const NotificationsPage = () => {
         try {
             const all = await notificationService.getNotifications(50);
             
-            const senderIds = Array.from(new Set(all.map(n => n.data?.sender_id || n.data?.new_member_id).filter(Boolean)));
+            const senderIds = Array.from(new Set(all.map(n => 
+                n.data?.sender_id || 
+                n.data?.new_member_id || 
+                n.data?.requester_id
+            ).filter(Boolean)));
             
             if (senderIds.length > 0) {
                 const { data: profiles } = await supabase
@@ -370,7 +374,7 @@ export const NotificationsPage = () => {
 
                 const extended = all.map(n => ({
                     ...n,
-                    sender: profileMap[n.data?.sender_id || n.data?.new_member_id]
+                    sender: profileMap[n.data?.sender_id || n.data?.new_member_id || n.data?.requester_id]
                 }));
                 setNotifications(extended);
             } else {
@@ -480,7 +484,7 @@ export const NotificationsPage = () => {
         if (n.type === 'system' && (n.data?.type === 'request_history' || n.data?.type === 'request_routines')) {
             const isHistory = n.data.type === 'request_history';
             const requesterId = n.data.requester_id;
-            const requesterUsername = n.data.requester_username || 'guerrero';
+            const requesterUsername = n.sender?.username || n.data.requester_username || 'guerrero';
 
             return (
                 <div 
