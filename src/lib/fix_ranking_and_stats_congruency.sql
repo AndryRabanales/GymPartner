@@ -87,7 +87,7 @@ BEGIN
         g.name AS gym_name,
         p.custom_settings->>'banner_url' AS banner_url,
         COALESCE(uf.count, 0) AS followers_count,
-        RANK() OVER (ORDER BY COALESCE(uf.count, 0) DESC) AS rank
+        RANK() OVER (ORDER BY (p.boost_until IS NOT NULL AND p.boost_until > NOW()) DESC, COALESCE(uf.count, 0) DESC) AS rank
     FROM 
         public.user_gyms ug
     JOIN 
@@ -99,6 +99,7 @@ BEGIN
     WHERE 
         ug.gym_id = gym_id_param
     ORDER BY 
+        (p.boost_until IS NOT NULL AND p.boost_until > NOW()) DESC,
         followers_count DESC
     LIMIT 100;
 END;
