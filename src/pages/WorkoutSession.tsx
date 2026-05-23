@@ -599,10 +599,10 @@ export const WorkoutSession = () => {
     const getClosestGymIdFromGPS = async (userId: string): Promise<{ id: string; name: string } | null> => {
         try {
             console.log("🎯 Adquiriendo GPS en tiempo real para inicio de entrenamiento...");
-            const gpsPosition = await getCurrentPosition({ enableHighAccuracy: true, timeout: 4000 })
+            const gpsPosition = await getCurrentPosition({ enableHighAccuracy: true, timeout: 1500 })
                 .catch(async () => {
                     console.log("⚠️ GPS de alta precisión falló o timeout, intentando rápido...");
-                    return await getCurrentPosition({ enableHighAccuracy: false, timeout: 2000 });
+                    return await getCurrentPosition({ enableHighAccuracy: false, timeout: 1000 });
                 });
 
             if (!gpsPosition) {
@@ -665,8 +665,8 @@ export const WorkoutSession = () => {
             let finalGymId = customGymId || resolvedGymId;
             let freshArsenal: any[] | undefined = undefined;
 
-            // 1. Fresh GPS check (only if not locked to routeGymId and no customGymId was chosen)
-            if (!routeGymId && !customGymId) {
+            // 1. Fresh GPS check (only if not locked to routeGymId, no customGymId was chosen, and no resolvedGymId exists yet)
+            if (!routeGymId && !customGymId && !resolvedGymId) {
                 const freshGym = await getClosestGymIdFromGPS(user.id);
                 if (freshGym) {
                     finalGymId = freshGym.id;
@@ -688,6 +688,8 @@ export const WorkoutSession = () => {
                         return unique;
                     });
                 }
+            } else {
+                console.log("📍 GPS already resolved or pre-selected. Using finalGymId:", finalGymId);
             }
 
             const { data: newSession, error: startError } = await workoutService.startSession(user.id, finalGymId || undefined);

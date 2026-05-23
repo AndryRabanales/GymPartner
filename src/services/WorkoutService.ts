@@ -51,11 +51,11 @@ class WorkoutService {
         try {
             const { data: profile } = await supabase
                 .from('profiles')
-                .select('username, full_name')
+                .select('username')
                 .eq('id', userId)
                 .single();
 
-            const displayName = profile?.full_name || profile?.username || "Tu amigo";
+            const displayName = profile?.username || "Tu amigo";
 
             let gymLabel = "un Gimnasio";
             if (gymId) {
@@ -148,11 +148,11 @@ class WorkoutService {
 
                 const { data: profile } = await supabase
                     .from('profiles')
-                    .select('username, full_name')
+                    .select('username')
                     .eq('id', userId)
                     .single();
 
-                const displayName = profile?.full_name || profile?.username || "Tu amigo";
+                const displayName = profile?.username || "Tu amigo";
 
                 let gymLabel = "un Gimnasio";
                 if (session.gym_id) {

@@ -45,19 +45,27 @@ export async function seedExercisesCatalog() {
         target_muscle_group: s.targetMuscle
     }));
 
-    // 4. Batch Insert/Upsert new seeds
-    const { data, error } = await supabase
-        .from('exercises')
-        .upsert(rows, { onConflict: 'name', ignoreDuplicates: false })
-        .select();
+    // 4. Safe Batch Insert only missing seeds to avoid ON CONFLICT errors
+    const dbNames = new Set(dbExercises?.map(dbEx => dbEx.name.toLowerCase().trim()) || []);
+    const missingRows = rows.filter(r => !dbNames.has(r.name.toLowerCase().trim()));
 
-    if (error) {
-        console.error('[SeedExercises] Batch seed error:', error);
-        return { success: false, error };
+    if (missingRows.length > 0) {
+        const { data, error } = await supabase
+            .from('exercises')
+            .insert(missingRows)
+            .select();
+
+        if (error) {
+            console.error('[SeedExercises] Batch seed error:', error);
+            return { success: false, error };
+        }
+
+        console.log(`[SeedExercises] ✅ Sync complete. Added ${missingRows.length} new items.`);
+        return { success: true, count: data?.length };
     }
 
-    console.log(`[SeedExercises] ✅ Sync complete. Checked/Added/Updated ${rows.length} items.`);
-    return { success: true, count: data?.length };
+    console.log(`[SeedExercises] ✅ Sync complete. Catalog is fully up to date.`);
+    return { success: true, count: 0 };
 }
 
 /**
