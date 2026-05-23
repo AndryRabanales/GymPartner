@@ -106,7 +106,7 @@ export const RoutineBuilder = () => {
             // 2. Fetch Global Seed Exercises
             const { data: globalData } = await supabase
                 .from('exercises')
-                .select('id, name, target_muscle')
+                .select('id, name, target_muscle_group')
                 .limit(100);
 
             let combinedCatalog: Exercise[] = [];
@@ -125,7 +125,7 @@ export const RoutineBuilder = () => {
                 combinedCatalog = [...combinedCatalog, ...globalData.map((item: any) => ({
                     id: item.id,
                     name: item.name,
-                    muscle_group: item.target_muscle || 'General'
+                    muscle_group: item.target_muscle_group || 'General'
                 }))];
             }
 

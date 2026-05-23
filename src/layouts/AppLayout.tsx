@@ -14,6 +14,7 @@ import { useAutoCheckin } from '../hooks/useAutoCheckin';
 import { GlobalGPSGuard } from '../components/GlobalGPSGuard';
 import { supabase } from '../lib/supabase';
 import toast, { Toaster } from 'react-hot-toast';
+import { COMMON_EQUIPMENT_SEEDS } from '../services/GymEquipmentService';
 
 export const AppLayout = () => {
     useAutoCheckin();
@@ -22,6 +23,17 @@ export const AppLayout = () => {
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const location = useLocation();
+
+    // Preload all exercise catalog images for instant rendering without delays
+    useEffect(() => {
+        console.log("🖼️ Preloading exercise catalog images for ultra-fast instant rendering...");
+        COMMON_EQUIPMENT_SEEDS.forEach(seed => {
+            if (seed.image_url) {
+                const img = new Image();
+                img.src = seed.image_url;
+            }
+        });
+    }, []);
 
     // Subscribe to real-time live workout notifications
     useEffect(() => {

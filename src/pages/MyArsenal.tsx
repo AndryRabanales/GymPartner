@@ -1197,7 +1197,7 @@ export const MyArsenal = () => {
                             'PECHO', 'HOMBRO', 'TRÍCEPS',
                             'ESPALDA', 'BÍCEPS', 'ANTEBRAZO',
                             'CUÁDRICEPS', 'ISQUIOTIBIALES', 'GLÚTEOS', 'PANTORRILLAS', 'ADUCTORES',
-                            'ABDOMINALES', 'LUMBARES', 'CUELLO'
+                            'ABDOMINALES', 'LUMBARES', 'CUELLO', 'CARDIO'
                         ]}
                     />
                 </div>
