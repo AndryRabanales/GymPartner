@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { equipmentService } from '../services/GymEquipmentService';
 import { userService } from '../services/UserService';
-import type { CustomSettings } from '../services/GymEquipmentService';
-import { ArrowLeft, Plus, Save, Trash2, Dumbbell, Clock, Hash, Trophy } from 'lucide-react';
+import type { CustomSettings, Equipment } from '../services/GymEquipmentService';
+import { ArrowLeft, Plus, Save, Trash2, Dumbbell, Clock, Hash, Trophy, Search, X, Check, Map as MapIcon } from 'lucide-react';
+import { ArsenalGrid } from '../components/arsenal/ArsenalGrid';
 
 interface Exercise {
     id: string;
@@ -34,6 +35,12 @@ export const RoutineBuilder = () => {
     const [showSelector, setShowSelector] = useState(false);
     const [catalog, setCatalog] = useState<Exercise[]>([]);
     const [userSettings, setUserSettings] = useState<CustomSettings>({ categories: [], metrics: [] });
+
+    // NEW: Search & Muscle filter states for the premium selector format
+    const [searchTerm, setSearchTerm] = useState('');
+    const [activeMuscleFilter, setActiveMuscleFilter] = useState<string | null>(null);
+    const [selectedCatalogItems, setSelectedCatalogItems] = useState<Set<string>>(new Set());
+    const catalogScrollRef = useRef<HTMLDivElement>(null);
 
     const { id } = useParams<{ id: string }>(); // Get ID from URL
 
@@ -155,6 +162,64 @@ export const RoutineBuilder = () => {
         setShowSelector(false);
     };
 
+    const scrollToCategory = (category: string) => {
+        setActiveMuscleFilter(category);
+        setTimeout(() => {
+            const element = document.getElementById(`category-section-${category}`);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else if (catalogScrollRef.current) {
+                catalogScrollRef.current.scrollTop = 0;
+            }
+        }, 100);
+    };
+
+    const handleCatalogToggle = (itemId: string) => {
+        setSelectedCatalogItems(prev => {
+            const next = new Set(prev);
+            if (next.has(itemId)) {
+                next.delete(itemId);
+            } else {
+                next.add(itemId);
+            }
+            return next;
+        });
+    };
+
+    const handleBatchAdd = () => {
+        const newSelections: RoutineExerciseConfig[] = [];
+        
+        // 1. Keep existing configurations for exercises that are still selected
+        selectedExercises.forEach(ex => {
+            if (selectedCatalogItems.has(ex.exercise_id)) {
+                newSelections.push(ex);
+            }
+        });
+        
+        // 2. Add newly selected exercises
+        selectedCatalogItems.forEach(id => {
+            if (!selectedExercises.some(ex => ex.exercise_id === id)) {
+                const catalogItem = catalog.find(ex => ex.id === id);
+                if (catalogItem) {
+                    newSelections.push({
+                        exercise_id: catalogItem.id,
+                        name: catalogItem.name,
+                        track_weight: true,
+                        track_reps: true,
+                        track_time: false,
+                        track_pr: true,
+                        target_sets: 4,
+                        target_reps_text: '10-12',
+                        custom_metric: ''
+                    });
+                }
+            }
+        });
+        
+        setSelectedExercises(newSelections);
+        setShowSelector(false);
+    };
+
     const removeExercise = (index: number) => {
         const newList = [...selectedExercises];
         newList.splice(index, 1);
@@ -238,7 +303,10 @@ export const RoutineBuilder = () => {
                     <div className="flex items-center justify-between">
                         <label className="text-neutral-500 text-sm font-bold uppercase tracking-wider">Secuencia de Ejercicios</label>
                         <button
-                            onClick={() => setShowSelector(true)}
+                            onClick={() => {
+                                setSelectedCatalogItems(new Set(selectedExercises.map(ex => ex.exercise_id)));
+                                setShowSelector(true);
+                            }}
                             className="text-gym-primary text-sm font-bold hover:underline flex items-center gap-1"
                         >
                             <Plus size={16} /> AGREGAR EJERCICIO
@@ -352,30 +420,172 @@ export const RoutineBuilder = () => {
             </div>
 
             {/* Exercise Selector Modal */}
-            {showSelector && (
-                <div className="fixed inset-0 bg-black/90 z-50 p-6 flex flex-col">
-                    <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-xl font-bold text-white">Catálogo de Ejercicios</h2>
-                        <button onClick={() => setShowSelector(false)} className="text-neutral-500">Cerrar</button>
-                    </div>
-                    <div className="grid grid-cols-1 gap-3 overflow-y-auto">
-                        {catalog.map(ex => {
-                            const customCat = (userSettings?.categories || []).find(c => c.id === ex.muscle_group);
-                            const label = customCat ? customCat.label : ex.muscle_group;
-                            return (
+            {showSelector && (() => {
+                const categoryEnumMap: Record<string, string> = {
+                    'pecho': 'CHEST',
+                    'espalda': 'BACK',
+                    'pierna': 'LEGS',
+                    'hombro': 'SHOULDERS',
+                    'triceps': 'ARMS',
+                    'biceps': 'ARMS',
+                    'antebrazo': 'FOREARMS',
+                    'core': 'CHEST'
+                };
+                const CATALOG_ORDER = [
+                    'PECHO', 'HOMBRO', 'TRÍCEPS',
+                    'ESPALDA', 'BÍCEPS', 'ANTEBRAZO',
+                    'CUÁDRICEPS', 'ISQUIOTIBIALES', 'GLÚTEOS', 'PANTORRILLAS', 'ADUCTORES',
+                    'ABDOMINALES', 'LUMBARES', 'CUELLO'
+                ];
+                const mappedCatalog: Equipment[] = catalog.map(ex => {
+                    const norm = ex.muscle_group.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+                    const cat = categoryEnumMap[norm] || 'BACK';
+                    return {
+                        id: ex.id,
+                        name: ex.name,
+                        category: cat,
+                        target_muscle_group: ex.muscle_group,
+                        quantity: 1,
+                        status: 'ACTIVE' as const
+                    };
+                });
+
+                return (
+                    <div className="fixed inset-0 bg-black/95 z-50 p-4 sm:p-6 flex flex-col animate-in fade-in duration-200">
+                        {/* Header */}
+                        <div className="flex items-center justify-between mb-4">
+                            <div>
+                                <h2 className="text-xl sm:text-2xl font-black italic uppercase tracking-wider text-white">Catálogo de Ejercicios</h2>
+                                <p className="text-neutral-500 text-xs sm:text-sm">Selecciona los ejercicios que compondrán tu rutina maestra.</p>
+                            </div>
+                            <button
+                                onClick={() => setShowSelector(false)}
+                                className="bg-neutral-900 p-2.5 rounded-full text-white hover:bg-neutral-800 transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Search Bar */}
+                        <div className="relative mb-4">
+                            <Search className="absolute left-3 top-3.5 text-neutral-500" size={20} />
+                            <input
+                                type="text"
+                                placeholder="Buscar ejercicio o músculo..."
+                                value={searchTerm}
+                                onChange={e => setSearchTerm(e.target.value)}
+                                className="w-full bg-neutral-900 border border-neutral-850 rounded-xl py-3.5 pl-10 pr-4 text-white focus:outline-none focus:border-gym-primary transition-all font-bold text-sm"
+                                autoFocus
+                            />
+                        </div>
+
+                        {/* Muscle Filter Bar */}
+                        <div className="flex gap-2 overflow-x-auto py-2 px-1 mb-4 no-scrollbar scroll-smooth items-center min-h-[50px]">
+                            {/* --- RAMA: PECHO --- */}
+                            <button
+                                onClick={() => scrollToCategory("PECHO")}
+                                className={`shrink-0 px-5 py-2 rounded-xl text-xs font-black italic uppercase tracking-tighter transition-all border-2 ${activeMuscleFilter === "PECHO" ? 'bg-gym-primary text-black border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-neutral-900 text-gym-primary border-neutral-800'}`}
+                            >
+                                PECHO
+                            </button>
+                            {["PECHO", "HOMBRO", "TRÍCEPS"].map(sub => (
                                 <button
-                                    key={ex.id}
-                                    onClick={() => addExercise(ex)}
-                                    className="bg-neutral-900 border border-neutral-800 p-4 rounded-xl text-left hover:border-gym-primary hover:bg-neutral-800 transition-all flex items-center justify-between group"
+                                    key={sub}
+                                    onClick={() => scrollToCategory(sub)}
+                                    className={`shrink-0 px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all border ${activeMuscleFilter === sub ? 'bg-white text-black border-white' : 'bg-neutral-800 text-neutral-400 border-neutral-700'}`}
                                 >
-                                    <span className="font-bold text-white group-hover:text-gym-primary">{ex.name}</span>
-                                    <span className="text-xs text-neutral-500 bg-neutral-950 px-2 py-1 rounded border border-neutral-800">{label}</span>
+                                    {sub}
                                 </button>
-                            );
-                        })}
+                            ))}
+
+                            <div className="w-px h-6 bg-neutral-800 mx-2 shrink-0" />
+
+                            {/* --- RAMA: ESPALDA --- */}
+                            <button
+                                onClick={() => scrollToCategory("ESPALDA")}
+                                className={`shrink-0 px-5 py-2 rounded-xl text-xs font-black italic uppercase tracking-tighter transition-all border-2 ${activeMuscleFilter === "ESPALDA" ? 'bg-gym-primary text-black border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-neutral-900 text-gym-primary border-neutral-800'}`}
+                            >
+                                ESPALDA
+                            </button>
+                            {["ESPALDA", "BÍCEPS", "ANTEBRAZO"].map(sub => (
+                                <button
+                                    key={sub}
+                                    onClick={() => scrollToCategory(sub)}
+                                    className={`shrink-0 px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all border ${activeMuscleFilter === sub ? 'bg-white text-black border-white' : 'bg-neutral-800 text-neutral-400 border-neutral-700'}`}
+                                >
+                                    {sub}
+                                </button>
+                            ))}
+
+                            <div className="w-px h-6 bg-neutral-800 mx-2 shrink-0" />
+
+                            {/* --- RAMA: PIERNA --- */}
+                            <button
+                                onClick={() => scrollToCategory("PIERNA")}
+                                className={`shrink-0 px-5 py-2 rounded-xl text-xs font-black italic uppercase tracking-tighter transition-all border-2 ${activeMuscleFilter === "PIERNA" ? 'bg-gym-primary text-black border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-neutral-900 text-gym-primary border-neutral-800'}`}
+                            >
+                                PIERNA
+                            </button>
+                            {["CUÁDRICEPS", "ISQUIOTIBIALES", "GLÚTEOS", "PANTORRILLAS", "ADUCTORES"].map(sub => (
+                                <button
+                                    key={sub}
+                                    onClick={() => scrollToCategory(sub)}
+                                    className={`shrink-0 px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all border ${activeMuscleFilter === sub ? 'bg-white text-black border-white' : 'bg-neutral-800 text-neutral-400 border-neutral-700'}`}
+                                >
+                                    {sub}
+                                </button>
+                            ))}
+
+                            <div className="w-px h-6 bg-neutral-800 mx-2 shrink-0" />
+
+                            {/* --- RAMA: CORE --- */}
+                            <button
+                                onClick={() => scrollToCategory("CORE")}
+                                className={`shrink-0 px-5 py-2 rounded-xl text-xs font-black italic uppercase tracking-tighter transition-all border-2 ${activeMuscleFilter === "CORE" ? 'bg-gym-primary text-black border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-neutral-900 text-gym-primary border-neutral-800'}`}
+                            >
+                                CORE
+                            </button>
+                            {["ABDOMINALES", "LUMBARES", "CUELLO"].map(sub => (
+                                <button
+                                    key={sub}
+                                    onClick={() => scrollToCategory(sub)}
+                                    className={`shrink-0 px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all border ${activeMuscleFilter === sub ? 'bg-white text-black border-white' : 'bg-neutral-800 text-neutral-400 border-neutral-700'}`}
+                                >
+                                    {sub}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Grid */}
+                        <div ref={catalogScrollRef} className="flex-1 overflow-y-auto px-1 pb-32 bg-black/40 rounded-2xl border border-neutral-900/60 p-4">
+                            <ArsenalGrid
+                                inventory={mappedCatalog}
+                                selectedItems={selectedCatalogItems}
+                                userSettings={userSettings}
+                                searchTerm={searchTerm}
+                                onToggleSelection={handleCatalogToggle}
+                                onOpenCatalog={() => { }}
+                                onEditItem={() => { }}
+                                sectionOrder={CATALOG_ORDER}
+                                gridClassName="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2"
+                            />
+                        </div>
+
+                        {/* Floating Action Button for batch confirms */}
+                        {selectedCatalogItems.size > 0 && (
+                            <div className="fixed bottom-6 left-0 right-0 px-6 flex justify-center pointer-events-none z-[100]">
+                                <button
+                                    onClick={handleBatchAdd}
+                                    className="pointer-events-auto bg-gym-primary text-black font-black uppercase py-4 px-12 rounded-2xl shadow-[0_10px_40px_rgba(250,204,21,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center gap-3 text-lg border-2 border-yellow-400 animate-in slide-in-from-bottom-4 duration-300"
+                                >
+                                    <Check size={24} strokeWidth={3} />
+                                    CONFIRMAR ({selectedCatalogItems.size})
+                                </button>
+                            </div>
+                        )}
                     </div>
-                </div>
-            )}
+                );
+            })()}
         </div>
     );
 };
