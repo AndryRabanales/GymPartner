@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { X, Swords, Loader, Trophy } from 'lucide-react';
 import { EQUIPMENT_CATEGORIES, COMMON_EQUIPMENT_SEEDS } from '../../services/GymEquipmentService';
 
@@ -8,6 +8,96 @@ interface RoutineViewModalProps {
     onCopy: () => void;
     isCopying: boolean;
 }
+
+const RoutineExerciseCard = ({ ex, idx }: { ex: any, idx: number }) => {
+    const [imageLoaded, setImageLoaded] = useState(false);
+
+    // Default stats if missing
+    const activeMetrics = [
+        { label: 'PESO', icon: '⚖️' },
+        { label: 'REPS', icon: '🔄' }
+    ];
+
+    return (
+        <div key={idx} className="relative group h-full bg-neutral-900 border border-white/5 rounded-2xl overflow-hidden flex flex-col hover:border-white/20 transition-all">
+
+            {/* Selection Indicator (Visual Only - Matches ArsenalCard) */}
+            <div className="absolute top-2 left-2 z-20 flex gap-1 flex-row-reverse">
+                <div className="w-5 h-5 rounded-full flex items-center justify-center bg-white/10 text-transparent">
+                    <div className="w-2.5 h-2.5 rounded-full bg-neutral-600"></div>
+                </div>
+            </div>
+
+            <div className="flex flex-col h-full relative group aspect-[3/4] min-h-[130px] p-0.5 overflow-hidden bg-neutral-900 border border-white/5 rounded-lg">
+
+                {/* Icon / Image - Centered, maximized to fill space */}
+                <div className="flex-1 w-full relative overflow-hidden flex items-center justify-center pt-1 pb-1 z-10">
+                    {(() => {
+                        const normalize = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+                        const normTarget = normalize(ex.name || '');
+                        const seed = COMMON_EQUIPMENT_SEEDS.find(s => normalize(s.name) === normTarget);
+                        const imageUrl = ex.image_url || seed?.image_url;
+
+                        if (imageUrl) {
+                            return (
+                                <div className="relative w-full h-full flex items-center justify-center animate-fade-in">
+                                    {!imageLoaded && (
+                                        <div className="absolute inset-0 flex items-center justify-center">
+                                            <div className="w-6 h-6 rounded-full border-2 border-white/5 border-t-gym-primary animate-spin"></div>
+                                        </div>
+                                    )}
+                                    <img
+                                        src={imageUrl}
+                                        alt={ex.name}
+                                        loading="lazy"
+                                        onLoad={() => setImageLoaded(true)}
+                                        className={`w-full h-full max-h-[85%] object-contain filter drop-shadow-md brightness-110 select-none transition-all duration-500 ${imageLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-90'}`}
+                                    />
+                                </div>
+                            );
+                        }
+
+                        // Fallback Icon handling (emojis)
+                        const icon = ex.icon || seed?.icon || (() => {
+                            // @ts-ignore
+                            if (ex.muscle_group && EQUIPMENT_CATEGORIES[ex.muscle_group]?.icon) return EQUIPMENT_CATEGORIES[ex.muscle_group].icon;
+                            const foundEntry = Object.values(EQUIPMENT_CATEGORIES).find((cat: any) =>
+                                ex.muscle_group && cat.label?.toLowerCase() === ex.muscle_group?.toLowerCase()
+                            );
+                            if (foundEntry) return (foundEntry as any).icon;
+                            return '⚡';
+                        })();
+
+                        return (
+                            <span className="text-5xl leading-none drop-shadow-md filter brightness-110 grayscale-[0.2] select-none">
+                                {icon}
+                            </span>
+                        );
+                    })()}
+                </div>
+
+                {/* Title - Anchored Bottom */}
+                <div className="text-center w-full px-1.5 leading-none z-20 pb-1.5 min-h-0 flex-shrink-0">
+                    <h4 className="text-[9px] font-black italic uppercase tracking-wider line-clamp-3 text-wrap leading-tight text-neutral-200 drop-shadow-sm">
+                        {ex.name}
+                    </h4>
+                </div>
+
+                {/* Footer Metrics */}
+                <div className="border-t border-white/5 w-full bg-black/40 backdrop-blur-sm mt-auto">
+                    <div className="flex flex-wrap gap-1 justify-center w-full py-1">
+                        {activeMetrics.map((m, mIdx) => (
+                            <span key={mIdx} className="text-[6px] font-bold px-1 py-0.5 rounded-[2px] flex items-center gap-0.5 leading-none text-neutral-400">
+                                <span>{m.icon}</span>
+                                <span className="tracking-wide uppercase">{m.label}</span>
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 export const RoutineViewModal: React.FC<RoutineViewModalProps> = ({ routine, onClose, onCopy, isCopying }) => {
     if (!routine) return null;
@@ -39,84 +129,9 @@ export const RoutineViewModal: React.FC<RoutineViewModalProps> = ({ routine, onC
                 <div className="flex-1 overflow-y-auto p-4 bg-neutral-950/50">
                     <div className="grid grid-cols-3 gap-2">
                         {routine.exercises && routine.exercises.length > 0 ? (
-                            routine.exercises.map((ex: any, idx: number) => {
-                                // Default stats if missing
-                                const activeMetrics = [
-                                    { label: 'PESO', icon: '⚖️' },
-                                    { label: 'REPS', icon: '🔄' }
-                                ];
-
-                                return (
-                                    <div key={idx} className="relative group h-full bg-neutral-900 border border-white/5 rounded-2xl overflow-hidden flex flex-col hover:border-white/20 transition-all">
-
-                                        {/* Selection Indicator (Visual Only - Matches ArsenalCard) */}
-                                        <div className="absolute top-2 left-2 z-20 flex gap-1 flex-row-reverse">
-                                            <div className="w-5 h-5 rounded-full flex items-center justify-center bg-white/10 text-transparent">
-                                                <div className="w-2.5 h-2.5 rounded-full bg-neutral-600"></div>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex flex-col h-full relative group aspect-[3/4] min-h-[130px] p-0.5 overflow-hidden bg-neutral-900 border border-white/5 rounded-lg">
-
-                                            {/* Icon / Image - Centered, maximized to fill space */}
-                                            <div className="flex-1 w-full relative overflow-hidden flex items-center justify-center pt-1 pb-1 z-10">
-                                                {(() => {
-                                                    const normalize = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-                                                    const normTarget = normalize(ex.name || '');
-                                                    const seed = COMMON_EQUIPMENT_SEEDS.find(s => normalize(s.name) === normTarget);
-                                                    const imageUrl = ex.image_url || seed?.image_url;
-
-                                                    if (imageUrl) {
-                                                        return (
-                                                            <img
-                                                                src={imageUrl}
-                                                                alt={ex.name}
-                                                                className="w-full h-full max-h-[85%] object-contain filter drop-shadow-md brightness-110 select-none"
-                                                            />
-                                                        );
-                                                    }
-
-                                                    // Fallback Icon handling (emojis)
-                                                    const icon = ex.icon || seed?.icon || (() => {
-                                                        // @ts-ignore
-                                                        if (ex.muscle_group && EQUIPMENT_CATEGORIES[ex.muscle_group]?.icon) return EQUIPMENT_CATEGORIES[ex.muscle_group].icon;
-                                                        const foundEntry = Object.values(EQUIPMENT_CATEGORIES).find((cat: any) =>
-                                                            ex.muscle_group && cat.label?.toLowerCase() === ex.muscle_group?.toLowerCase()
-                                                        );
-                                                        if (foundEntry) return (foundEntry as any).icon;
-                                                        return '⚡';
-                                                    })();
-
-                                                    return (
-                                                        <span className="text-5xl leading-none drop-shadow-md filter brightness-110 grayscale-[0.2] select-none">
-                                                            {icon}
-                                                        </span>
-                                                    );
-                                                })()}
-                                            </div>
-
-                                            {/* Title - Anchored Bottom */}
-                                            <div className="text-center w-full px-1.5 leading-none z-20 pb-1.5 min-h-0 flex-shrink-0">
-                                                <h4 className="text-[9px] font-black italic uppercase tracking-wider line-clamp-3 text-wrap leading-tight text-neutral-200 drop-shadow-sm">
-                                                    {ex.name}
-                                                </h4>
-                                            </div>
-
-                                            {/* Footer / Stats */}
-                                            <div className="border-t border-white/5 w-full bg-black/40 backdrop-blur-sm mt-auto">
-                                                <div className="flex flex-wrap gap-1 justify-center w-full py-1">
-                                                    {activeMetrics.map((m, i) => (
-                                                        <span key={i} className="text-[6px] font-bold px-1 py-0.5 rounded-[2px] flex items-center gap-0.5 leading-none text-neutral-400">
-                                                            <span>{m.icon}</span>
-                                                            <span className="tracking-wide uppercase">{m.label}</span>
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })
+                            routine.exercises.map((ex: any, idx: number) => (
+                                <RoutineExerciseCard key={idx} ex={ex} idx={idx} />
+                            ))
                         ) : (
                             <div className="col-span-3 text-center py-12 text-neutral-500 italic flex flex-col items-center">
                                 <Swords className="mb-2 opacity-20" size={32} />
