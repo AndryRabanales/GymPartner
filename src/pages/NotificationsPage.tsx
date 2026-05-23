@@ -26,7 +26,8 @@ interface WorkoutNotificationCardProps {
 }
 
 const WorkoutNotificationCard = ({ n, setSelectedPlayer, navigate }: WorkoutNotificationCardProps) => {
-    const isLive = n.data?.status === 'started';
+    const staticIsLive = n.data?.status === 'started';
+    const [isCurrentlyLive, setIsCurrentlyLive] = useState(staticIsLive);
     const gymLabel = n.data?.gym_name || 'un Gimnasio';
     const muscles = n.data?.muscles || [];
     const duration = n.data?.duration;
@@ -37,27 +38,38 @@ const WorkoutNotificationCard = ({ n, setSelectedPlayer, navigate }: WorkoutNoti
 
     // If it is a live workout, subscribe to live session updates in real-time
     useEffect(() => {
-        if (!isLive || !n.data?.sender_id) return;
+        if (!staticIsLive || !n.data?.sender_id) return;
 
         const fetchAndSubscribe = async () => {
             try {
                 // Initial load
                 const { data: activeSession } = await workoutService.getActiveSession(n.data.sender_id);
                 if (activeSession) {
-                    setLiveSession(activeSession);
-                    if (activeSession.notes) {
-                        try {
-                            const parsed = JSON.parse(activeSession.notes);
-                            if (parsed && Array.isArray(parsed.active_exercises)) {
-                                setLiveExercises(parsed.active_exercises);
-                            }
-                        } catch (e) {}
+                    if (activeSession.id === n.data?.session_id) {
+                        setIsCurrentlyLive(true);
+                        setLiveSession(activeSession);
+                        if (activeSession.notes) {
+                            try {
+                                const parsed = JSON.parse(activeSession.notes);
+                                if (parsed && Array.isArray(parsed.active_exercises)) {
+                                    setLiveExercises(parsed.active_exercises);
+                                }
+                            } catch (e) {}
+                        }
+                    } else {
+                        setIsCurrentlyLive(false);
+                        setLiveSession(null);
+                        setLiveExercises([]);
                     }
+                } else {
+                    setIsCurrentlyLive(false);
+                    setLiveSession(null);
+                    setLiveExercises([]);
                 }
 
                 // Sub
                 const channel = supabase
-                    .channel(`notif-live-session:${n.data.sender_id}`)
+                    .channel(`notif-live-session:${n.data.sender_id}:${n.data.session_id}`)
                     .on('postgres_changes', {
                         event: '*',
                         schema: 'public',
@@ -66,7 +78,8 @@ const WorkoutNotificationCard = ({ n, setSelectedPlayer, navigate }: WorkoutNoti
                     }, async (payload: any) => {
                         console.log("⚡ Real-time live workout update in feed card:", payload);
                         const { data: updatedSession } = await workoutService.getActiveSession(n.data.sender_id);
-                        if (updatedSession) {
+                        if (updatedSession && updatedSession.id === n.data?.session_id) {
+                            setIsCurrentlyLive(true);
                             setLiveSession(updatedSession);
                             if (updatedSession.notes) {
                                 try {
@@ -77,6 +90,7 @@ const WorkoutNotificationCard = ({ n, setSelectedPlayer, navigate }: WorkoutNoti
                                 } catch (e) {}
                             }
                         } else {
+                            setIsCurrentlyLive(false);
                             setLiveSession(null);
                             setLiveExercises([]);
                         }
@@ -92,15 +106,15 @@ const WorkoutNotificationCard = ({ n, setSelectedPlayer, navigate }: WorkoutNoti
         };
 
         fetchAndSubscribe();
-    }, [isLive, n.data?.sender_id]);
+    }, [staticIsLive, n.data?.sender_id, n.data?.session_id]);
 
     return (
         <div 
-            className={`bg-black/40 backdrop-blur-2xl border rounded-[2rem] p-5 shadow-[0_15px_40px_rgba(0,0,0,0.4)] transition-all group my-3 text-left ${isLive ? 'border-red-500/20 hover:border-red-500/40 bg-red-950/5' : 'border-green-500/20 hover:border-green-500/40 bg-green-950/5'}`}
+            className={`bg-black/40 backdrop-blur-2xl border rounded-[2rem] p-5 shadow-[0_15px_40px_rgba(0,0,0,0.4)] transition-all group my-3 text-left ${isCurrentlyLive ? 'border-red-500/20 hover:border-red-500/40 bg-red-950/5' : 'border-green-500/20 hover:border-green-500/40 bg-green-950/5'}`}
         >
             <div className="flex items-start gap-4">
                 <div className="relative shrink-0">
-                    <div className={`absolute -inset-1 rounded-full blur-md opacity-0 group-hover:opacity-20 transition-opacity ${isLive ? 'bg-red-500' : 'bg-green-500'}`}></div>
+                    <div className={`absolute -inset-1 rounded-full blur-md opacity-0 group-hover:opacity-20 transition-opacity ${isCurrentlyLive ? 'bg-red-500' : 'bg-green-500'}`}></div>
                     <div className="w-14 h-14 rounded-full p-0.5 bg-gradient-to-tr from-neutral-800 to-neutral-600">
                         <div 
                             className="w-full h-full rounded-full bg-neutral-900 overflow-hidden flex items-center justify-center border border-white/10 relative cursor-pointer" 
@@ -127,15 +141,15 @@ const WorkoutNotificationCard = ({ n, setSelectedPlayer, navigate }: WorkoutNoti
                             )}
                         </div>
                     </div>
-                    <div className={`absolute -bottom-1 -right-1 p-1 rounded-full border-2 border-black shadow-lg ${isLive ? 'bg-red-500 text-white animate-pulse' : 'bg-green-500 text-black'}`}>
+                    <div className={`absolute -bottom-1 -right-1 p-1 rounded-full border-2 border-black shadow-lg ${isCurrentlyLive ? 'bg-red-500 text-white animate-pulse' : 'bg-green-500 text-black'}`}>
                         <Activity size={10} strokeWidth={3} />
                     </div>
                 </div>
 
                 <div className="flex-1 min-w-0 flex flex-col text-left">
                     <div className="flex items-center justify-between gap-2 mb-1">
-                        <span className={`text-[9px] font-black italic uppercase tracking-wider px-2 py-0.5 rounded-full ${isLive ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-green-500/20 text-green-400 border border-green-500/30'}`}>
-                            {isLive ? '🔴 EN VIVO' : '✅ COMPLETADO'}
+                        <span className={`text-[9px] font-black italic uppercase tracking-wider px-2 py-0.5 rounded-full ${isCurrentlyLive ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-green-500/20 text-green-400 border border-green-500/30'}`}>
+                            {isCurrentlyLive ? '🔴 EN VIVO' : '✅ COMPLETADO'}
                         </span>
                         <span className="text-[9px] font-bold text-neutral-600 shrink-0">
                             {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -159,14 +173,14 @@ const WorkoutNotificationCard = ({ n, setSelectedPlayer, navigate }: WorkoutNoti
                         >
                             @{n.sender?.username || n.data?.sender_name || 'Tu amigo'}
                         </span>
-                        {isLive ? `comenzó a entrenar en ${gymLabel}` : `finalizó su entrenamiento en ${gymLabel}`}
+                        {isCurrentlyLive ? `comenzó a entrenar en ${gymLabel}` : `finalizó su entrenamiento en ${gymLabel}`}
                     </p>
 
                     <div 
                         onClick={() => {
-                            if (!isLive && n.data?.session_id) {
+                            if (!isCurrentlyLive && n.data?.session_id) {
                                 navigate(`/history/${n.data.session_id}`);
-                            } else if (isLive) {
+                            } else if (isCurrentlyLive) {
                                 // Open profile modal so they can see full live details
                                 if (n.data?.sender_id) {
                                     setSelectedPlayer({
@@ -186,7 +200,7 @@ const WorkoutNotificationCard = ({ n, setSelectedPlayer, navigate }: WorkoutNoti
                             <span className="truncate">{gymLabel}</span>
                         </div>
 
-                        {!isLive && (
+                        {!isCurrentlyLive && (
                             <div className="flex flex-wrap gap-x-4 gap-y-1.5 border-t border-white/5 pt-2">
                                 {duration && (
                                     <div className="flex items-center gap-1 text-[10px] font-black text-blue-400 uppercase">
@@ -202,44 +216,26 @@ const WorkoutNotificationCard = ({ n, setSelectedPlayer, navigate }: WorkoutNoti
                         )}
 
                         {/* Real-time Live Selected Exercises */}
-                        {isLive && liveExercises.length > 0 && (
+                        {isCurrentlyLive && liveExercises.length > 0 && (
                             <div className="border-t border-white/5 pt-2 mt-2 space-y-1.5" onClick={(e) => e.stopPropagation()}>
                                 <p className="text-[8px] font-black text-red-400 uppercase tracking-widest flex items-center gap-1">
                                     <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping"></span>
                                     SELECCIONANDO AHORA ({liveExercises.length})
                                 </p>
-                                <div className="space-y-1 max-h-36 overflow-y-auto custom-scrollbar">
-                                    {liveExercises.map((ex: any, idx: number) => {
-                                        const completedPct = ex.setsCount > 0 ? Math.round((ex.completedSetsCount / ex.setsCount) * 100) : 0;
-                                        return (
-                                            <div key={ex.id || idx} className="flex items-center justify-between gap-2 bg-white/[0.01] border border-white/5 p-2 rounded-lg">
-                                                <div className="min-w-0 flex-1">
-                                                    <p className="text-[10px] font-black text-white truncate uppercase tracking-tight">
-                                                        {ex.equipmentName}
-                                                    </p>
-                                                    <p className="text-[8px] text-neutral-500 font-bold uppercase tracking-wider">
-                                                        {ex.setsCount} {ex.setsCount === 1 ? 'SERIE' : 'SERIES'}
-                                                    </p>
-                                                </div>
-                                                <div className="shrink-0 flex items-center gap-2">
-                                                    <span className="text-[9px] font-mono font-black text-red-400">
-                                                        {ex.completedSetsCount}/{ex.setsCount}
-                                                    </span>
-                                                    <div className="w-8 h-0.5 bg-neutral-800 rounded-full overflow-hidden">
-                                                        <div 
-                                                            className="h-full bg-red-500 rounded-full transition-all duration-300"
-                                                            style={{ width: `${completedPct}%` }}
-                                                        ></div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
+                                <div className="flex flex-wrap gap-1 mt-2">
+                                    {liveExercises.map((ex: any, idx: number) => (
+                                        <span 
+                                            key={ex.id || idx} 
+                                            className="bg-red-500/10 border border-red-500/20 text-red-400 text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg"
+                                        >
+                                            🏋️ {ex.equipmentName.toUpperCase()}
+                                        </span>
+                                    ))}
                                 </div>
                             </div>
                         )}
 
-                        {!isLive && muscles.length > 0 && (
+                        {!isCurrentlyLive && muscles.length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-2">
                                 {muscles.map((muscle: string, idx: number) => {
                                     const emojiMap: Record<string, string> = {
