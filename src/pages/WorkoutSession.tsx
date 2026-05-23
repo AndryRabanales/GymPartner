@@ -1931,15 +1931,12 @@ export const WorkoutSession = () => {
                 showAddModal && (
                     <div className="fixed inset-0 bg-black/95 z-50 flex flex-col animate-in fade-in duration-200">
                         {/* Header */}
-                        <div className="flex-none p-6 pb-2 border-b border-white/5 bg-neutral-950">
-                            <div className="flex justify-between items-start mb-4">
+                        <div className="flex-none p-2.5 pb-1 border-b border-white/5 bg-neutral-950">
+                            <div className="flex justify-between items-center mb-2">
                                 <div>
-                                    <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">
+                                    <h2 className="text-lg md:text-2xl font-black text-white italic uppercase tracking-tighter">
                                         {isCreatingExercise ? (editingItem ? 'Editar Ejercicio' : 'Crear Ejercicio') : 'Catálogo'}
                                     </h2>
-                                    <p className="text-neutral-500 text-sm">
-                                        {isCreatingExercise ? 'Personaliza tu equipo.' : 'Selecciona los ejercicios para hoy.'}
-                                    </p>
                                 </div>
                                 <button onClick={() => {
                                     if (isCreatingExercise) { setIsCreatingExercise(false); setEditingItem(null); }
@@ -1951,21 +1948,21 @@ export const WorkoutSession = () => {
                                             setShowAddModal(false);
                                         }
                                     }
-                                }} className="bg-neutral-900 p-2 rounded-full text-white hover:bg-neutral-800 transition-colors">
-                                    {isCreatingExercise ? <ArrowLeft size={20} /> : <X size={20} />}
+                                }} className="bg-neutral-900 p-1.5 rounded-full text-white hover:bg-neutral-800 transition-colors">
+                                    {isCreatingExercise ? <ArrowLeft size={16} /> : <X size={16} />}
                                 </button>
                             </div>
 
                             {/* Search Bar - only show if NOT creating custom */}
                             {!isCreatingExercise && (
                                 <div className="relative">
-                                    <Search className="absolute left-3 top-3 text-neutral-500" size={20} />
+                                    <Search className="absolute left-3 top-2.5 text-neutral-500" size={16} />
                                     <input
                                         type="text"
                                         placeholder="Buscar ejercicio o máquina..."
                                         value={searchTerm}
                                         onChange={e => setSearchTerm(e.target.value)}
-                                        className="w-full bg-neutral-900 border border-neutral-800 rounded-xl py-3 pl-10 text-white focus:outline-none focus:border-gym-primary transition-all"
+                                        className="w-full bg-neutral-900 border border-neutral-800 rounded-xl py-2 pl-9 text-xs md:text-sm text-white focus:outline-none focus:border-gym-primary transition-all font-bold"
                                         autoFocus
                                     />
                                 </div>
@@ -1973,7 +1970,7 @@ export const WorkoutSession = () => {
 
                             {/* Muscle Filter Bar */}
                             {!isCreatingExercise && (
-                                <div className="mt-4 flex gap-2 overflow-x-auto py-2 px-1 no-scrollbar scroll-smooth items-center">
+                                <div className="mt-2 flex gap-2 overflow-x-auto py-1 px-1 no-scrollbar scroll-smooth items-center">
                                     {/* --- RAMA: PECHO --- */}
                                     <button
                                         onClick={() => scrollToCategory("PECHO")}

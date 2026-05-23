@@ -113,11 +113,12 @@ export const AppLayout = () => {
     const isRankingPage = location.pathname === '/ranking';
     const isChatPage = location.pathname === '/inbox' || location.pathname.startsWith('/chat/');
     const isReelsPage = location.pathname === '/reels';
+    const isArsenalPage = location.pathname === '/arsenal';
+    const isWorkoutPage = location.pathname === '/workout' || location.pathname.includes('/territory/');
     
-    const shouldHideHeader = isRadarPage || isRankingPage || isChatPage || isReelsPage;
+    const shouldHideHeader = isRadarPage || isRankingPage || isChatPage || isReelsPage || isArsenalPage || isWorkoutPage;
 
     // Hide BottomNav during workout sessions, gym territory pages, arsenal, stats, and history
-    const isWorkoutPage = location.pathname === '/workout' || location.pathname.includes('/territory/');
     const isContentPage = location.pathname === '/arsenal' || location.pathname === '/stats' || location.pathname === '/history' || location.pathname.startsWith('/history/');
     const shouldShowBottomNav = user && !isWorkoutPage && !isContentPage && isBottomNavVisible;
 

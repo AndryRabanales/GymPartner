@@ -1014,24 +1014,21 @@ export const MyArsenal = () => {
         <div className="min-h-screen bg-black text-white font-sans selection:bg-gym-primary selection:text-black flex flex-col">
             {/* STATIC HEADER - SCROLLS AWAY */}
             <div className="bg-black/95 backdrop-blur-xl border-b border-white/5 shadow-2xl flex-none">
-                <div className="max-w-7xl mx-auto p-4 md:p-6 flex flex-col gap-4">
+                <div className="max-w-7xl mx-auto p-2.5 flex flex-col gap-2.5">
 
                     {/* Compact Top Row: Nav + Title + Save */}
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <button 
                                 onClick={() => setViewMode('ROUTINES')} 
-                                className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-white transition-colors border border-white/10"
+                                className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-white transition-colors border border-white/10"
                             >
-                                <ArrowLeft size={18} />
+                                <ArrowLeft size={16} />
                             </button>
                             <div>
-                                <h2 className="text-xl md:text-3xl font-black italic uppercase tracking-tighter flex items-center gap-2 leading-none">
+                                <h2 className="text-lg md:text-2xl font-black italic uppercase tracking-tighter flex items-center gap-2 leading-none">
                                     {editingRoutineId ? 'Editar' : 'Nueva'} <span className="text-gym-primary">Estrategia</span>
                                 </h2>
-                                <p className="text-neutral-500 text-xs md:text-sm font-bold mt-1">
-                                    {editingRoutineId ? 'Modifica tu secuencia de combate maestro.' : 'Diseña tu nueva secuencia de combate maestro.'}
-                                </p>
                             </div>
                         </div>
 
@@ -1040,9 +1037,9 @@ export const MyArsenal = () => {
                             <button
                                 onClick={handleSaveRoutine}
                                 disabled={isSaving || !routineName.trim() || selectedItems.size === 0}
-                                className="hidden md:flex bg-gym-primary hover:bg-yellow-400 text-black font-black uppercase tracking-wider px-6 py-2.5 rounded-xl transition-all items-center gap-2 text-sm shadow-[0_0_20px_rgba(250,204,21,0.2)] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                                className="hidden md:flex bg-gym-primary hover:bg-yellow-400 text-black font-black uppercase tracking-wider px-5 py-2 rounded-xl transition-all items-center gap-2 text-xs shadow-[0_0_20px_rgba(250,204,21,0.2)] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                             >
-                                {isSaving ? <Loader className="animate-spin" size={16} /> : <Check size={16} strokeWidth={3} />}
+                                {isSaving ? <Loader className="animate-spin" size={14} /> : <Check size={14} strokeWidth={3} />}
                                 <span>Guardar Estrategia</span>
                             </button>
 
@@ -1050,9 +1047,9 @@ export const MyArsenal = () => {
                             <button
                                 onClick={handleSaveRoutine}
                                 disabled={isSaving || !routineName.trim() || selectedItems.size === 0}
-                                className="w-12 h-12 flex items-center justify-center bg-green-500 hover:bg-green-400 rounded-xl text-white shadow-[0_0_15px_rgba(34,197,94,0.5)] transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                                className="w-10 h-10 flex items-center justify-center bg-green-500 hover:bg-green-400 rounded-xl text-white shadow-[0_0_15px_rgba(34,197,94,0.5)] transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                             >
-                                {isSaving ? <Loader size={20} className="animate-spin" /> : <Check size={28} strokeWidth={4} />}
+                                {isSaving ? <Loader size={18} className="animate-spin" /> : <Check size={24} strokeWidth={4} />}
                             </button>
                         </div>
                     </div>
@@ -1065,26 +1062,26 @@ export const MyArsenal = () => {
                             value={routineName}
                             onChange={(e) => setRoutineName(e.target.value)}
                             required
-                            className={`w-full bg-neutral-900 border-2 rounded-2xl px-5 py-4 text-base md:text-lg text-white placeholder-neutral-500 focus:outline-none focus:bg-neutral-950 focus:border-gym-primary transition-all font-bold tracking-tight ${!routineName.trim() ? 'border-red-500/30' : 'border-neutral-850'}`}
+                            className={`w-full bg-neutral-900 border-2 rounded-xl px-4 py-2.5 text-sm md:text-base text-white placeholder-neutral-500 focus:outline-none focus:bg-neutral-950 focus:border-gym-primary transition-all font-bold tracking-tight ${!routineName.trim() ? 'border-red-500/30' : 'border-neutral-850'}`}
                         />
                     </div>
 
                     {/* Responsive Search Bar */}
                     <div className="relative group w-full">
-                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-neutral-500 group-focus-within:text-gym-primary transition-colors">
-                            <Search size={20} />
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-500 group-focus-within:text-gym-primary transition-colors">
+                            <Search size={16} />
                         </div>
                         <input
                             type="text"
                             placeholder="Buscar ejercicio o máquina..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full bg-neutral-900 border-2 border-neutral-850 rounded-2xl pl-12 pr-4 py-4 text-sm md:text-base text-white placeholder-neutral-500 focus:outline-none focus:border-gym-primary focus:bg-neutral-950 transition-all font-bold"
+                            className="w-full bg-neutral-900 border-2 border-neutral-850 rounded-xl pl-10 pr-4 py-2.5 text-xs md:text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-gym-primary focus:bg-neutral-950 transition-all font-bold"
                         />
                     </div>
 
                     {/* Muscle Filter Bar */}
-                    <div className="flex gap-2 overflow-x-auto py-2 px-1 no-scrollbar scroll-smooth items-center min-h-[50px] border-t border-white/5">
+                    <div className="flex gap-2 overflow-x-auto py-1.5 px-1 no-scrollbar scroll-smooth items-center min-h-[40px] border-t border-white/5">
                         {/* --- PECHO --- */}
                         <button
                             type="button"
