@@ -94,9 +94,9 @@ export const ArsenalCard = ({ item, isSelected, userSettings, onEdit, configOver
                 </div>
             </div>
 
-            <div className="flex flex-col h-full relative group aspect-[3/4] min-h-[130px] p-1.5 overflow-hidden bg-neutral-900 border border-white/5 rounded-lg">
-                {/* Icon or Image - Centered, slightly smaller to allow breathing room */}
-                <div className="flex-1 flex items-center justify-center w-full z-10 pb-2 pt-2 h-20 relative overflow-hidden">
+            <div className="flex flex-col h-full relative group aspect-[3/4] min-h-[130px] p-0.5 overflow-hidden bg-neutral-900 border border-white/5 rounded-lg">
+                {/* Icon or Image - Centered, maximized to fill space */}
+                <div className="flex-1 w-full relative overflow-hidden flex items-center justify-center pt-1 pb-1 z-10">
                     {(() => {
                         const normalize = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
                         const normName = normalize(item.name || '');
@@ -108,7 +108,7 @@ export const ArsenalCard = ({ item, isSelected, userSettings, onEdit, configOver
                                 <img 
                                     src={imageUrl} 
                                     alt={item.name} 
-                                    className="w-14 h-14 object-contain filter drop-shadow-md transition-transform duration-300 transform group-hover:scale-115 select-none"
+                                    className="w-full h-full max-h-[85%] object-contain filter drop-shadow-md transition-transform duration-300 transform group-hover:scale-110 select-none"
                                 />
                             );
                         }

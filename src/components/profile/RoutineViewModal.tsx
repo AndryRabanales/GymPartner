@@ -56,10 +56,10 @@ export const RoutineViewModal: React.FC<RoutineViewModalProps> = ({ routine, onC
                                             </div>
                                         </div>
 
-                                        <div className="flex flex-col h-full relative group aspect-[3/4] min-h-[130px] p-1.5 overflow-hidden bg-neutral-900 border border-white/5 rounded-lg">
+                                        <div className="flex flex-col h-full relative group aspect-[3/4] min-h-[130px] p-0.5 overflow-hidden bg-neutral-900 border border-white/5 rounded-lg">
 
-                                            {/* Icon / Image - Centered */}
-                                            <div className="flex-1 flex items-center justify-center w-full z-10 pb-2 pt-2">
+                                            {/* Icon / Image - Centered, maximized to fill space */}
+                                            <div className="flex-1 w-full relative overflow-hidden flex items-center justify-center pt-1 pb-1 z-10">
                                                 {(() => {
                                                     const normalize = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
                                                     const normTarget = normalize(ex.name || '');
@@ -71,7 +71,7 @@ export const RoutineViewModal: React.FC<RoutineViewModalProps> = ({ routine, onC
                                                             <img
                                                                 src={imageUrl}
                                                                 alt={ex.name}
-                                                                className="w-14 h-14 object-contain drop-shadow-md filter brightness-110"
+                                                                className="w-full h-full max-h-[85%] object-contain filter drop-shadow-md brightness-110 select-none"
                                                             />
                                                         );
                                                     }
