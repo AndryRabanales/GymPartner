@@ -665,32 +665,7 @@ export const WorkoutSession = () => {
             let finalGymId = customGymId || resolvedGymId;
             let freshArsenal: any[] | undefined = undefined;
 
-            // 1. Fresh GPS check (only if not locked to routeGymId, no customGymId was chosen, and no resolvedGymId exists yet)
-            if (!routeGymId && !customGymId && !resolvedGymId) {
-                const freshGym = await getClosestGymIdFromGPS(user.id);
-                if (freshGym) {
-                    finalGymId = freshGym.id;
-                    setResolvedGymId(freshGym.id);
-                    setDetectedGymName(freshGym.name);
-
-                    // Fetch latest inventory for this gym immediately to avoid state delays
-                    console.log(`🔄 Fetching fresh inventory for gym: ${freshGym.name}`);
-                    const [newItems, newRoutines] = await Promise.all([
-                        equipmentService.getInventory(freshGym.id),
-                        workoutService.getUserRoutines(user.id, freshGym.id)
-                    ]);
-                    
-                    freshArsenal = newItems;
-                    setRoutines(newRoutines);
-                    setArsenal(prev => {
-                        const combined = [...newItems, ...prev];
-                        const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
-                        return unique;
-                    });
-                }
-            } else {
-                console.log("📍 GPS already resolved or pre-selected. Using finalGymId:", finalGymId);
-            }
+            console.log("📍 GPS already resolved or pre-selected. Using finalGymId:", finalGymId);
 
             const { data: newSession, error: startError } = await workoutService.startSession(user.id, finalGymId || undefined);
             if (startError) throw startError;
