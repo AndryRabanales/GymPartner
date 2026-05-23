@@ -394,19 +394,15 @@ export const WorkoutSession = () => {
                 userService.getAllGyms()
             ]);
 
-            // ALWAYS DEFAULT TO HOME BASE FIRST (Graceful degradation for GPS)
-            const homeBase = gyms.find(g => g.is_home_base)?.gym_id;
-            const targetGymId = routeGymId || homeBase || null;
+            // Always respect route parameter if explicitly navigated to a gym, otherwise start libre
+            const targetGymId = routeGymId || null;
 
-            // Set initial name only if we have a specific route ID, otherwise empty (wait for GPS)
+            // Set initial name only if we have a specific route ID, otherwise "Buscando ubicación..."
             if (routeGymId) {
                 const routeGym = gyms.find(g => g.gym_id === routeGymId);
                 if (routeGym) setDetectedGymName(routeGym.gym_name || '');
-            } else if (homeBase) {
-                const homeGym = gyms.find(g => g.gym_id === homeBase);
-                if (homeGym) setDetectedGymName(homeGym.gym_name || '');
             } else {
-                setDetectedGymName(''); // Clean start
+                setDetectedGymName('Buscando ubicación...');
             }
 
             setResolvedGymId(targetGymId);
@@ -450,63 +446,29 @@ export const WorkoutSession = () => {
                             .filter(g => g.dist <= 0.5) // 500m radius for strict checking
                             .sort((a, b) => a.dist - b.dist);
 
-                        const applyPrecisionGym = async (nearestGym: any) => {
-                            if (nearestGym && nearestGym.id !== targetGymId) {
-                                console.log(`🎯 Precision Lock: ${nearestGym.name} (${Math.round(nearestGym.dist * 1000)}m)`);
-                                setDetectedGymName(nearestGym.name || '');
-                                setResolvedGymId(nearestGym.id);
-
-                                // Ensure it's in user's passport
-                                if (!gyms.some(g => g.gym_id === nearestGym.id)) {
-                                    await userService.addGymToPassport(userId, {
-                                        place_id: nearestGym.place_id,
-                                        name: nearestGym.name,
-                                        address: nearestGym.address || '',
-                                        location: { lat: nearestGym.lat, lng: nearestGym.lng }
-                                    });
-                                }
-
-                                // Hot-swap inventory and routines
-                                const [newItems, newRoutines] = await Promise.all([
-                                    equipmentService.getInventory(nearestGym.id),
-                                    workoutService.getUserRoutines(userId, nearestGym.id)
-                                ]);
-
-                                setRoutines(newRoutines);
-                                setArsenal(prev => {
-                                    const combined = [...newItems, ...prev];
-                                    const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
-                                    return unique;
-                                });
-                            }
-                        };
-
                         if (gymsWithDistance.length > 0) {
-                            // Find which of these nearby gyms are predeterminados
-                            const nearbyPredeterminados = gymsWithDistance.filter(g => gyms.some(ug => ug.gym_id === g.id && ug.is_home_base));
-                            
-                            if (nearbyPredeterminados.length === 1) {
-                                // User is near exactly one predeterminado. Auto-select it.
-                                await applyPrecisionGym(nearbyPredeterminados[0]);
-                            } else if (nearbyPredeterminados.length > 1) {
-                                // User is near MULTIPLE predeterminados. Ask them to choose.
-                                setAmbiguousGyms(nearbyPredeterminados);
-                            } else {
-                                // User is near 0 predeterminados. Ask them to choose from all nearby gyms.
-                                setAmbiguousGyms(gymsWithDistance);
-                            }
+                            // Always present nearby gyms to let the user select where they want to train
+                            setAmbiguousGyms(gymsWithDistance);
+                        } else {
+                            // No gyms nearby! Train Libre normally
+                            console.log("📍 No gyms nearby. Training Libre.");
+                            setDetectedGymName("Entrenamiento Libre");
+                            setResolvedGymId(null);
                         }
+                    } else if (!gpsPosition && !routeGymId) {
+                        console.log("📍 GPS failed or disabled. Training Libre.");
+                        setDetectedGymName("Entrenamiento Libre");
+                        setResolvedGymId(null);
                     }
                 } catch (err) {
                     console.warn("Precision GPS failed:", err);
+                    setDetectedGymName("Entrenamiento Libre");
+                    setResolvedGymId(null);
                 }
             })();
 
             const handleSelectAmbiguousGym = async (gym: any) => {
                 try {
-                    // Make it home base since they picked it
-                    await userService.toggleHomeBase(user!.id, gym.id, true);
-
                     // Ensure it's in passport
                     if (!gyms.some(g => g.gym_id === gym.id)) {
                         await userService.addGymToPassport(user!.id, {
@@ -1501,14 +1463,16 @@ export const WorkoutSession = () => {
             {/* AMBIGUOUS GYMS MODAL */}
             {ambiguousGyms.length > 0 && (
                 <div className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-4 animate-in fade-in zoom-in duration-300">
-                    <div className="bg-neutral-900 border border-white/10 p-6 md:p-8 rounded-[2rem] w-full max-w-sm text-center shadow-2xl relative overflow-hidden">
-                        <div className="w-16 h-16 bg-gym-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-gym-primary/20">
-                            <MapIcon className="text-gym-primary w-8 h-8" />
+                    <div className="bg-neutral-900 border border-white/10 p-6 md:p-8 rounded-[2rem] w-full max-w-sm text-center shadow-2xl relative overflow-hidden flex flex-col gap-6">
+                        <div>
+                            <div className="w-16 h-16 bg-gym-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-gym-primary/20">
+                                <MapIcon className="text-gym-primary w-8 h-8" />
+                            </div>
+                            <h2 className="text-2xl font-black text-white italic uppercase tracking-tighter mb-2">Selecciona tu Base</h2>
+                            <p className="text-neutral-400 text-sm">Hemos detectado gimnasios cerca de ti. Selecciona en cuál estás entrenando.</p>
                         </div>
-                        <h2 className="text-2xl font-black text-white italic uppercase tracking-tighter mb-2">Selecciona tu Base</h2>
-                        <p className="text-neutral-400 text-sm mb-6">Hemos detectado varios gimnasios cerca de ti. Selecciona en cuál estás entrenando.</p>
                         
-                        <div className="space-y-3 max-h-[40vh] overflow-y-auto">
+                        <div className="space-y-3 max-h-[30vh] overflow-y-auto pr-1 custom-scrollbar">
                             {ambiguousGyms.map(gym => (
                                 <button
                                     key={gym.id}
@@ -1523,6 +1487,17 @@ export const WorkoutSession = () => {
                                 </button>
                             ))}
                         </div>
+
+                        <button
+                            onClick={() => {
+                                setAmbiguousGyms([]);
+                                setResolvedGymId(null);
+                                setDetectedGymName("Entrenamiento Libre");
+                            }}
+                            className="w-full bg-transparent border border-neutral-800 text-neutral-400 font-bold uppercase py-3 rounded-xl hover:text-white hover:border-white transition-colors"
+                        >
+                            Entrenar Libre (Sin Gym)
+                        </button>
                     </div>
                 </div>
             )}
