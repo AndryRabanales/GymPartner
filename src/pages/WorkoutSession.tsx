@@ -120,6 +120,7 @@ export const WorkoutSession = () => {
     const [currentRoutineName, setCurrentRoutineName] = useState<string | undefined>(undefined);
     const [originalExerciseIds, setOriginalExerciseIds] = useState<string[]>([]); // To detect changes
     const [originalMetricsSnapshot, setOriginalMetricsSnapshot] = useState<string | null>(null); // To detect changes in routine targets
+    const [isRoutineModified, setIsRoutineModified] = useState(false); // Tracks if routine structure changed during session
     // currentGym state removed
 
     // Tutorial State
@@ -313,6 +314,7 @@ export const WorkoutSession = () => {
         });
 
         setActiveExercises(prev => [...prev, ...newExercises]);
+        setIsRoutineModified(true); // Structural change: exercises added
 
         // 3. Cleanup
         setSelectedCatalogItems(new Set());
@@ -513,7 +515,14 @@ export const WorkoutSession = () => {
                 const savedDraft = localStorage.getItem(`workout_draft_${active.id}`);
                 if (savedDraft) {
                     const parsed = JSON.parse(savedDraft);
-                    setActiveExercises(Array.isArray(parsed) ? parsed : (parsed.exercises || []));
+                    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                        setActiveExercises(parsed.exercises || []);
+                        if (parsed.routineName) setCurrentRoutineName(parsed.routineName);
+                        if (parsed.originalIds) setOriginalExerciseIds(parsed.originalIds);
+                        if (parsed.isRoutineModified !== undefined) setIsRoutineModified(parsed.isRoutineModified);
+                    } else {
+                        setActiveExercises(Array.isArray(parsed) ? parsed : []);
+                    }
                     setLoading(false);
                 } else {
                     const logs = await workoutService.getSessionLogs(active.id);
@@ -888,6 +897,7 @@ export const WorkoutSession = () => {
             setActiveExercises(exercisesToAdd);
             setOriginalExerciseIds(exercisesToAdd.map(ex => ex.equipmentId)); // Store original IDs for "Smart Skip"
             setOriginalMetricsSnapshot(JSON.stringify(exercisesToAdd.map(ex => ex.metrics))); // Snapshot metrics
+            setIsRoutineModified(false); // Clean loaded routine from template
 
             // Show warning if some exercises are missing, but allow continuing
             if (missingExercises.length > 0) {
@@ -905,6 +915,7 @@ export const WorkoutSession = () => {
 
     const removeExercise = (id: string) => {
         setActiveExercises(prev => prev.filter(e => e.id !== id));
+        setIsRoutineModified(true); // Structural change: exercise removed
     };
 
     const updateSet = (exerciseIndex: number, setIndex: number, field: string, value: string | number, isCustom: boolean = false) => {
@@ -1111,11 +1122,12 @@ export const WorkoutSession = () => {
             const draftPayload = {
                 exercises: activeExercises,
                 routineName: currentRoutineName,
-                originalIds: originalExerciseIds
+                originalIds: originalExerciseIds,
+                isRoutineModified: isRoutineModified
             };
             localStorage.setItem(`workout_draft_${sessionId}`, JSON.stringify(draftPayload));
         }
-    }, [sessionId, activeExercises, currentRoutineName, originalExerciseIds]);
+    }, [sessionId, activeExercises, currentRoutineName, originalExerciseIds, isRoutineModified]);
 
     // NEW: Handle Cancel
     const handleCancelSession = async () => {
@@ -1227,14 +1239,9 @@ export const WorkoutSession = () => {
         if (isFinalizing) return;
         setIsFinished(true); // Stop timer
 
-        // SMART SKIP: If we have a routine name AND the exercises haven't changed, skip modal
-        const currentIds = activeExercises.map(ex => ex.equipmentId);
-
-        // We only care about the LIST of exercises. 
-        // Users can add sets, change weights, etc. - those are DATA changes, not CONFIG changes.
+        // SMART SKIP: Skip modal if using a routine and the structure wasn't modified
         const hasChanged = currentRoutineName
-            ? currentIds.length !== originalExerciseIds.length ||
-            !currentIds.every((id, idx) => id === originalExerciseIds[idx])
+            ? isRoutineModified
             : true; // Always ask for Quick Start sessions
 
         if (currentRoutineName && !hasChanged) {
