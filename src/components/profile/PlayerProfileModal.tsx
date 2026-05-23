@@ -523,6 +523,19 @@ export const PlayerProfileModal = ({ player, onClose, onFollowToggle }: PlayerPr
         sessionsByDate[dateStr].push(session);
     });
 
+    // Parse real-time exercises from the notes column during live workout
+    let liveExercises: any[] = [];
+    if (liveSession?.notes) {
+        try {
+            const parsed = JSON.parse(liveSession.notes);
+            if (parsed && Array.isArray(parsed.active_exercises)) {
+                liveExercises = parsed.active_exercises;
+            }
+        } catch (e) {
+            // Not JSON or other notes, ignore
+        }
+    }
+
     return (
 
         <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-end md:justify-center p-0 md:p-4 backdrop-blur-sm animate-in fade-in duration-200">
@@ -625,6 +638,55 @@ export const PlayerProfileModal = ({ player, onClose, onFollowToggle }: PlayerPr
                                     <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest flex items-center justify-center gap-2">
                                         ⏱️ DURACIÓN: <span className="text-red-400 font-mono text-sm font-black tracking-normal">{liveDuration}</span>
                                     </p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Live Exercises Display */}
+                        {liveSession && liveExercises.length > 0 && (
+                            <div className="w-[90%] max-w-sm bg-neutral-900/60 border border-red-500/30 rounded-2xl p-4 mb-6 shadow-xl flex flex-col text-left">
+                                <div className="flex items-center justify-between mb-3 border-b border-white/5 pb-2">
+                                    <div className="flex items-center gap-1.5">
+                                        <Activity size={12} className="text-red-400 animate-pulse" />
+                                        <span className="text-[10px] font-black text-white uppercase tracking-wider">EJERCICIOS SELECCIONADOS</span>
+                                    </div>
+                                    <span className="text-[9px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full font-black">
+                                        {liveExercises.length}
+                                    </span>
+                                </div>
+                                <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-1">
+                                    {liveExercises.map((ex: any, idx: number) => {
+                                        const completedPct = ex.setsCount > 0 ? Math.round((ex.completedSetsCount / ex.setsCount) * 100) : 0;
+                                        return (
+                                            <div key={ex.id || idx} className="flex items-center justify-between gap-2 bg-white/[0.02] border border-white/5 p-2.5 rounded-xl hover:border-white/10 transition-colors">
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="text-xs font-black text-white truncate uppercase tracking-tight">
+                                                        {ex.equipmentName}
+                                                    </p>
+                                                    <p className="text-[9px] text-neutral-500 font-bold uppercase tracking-wider mt-0.5 flex items-center gap-1.5">
+                                                        <span className="text-red-400/80">{ex.category.toUpperCase()}</span>
+                                                        <span>•</span>
+                                                        <span>{ex.setsCount} {ex.setsCount === 1 ? 'SERIE' : 'SERIES'}</span>
+                                                    </p>
+                                                </div>
+                                                <div className="shrink-0 flex items-center gap-2">
+                                                    {ex.setsCount > 0 && (
+                                                        <div className="flex flex-col items-end">
+                                                            <span className="text-[9px] font-mono font-black text-red-400">
+                                                                {ex.completedSetsCount}/{ex.setsCount}
+                                                            </span>
+                                                            <div className="w-12 h-1 bg-neutral-800 rounded-full overflow-hidden mt-1">
+                                                                <div 
+                                                                    className="h-full bg-red-500 rounded-full transition-all duration-300"
+                                                                    style={{ width: `${completedPct}%` }}
+                                                                ></div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         )}

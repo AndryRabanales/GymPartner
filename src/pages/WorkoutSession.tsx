@@ -271,6 +271,35 @@ export const WorkoutSession = () => {
         return () => clearTimeout(timeoutId);
     }, [activeExercises, startTime, currentRoutineName, resolvedGymId, user]);
 
+    // Sync active exercises list to Supabase notes column for real-time allied view
+    useEffect(() => {
+        if (!sessionId || !user) return;
+
+        const syncToSupabaseLive = async () => {
+            try {
+                const liveExercisesSummary = activeExercises.map(e => ({
+                    id: e.id,
+                    equipmentId: e.equipmentId,
+                    equipmentName: e.equipmentName,
+                    setsCount: e.sets.length,
+                    completedSetsCount: e.sets.filter(s => s.completed).length,
+                    category: e.category || 'Custom'
+                }));
+                const livePayload = JSON.stringify({ active_exercises: liveExercisesSummary });
+                
+                await supabase
+                    .from('workout_sessions')
+                    .update({ notes: livePayload })
+                    .eq('id', sessionId);
+            } catch (err) {
+                console.error("Error syncing live session exercises to Supabase:", err);
+            }
+        };
+
+        const timer = setTimeout(syncToSupabaseLive, 1000); // Debounce 1.0s
+        return () => clearTimeout(timer);
+    }, [activeExercises, sessionId, user]);
+
     // --- End Local Backup ---
 
     const handleBatchAdd = async () => {
