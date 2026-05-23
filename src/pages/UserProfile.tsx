@@ -25,6 +25,7 @@ import { StreakFlame } from '../components/gamification/StreakFlame';
 import { alphaService } from '../services/AlphaService';
 import { useBottomNav } from '../context/BottomNavContext';
 import { TierService } from '../services/TierService';
+import { seedExercisesCatalog } from '../services/ExerciseSeeder';
 
 
 
@@ -122,10 +123,10 @@ export const UserProfile = () => {
             // Short delay for better UX
             // Seed DB with new defaults (Background) - Run Only Once
             if (!hasSeededRef.current) {
-                // console.log('Triggering background seed...');
+                console.log('Triggering background seed...');
                 hasSeededRef.current = true;
-                // seedExercisesCatalog().catch(console.error);
-                // console.log("UserProfile Loaded - Ready for Reset");
+                seedExercisesCatalog().catch(console.error);
+                console.log("UserProfile Loaded - Ready for Reset");
             }
         } else {
             setLoading(false);

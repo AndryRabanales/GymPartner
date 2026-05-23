@@ -95,9 +95,17 @@ export const ArsenalCard = ({ item, isSelected, userSettings, onEdit, configOver
             </div>
 
             <div className="flex flex-col h-full relative group aspect-[3/4] min-h-[130px] p-1.5 overflow-hidden bg-neutral-900 border border-white/5 rounded-lg">
-                {/* Icon - Centered, slightly smaller to allow breathing room */}
-                <div className="flex-1 flex items-center justify-center w-full z-10 pb-2 pt-2">
-                    <span className="text-5xl leading-none drop-shadow-md filter brightness-110 grayscale-[0.2] hover:grayscale-0 transition-transform duration-300 transform group-hover:scale-110 select-none">{icon}</span>
+                {/* Icon or Image - Centered, slightly smaller to allow breathing room */}
+                <div className="flex-1 flex items-center justify-center w-full z-10 pb-2 pt-2 h-20 relative overflow-hidden">
+                    {item.image_url ? (
+                        <img 
+                            src={item.image_url} 
+                            alt={item.name} 
+                            className="w-14 h-14 object-contain filter drop-shadow-md transition-transform duration-300 transform group-hover:scale-115 select-none"
+                        />
+                    ) : (
+                        <span className="text-5xl leading-none drop-shadow-md filter brightness-110 grayscale-[0.2] hover:grayscale-0 transition-transform duration-300 transform group-hover:scale-110 select-none">{icon}</span>
+                    )}
                 </div>
 
                 {/* Title - Anchored to bottom, with horizontal padding */}

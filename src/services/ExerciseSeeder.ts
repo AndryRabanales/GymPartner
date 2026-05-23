@@ -6,34 +6,57 @@ import { COMMON_EQUIPMENT_SEEDS } from './GymEquipmentService';
  * This should be run once to populate the global exercises catalog
  */
 export async function seedExercisesCatalog() {
-    console.log('[SeedExercises] Starting catalog seed (Batch Mode)...');
+    console.log('[SeedExercises] Starting catalog seed (Sync Mode)...');
 
     const seeds = COMMON_EQUIPMENT_SEEDS;
+    const seedNames = new Set(seeds.map(s => s.name));
 
-    // Prepare rows
+    // 1. Get all exercises from the DB
+    const { data: dbExercises, error: fetchError } = await supabase
+        .from('exercises')
+        .select('id, name');
+
+    if (fetchError) {
+        console.error('[SeedExercises] Error fetching existing exercises:', fetchError);
+        return { success: false, error: fetchError };
+    }
+
+    // 2. Identify and delete obsolete exercises
+    const toDelete = dbExercises?.filter(dbEx => !seedNames.has(dbEx.name)) || [];
+    if (toDelete.length > 0) {
+        console.log(`[SeedExercises] Found ${toDelete.length} old exercises to delete from database.`);
+        for (const ex of toDelete) {
+            const { error: delError } = await supabase
+                .from('exercises')
+                .delete()
+                .eq('id', ex.id);
+            if (delError) {
+                console.warn(`[SeedExercises] Could not delete exercise "${ex.name}" (it may be referenced by existing logs/routines):`, delError.message);
+            } else {
+                console.log(`[SeedExercises] Deleted old exercise: "${ex.name}"`);
+            }
+        }
+    }
+
+    // 3. Prepare rows for new seeds
     const rows = seeds.map(s => ({
         name: s.name,
         // @ts-ignore
         target_muscle_group: s.targetMuscle
     }));
 
-    // Batch Insert/Upsert
-    // ignoreDuplicates: true means if 'name' conflict, do nothing (preserve existing).
-    // This requires 'name' to have a UNIQUE constraint. If not, it duplicates.
-    // Assuming 'name' is unique or we want duplicates? No, we want unique.
-    // Ideally we check schema. But 'upsert' is safest attempt.
+    // 4. Batch Insert/Upsert new seeds
     const { data, error } = await supabase
         .from('exercises')
-        .upsert(rows, { onConflict: 'name', ignoreDuplicates: true })
+        .upsert(rows, { onConflict: 'name', ignoreDuplicates: false })
         .select();
 
     if (error) {
-        // If 406 or other error, log it but don't crash app
         console.error('[SeedExercises] Batch seed error:', error);
         return { success: false, error };
     }
 
-    console.log(`[SeedExercises] ✅ Sync complete. Checked/Added ${rows.length} items.`);
+    console.log(`[SeedExercises] ✅ Sync complete. Checked/Added/Updated ${rows.length} items.`);
     return { success: true, count: data?.length };
 }
 

@@ -8,7 +8,29 @@ export const normalizeText = (text: any) => {
 export const getMuscleGroup = (item: Equipment | { name: string, category: string }, userSettings?: CustomSettings): string => {
     const n = normalizeText(item.name);
 
-    // 1. Check Custom Categories
+    // 1. Check Explicit Target Muscle Group (Seed or DB field)
+    // @ts-ignore
+    const targetMuscle = item.target_muscle_group || item.targetMuscle;
+    if (targetMuscle) {
+        const tm = normalizeText(targetMuscle);
+        if (tm === 'pecho') return 'PECHO';
+        if (tm === 'espalda') return 'ESPALDA';
+        if (tm === 'pierna' || tm === 'cuadriceps') return 'CUÁDRICEPS';
+        if (tm === 'isquiotibiales') return 'ISQUIOTIBIALES';
+        if (tm === 'gluteos' || tm === 'gluteo') return 'GLÚTEOS';
+        if (tm === 'pantorrillas') return 'PANTORRILLAS';
+        if (tm === 'aductores') return 'ADUCTORES';
+        if (tm === 'hombro') return 'HOMBRO';
+        if (tm === 'triceps') return 'TRÍCEPS';
+        if (tm === 'biceps') return 'BÍCEPS';
+        if (tm === 'antebrazo') return 'ANTEBRAZO';
+        if (tm === 'abdominales' || tm === 'abdomen') return 'ABDOMINALES';
+        if (tm === 'lumbares') return 'LUMBARES';
+        if (tm === 'cuello') return 'CUELLO';
+        if (tm === 'cardio') return 'Cardio';
+    }
+
+    // 2. Check Custom Categories
     if (userSettings && userSettings.categories) {
         const matchedCategory = userSettings.categories.find(c => c.id === item.category);
         if (matchedCategory) return matchedCategory.label;

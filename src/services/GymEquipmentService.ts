@@ -54,117 +54,1295 @@ export interface CustomSettings {
 }
 
 export const COMMON_EQUIPMENT_SEEDS = [
-    // --- PECHO (CHEST) - SUPERIOR ---
-    { name: 'Press Inclinado (Máquina)', category: 'STRENGTH_MACHINE', targetMuscle: 'Pecho', icon: '📐' },
-    { name: 'Press Inclinado (Mancuernas)', category: 'FREE_WEIGHT', targetMuscle: 'Pecho', icon: '🏋️' },
-    { name: 'Press Inclinado (Barra)', category: 'FREE_WEIGHT', targetMuscle: 'Pecho', icon: '🏋️‍♂️' },
-    { name: 'Press Inclinado (Polea/Cable)', category: 'CABLE', targetMuscle: 'Pecho', icon: '⛓️' },
-    { name: 'Smith Press Inclinado', category: 'STRENGTH_MACHINE', targetMuscle: 'Pecho', icon: '⚙️' },
-
-    // --- PECHO (CHEST) - MEDIO/PLANO ---
-    { name: 'Press Banca Plano (Barra)', category: 'FREE_WEIGHT', targetMuscle: 'Pecho', icon: '🏋️‍♂️' },
-    { name: 'Press Banca Plano (Mancuernas)', category: 'FREE_WEIGHT', targetMuscle: 'Pecho', icon: '🏋️' },
-    { name: 'Press de Pecho (Máquina)', category: 'STRENGTH_MACHINE', targetMuscle: 'Pecho', icon: '🤖' },
-    { name: 'Press Plano (Polea/Cable)', category: 'CABLE', targetMuscle: 'Pecho', icon: '⛓️' },
-    { name: 'Smith Press Plano', category: 'STRENGTH_MACHINE', targetMuscle: 'Pecho', icon: '⚙️' },
-    { name: 'Peck Deck (Mariposa)', category: 'STRENGTH_MACHINE', targetMuscle: 'Pecho', icon: '🦋' },
-    { name: 'Cruce de Poleas (Crossover Alto)', category: 'CABLE', targetMuscle: 'Pecho', icon: '⚔️' },
-
-    // --- PECHO (CHEST) - INFERIOR ---
-    { name: 'Press Declinado (Barra)', category: 'FREE_WEIGHT', targetMuscle: 'Pecho', icon: '📉' },
-    { name: 'Press Declinado (Mancuernas)', category: 'FREE_WEIGHT', targetMuscle: 'Pecho', icon: '📉' },
-    { name: 'Press Declinado (Máquina)', category: 'STRENGTH_MACHINE', targetMuscle: 'Pecho', icon: '🤖' },
-    { name: 'Cruce de Poleas (Crossover Bajo)', category: 'CABLE', targetMuscle: 'Pecho', icon: '⚔️' },
-    { name: 'Fondos (Dips)', category: 'ACCESSORY', targetMuscle: 'Pecho', icon: '🏗️' },
-    { name: 'Fondos Asistidos (Máquina)', category: 'STRENGTH_MACHINE', targetMuscle: 'Pecho', icon: '🤖' },
-
-    // --- ESPALDA (BACK) - LATERAL/AMPLITUD ---
-    { name: 'Jalón al Pecho (Polea Alta)', category: 'CABLE', targetMuscle: 'Espalda', icon: '🔻' },
-    { name: 'Jalón al Pecho (Agarre Estrecho)', category: 'CABLE', targetMuscle: 'Espalda', icon: '🔻' },
-    { name: 'Dominadas (Pullups)', category: 'ACCESSORY', targetMuscle: 'Espalda', icon: '🧗' },
-    { name: 'Dominadas Asistidas (Máquina)', category: 'STRENGTH_MACHINE', targetMuscle: 'Espalda', icon: '🤖' },
-    { name: 'Pull-Over en Polea', category: 'CABLE', targetMuscle: 'Espalda', icon: '🎣' },
-
-    // --- ESPALDA (BACK) - DENSIDAD/GROSOR ---
-    { name: 'Remo con Barra (Pendlay/Yates)', category: 'FREE_WEIGHT', targetMuscle: 'Espalda', icon: '🚣' },
-    { name: 'Remo con Mancuerna (Unilateral)', category: 'FREE_WEIGHT', targetMuscle: 'Espalda', icon: '👜' },
-    { name: 'Remo Gironda (Polea Baja)', category: 'CABLE', targetMuscle: 'Espalda', icon: '🛶' },
-    { name: 'Remo en Máquina (Pecho Apoyado)', category: 'STRENGTH_MACHINE', targetMuscle: 'Espalda', icon: '🚜' },
-    { name: 'Remo en T (Barra/Máquina)', category: 'FREE_WEIGHT', targetMuscle: 'Espalda', icon: '⚓' },
-    { name: 'Peso Muerto (Deadlift)', category: 'FREE_WEIGHT', targetMuscle: 'Espalda', icon: '🧟' },
-
-    // --- HOMBRO (SHOULDERS) - ANTERIOR ---
-    { name: 'Press Militar (Barra)', category: 'FREE_WEIGHT', targetMuscle: 'Hombro', icon: '💂' },
-    { name: 'Press Militar (Mancuernas)', category: 'FREE_WEIGHT', targetMuscle: 'Hombro', icon: '🏋️' },
-    { name: 'Press de Hombros (Máquina)', category: 'STRENGTH_MACHINE', targetMuscle: 'Hombro', icon: '🤖' },
-    { name: 'Elevaciones Frontales (Mancuernas)', category: 'FREE_WEIGHT', targetMuscle: 'Hombro', icon: '🧟‍♂️' },
-    { name: 'Elevaciones Frontales (Polea)', category: 'CABLE', targetMuscle: 'Hombro', icon: '🧟‍♂️' },
-
-    // --- HOMBRO (SHOULDERS) - LATERAL ---
-    { name: 'Elevaciones Laterales (Mancuernas)', category: 'FREE_WEIGHT', targetMuscle: 'Hombro', icon: '🐦' },
-    { name: 'Elevaciones Laterales (Polea)', category: 'CABLE', targetMuscle: 'Hombro', icon: '🐦' },
-    { name: 'Elevaciones Laterales (Máquina)', category: 'STRENGTH_MACHINE', targetMuscle: 'Hombro', icon: '🤖' },
-
-    // --- HOMBRO (SHOULDERS) - POSTERIOR ---
-    { name: 'Pájaros/Vuelos (Mancuernas)', category: 'FREE_WEIGHT', targetMuscle: 'Hombro', icon: '🦅' },
-    { name: 'Face Pull', category: 'CABLE', targetMuscle: 'Hombro', icon: '🤡' },
-    { name: 'Peck Deck Invertido', category: 'STRENGTH_MACHINE', targetMuscle: 'Hombro', icon: '🦋' },
-
-    // --- PIERNA (LEGS) - CUÁDRICEPS ---
-    { name: 'Sentadilla Libre (Barra)', category: 'FREE_WEIGHT', targetMuscle: 'Pierna', icon: '🍑' },
-    { name: 'Sentadilla Frontal', category: 'FREE_WEIGHT', targetMuscle: 'Pierna', icon: '🏋️' },
-    { name: 'Sentadilla Hack (Máquina)', category: 'STRENGTH_MACHINE', targetMuscle: 'Pierna', icon: '🪑' },
-    { name: 'Prensa de Piernas (45°)', category: 'STRENGTH_MACHINE', targetMuscle: 'Pierna', icon: '📐' },
-    { name: 'Extensiones de Cuádriceps', category: 'STRENGTH_MACHINE', targetMuscle: 'Pierna', icon: '🦵' },
-    { name: 'Zancadas/Lunges (Mancuernas/Barra)', category: 'FREE_WEIGHT', targetMuscle: 'Pierna', icon: '🚶' },
-    { name: 'Sentadilla Bulgara', category: 'FREE_WEIGHT', targetMuscle: 'Pierna', icon: '🇧🇬' },
-
-    // --- PIERNA (LEGS) - ISQUIOS/FEMORAL ---
-    { name: 'Peso Muerto Rumano (Barra/Mancuernas)', category: 'FREE_WEIGHT', targetMuscle: 'Pierna', icon: '🎋' },
-    { name: 'Curl Femoral Tumbado (Máquina)', category: 'STRENGTH_MACHINE', targetMuscle: 'Pierna', icon: '🥓' },
-    { name: 'Curl Femoral Sentado (Máquina)', category: 'STRENGTH_MACHINE', targetMuscle: 'Pierna', icon: '🪑' },
-    { name: 'Good Mornings (Buenos Días)', category: 'FREE_WEIGHT', targetMuscle: 'Pierna', icon: '🌞' },
-
-    // --- PIERNA (LEGS) - GLÚTEOS ---
-    { name: 'Hip Thrust (Barra)', category: 'FREE_WEIGHT', targetMuscle: 'Glúteos', icon: '🌉' },
-    { name: 'Hip Thrust (Máquina)', category: 'STRENGTH_MACHINE', targetMuscle: 'Glúteos', icon: '🌉' },
-    { name: 'Patada de Glúteo (Polea)', category: 'CABLE', targetMuscle: 'Glúteos', icon: '🍑' },
-    { name: 'Patada de Glúteo (Máquina)', category: 'STRENGTH_MACHINE', targetMuscle: 'Glúteos', icon: '🍑' },
-
-    // --- BÍCEPS (ARMS) ---
-    { name: 'Curl con Barra (Recta/Z)', category: 'FREE_WEIGHT', targetMuscle: 'Bíceps', icon: '🥖' },
-    { name: 'Curl con Mancuernas (Supino/Alterno)', category: 'FREE_WEIGHT', targetMuscle: 'Bíceps', icon: '🦾' },
-    { name: 'Curl Martillo (Mancuernas)', category: 'FREE_WEIGHT', targetMuscle: 'Bíceps', icon: '🔨' },
-    { name: 'Curl Predicador (Barra/Mancuerna)', category: 'FREE_WEIGHT', targetMuscle: 'Bíceps', icon: '🙏' },
-    { name: 'Curl Predicador (Máquina)', category: 'STRENGTH_MACHINE', targetMuscle: 'Bíceps', icon: '🤖' },
-    { name: 'Curl de Bíceps en Polea', category: 'CABLE', targetMuscle: 'Bíceps', icon: '🐍' },
-    { name: 'Curl Araña (Spider Curl)', category: 'FREE_WEIGHT', targetMuscle: 'Bíceps', icon: '🕷️' },
-
-    // --- TRÍCEPS (ARMS) ---
-    { name: 'Extensiones de Tríceps (Polea/Cuerda)', category: 'CABLE', targetMuscle: 'Tríceps', icon: '🏇' },
-    { name: 'Extensiones de Tríceps (Barra recta)', category: 'CABLE', targetMuscle: 'Tríceps', icon: '🦯' },
-    { name: 'Press Francés (Barra Z/Mancuernas)', category: 'FREE_WEIGHT', targetMuscle: 'Tríceps', icon: '🇫🇷' },
-    { name: 'Copa a una mano (Mancuerna)', category: 'FREE_WEIGHT', targetMuscle: 'Tríceps', icon: '🏆' },
-    { name: 'Fondos en Paralelas/Bancos', category: 'ACCESSORY', targetMuscle: 'Tríceps', icon: '🛋️' },
-    { name: 'Patada de Tríceps (Mancuerna)', category: 'FREE_WEIGHT', targetMuscle: 'Tríceps', icon: '🐴' },
-
-    // --- ABDOMINALES (ABS) ---
-    { name: 'Crunch Abdominal', category: 'ACCESSORY', targetMuscle: 'Abdominales', icon: '🥨' },
-    { name: 'Elevación de Piernas (Colgado)', category: 'ACCESSORY', targetMuscle: 'Abdominales', icon: '🥒' },
-    { name: 'Plancha (Plank)', category: 'ACCESSORY', targetMuscle: 'Abdominales', icon: '🪵' },
-    { name: 'Rueda Abdominal', category: 'ACCESSORY', targetMuscle: 'Abdominales', icon: '🛞' },
-    { name: 'Crunch en Máquina', category: 'STRENGTH_MACHINE', targetMuscle: 'Abdominales', icon: '🤖' },
-    { name: 'Crunch en Polea Alta', category: 'CABLE', targetMuscle: 'Abdominales', icon: '🙇' },
-    { name: 'Russian Twist', category: 'ACCESSORY', targetMuscle: 'Abdominales', icon: '🇷🇺' },
-
-    // --- CARDIO ---
-    { name: 'Cinta de Correr', category: 'CARDIO', targetMuscle: 'Cardio', icon: '🏃' },
-    { name: 'Elíptica', category: 'CARDIO', targetMuscle: 'Cardio', icon: '⛷️' },
-    { name: 'Bicicleta Estática', category: 'CARDIO', targetMuscle: 'Cardio', icon: '🚴' },
-    { name: 'Remo (Concept2)', category: 'CARDIO', targetMuscle: 'Cardio', icon: '🚣' },
-    { name: 'Escaladora (Stairmaster)', category: 'CARDIO', targetMuscle: 'Cardio', icon: '🧗' },
-    { name: 'Salto de Cuerda', category: 'CARDIO', targetMuscle: 'Cardio', icon: '🪢' },
-];
+    {
+        "name": "Abdominales Inversos",
+        "category": "ACCESSORY",
+        "targetMuscle": "Abdominales",
+        "icon": "🥨",
+        "image_url": "/ejercicioimg/ejercicios/Abdomen/AbdominalesInversos.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Russian Twist",
+        "category": "ACCESSORY",
+        "targetMuscle": "Abdominales",
+        "icon": "🇷🇺",
+        "image_url": "/ejercicioimg/ejercicios/Abdomen/AbdominalRussianTwist.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Crunch Abdominal",
+        "category": "ACCESSORY",
+        "targetMuscle": "Abdominales",
+        "icon": "🥨",
+        "image_url": "/ejercicioimg/ejercicios/Abdomen/CrunchAbdominal.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Crunch en Máquina",
+        "category": "STRENGTH_MACHINE",
+        "targetMuscle": "Abdominales",
+        "icon": "🤖",
+        "image_url": "/ejercicioimg/ejercicios/Abdomen/CrunchAbdominalEnMaquina.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Crunch en Polea Alta",
+        "category": "CABLE",
+        "targetMuscle": "Abdominales",
+        "icon": "🙇",
+        "image_url": "/ejercicioimg/ejercicios/Abdomen/CrunchPoleaAlta.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Elevación de Piernas (Colgado)",
+        "category": "ACCESSORY",
+        "targetMuscle": "Abdominales",
+        "icon": "🥒",
+        "image_url": "/ejercicioimg/ejercicios/Abdomen/ElevacionesDePiernaColgado.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Plancha (Plank)",
+        "category": "ACCESSORY",
+        "targetMuscle": "Abdominales",
+        "icon": "🪵",
+        "image_url": "/ejercicioimg/ejercicios/Abdomen/Plancha.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Curl Martillo (Polea/Cuerda)",
+        "category": "CABLE",
+        "targetMuscle": "Bíceps",
+        "icon": "⛓️",
+        "image_url": "/ejercicioimg/ejercicios/Biceps/Curl Martillo cuerdas .png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Curl Martillo (Mancuernas)",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Bíceps",
+        "icon": "🔨",
+        "image_url": "/ejercicioimg/ejercicios/Biceps/Curl Martillo Mancuernas.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Curl de Bíceps (Mancuernas)",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Bíceps",
+        "icon": "💪",
+        "image_url": "/ejercicioimg/ejercicios/Biceps/CurlDeBiceps(1).png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Curl de Bíceps con Barra",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Bíceps",
+        "icon": "🥖",
+        "image_url": "/ejercicioimg/ejercicios/Biceps/CurlDeBiceps.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Curl de Bíceps Bayoneta",
+        "category": "CABLE",
+        "targetMuscle": "Bíceps",
+        "icon": "💪",
+        "image_url": "/ejercicioimg/ejercicios/Biceps/CurlDeBicepsBayoneta.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Curl de Bíceps en Polea",
+        "category": "CABLE",
+        "targetMuscle": "Bíceps",
+        "icon": "🐍",
+        "image_url": "/ejercicioimg/ejercicios/Biceps/CurlDeBicepsEnPolea.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Curl Predicador (Barra)",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Bíceps",
+        "icon": "🙏",
+        "image_url": "/ejercicioimg/ejercicios/Biceps/CurlDeBicepsPredicadorBarra.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Curl Predicador (Máquina)",
+        "category": "STRENGTH_MACHINE",
+        "targetMuscle": "Bíceps",
+        "icon": "🤖",
+        "image_url": "/ejercicioimg/ejercicios/Biceps/CurlDeBicepsPredicadorMaquina.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Curl Araña (Spider Curl)",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Bíceps",
+        "icon": "🕷️",
+        "image_url": "/ejercicioimg/ejercicios/Biceps/CurlSpiderman.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Bicicleta Estática",
+        "category": "CARDIO",
+        "targetMuscle": "Cardio",
+        "icon": "🚴",
+        "image_url": "/ejercicioimg/ejercicios/Cardio/CardioBicicleta.png",
+        "metrics": {
+            "weight": false,
+            "reps": false,
+            "time": true,
+            "distance": true,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Elíptica",
+        "category": "CARDIO",
+        "targetMuscle": "Cardio",
+        "icon": "⛷️",
+        "image_url": "/ejercicioimg/ejercicios/Cardio/CardioEliptica.png",
+        "metrics": {
+            "weight": false,
+            "reps": false,
+            "time": true,
+            "distance": true,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Cinta de Correr",
+        "category": "CARDIO",
+        "targetMuscle": "Cardio",
+        "icon": "🏃",
+        "image_url": "/ejercicioimg/ejercicios/Cardio/CardioEnCinta.png",
+        "metrics": {
+            "weight": false,
+            "reps": false,
+            "time": true,
+            "distance": true,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Escaladora (Stairmaster)",
+        "category": "CARDIO",
+        "targetMuscle": "Cardio",
+        "icon": "🧗",
+        "image_url": "/ejercicioimg/ejercicios/Cardio/CardioEscalera.png",
+        "metrics": {
+            "weight": false,
+            "reps": false,
+            "time": true,
+            "distance": true,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Remo (Concept2)",
+        "category": "CARDIO",
+        "targetMuscle": "Cardio",
+        "icon": "🚣",
+        "image_url": "/ejercicioimg/ejercicios/Cardio/CardioRemo.png",
+        "metrics": {
+            "weight": false,
+            "reps": false,
+            "time": true,
+            "distance": true,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Salto de Cuerda",
+        "category": "CARDIO",
+        "targetMuscle": "Cardio",
+        "icon": "🪢",
+        "image_url": "/ejercicioimg/ejercicios/Cardio/CardioSaltarCuerda.png",
+        "metrics": {
+            "weight": false,
+            "reps": false,
+            "time": true,
+            "distance": true,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Dominadas Asistidas (Máquina)",
+        "category": "STRENGTH_MACHINE",
+        "targetMuscle": "Espalda",
+        "icon": "🤖",
+        "image_url": "/ejercicioimg/ejercicios/Espalda/Dominadas Asistidas Máquina.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Dominadas (Pullups)",
+        "category": "ACCESSORY",
+        "targetMuscle": "Espalda",
+        "icon": "🧗",
+        "image_url": "/ejercicioimg/ejercicios/Espalda/Dominadas Pullups.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Jalón al Pecho (Agarre Estrecho)",
+        "category": "CABLE",
+        "targetMuscle": "Espalda",
+        "icon": "🔻",
+        "image_url": "/ejercicioimg/ejercicios/Espalda/Jalón al Pecho Agarre Estrecho.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Jalón al Pecho (Polea Alta)",
+        "category": "CABLE",
+        "targetMuscle": "Espalda",
+        "icon": "🔻",
+        "image_url": "/ejercicioimg/ejercicios/Espalda/Jalón al Pecho Polea Alta.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Peso Muerto (Deadlift)",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Espalda",
+        "icon": "🧟",
+        "image_url": "/ejercicioimg/ejercicios/Espalda/Peso Muerto Deadlift.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Pull-Over en Polea",
+        "category": "CABLE",
+        "targetMuscle": "Espalda",
+        "icon": "🎣",
+        "image_url": "/ejercicioimg/ejercicios/Espalda/Pull-Over en Polea.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Remo con Barra Pendlay",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Espalda",
+        "icon": "🚣",
+        "image_url": "/ejercicioimg/ejercicios/Espalda/Remo con Barra Pendlay.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Remo con Barra Yates",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Espalda",
+        "icon": "🚣",
+        "image_url": "/ejercicioimg/ejercicios/Espalda/Remo con Barra Yates.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Remo con Mancuerna (Unilateral)",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Espalda",
+        "icon": "👜",
+        "image_url": "/ejercicioimg/ejercicios/Espalda/Remo con Mancuerna Unilateral.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Remo en Máquina (Pecho Apoyado)",
+        "category": "STRENGTH_MACHINE",
+        "targetMuscle": "Espalda",
+        "icon": "🚜",
+        "image_url": "/ejercicioimg/ejercicios/Espalda/Remo en Máquina Pecho Apoyado.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Remo en T (Barra/Máquina)",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Espalda",
+        "icon": "⚓",
+        "image_url": "/ejercicioimg/ejercicios/Espalda/Remo en T Barra_Máquina.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Remo Gironda (Polea Baja)",
+        "category": "CABLE",
+        "targetMuscle": "Espalda",
+        "icon": "🛶",
+        "image_url": "/ejercicioimg/ejercicios/Espalda/Remo Gironda Polea Baja.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Hip Thrust (Barra Libre)",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Glúteos",
+        "icon": "Bridge",
+        "image_url": "/ejercicioimg/ejercicios/Gluteo/HiptrustBarraLibre.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Hip Thrust (Máquina)",
+        "category": "STRENGTH_MACHINE",
+        "targetMuscle": "Glúteos",
+        "icon": "🌉",
+        "image_url": "/ejercicioimg/ejercicios/Gluteo/HiptrustEnMaquina.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Hip Thrust en Smith",
+        "category": "STRENGTH_MACHINE",
+        "targetMuscle": "Glúteos",
+        "icon": "⚙️",
+        "image_url": "/ejercicioimg/ejercicios/Gluteo/HipTrustEnsMITH.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Patada de Glúteo (Polea)",
+        "category": "CABLE",
+        "targetMuscle": "Glúteos",
+        "icon": "🍑",
+        "image_url": "/ejercicioimg/ejercicios/Gluteo/PatadaDeGluteo.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Hip Thrust (Máquina)",
+        "category": "STRENGTH_MACHINE",
+        "targetMuscle": "Glúteos",
+        "icon": "🌉",
+        "image_url": "/ejercicioimg/ejercicios/Gluteo/PatadaDeGluteoEnMaquina.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Elevaciones Frontales (Mancuernas)",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Hombro",
+        "icon": "🧟‍♂️",
+        "image_url": "/ejercicioimg/ejercicios/Hombro/Elevaciones Frontales Mancuernas.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Elevaciones Frontales (Polea)",
+        "category": "CABLE",
+        "targetMuscle": "Hombro",
+        "icon": "🧟‍♂️",
+        "image_url": "/ejercicioimg/ejercicios/Hombro/Elevaciones Frontales Polea.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Elevaciones Laterales (Mancuernas)",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Hombro",
+        "icon": "🐦",
+        "image_url": "/ejercicioimg/ejercicios/Hombro/Elevaciones Laterales Mancuernas.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Elevaciones Laterales (Máquina)",
+        "category": "STRENGTH_MACHINE",
+        "targetMuscle": "Hombro",
+        "icon": "🤖",
+        "image_url": "/ejercicioimg/ejercicios/Hombro/Elevaciones Laterales Máquina.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Elevaciones Laterales (Polea)",
+        "category": "CABLE",
+        "targetMuscle": "Hombro",
+        "icon": "🐦",
+        "image_url": "/ejercicioimg/ejercicios/Hombro/Elevaciones Laterales Polea.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Face Pull",
+        "category": "CABLE",
+        "targetMuscle": "Hombro",
+        "icon": "🤡",
+        "image_url": "/ejercicioimg/ejercicios/Hombro/Face Pull.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Peck Deck Invertido",
+        "category": "STRENGTH_MACHINE",
+        "targetMuscle": "Hombro",
+        "icon": "🦋",
+        "image_url": "/ejercicioimg/ejercicios/Hombro/Peck Deck Invertido.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Press de Hombros (Máquina)",
+        "category": "STRENGTH_MACHINE",
+        "targetMuscle": "Hombro",
+        "icon": "🤖",
+        "image_url": "/ejercicioimg/ejercicios/Hombro/Press de Hombros Máquina.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Press Militar (Barra)",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Hombro",
+        "icon": "💂",
+        "image_url": "/ejercicioimg/ejercicios/Hombro/Press Militar Barra.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Press Militar (Mancuernas)",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Hombro",
+        "icon": "🏋️",
+        "image_url": "/ejercicioimg/ejercicios/Hombro/Press Militar Mancuernas.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Pájaros / Vuelos (Mancuernas)",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Hombro",
+        "icon": "🦅",
+        "image_url": "/ejercicioimg/ejercicios/Hombro/Pájaros_Vuelos Mancuernas.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Crossover en Polea Baja",
+        "category": "CABLE",
+        "targetMuscle": "Pecho",
+        "icon": "⚔️",
+        "image_url": "/ejercicioimg/ejercicios/pecho/CrossOverEnPoleaBaja.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Cruce de Poleas (Crossover Alto)",
+        "category": "CABLE",
+        "targetMuscle": "Pecho",
+        "icon": "⚔️",
+        "image_url": "/ejercicioimg/ejercicios/pecho/CruceDePoleasAltaCrossOver.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Peck Deck (Mariposa)",
+        "category": "STRENGTH_MACHINE",
+        "targetMuscle": "Pecho",
+        "icon": "🦋",
+        "image_url": "/ejercicioimg/ejercicios/pecho/FlyesMariposaPeckDeck.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Fondos (Dips)",
+        "category": "ACCESSORY",
+        "targetMuscle": "Pecho",
+        "icon": "🏗️",
+        "image_url": "/ejercicioimg/ejercicios/pecho/FondosDips(pecho).png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Fondos Asistidos (Pecho)",
+        "category": "STRENGTH_MACHINE",
+        "targetMuscle": "Pecho",
+        "icon": "🤖",
+        "image_url": "/ejercicioimg/ejercicios/pecho/FondosDipsAsistido(Pecho).png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Press Banca Plano (Barra)",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Pecho",
+        "icon": "🏋️‍♂️",
+        "image_url": "/ejercicioimg/ejercicios/pecho/PressBancaPlanoLibre.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Press Banca Plano (Mancuernas)",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Pecho",
+        "icon": "🏋️",
+        "image_url": "/ejercicioimg/ejercicios/pecho/PressBancaPlanoMancuerna.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Press Declinado (Barra)",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Pecho",
+        "icon": "📉",
+        "image_url": "/ejercicioimg/ejercicios/pecho/PressDeclinadoEnBarra.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Press Declinado (Máquina)",
+        "category": "STRENGTH_MACHINE",
+        "targetMuscle": "Pecho",
+        "icon": "🤖",
+        "image_url": "/ejercicioimg/ejercicios/pecho/PressDeclinadoEnMaquina.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Press Declinado (Mancuernas)",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Pecho",
+        "icon": "📉",
+        "image_url": "/ejercicioimg/ejercicios/pecho/PressDeclinadoMancuerna.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Press Inclinado (Barra)",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Pecho",
+        "icon": "🏋️‍♂️",
+        "image_url": "/ejercicioimg/ejercicios/pecho/PressInclinadoConBarra.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Press Inclinado (Mancuernas)",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Pecho",
+        "icon": "🏋️",
+        "image_url": "/ejercicioimg/ejercicios/pecho/PressInclinadoConMancuerna.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Press Inclinado (Polea/Cable)",
+        "category": "CABLE",
+        "targetMuscle": "Pecho",
+        "icon": "⛓️",
+        "image_url": "/ejercicioimg/ejercicios/pecho/PressInclinadoConPolea.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Press Inclinado (Máquina)",
+        "category": "STRENGTH_MACHINE",
+        "targetMuscle": "Pecho",
+        "icon": "📐",
+        "image_url": "/ejercicioimg/ejercicios/pecho/PressInclinadoEnMaquina.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Smith Press Inclinado",
+        "category": "STRENGTH_MACHINE",
+        "targetMuscle": "Pecho",
+        "icon": "⚙️",
+        "image_url": "/ejercicioimg/ejercicios/pecho/PressInclinadoEnSmith.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Press de Pecho (Máquina)",
+        "category": "STRENGTH_MACHINE",
+        "targetMuscle": "Pecho",
+        "icon": "🤖",
+        "image_url": "/ejercicioimg/ejercicios/pecho/PressPlanoEnMaquina.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Press Plano (Polea/Cable)",
+        "category": "CABLE",
+        "targetMuscle": "Pecho",
+        "icon": "⛓️",
+        "image_url": "/ejercicioimg/ejercicios/pecho/PressPlanoEnPolea.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Smith Press Plano",
+        "category": "STRENGTH_MACHINE",
+        "targetMuscle": "Pecho",
+        "icon": "⚙️",
+        "image_url": "/ejercicioimg/ejercicios/pecho/PressPlanoEnSmith.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Curl Femoral Sentado (Máquina)",
+        "category": "STRENGTH_MACHINE",
+        "targetMuscle": "Pierna",
+        "icon": "🪑",
+        "image_url": "/ejercicioimg/ejercicios/Pierna/Curl Femoral Sentado Máquina.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Curl Femoral Tumbado (Máquina)",
+        "category": "STRENGTH_MACHINE",
+        "targetMuscle": "Pierna",
+        "icon": "🥓",
+        "image_url": "/ejercicioimg/ejercicios/Pierna/Curl Femoral Tumbado Máquina.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Extensiones de Cuádriceps",
+        "category": "STRENGTH_MACHINE",
+        "targetMuscle": "Pierna",
+        "icon": "🦵",
+        "image_url": "/ejercicioimg/ejercicios/Pierna/Extensiones de Cuádriceps.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Good Mornings (Buenos Días)",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Pierna",
+        "icon": "🌞",
+        "image_url": "/ejercicioimg/ejercicios/Pierna/Good Mornings Buenos Días.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Peso Muerto Rumano (Barra)",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Pierna",
+        "icon": "🎋",
+        "image_url": "/ejercicioimg/ejercicios/Pierna/Peso Muerto Rumano Barra.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Peso Muerto Rumano (Mancuernas)",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Pierna",
+        "icon": "🎋",
+        "image_url": "/ejercicioimg/ejercicios/Pierna/Peso Muerto Rumano Mancuernas.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Prensa de Piernas (45°)",
+        "category": "STRENGTH_MACHINE",
+        "targetMuscle": "Pierna",
+        "icon": "📐",
+        "image_url": "/ejercicioimg/ejercicios/Pierna/Prensa de Piernas 45°.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Sentadilla Búlgara",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Pierna",
+        "icon": "🇧🇬",
+        "image_url": "/ejercicioimg/ejercicios/Pierna/Sentadilla Bulgara.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Sentadilla Frontal",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Pierna",
+        "icon": "🏋️",
+        "image_url": "/ejercicioimg/ejercicios/Pierna/Sentadilla Frontal.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Sentadilla Hack (Máquina)",
+        "category": "STRENGTH_MACHINE",
+        "targetMuscle": "Pierna",
+        "icon": "🪑",
+        "image_url": "/ejercicioimg/ejercicios/Pierna/Sentadilla Hack Máquina.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Sentadilla Libre (Barra)",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Pierna",
+        "icon": "🍑",
+        "image_url": "/ejercicioimg/ejercicios/Pierna/Sentadilla Libre Barra.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Zancadas en Smith",
+        "category": "STRENGTH_MACHINE",
+        "targetMuscle": "Pierna",
+        "icon": "🚶",
+        "image_url": "/ejercicioimg/ejercicios/Pierna/Zancadas con smith.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Zancadas / Lunges (Barra)",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Pierna",
+        "icon": "🚶",
+        "image_url": "/ejercicioimg/ejercicios/Pierna/Zancadas_Lunges con Barra.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Zancadas / Lunges (Mancuernas)",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Pierna",
+        "icon": "🚶",
+        "image_url": "/ejercicioimg/ejercicios/Pierna/Zancadas_Lunges con Mancuernas.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Copa a dos manos (Mancuerna)",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Tríceps",
+        "icon": "🏆",
+        "image_url": "/ejercicioimg/ejercicios/Triceps/Copa a dos manos Mancuerna.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Copa a una mano (Mancuerna)",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Tríceps",
+        "icon": "🏆",
+        "image_url": "/ejercicioimg/ejercicios/Triceps/Copa a una mano Mancuerna.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Extensiones de Tríceps (Barra Recta)",
+        "category": "CABLE",
+        "targetMuscle": "Tríceps",
+        "icon": "🦯",
+        "image_url": "/ejercicioimg/ejercicios/Triceps/Extensiones de Tríceps Barra Recta.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Extensiones de Tríceps (Polea/Cuerda)",
+        "category": "CABLE",
+        "targetMuscle": "Tríceps",
+        "icon": "🏇",
+        "image_url": "/ejercicioimg/ejercicios/Triceps/Extensiones de Tríceps Cuerda.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Extensiones de Tríceps (Polea)",
+        "category": "CABLE",
+        "targetMuscle": "Tríceps",
+        "icon": "🏇",
+        "image_url": "/ejercicioimg/ejercicios/Triceps/Extensiones de Tríceps Polea.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Fondos en Bancos",
+        "category": "ACCESSORY",
+        "targetMuscle": "Tríceps",
+        "icon": "🛋️",
+        "image_url": "/ejercicioimg/ejercicios/Triceps/Fondos en Bancos.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Fondos en Paralelas",
+        "category": "ACCESSORY",
+        "targetMuscle": "Tríceps",
+        "icon": "🛋️",
+        "image_url": "/ejercicioimg/ejercicios/Triceps/Fondos en Paralelas.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Patada de Tríceps (Mancuerna)",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Tríceps",
+        "icon": "🐴",
+        "image_url": "/ejercicioimg/ejercicios/Triceps/Patada de Tríceps Mancuerna.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Press Francés (Barra Z)",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Tríceps",
+        "icon": "🇫🇷",
+        "image_url": "/ejercicioimg/ejercicios/Triceps/Press Francés Barra Z.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    },
+    {
+        "name": "Press Francés (Mancuernas)",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Tríceps",
+        "icon": "🇫🇷",
+        "image_url": "/ejercicioimg/ejercicios/Triceps/Press Francés Mancuernas.png",
+        "metrics": {
+            "weight": true,
+            "reps": true,
+            "time": false,
+            "distance": false,
+            "rpe": false
+        }
+    }
+];;
 
 // ... (skipping seeds)
 
