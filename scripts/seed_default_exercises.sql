@@ -1,8 +1,17 @@
 -- Este script sincroniza el catálogo de ejercicios de GymPartner
 -- con los 92 ejercicios premium que cuentan con imágenes sin fondo de forma segura.
 
--- 1. Insertar o actualizar los 92 ejercicios con imágenes
-INSERT INTO public.exercises (name, target_muscle_group) VALUES
+-- 1. Eliminar de forma segura ejercicios obsoletos que NO estén siendo referenciados en ningún historial o rutina
+DELETE FROM public.exercises 
+WHERE name NOT IN ('Abdominales Inversos', 'Russian Twist', 'Crunch Abdominal', 'Crunch en Máquina', 'Crunch en Polea Alta', 'Elevación de Piernas (Colgado)', 'Plancha (Plank)', 'Curl Martillo (Polea/Cuerda)', 'Curl Martillo (Mancuernas)', 'Curl de Bíceps (Mancuernas)', 'Curl de Bíceps con Barra', 'Curl de Bíceps Bayoneta', 'Curl de Bíceps en Polea', 'Curl Predicador (Barra)', 'Curl Predicador (Máquina)', 'Curl Araña (Spider Curl)', 'Bicicleta Estática', 'Elíptica', 'Cinta de Correr', 'Escaladora (Stairmaster)', 'Remo (Concept2)', 'Salto de Cuerda', 'Dominadas Asistidas (Máquina)', 'Dominadas (Pullups)', 'Jalón al Pecho (Agarre Estrecho)', 'Jalón al Pecho (Polea Alta)', 'Peso Muerto (Deadlift)', 'Pull-Over en Polea', 'Remo con Barra Pendlay', 'Remo con Barra Yates', 'Remo con Mancuerna (Unilateral)', 'Remo en Máquina (Pecho Apoyado)', 'Remo en T (Barra/Máquina)', 'Remo Gironda (Polea Baja)', 'Hip Thrust (Barra Libre)', 'Hip Thrust (Máquina)', 'Hip Thrust en Smith', 'Patada de Glúteo (Polea)', 'Patada de Glúteo (Máquina)', 'Elevaciones Frontales (Mancuernas)', 'Elevaciones Frontales (Polea)', 'Elevaciones Laterales (Mancuernas)', 'Elevaciones Laterales (Máquina)', 'Elevaciones Laterales (Polea)', 'Face Pull', 'Peck Deck Invertido', 'Press de Hombros (Máquina)', 'Press Militar (Barra)', 'Press Militar (Mancuernas)', 'Pájaros / Vuelos (Mancuernas)', 'Crossover en Polea Baja', 'Cruce de Poleas (Crossover Alto)', 'Peck Deck (Mariposa)', 'Fondos (Dips)', 'Fondos Asistidos (Pecho)', 'Press Banca Plano (Barra)', 'Press Banca Plano (Mancuernas)', 'Press Declinado (Barra)', 'Press Declinado (Máquina)', 'Press Declinado (Mancuernas)', 'Press Inclinado (Barra)', 'Press Inclinado (Mancuernas)', 'Press Inclinado (Polea/Cable)', 'Press Inclinado (Máquina)', 'Smith Press Inclinado', 'Press de Pecho (Máquina)', 'Press Plano (Polea/Cable)', 'Smith Press Plano', 'Curl Femoral Sentado (Máquina)', 'Curl Femoral Tumbado (Máquina)', 'Extensiones de Cuádriceps', 'Good Mornings (Buenos Días)', 'Peso Muerto Rumano (Barra)', 'Peso Muerto Rumano (Mancuernas)', 'Prensa de Piernas (45°)', 'Sentadilla Búlgara', 'Sentadilla Frontal', 'Sentadilla Hack (Máquina)', 'Sentadilla Libre (Barra)', 'Zancadas en Smith', 'Zancadas / Lunges (Barra)', 'Zancadas / Lunges (Mancuernas)', 'Copa a dos manos (Mancuerna)', 'Copa a una mano (Mancuerna)', 'Extensiones de Tríceps (Barra Recta)', 'Extensiones de Tríceps (Polea/Cuerda)', 'Extensiones de Tríceps (Polea)', 'Fondos en Bancos', 'Fondos en Paralelas', 'Patada de Tríceps (Mancuerna)', 'Press Francés (Barra Z)', 'Press Francés (Mancuernas)')
+  AND id NOT IN (SELECT DISTINCT exercise_id FROM public.workout_logs WHERE exercise_id IS NOT NULL)
+  AND id NOT IN (SELECT DISTINCT exercise_id FROM public.routine_exercises WHERE exercise_id IS NOT NULL);
+
+-- 2. Insertar los nuevos ejercicios únicamente si no existen previamente por nombre
+INSERT INTO public.exercises (name, target_muscle_group)
+SELECT new_ex.name, new_ex.target_muscle_group
+FROM (
+    VALUES
     ('Abdominales Inversos', 'Abdominales'),
     ('Russian Twist', 'Abdominales'),
     ('Crunch Abdominal', 'Abdominales'),
@@ -95,10 +104,8 @@ INSERT INTO public.exercises (name, target_muscle_group) VALUES
     ('Patada de Tríceps (Mancuerna)', 'Tríceps'),
     ('Press Francés (Barra Z)', 'Tríceps'),
     ('Press Francés (Mancuernas)', 'Tríceps')
-ON CONFLICT (name) DO UPDATE SET target_muscle_group = EXCLUDED.target_muscle_group;
-
--- 2. Eliminar de forma segura ejercicios obsoletos que NO estén siendo referenciados en ningún historial o rutina
-DELETE FROM public.exercises 
-WHERE name NOT IN ('Abdominales Inversos', 'Russian Twist', 'Crunch Abdominal', 'Crunch en Máquina', 'Crunch en Polea Alta', 'Elevación de Piernas (Colgado)', 'Plancha (Plank)', 'Curl Martillo (Polea/Cuerda)', 'Curl Martillo (Mancuernas)', 'Curl de Bíceps (Mancuernas)', 'Curl de Bíceps con Barra', 'Curl de Bíceps Bayoneta', 'Curl de Bíceps en Polea', 'Curl Predicador (Barra)', 'Curl Predicador (Máquina)', 'Curl Araña (Spider Curl)', 'Bicicleta Estática', 'Elíptica', 'Cinta de Correr', 'Escaladora (Stairmaster)', 'Remo (Concept2)', 'Salto de Cuerda', 'Dominadas Asistidas (Máquina)', 'Dominadas (Pullups)', 'Jalón al Pecho (Agarre Estrecho)', 'Jalón al Pecho (Polea Alta)', 'Peso Muerto (Deadlift)', 'Pull-Over en Polea', 'Remo con Barra Pendlay', 'Remo con Barra Yates', 'Remo con Mancuerna (Unilateral)', 'Remo en Máquina (Pecho Apoyado)', 'Remo en T (Barra/Máquina)', 'Remo Gironda (Polea Baja)', 'Hip Thrust (Barra Libre)', 'Hip Thrust (Máquina)', 'Hip Thrust en Smith', 'Patada de Glúteo (Polea)', 'Patada de Glúteo (Máquina)', 'Elevaciones Frontales (Mancuernas)', 'Elevaciones Frontales (Polea)', 'Elevaciones Laterales (Mancuernas)', 'Elevaciones Laterales (Máquina)', 'Elevaciones Laterales (Polea)', 'Face Pull', 'Peck Deck Invertido', 'Press de Hombros (Máquina)', 'Press Militar (Barra)', 'Press Militar (Mancuernas)', 'Pájaros / Vuelos (Mancuernas)', 'Crossover en Polea Baja', 'Cruce de Poleas (Crossover Alto)', 'Peck Deck (Mariposa)', 'Fondos (Dips)', 'Fondos Asistidos (Pecho)', 'Press Banca Plano (Barra)', 'Press Banca Plano (Mancuernas)', 'Press Declinado (Barra)', 'Press Declinado (Máquina)', 'Press Declinado (Mancuernas)', 'Press Inclinado (Barra)', 'Press Inclinado (Mancuernas)', 'Press Inclinado (Polea/Cable)', 'Press Inclinado (Máquina)', 'Smith Press Inclinado', 'Press de Pecho (Máquina)', 'Press Plano (Polea/Cable)', 'Smith Press Plano', 'Curl Femoral Sentado (Máquina)', 'Curl Femoral Tumbado (Máquina)', 'Extensiones de Cuádriceps', 'Good Mornings (Buenos Días)', 'Peso Muerto Rumano (Barra)', 'Peso Muerto Rumano (Mancuernas)', 'Prensa de Piernas (45°)', 'Sentadilla Búlgara', 'Sentadilla Frontal', 'Sentadilla Hack (Máquina)', 'Sentadilla Libre (Barra)', 'Zancadas en Smith', 'Zancadas / Lunges (Barra)', 'Zancadas / Lunges (Mancuernas)', 'Copa a dos manos (Mancuerna)', 'Copa a una mano (Mancuerna)', 'Extensiones de Tríceps (Barra Recta)', 'Extensiones de Tríceps (Polea/Cuerda)', 'Extensiones de Tríceps (Polea)', 'Fondos en Bancos', 'Fondos en Paralelas', 'Patada de Tríceps (Mancuerna)', 'Press Francés (Barra Z)', 'Press Francés (Mancuernas)')
-  AND id NOT IN (SELECT DISTINCT exercise_id FROM public.workout_logs WHERE exercise_id IS NOT NULL)
-  AND id NOT IN (SELECT DISTINCT exercise_id FROM public.routine_exercises WHERE exercise_id IS NOT NULL);
+) AS new_ex(name, target_muscle_group)
+WHERE NOT EXISTS (
+    SELECT 1 FROM public.exercises e 
+    WHERE e.name = new_ex.name
+);
