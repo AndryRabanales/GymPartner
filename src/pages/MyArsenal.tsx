@@ -1163,6 +1163,17 @@ export const MyArsenal = () => {
                                 {sub}
                             </button>
                         ))}
+
+                        <div className="w-px h-6 bg-neutral-800 mx-2 shrink-0" />
+
+                        {/* --- CARDIO --- */}
+                        <button
+                            type="button"
+                            onClick={() => scrollToCategory("CARDIO")}
+                            className={`shrink-0 px-5 py-2 rounded-xl text-xs font-black italic uppercase tracking-tighter transition-all border-2 ${activeMuscleFilter === "CARDIO" ? 'bg-gym-primary text-black border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-neutral-900 text-gym-primary border-neutral-800'}`}
+                        >
+                            CARDIO
+                        </button>
                     </div>
                 </div>
             </div>

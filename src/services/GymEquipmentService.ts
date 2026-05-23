@@ -1341,6 +1341,90 @@ export const COMMON_EQUIPMENT_SEEDS = [
             "distance": false,
             "rpe": false
         }
+    },
+    {
+        "name": "Cardio (Bicicleta)",
+        "category": "CARDIO",
+        "targetMuscle": "Cardio",
+        "icon": "🚲",
+        "image_url": "/ejercicioimg/ejercicios/Cardio/CardioBicicleta.png",
+        "metrics": {
+            "weight": false,
+            "reps": false,
+            "time": true,
+            "distance": true,
+            "rpe": true
+        }
+    },
+    {
+        "name": "Cardio (Elíptica)",
+        "category": "CARDIO",
+        "targetMuscle": "Cardio",
+        "icon": "🏃",
+        "image_url": "/ejercicioimg/ejercicios/Cardio/CardioEliptica.png",
+        "metrics": {
+            "weight": false,
+            "reps": false,
+            "time": true,
+            "distance": true,
+            "rpe": true
+        }
+    },
+    {
+        "name": "Cardio (Cinta de Correr)",
+        "category": "CARDIO",
+        "targetMuscle": "Cardio",
+        "icon": "🏃",
+        "image_url": "/ejercicioimg/ejercicios/Cardio/CardioEnCinta.png",
+        "metrics": {
+            "weight": false,
+            "reps": false,
+            "time": true,
+            "distance": true,
+            "rpe": true
+        }
+    },
+    {
+        "name": "Cardio (Escaladora)",
+        "category": "CARDIO",
+        "targetMuscle": "Cardio",
+        "icon": "🪜",
+        "image_url": "/ejercicioimg/ejercicios/Cardio/CardioEscalera.png",
+        "metrics": {
+            "weight": false,
+            "reps": false,
+            "time": true,
+            "distance": false,
+            "rpe": true
+        }
+    },
+    {
+        "name": "Cardio (Remo)",
+        "category": "CARDIO",
+        "targetMuscle": "Cardio",
+        "icon": "🚣",
+        "image_url": "/ejercicioimg/ejercicios/Cardio/CardioRemo.png",
+        "metrics": {
+            "weight": false,
+            "reps": false,
+            "time": true,
+            "distance": true,
+            "rpe": true
+        }
+    },
+    {
+        "name": "Cardio (Saltar Cuerda)",
+        "category": "CARDIO",
+        "targetMuscle": "Cardio",
+        "icon": "🪢",
+        "image_url": "/ejercicioimg/ejercicios/Cardio/CardioSaltarCuerda.png",
+        "metrics": {
+            "weight": false,
+            "reps": false,
+            "time": true,
+            "distance": false,
+            "rpe": true
+        }
     }
 ];;
 

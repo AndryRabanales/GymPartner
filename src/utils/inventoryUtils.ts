@@ -27,7 +27,7 @@ export const getMuscleGroup = (item: Equipment | { name: string, category: strin
         if (tm === 'abdominales' || tm === 'abdomen') return 'ABDOMINALES';
         if (tm === 'lumbares') return 'LUMBARES';
         if (tm === 'cuello') return 'CUELLO';
-        if (tm === 'cardio') return 'Cardio';
+        if (tm === 'cardio') return 'CARDIO';
     }
 
     // 2. Check Custom Categories
@@ -37,6 +37,7 @@ export const getMuscleGroup = (item: Equipment | { name: string, category: strin
     }
 
     // 2. Granular Keyword Matching (Highest Priority)
+    if (n.includes('cardio') || n.includes('correr') || n.includes('cinta') || n.includes('elip') || n.includes('escalera') || n.includes('remo') || n.includes('soga') || n.includes('bici')) return 'CARDIO';
     if (n.includes('abdominal') || n.includes('crunch') || n.includes('plancha') || n.includes('core')) return 'ABDOMINALES';
     if (n.includes('lumbar') || n.includes('hiperextension') || n.includes('espalda baja')) return 'LUMBARES';
     if (n.includes('cuello') || n.includes('neck')) return 'CUELLO';
@@ -53,7 +54,7 @@ export const getMuscleGroup = (item: Equipment | { name: string, category: strin
     if (n.includes('antebrazo') || n.includes('muñeca')) return 'ANTEBRAZO';
 
     if (n.includes('banca') || n.includes('pecho') || n.includes('chest') || n.includes('apertura') || n.includes('press inclinado') || n.includes('press plano') || n.includes('pec deck')) return 'PECHO';
-    if (n.includes('espalda') || n.includes('jalon') || n.includes('remo') || n.includes('dorsal') || n.includes('dominada') || n.includes('t-bar')) return 'ESPALDA';
+    if (n.includes('espalda') || n.includes('jalon') || n.includes('remo') || n.includes('dorsal') || n.includes('dominada') || n.includes('t-bar') && !n.includes('cardio')) return 'ESPALDA';
 
     // 3. Fallback to Category Enums
     if (item.category === 'CHEST') return 'PECHO';
@@ -64,7 +65,7 @@ export const getMuscleGroup = (item: Equipment | { name: string, category: strin
     if (item.category === 'SHOULDERS') return 'HOMBRO';
     if (item.category === 'FOREARMS') return 'ANTEBRAZO';
     if (item.category === 'ARMS') return 'BÍCEPS';
-    if (item.category === 'CARDIO') return 'Cardio';
+    if (item.category === 'CARDIO') return 'CARDIO';
 
     return 'Otros';
 };

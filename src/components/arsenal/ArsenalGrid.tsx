@@ -34,6 +34,7 @@ export const ArsenalGrid = ({
         'ESPALDA', 'BÍCEPS', 'ANTEBRAZO',
         'CUÁDRICEPS', 'ISQUIOTIBIALES', 'GLÚTEOS', 'PANTORRILLAS', 'ADUCTORES',
         'ABDOMINALES', 'LUMBARES', 'CUELLO',
+        'CARDIO',
         'Otros'
     ];
 

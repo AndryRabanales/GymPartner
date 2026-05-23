@@ -10,8 +10,6 @@ interface RoutineViewModalProps {
 }
 
 const RoutineExerciseCard = ({ ex, idx }: { ex: any, idx: number }) => {
-    const [imageLoaded, setImageLoaded] = useState(false);
-
     // Default stats if missing
     const activeMetrics = [
         { label: 'PESO', icon: '⚖️' },
@@ -41,17 +39,11 @@ const RoutineExerciseCard = ({ ex, idx }: { ex: any, idx: number }) => {
                         if (imageUrl) {
                             return (
                                 <div className="relative w-full h-full flex items-center justify-center animate-fade-in">
-                                    {!imageLoaded && (
-                                        <div className="absolute inset-0 flex items-center justify-center">
-                                            <div className="w-6 h-6 rounded-full border-2 border-white/5 border-t-gym-primary animate-spin"></div>
-                                        </div>
-                                    )}
                                     <img
                                         src={imageUrl}
                                         alt={ex.name}
-                                        loading="lazy"
-                                        onLoad={() => setImageLoaded(true)}
-                                        className={`w-full h-full max-h-[85%] object-contain filter drop-shadow-md brightness-110 select-none transition-all duration-500 ${imageLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-90'}`}
+                                        loading="eager"
+                                        className="w-full h-full max-h-[85%] object-contain filter drop-shadow-md brightness-110 select-none opacity-100 scale-100 transition-all duration-300"
                                     />
                                 </div>
                             );

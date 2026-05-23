@@ -13,7 +13,6 @@ export interface ArsenalCardProps {
 }
 
 export const ArsenalCard = ({ item, isSelected, userSettings, onEdit, configOverride }: ArsenalCardProps) => {
-    const [imageLoaded, setImageLoaded] = useState(false);
     // Determine active metrics based on item data or fallback
     let activeMetricIds: string[] = [];
 
@@ -108,17 +107,11 @@ export const ArsenalCard = ({ item, isSelected, userSettings, onEdit, configOver
                         if (imageUrl) {
                             return (
                                 <div className="relative w-full h-full flex items-center justify-center">
-                                    {!imageLoaded && (
-                                        <div className="absolute inset-0 flex items-center justify-center">
-                                            <div className="w-8 h-8 rounded-full border-4 border-white/5 border-t-gym-primary animate-spin"></div>
-                                        </div>
-                                    )}
                                     <img 
                                         src={imageUrl} 
                                         alt={item.name} 
-                                        loading="lazy"
-                                        onLoad={() => setImageLoaded(true)}
-                                        className={`w-full h-full max-h-[85%] object-contain filter drop-shadow-md select-none transition-all duration-500 transform group-hover:scale-110 ${imageLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-90'}`}
+                                        loading="eager"
+                                        className="w-full h-full max-h-[85%] object-contain filter drop-shadow-md select-none transition-all duration-300 transform group-hover:scale-110 opacity-100 scale-100"
                                     />
                                 </div>
                             );
