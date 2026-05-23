@@ -1,4 +1,5 @@
 -- Este script vacía por completo el catálogo de ejercicios de GymPartner
--- eliminando en cascada las referencias obsoletas para comenzar desde cero.
+-- y el inventario de equipamiento de los gimnasios para comenzar totalmente desde cero.
 
 TRUNCATE TABLE public.exercises CASCADE;
+TRUNCATE TABLE public.gym_equipment CASCADE;
