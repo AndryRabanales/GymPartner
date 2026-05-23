@@ -6,6 +6,7 @@ import type { Notification } from '../services/NotificationService';
 import { FadeInImage } from '../components/ui/FadeInImage';
 import { Zap, UserPlus, MapPin, Check, X, Bell, History, Swords, Loader, Loader2, Bookmark, Activity } from 'lucide-react';
 import { socialService } from '../services/SocialService';
+import { workoutService } from '../services/WorkoutService';
 import { ShareRoutinesToUserModal } from '../components/profile/ShareRoutinesToUserModal';
 import { PlayerProfileModal } from '../components/profile/PlayerProfileModal';
 import toast from 'react-hot-toast';
@@ -17,12 +18,249 @@ interface ExtendedNotification extends Notification {
     };
 }
 
-interface ExtendedNotification extends Notification {
-    sender?: {
-        username: string;
-        avatar_url: string | null;
-    };
+// Sub-component to display live & completed workout notifications in real-time
+interface WorkoutNotificationCardProps {
+    n: ExtendedNotification;
+    setSelectedPlayer: (player: any) => void;
+    navigate: any;
 }
+
+const WorkoutNotificationCard = ({ n, setSelectedPlayer, navigate }: WorkoutNotificationCardProps) => {
+    const isLive = n.data?.status === 'started';
+    const gymLabel = n.data?.gym_name || 'un Gimnasio';
+    const muscles = n.data?.muscles || [];
+    const duration = n.data?.duration;
+    const volume = n.data?.volume;
+
+    const [liveSession, setLiveSession] = useState<any | null>(null);
+    const [liveExercises, setLiveExercises] = useState<any[]>([]);
+
+    // If it is a live workout, subscribe to live session updates in real-time
+    useEffect(() => {
+        if (!isLive || !n.data?.sender_id) return;
+
+        const fetchAndSubscribe = async () => {
+            try {
+                // Initial load
+                const { data: activeSession } = await workoutService.getActiveSession(n.data.sender_id);
+                if (activeSession) {
+                    setLiveSession(activeSession);
+                    if (activeSession.notes) {
+                        try {
+                            const parsed = JSON.parse(activeSession.notes);
+                            if (parsed && Array.isArray(parsed.active_exercises)) {
+                                setLiveExercises(parsed.active_exercises);
+                            }
+                        } catch (e) {}
+                    }
+                }
+
+                // Sub
+                const channel = supabase
+                    .channel(`notif-live-session:${n.data.sender_id}`)
+                    .on('postgres_changes', {
+                        event: '*',
+                        schema: 'public',
+                        table: 'workout_sessions',
+                        filter: `user_id=eq.${n.data.sender_id}`
+                    }, async (payload: any) => {
+                        console.log("⚡ Real-time live workout update in feed card:", payload);
+                        const { data: updatedSession } = await workoutService.getActiveSession(n.data.sender_id);
+                        if (updatedSession) {
+                            setLiveSession(updatedSession);
+                            if (updatedSession.notes) {
+                                try {
+                                    const parsed = JSON.parse(updatedSession.notes);
+                                    if (parsed && Array.isArray(parsed.active_exercises)) {
+                                        setLiveExercises(parsed.active_exercises);
+                                    }
+                                } catch (e) {}
+                            }
+                        } else {
+                            setLiveSession(null);
+                            setLiveExercises([]);
+                        }
+                    })
+                    .subscribe();
+
+                return () => {
+                    supabase.removeChannel(channel);
+                };
+            } catch (err) {
+                console.error("Error setting up live card sub:", err);
+            }
+        };
+
+        fetchAndSubscribe();
+    }, [isLive, n.data?.sender_id]);
+
+    return (
+        <div 
+            className={`bg-black/40 backdrop-blur-2xl border rounded-[2rem] p-5 shadow-[0_15px_40px_rgba(0,0,0,0.4)] transition-all group my-3 text-left ${isLive ? 'border-red-500/20 hover:border-red-500/40 bg-red-950/5' : 'border-green-500/20 hover:border-green-500/40 bg-green-950/5'}`}
+        >
+            <div className="flex items-start gap-4">
+                <div className="relative shrink-0">
+                    <div className={`absolute -inset-1 rounded-full blur-md opacity-0 group-hover:opacity-20 transition-opacity ${isLive ? 'bg-red-500' : 'bg-green-500'}`}></div>
+                    <div className="w-14 h-14 rounded-full p-0.5 bg-gradient-to-tr from-neutral-800 to-neutral-600">
+                        <div 
+                            className="w-full h-full rounded-full bg-neutral-900 overflow-hidden flex items-center justify-center border border-white/10 relative cursor-pointer" 
+                            onClick={() => {
+                                if (n.data?.sender_id) {
+                                    setSelectedPlayer({
+                                        id: n.data.sender_id,
+                                        username: n.sender?.username || n.data?.sender_name || 'Guerrero',
+                                        avatar_url: n.sender?.avatar_url || '',
+                                        rank: 999,
+                                        gym_name: n.data?.gym_name || 'un Gimnasio'
+                                    });
+                                }
+                            }}
+                        >
+                            {n.sender?.avatar_url ? (
+                                <FadeInImage src={n.sender.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                            ) : (
+                                <div className="w-full h-full bg-gradient-to-br from-neutral-800 to-black flex items-center justify-center">
+                                    <span className="text-lg font-black text-gym-primary italic">
+                                        {n.sender?.username?.[0].toUpperCase() || 'G'}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    <div className={`absolute -bottom-1 -right-1 p-1 rounded-full border-2 border-black shadow-lg ${isLive ? 'bg-red-500 text-white animate-pulse' : 'bg-green-500 text-black'}`}>
+                        <Activity size={10} strokeWidth={3} />
+                    </div>
+                </div>
+
+                <div className="flex-1 min-w-0 flex flex-col text-left">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                        <span className={`text-[9px] font-black italic uppercase tracking-wider px-2 py-0.5 rounded-full ${isLive ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-green-500/20 text-green-400 border border-green-500/30'}`}>
+                            {isLive ? '🔴 EN VIVO' : '✅ COMPLETADO'}
+                        </span>
+                        <span className="text-[9px] font-bold text-neutral-600 shrink-0">
+                            {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                    </div>
+                    
+                    <p className="text-xs font-bold leading-normal text-white mt-1">
+                        <span 
+                            className="text-gym-primary font-black uppercase mr-1 cursor-pointer hover:underline" 
+                            onClick={() => {
+                                if (n.data?.sender_id) {
+                                    setSelectedPlayer({
+                                        id: n.data.sender_id,
+                                        username: n.sender?.username || n.data?.sender_name || 'Guerrero',
+                                        avatar_url: n.sender?.avatar_url || '',
+                                        rank: 999,
+                                        gym_name: n.data?.gym_name || 'un Gimnasio'
+                                    });
+                                }
+                            }}
+                        >
+                            @{n.sender?.username || n.data?.sender_name || 'Tu amigo'}
+                        </span>
+                        {isLive ? `comenzó a entrenar en ${gymLabel}` : `finalizó su entrenamiento en ${gymLabel}`}
+                    </p>
+
+                    <div 
+                        onClick={() => {
+                            if (!isLive && n.data?.session_id) {
+                                navigate(`/history/${n.data.session_id}`);
+                            } else if (isLive) {
+                                // Open profile modal so they can see full live details
+                                if (n.data?.sender_id) {
+                                    setSelectedPlayer({
+                                        id: n.data.sender_id,
+                                        username: n.sender?.username || n.data?.sender_name || 'Guerrero',
+                                        avatar_url: n.sender?.avatar_url || '',
+                                        rank: 999,
+                                        gym_name: n.data?.gym_name || 'un Gimnasio'
+                                    });
+                                }
+                            }
+                        }}
+                        className="mt-3 bg-black/30 border border-white/5 rounded-xl p-3 space-y-2 select-none cursor-pointer hover:border-gym-primary/30 hover:bg-neutral-950/40 active:scale-[0.99] transition-all"
+                    >
+                        <div className="flex items-center gap-1.5 text-[10px] text-neutral-400 font-bold uppercase">
+                            <MapPin size={10} className="text-gym-primary" />
+                            <span className="truncate">{gymLabel}</span>
+                        </div>
+
+                        {!isLive && (
+                            <div className="flex flex-wrap gap-x-4 gap-y-1.5 border-t border-white/5 pt-2">
+                                {duration && (
+                                    <div className="flex items-center gap-1 text-[10px] font-black text-blue-400 uppercase">
+                                        ⏱️ {duration} MIN
+                                    </div>
+                                )}
+                                {volume && volume > 0 && (
+                                    <div className="flex items-center gap-1 text-[10px] font-black text-yellow-500 uppercase">
+                                        💪 {volume.toLocaleString()} KG VOL
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Real-time Live Selected Exercises */}
+                        {isLive && liveExercises.length > 0 && (
+                            <div className="border-t border-white/5 pt-2 mt-2 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                                <p className="text-[8px] font-black text-red-400 uppercase tracking-widest flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping"></span>
+                                    SELECCIONANDO AHORA ({liveExercises.length})
+                                </p>
+                                <div className="space-y-1 max-h-36 overflow-y-auto custom-scrollbar">
+                                    {liveExercises.map((ex: any, idx: number) => {
+                                        const completedPct = ex.setsCount > 0 ? Math.round((ex.completedSetsCount / ex.setsCount) * 100) : 0;
+                                        return (
+                                            <div key={ex.id || idx} className="flex items-center justify-between gap-2 bg-white/[0.01] border border-white/5 p-2 rounded-lg">
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="text-[10px] font-black text-white truncate uppercase tracking-tight">
+                                                        {ex.equipmentName}
+                                                    </p>
+                                                    <p className="text-[8px] text-neutral-500 font-bold uppercase tracking-wider">
+                                                        {ex.setsCount} {ex.setsCount === 1 ? 'SERIE' : 'SERIES'}
+                                                    </p>
+                                                </div>
+                                                <div className="shrink-0 flex items-center gap-2">
+                                                    <span className="text-[9px] font-mono font-black text-red-400">
+                                                        {ex.completedSetsCount}/{ex.setsCount}
+                                                    </span>
+                                                    <div className="w-8 h-0.5 bg-neutral-800 rounded-full overflow-hidden">
+                                                        <div 
+                                                            className="h-full bg-red-500 rounded-full transition-all duration-300"
+                                                            style={{ width: `${completedPct}%` }}
+                                                        ></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
+                        {!isLive && muscles.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                                {muscles.map((muscle: string, idx: number) => {
+                                    const emojiMap: Record<string, string> = {
+                                        'Pecho': '💪', 'Espalda': '🦅', 'Pierna': '🦵', 'Hombro': '🛡️',
+                                        'Bíceps': '🔥', 'Tríceps': '⚡', 'Core': '🛡️', 'Cardio': '🏃'
+                                    };
+                                    const emoji = emojiMap[muscle] || '🏋️';
+                                    return (
+                                        <span key={idx} className="bg-neutral-800 border border-white/5 text-neutral-300 text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded">
+                                            {emoji} {muscle.toUpperCase()}
+                                        </span>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 // Sub-component to display and manage routine shares
 interface SharedRoutineCardProps {
@@ -474,131 +712,13 @@ export const NotificationsPage = () => {
         const status = n.data?.status;
 
         if (n.type === 'system' && (n.data?.status === 'started' || n.data?.status === 'finished')) {
-            const isLive = n.data.status === 'started';
-            const gymLabel = n.data.gym_name || 'un Gimnasio';
-            const muscles = n.data.muscles || [];
-            const duration = n.data.duration;
-            const volume = n.data.volume;
-
             return (
-                <div 
-                    key={n.id} 
-                    className={`bg-black/40 backdrop-blur-2xl border rounded-[2rem] p-5 shadow-[0_15px_40px_rgba(0,0,0,0.4)] transition-all group my-3 text-left ${isLive ? 'border-red-500/20 hover:border-red-500/40 bg-red-950/5' : 'border-green-500/20 hover:border-green-500/40 bg-green-950/5'}`}
-                >
-                    <div className="flex items-start gap-4">
-                        <div className="relative shrink-0">
-                            <div className={`absolute -inset-1 rounded-full blur-md opacity-0 group-hover:opacity-20 transition-opacity ${isLive ? 'bg-red-500' : 'bg-green-500'}`}></div>
-                            <div className="w-14 h-14 rounded-full p-0.5 bg-gradient-to-tr from-neutral-800 to-neutral-600">
-                                <div 
-                                    className="w-full h-full rounded-full bg-neutral-900 overflow-hidden flex items-center justify-center border border-white/10 relative cursor-pointer" 
-                                    onClick={() => {
-                                        if (n.data?.sender_id) {
-                                            setSelectedPlayer({
-                                                id: n.data.sender_id,
-                                                username: n.sender?.username || n.data?.sender_name || 'Guerrero',
-                                                avatar_url: n.sender?.avatar_url || '',
-                                                rank: 999,
-                                                gym_name: n.data?.gym_name || 'un Gimnasio'
-                                            });
-                                        }
-                                    }}
-                                >
-                                    {n.sender?.avatar_url ? (
-                                        <FadeInImage src={n.sender.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-                                    ) : (
-                                        <div className="w-full h-full bg-gradient-to-br from-neutral-800 to-black flex items-center justify-center">
-                                            <span className="text-lg font-black text-gym-primary italic">
-                                                {n.sender?.username?.[0].toUpperCase() || 'G'}
-                                            </span>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                            <div className={`absolute -bottom-1 -right-1 p-1 rounded-full border-2 border-black shadow-lg ${isLive ? 'bg-red-500 text-white animate-pulse' : 'bg-green-500 text-black'}`}>
-                                <Activity size={10} strokeWidth={3} />
-                            </div>
-                        </div>
-
-                        <div className="flex-1 min-w-0 flex flex-col text-left">
-                            <div className="flex items-center justify-between gap-2 mb-1">
-                                <span className={`text-[9px] font-black italic uppercase tracking-wider px-2 py-0.5 rounded-full ${isLive ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-green-500/20 text-green-400 border border-green-500/30'}`}>
-                                    {isLive ? '🔴 EN VIVO' : '✅ COMPLETADO'}
-                                </span>
-                                <span className="text-[9px] font-bold text-neutral-600 shrink-0">
-                                    {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </span>
-                            </div>
-                            
-                            <p className="text-xs font-bold leading-normal text-white mt-1">
-                                <span 
-                                    className="text-gym-primary font-black uppercase mr-1 cursor-pointer hover:underline" 
-                                    onClick={() => {
-                                        if (n.data?.sender_id) {
-                                            setSelectedPlayer({
-                                                id: n.data.sender_id,
-                                                username: n.sender?.username || n.data?.sender_name || 'Guerrero',
-                                                avatar_url: n.sender?.avatar_url || '',
-                                                rank: 999,
-                                                gym_name: n.data?.gym_name || 'un Gimnasio'
-                                            });
-                                        }
-                                    }}
-                                >
-                                    @{n.sender?.username || n.data?.sender_name || 'Tu amigo'}
-                                </span>
-                                {isLive ? `comenzó a entrenar en ${gymLabel}` : `finalizó su entrenamiento en ${gymLabel}`}
-                            </p>
-
-                            <div 
-                                onClick={() => {
-                                    if (!isLive && n.data?.session_id) {
-                                        navigate(`/history/${n.data.session_id}`);
-                                    } else if (isLive) {
-                                        toast.success("¡Este entrenamiento está en vivo ahora mismo!");
-                                    }
-                                }}
-                                className={`mt-3 bg-black/30 border border-white/5 rounded-xl p-3 space-y-2 select-none ${(!isLive && n.data?.session_id) ? 'cursor-pointer hover:border-gym-primary/30 hover:bg-neutral-950/40 active:scale-[0.99] transition-all' : ''}`}
-                            >
-                                <div className="flex items-center gap-1.5 text-[10px] text-neutral-400 font-bold uppercase">
-                                    <MapPin size={10} className="text-gym-primary" />
-                                    <span className="truncate">{gymLabel}</span>
-                                </div>
-
-                                {!isLive && (
-                                    <div className="flex flex-wrap gap-x-4 gap-y-1.5 border-t border-white/5 pt-2">
-                                        {duration && (
-                                            <div className="flex items-center gap-1 text-[10px] font-black text-blue-400 uppercase">
-                                                ⏱️ {duration} MIN
-                                            </div>
-                                        )}
-                                        {volume && volume > 0 && (
-                                            <div className="flex items-center gap-1 text-[10px] font-black text-yellow-500 uppercase">
-                                                💪 {volume.toLocaleString()} KG VOL
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-
-                                {muscles.length > 0 && (
-                                    <div className="flex flex-wrap gap-1 mt-2">
-                                        {muscles.map((muscle: string, idx: number) => {
-                                            const emojiMap: Record<string, string> = {
-                                                'Pecho': '💪', 'Espalda': '🦅', 'Pierna': '🦵', 'Hombro': '🛡️',
-                                                'Bíceps': '🔥', 'Tríceps': '⚡', 'Core': '🛡️', 'Cardio': '🏃'
-                                            };
-                                            const emoji = emojiMap[muscle] || '🏋️';
-                                            return (
-                                                <span key={idx} className="bg-neutral-800 border border-white/5 text-neutral-300 text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded">
-                                                    {emoji} {muscle.toUpperCase()}
-                                                </span>
-                                            );
-                                        })}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <WorkoutNotificationCard
+                    key={n.id}
+                    n={n}
+                    setSelectedPlayer={setSelectedPlayer}
+                    navigate={navigate}
+                />
             );
         }
 

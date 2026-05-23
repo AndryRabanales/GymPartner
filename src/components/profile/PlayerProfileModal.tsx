@@ -60,14 +60,9 @@ export const PlayerProfileModal = ({ player, onClose, onFollowToggle }: PlayerPr
     const [liveGymName, setLiveGymName] = useState<string>('');
     const [liveDuration, setLiveDuration] = useState<string>('00:00');
 
-    // Fetch Live Training Status if has history access
+    // Fetch Live Training Status (always checked for live social features)
     useEffect(() => {
         const checkLiveSession = async () => {
-            if (!hasHistoryAccess) {
-                setLiveSession(null);
-                setLiveGymName('');
-                return;
-            }
             try {
                 const { data: activeSession } = await workoutService.getActiveSession(player.id);
                 if (activeSession) {
@@ -92,7 +87,7 @@ export const PlayerProfileModal = ({ player, onClose, onFollowToggle }: PlayerPr
         };
 
         checkLiveSession();
-    }, [hasHistoryAccess, player.id]);
+    }, [player.id]);
 
     // Live Session Timer tick
     useEffect(() => {
@@ -121,8 +116,6 @@ export const PlayerProfileModal = ({ player, onClose, onFollowToggle }: PlayerPr
 
     // Supabase Realtime channel for player session updates
     useEffect(() => {
-        if (!hasHistoryAccess) return;
-
         console.log("⚡ Subscribing to player workout session updates...", player.id);
         const channel = supabase
             .channel(`player-session-realtime:${player.id}`)
@@ -160,7 +153,7 @@ export const PlayerProfileModal = ({ player, onClose, onFollowToggle }: PlayerPr
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [hasHistoryAccess, player.id]);
+    }, [player.id]);
 
     // Hide BottomNav when modal opens, show when it closes
     useEffect(() => {
