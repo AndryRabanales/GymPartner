@@ -201,6 +201,14 @@ export const WorkoutSession = () => {
         }
     }, [activeMuscleFilter, searchTerm]);
 
+    // Sync Selected Catalog Items when modal opens
+    useEffect(() => {
+        if (showAddModal) {
+            const currentIds = activeExercises.map(e => e.equipmentId).filter(Boolean) as string[];
+            setSelectedCatalogItems(new Set(currentIds));
+        }
+    }, [showAddModal]);
+
     // Helpers for Unit Conversion
     const toDisplayWeight = (kgVal: number, unit: 'kg' | 'lb' = 'kg'): string => {
         if (!kgVal) return '';
@@ -264,7 +272,7 @@ export const WorkoutSession = () => {
     // --- End Local Backup ---
 
     const handleBatchAdd = async () => {
-        if (selectedCatalogItems.size === 0) return;
+        if (selectedCatalogItems.size === 0 && activeExercises.length === 0) return;
 
         let activeArsenal = arsenal;
 
@@ -290,14 +298,21 @@ export const WorkoutSession = () => {
             }
         });
 
-        // 2. Add All Selected Items
+        // 2. Identify keeping, adding, and removing exercises
+        // Find existing exercises to keep (those whose equipmentId is still in selectedCatalogItems)
+        const exercisesToKeep = activeExercises.filter(e => e.equipmentId && selectedCatalogItems.has(e.equipmentId));
+
+        // Find which selected equipment IDs are new (not already in activeExercises)
+        const existingEquipmentIds = new Set(activeExercises.map(e => e.equipmentId).filter(Boolean));
+        const newEquipmentIdsToAdd = Array.from(selectedCatalogItems).filter(id => !existingEquipmentIds.has(id));
+
         const itemsToAdd: Equipment[] = [];
-        selectedCatalogItems.forEach(id => {
+        newEquipmentIdsToAdd.forEach(id => {
             const item = effectiveInv.find(i => i.id === id);
             if (item) itemsToAdd.push(item);
         });
 
-        // Batch update to avoid multiple re-renders
+        // Map new ones to WorkoutExercise
         const newExercises = itemsToAdd.map(equipment => {
             const defaultMetrics = { weight: true, reps: true, time: false, distance: false, rpe: false };
             return {
@@ -313,8 +328,9 @@ export const WorkoutSession = () => {
             } as WorkoutExercise;
         });
 
-        setActiveExercises(prev => [...prev, ...newExercises]);
-        setIsRoutineModified(true); // Structural change: exercises added
+        const nextActiveExercises = [...exercisesToKeep, ...newExercises];
+        setActiveExercises(nextActiveExercises);
+        setIsRoutineModified(true); // Structural change: exercises synchronized
 
         // 3. Cleanup
         setSelectedCatalogItems(new Set());
