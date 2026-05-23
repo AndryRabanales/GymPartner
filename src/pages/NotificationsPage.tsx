@@ -7,6 +7,7 @@ import { FadeInImage } from '../components/ui/FadeInImage';
 import { Zap, UserPlus, MapPin, Check, X, Bell, History, Swords, Loader, Loader2, Bookmark, Activity } from 'lucide-react';
 import { socialService } from '../services/SocialService';
 import { ShareRoutinesToUserModal } from '../components/profile/ShareRoutinesToUserModal';
+import { PlayerProfileModal } from '../components/profile/PlayerProfileModal';
 import toast from 'react-hot-toast';
 
 interface ExtendedNotification extends Notification {
@@ -313,6 +314,7 @@ export const NotificationsPage = () => {
     const [loading, setLoading] = useState(false);
     const [sharingRoutinesRequester, setSharingRoutinesRequester] = useState<{ id: string; username: string; notification: ExtendedNotification } | null>(null);
     const [currentUser, setCurrentUser] = useState<any>(null);
+    const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
 
     useEffect(() => {
         supabase.auth.getUser().then(({ data: { user } }) => {
@@ -487,7 +489,20 @@ export const NotificationsPage = () => {
                         <div className="relative shrink-0">
                             <div className={`absolute -inset-1 rounded-full blur-md opacity-0 group-hover:opacity-20 transition-opacity ${isLive ? 'bg-red-500' : 'bg-green-500'}`}></div>
                             <div className="w-14 h-14 rounded-full p-0.5 bg-gradient-to-tr from-neutral-800 to-neutral-600">
-                                <div className="w-full h-full rounded-full bg-neutral-900 overflow-hidden flex items-center justify-center border border-white/10 relative cursor-pointer" onClick={() => navigate(`/user/${n.data?.sender_id}`)}>
+                                <div 
+                                    className="w-full h-full rounded-full bg-neutral-900 overflow-hidden flex items-center justify-center border border-white/10 relative cursor-pointer" 
+                                    onClick={() => {
+                                        if (n.data?.sender_id) {
+                                            setSelectedPlayer({
+                                                id: n.data.sender_id,
+                                                username: n.sender?.username || n.data?.sender_name || 'Guerrero',
+                                                avatar_url: n.sender?.avatar_url || '',
+                                                rank: 999,
+                                                gym_name: n.data?.gym_name || 'un Gimnasio'
+                                            });
+                                        }
+                                    }}
+                                >
                                     {n.sender?.avatar_url ? (
                                         <FadeInImage src={n.sender.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                                     ) : (
@@ -515,13 +530,35 @@ export const NotificationsPage = () => {
                             </div>
                             
                             <p className="text-xs font-bold leading-normal text-white mt-1">
-                                <span className="text-gym-primary font-black uppercase mr-1 cursor-pointer hover:underline" onClick={() => navigate(`/user/${n.data?.sender_id}`)}>
+                                <span 
+                                    className="text-gym-primary font-black uppercase mr-1 cursor-pointer hover:underline" 
+                                    onClick={() => {
+                                        if (n.data?.sender_id) {
+                                            setSelectedPlayer({
+                                                id: n.data.sender_id,
+                                                username: n.sender?.username || n.data?.sender_name || 'Guerrero',
+                                                avatar_url: n.sender?.avatar_url || '',
+                                                rank: 999,
+                                                gym_name: n.data?.gym_name || 'un Gimnasio'
+                                            });
+                                        }
+                                    }}
+                                >
                                     @{n.sender?.username || n.data?.sender_name || 'Tu amigo'}
                                 </span>
                                 {isLive ? `comenzó a entrenar en ${gymLabel}` : `finalizó su entrenamiento en ${gymLabel}`}
                             </p>
 
-                            <div className="mt-3 bg-black/30 border border-white/5 rounded-xl p-3 space-y-2">
+                            <div 
+                                onClick={() => {
+                                    if (!isLive && n.data?.session_id) {
+                                        navigate(`/history/${n.data.session_id}`);
+                                    } else if (isLive) {
+                                        toast.success("¡Este entrenamiento está en vivo ahora mismo!");
+                                    }
+                                }}
+                                className={`mt-3 bg-black/30 border border-white/5 rounded-xl p-3 space-y-2 select-none ${(!isLive && n.data?.session_id) ? 'cursor-pointer hover:border-gym-primary/30 hover:bg-neutral-950/40 active:scale-[0.99] transition-all' : ''}`}
+                            >
                                 <div className="flex items-center gap-1.5 text-[10px] text-neutral-400 font-bold uppercase">
                                     <MapPin size={10} className="text-gym-primary" />
                                     <span className="truncate">{gymLabel}</span>
@@ -589,7 +626,20 @@ export const NotificationsPage = () => {
                         <div className="relative shrink-0">
                             <div className="absolute -inset-1 bg-gym-primary rounded-full blur-md opacity-0 group-hover:opacity-20 transition-opacity"></div>
                             <div className={`w-16 h-16 rounded-full p-0.5 ${status ? 'bg-neutral-800' : 'bg-gradient-to-tr from-neutral-800 to-neutral-600'}`}>
-                                <div className="w-full h-full rounded-full bg-neutral-900 overflow-hidden flex items-center justify-center border border-white/10 relative cursor-pointer" onClick={() => navigate(`/user/${requesterId}`)}>
+                                <div 
+                                    className="w-full h-full rounded-full bg-neutral-900 overflow-hidden flex items-center justify-center border border-white/10 relative cursor-pointer" 
+                                    onClick={() => {
+                                        if (requesterId) {
+                                            setSelectedPlayer({
+                                                id: requesterId,
+                                                username: requesterUsername,
+                                                avatar_url: n.sender?.avatar_url || '',
+                                                rank: 999,
+                                                gym_name: n.data?.gym_name || 'un Gimnasio'
+                                            });
+                                        }
+                                    }}
+                                >
                                     {n.sender?.avatar_url ? (
                                         <FadeInImage src={n.sender.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                                     ) : (
@@ -618,7 +668,20 @@ export const NotificationsPage = () => {
                                 </span>
                             </div>
                             <p className={`text-xs font-medium leading-relaxed ${status ? 'text-neutral-600' : 'text-neutral-400'}`}>
-                                <span className={`${status ? 'text-neutral-500' : 'text-white'} font-black uppercase mr-1 cursor-pointer hover:text-gym-primary`} onClick={() => navigate(`/user/${requesterId}`)}>
+                                <span 
+                                    className={`${status ? 'text-neutral-500' : 'text-white'} font-black uppercase mr-1 cursor-pointer hover:text-gym-primary`} 
+                                    onClick={() => {
+                                        if (requesterId) {
+                                            setSelectedPlayer({
+                                                id: requesterId,
+                                                username: requesterUsername,
+                                                avatar_url: n.sender?.avatar_url || '',
+                                                rank: 999,
+                                                gym_name: n.data?.gym_name || 'un Gimnasio'
+                                            });
+                                        }
+                                    }}
+                                >
                                     @{requesterUsername}
                                 </span> 
                                 {isHistory 
@@ -673,11 +736,27 @@ export const NotificationsPage = () => {
         
         // Base layout for standard notifications (follower, gym_join, system)
         if (n.type !== 'invitation') {
+            const targetUserId = n.data?.sender_id || n.data?.new_member_id || '';
+            const targetUsername = n.sender?.username || n.data?.sender_name || 'Guerrero';
+
             return (
                 <div key={n.id} className="flex items-center gap-4 py-3 group">
                     <div className="relative shrink-0">
                         <div className="w-12 h-12 rounded-full p-0.5 bg-gradient-to-tr from-neutral-800 to-neutral-600">
-                            <div className="w-full h-full rounded-full bg-neutral-900 overflow-hidden flex items-center justify-center border border-white/10 relative cursor-pointer" onClick={() => navigate(`/user/${n.data?.sender_id || n.data?.new_member_id || ''}`)}>
+                            <div 
+                                className="w-full h-full rounded-full bg-neutral-900 overflow-hidden flex items-center justify-center border border-white/10 relative cursor-pointer" 
+                                onClick={() => {
+                                    if (targetUserId) {
+                                        setSelectedPlayer({
+                                            id: targetUserId,
+                                            username: targetUsername,
+                                            avatar_url: n.sender?.avatar_url || '',
+                                            rank: 999,
+                                            gym_name: n.data?.gym_name || 'un Gimnasio'
+                                        });
+                                    }
+                                }}
+                            >
                                 {n.sender?.avatar_url ? (
                                     <FadeInImage src={n.sender.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                                 ) : (
@@ -702,7 +781,20 @@ export const NotificationsPage = () => {
                     </div>
                     <div className="flex-1 min-w-0 pr-2">
                         <p className="text-xs text-neutral-300 font-medium leading-tight">
-                            <span className="font-bold text-white mr-1 cursor-pointer hover:text-gym-primary" onClick={() => navigate(`/user/${n.data?.sender_id || n.data?.new_member_id || ''}`)}>
+                            <span 
+                                className="font-bold text-white mr-1 cursor-pointer hover:text-gym-primary" 
+                                onClick={() => {
+                                    if (targetUserId) {
+                                        setSelectedPlayer({
+                                            id: targetUserId,
+                                            username: targetUsername,
+                                            avatar_url: n.sender?.avatar_url || '',
+                                            rank: 999,
+                                            gym_name: n.data?.gym_name || 'un Gimnasio'
+                                        });
+                                    }
+                                }}
+                            >
                                 {n.sender?.username || n.data?.sender_name || 'Alguien'}
                             </span>
                             {n.type === 'follower' && 'ha comenzado a seguirte.'}
@@ -712,7 +804,20 @@ export const NotificationsPage = () => {
                         <span className="text-[10px] text-neutral-600 font-bold mt-0.5 block">{new Date(n.created_at).toLocaleDateString()}</span>
                     </div>
                     {n.type === 'follower' && (
-                        <button onClick={() => navigate(`/user/${n.data?.sender_id}`)} className="shrink-0 bg-neutral-900 border border-white/10 text-white text-[10px] font-black uppercase tracking-wider px-4 py-2 rounded-xl hover:bg-white/10 transition-colors">
+                        <button 
+                            onClick={() => {
+                                if (targetUserId) {
+                                    setSelectedPlayer({
+                                        id: targetUserId,
+                                        username: targetUsername,
+                                        avatar_url: n.sender?.avatar_url || '',
+                                        rank: 999,
+                                        gym_name: n.data?.gym_name || 'un Gimnasio'
+                                    });
+                                }
+                            }} 
+                            className="shrink-0 bg-neutral-900 border border-white/10 text-white text-[10px] font-black uppercase tracking-wider px-4 py-2 rounded-xl hover:bg-white/10 transition-colors"
+                        >
                             Ver Perfil
                         </button>
                     )}
@@ -735,7 +840,20 @@ export const NotificationsPage = () => {
                     <div className="relative shrink-0">
                         <div className="absolute -inset-1 bg-gym-primary rounded-full blur-md opacity-0 group-hover:opacity-20 transition-opacity"></div>
                         <div className={`w-16 h-16 rounded-full p-0.5 ${status ? 'bg-neutral-800' : 'bg-gradient-to-tr from-neutral-800 to-neutral-600'}`}>
-                            <div className="w-full h-full rounded-full bg-neutral-900 overflow-hidden flex items-center justify-center border border-white/10 relative cursor-pointer" onClick={() => navigate(`/user/${n.data?.sender_id}`)}>
+                            <div 
+                                className="w-full h-full rounded-full bg-neutral-900 overflow-hidden flex items-center justify-center border border-white/10 relative cursor-pointer" 
+                                onClick={() => {
+                                    if (n.data?.sender_id) {
+                                        setSelectedPlayer({
+                                            id: n.data.sender_id,
+                                            username: n.sender?.username || 'Guerrero',
+                                            avatar_url: n.sender?.avatar_url || '',
+                                            rank: 999,
+                                            gym_name: n.data?.gym_name || 'un Gimnasio'
+                                        });
+                                    }
+                                }}
+                            >
                                 {n.sender?.avatar_url ? (
                                     <FadeInImage src={n.sender.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                                 ) : (
@@ -764,7 +882,20 @@ export const NotificationsPage = () => {
                             </span>
                         </div>
                         <p className={`text-xs font-medium leading-relaxed ${status ? 'text-neutral-600' : 'text-neutral-400'}`}>
-                            <span className={`${status ? 'text-neutral-500' : 'text-gym-primary'} font-black uppercase italic mr-1 cursor-pointer`} onClick={() => navigate(`/user/${n.data?.sender_id}`)}>
+                            <span 
+                                className={`${status ? 'text-neutral-500' : 'text-gym-primary'} font-black uppercase italic mr-1 cursor-pointer`} 
+                                onClick={() => {
+                                    if (n.data?.sender_id) {
+                                        setSelectedPlayer({
+                                            id: n.data.sender_id,
+                                            username: n.sender?.username || 'Guerrero',
+                                            avatar_url: n.sender?.avatar_url || '',
+                                            rank: 999,
+                                            gym_name: n.data?.gym_name || 'un Gimnasio'
+                                        });
+                                    }
+                                }}
+                            >
                                 @{n.sender?.username || 'guerrero'}
                             </span> 
                             te ha enviado un reto de gimnasio. ¿Entrenamos?
@@ -875,6 +1006,13 @@ export const NotificationsPage = () => {
                         setSharingRoutinesRequester(null);
                         loadNotifications();
                     }}
+                />
+            )}
+
+            {selectedPlayer && (
+                <PlayerProfileModal 
+                    player={selectedPlayer}
+                    onClose={() => setSelectedPlayer(null)}
                 />
             )}
         </div>
