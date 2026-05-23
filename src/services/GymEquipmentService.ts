@@ -587,10 +587,10 @@ export const COMMON_EQUIPMENT_SEEDS = [
         }
     },
     {
-        "name": "Hip Thrust (Máquina)",
+        "name": "Patada de Glúteo (Máquina)",
         "category": "STRENGTH_MACHINE",
         "targetMuscle": "Glúteos",
-        "icon": "🌉",
+        "icon": "🍑",
         "image_url": "/ejercicioimg/ejercicios/Gluteo/PatadaDeGluteoEnMaquina.png",
         "metrics": {
             "weight": true,
