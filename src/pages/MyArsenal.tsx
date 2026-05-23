@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Plus, Search, ChevronRight, Check, Swords, Loader, Trash2, Dumbbell, Save, Edit2, X, Share2 } from 'lucide-react';
@@ -183,6 +183,21 @@ export const MyArsenal = () => {
     // Custom Exercise State (Simplified for EquipmentForm)
     const [userSettings, setUserSettings] = useState<CustomSettings>({ categories: [], metrics: [] });
     const [editingItem, setEditingItem] = useState<Equipment | null>(null);
+
+    const [activeMuscleFilter, setActiveMuscleFilter] = useState<string | null>(null);
+    const catalogScrollRef = useRef<HTMLDivElement>(null);
+
+    const scrollToCategory = (category: string) => {
+        setActiveMuscleFilter(category);
+        setTimeout(() => {
+            const element = document.getElementById(`category-section-${category}`);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else if (catalogScrollRef.current) {
+                catalogScrollRef.current.scrollTop = 0;
+            }
+        }, 100);
+    };
 
 
 
@@ -996,101 +1011,188 @@ export const MyArsenal = () => {
 
     // RENDER MACHINE INVENTORY (Level 2 - Builder Logic)
     return (
-        <div className="min-h-screen bg-black text-white font-sans selection:bg-gym-primary selection:text-black">
+        <div className="min-h-screen bg-black text-white font-sans selection:bg-gym-primary selection:text-black flex flex-col">
             {/* STATIC HEADER - SCROLLS AWAY */}
-            <div className="bg-black/95 backdrop-blur-xl border-b border-white/10 shadow-2xl">
-                <div className="max-w-7xl mx-auto p-2 md:p-6 flex flex-col gap-2 md:gap-4">
+            <div className="bg-black/95 backdrop-blur-xl border-b border-white/5 shadow-2xl flex-none">
+                <div className="max-w-7xl mx-auto p-4 md:p-6 flex flex-col gap-4">
 
-                    {/* Compact Top Row: Nav + Title + Mobile Save */}
+                    {/* Compact Top Row: Nav + Title + Save */}
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <button onClick={() => setViewMode('ROUTINES')} className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-white transition-colors border border-white/10">
-                                <ArrowLeft size={16} className="md:w-5 md:h-5" />
+                            <button 
+                                onClick={() => setViewMode('ROUTINES')} 
+                                className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-white transition-colors border border-white/10"
+                            >
+                                <ArrowLeft size={18} />
                             </button>
-                            <h2 className="text-base md:text-2xl font-black italic uppercase tracking-tight flex items-center gap-2 leading-none">
-                                {editingRoutineId ? 'Edit' : 'Nueva'} <span className="text-gym-primary">Estrategia</span>
-                            </h2>
+                            <div>
+                                <h2 className="text-xl md:text-3xl font-black italic uppercase tracking-tighter flex items-center gap-2 leading-none">
+                                    {editingRoutineId ? 'Editar' : 'Nueva'} <span className="text-gym-primary">Estrategia</span>
+                                </h2>
+                                <p className="text-neutral-500 text-xs md:text-sm font-bold mt-1">
+                                    {editingRoutineId ? 'Modifica tu secuencia de combate maestro.' : 'Diseña tu nueva secuencia de combate maestro.'}
+                                </p>
+                            </div>
                         </div>
 
-                        {/* Mobile Save Button (Icon Only) */}
-                        <button
-                            id="tut-save-routine-btn-mobile"
-                            onClick={handleSaveRoutine}
-                            disabled={isSaving}
-                            className="md:hidden w-12 h-12 flex items-center justify-center bg-green-500 hover:bg-green-400 rounded-xl text-white shadow-[0_0_15px_rgba(34,197,94,0.5)] transition-all active:scale-95"
-                        >
-                            {isSaving ? <Loader size={20} className="animate-spin" /> : <Check size={28} strokeWidth={4} />}
-                        </button>
+                        <div className="flex items-center gap-3">
+                            {/* Desktop Save Button */}
+                            <button
+                                onClick={handleSaveRoutine}
+                                disabled={isSaving || !routineName.trim() || selectedItems.size === 0}
+                                className="hidden md:flex bg-gym-primary hover:bg-yellow-400 text-black font-black uppercase tracking-wider px-6 py-2.5 rounded-xl transition-all items-center gap-2 text-sm shadow-[0_0_20px_rgba(250,204,21,0.2)] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                            >
+                                {isSaving ? <Loader className="animate-spin" size={16} /> : <Check size={16} strokeWidth={3} />}
+                                <span>Guardar Estrategia</span>
+                            </button>
 
-                        {/* Desktop Save Button (Full) */}
-                        <button
-                            id="tut-save-routine-btn-desktop"
-                            onClick={handleSaveRoutine}
-                            disabled={isSaving}
-                            className="hidden md:flex bg-gym-primary hover:bg-yellow-400 text-black font-black uppercase tracking-wider px-6 py-2.5 rounded-xl transition-all items-center gap-2 text-sm shadow-[0_0_20px_rgba(250,204,21,0.2)]"
-                        >
-                            {isSaving ? <Loader className="animate-spin" size={16} /> : <Check size={16} strokeWidth={3} />}
-                            <span>Guardar Estrategia</span>
-                        </button>
+                            {/* Mobile / General Circular Save Button */}
+                            <button
+                                onClick={handleSaveRoutine}
+                                disabled={isSaving || !routineName.trim() || selectedItems.size === 0}
+                                className="w-12 h-12 flex items-center justify-center bg-green-500 hover:bg-green-400 rounded-xl text-white shadow-[0_0_15px_rgba(34,197,94,0.5)] transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                            >
+                                {isSaving ? <Loader size={20} className="animate-spin" /> : <Check size={28} strokeWidth={4} />}
+                            </button>
+                        </div>
                     </div>
 
-                    {/* Compact Inputs Row - FULL WIDTH MOBILE */}
-                    <div className="flex flex-col md:flex-row gap-2 w-full">
-                        {/* Routine Name Input */}
-                        <div className="w-full md:w-1/3">
-                            <input
-                                type="text"
-                                placeholder="Nombre de la Rutina (Obligatorio)..."
-                                value={routineName}
-                                onChange={(e) => setRoutineName(e.target.value)}
-                                required
-                                className={`w-full bg-white/5 border rounded-xl px-4 py-3 text-base text-white placeholder-white/30 focus:outline-none focus:bg-white/10 transition-all font-medium ${!routineName.trim() ? 'border-red-500/50 focus:border-red-500' : 'border-white/10 focus:border-gym-primary/50'}`}
-                            />
-                        </div>
+                    {/* Routine Name Input */}
+                    <div className="w-full">
+                        <input
+                            type="text"
+                            placeholder="Nombre de la Rutina (Obligatorio)..."
+                            value={routineName}
+                            onChange={(e) => setRoutineName(e.target.value)}
+                            required
+                            className={`w-full bg-neutral-900 border-2 rounded-2xl px-5 py-4 text-base md:text-lg text-white placeholder-neutral-500 focus:outline-none focus:bg-neutral-950 focus:border-gym-primary transition-all font-bold tracking-tight ${!routineName.trim() ? 'border-red-500/30' : 'border-neutral-850'}`}
+                        />
+                    </div>
 
-                        {/* Responsive Search Bar */}
-                        <div className="relative group w-full md:flex-1">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-white/30 group-focus-within:text-gym-primary transition-colors">
-                                <Search size={20} className="md:w-5 md:h-5" />
-                            </div>
-                            <input
-                                type="text"
-                                placeholder="Buscar ejercicio en tu arsenal..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-base text-white placeholder-white/30 focus:outline-none focus:border-gym-primary/50 focus:bg-white/10 transition-all"
-                            />
+                    {/* Responsive Search Bar */}
+                    <div className="relative group w-full">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-neutral-500 group-focus-within:text-gym-primary transition-colors">
+                            <Search size={20} />
                         </div>
+                        <input
+                            type="text"
+                            placeholder="Buscar ejercicio o máquina..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full bg-neutral-900 border-2 border-neutral-850 rounded-2xl pl-12 pr-4 py-4 text-sm md:text-base text-white placeholder-neutral-500 focus:outline-none focus:border-gym-primary focus:bg-neutral-950 transition-all font-bold"
+                        />
+                    </div>
+
+                    {/* Muscle Filter Bar */}
+                    <div className="flex gap-2 overflow-x-auto py-2 px-1 no-scrollbar scroll-smooth items-center min-h-[50px] border-t border-white/5">
+                        {/* --- PECHO --- */}
+                        <button
+                            type="button"
+                            onClick={() => scrollToCategory("PECHO")}
+                            className={`shrink-0 px-5 py-2 rounded-xl text-xs font-black italic uppercase tracking-tighter transition-all border-2 ${activeMuscleFilter === "PECHO" ? 'bg-gym-primary text-black border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-neutral-900 text-gym-primary border-neutral-800'}`}
+                        >
+                            PECHO
+                        </button>
+                        {["PECHO", "HOMBRO", "TRÍCEPS"].map(sub => (
+                            <button
+                                type="button"
+                                key={sub}
+                                onClick={() => scrollToCategory(sub)}
+                                className={`shrink-0 px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all border ${activeMuscleFilter === sub ? 'bg-white text-black border-white' : 'bg-neutral-800 text-neutral-400 border-neutral-700'}`}
+                            >
+                                {sub}
+                            </button>
+                        ))}
+
+                        <div className="w-px h-6 bg-neutral-800 mx-2 shrink-0" />
+
+                        {/* --- ESPALDA --- */}
+                        <button
+                            type="button"
+                            onClick={() => scrollToCategory("ESPALDA")}
+                            className={`shrink-0 px-5 py-2 rounded-xl text-xs font-black italic uppercase tracking-tighter transition-all border-2 ${activeMuscleFilter === "ESPALDA" ? 'bg-gym-primary text-black border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-neutral-900 text-gym-primary border-neutral-800'}`}
+                        >
+                            ESPALDA
+                        </button>
+                        {["ESPALDA", "BÍCEPS", "ANTEBRAZO"].map(sub => (
+                            <button
+                                type="button"
+                                key={sub}
+                                onClick={() => scrollToCategory(sub)}
+                                className={`shrink-0 px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all border ${activeMuscleFilter === sub ? 'bg-white text-black border-white' : 'bg-neutral-800 text-neutral-400 border-neutral-700'}`}
+                            >
+                                {sub}
+                            </button>
+                        ))}
+
+                        <div className="w-px h-6 bg-neutral-800 mx-2 shrink-0" />
+
+                        {/* --- PIERNA --- */}
+                        <button
+                            type="button"
+                            onClick={() => scrollToCategory("PIERNA")}
+                            className={`shrink-0 px-5 py-2 rounded-xl text-xs font-black italic uppercase tracking-tighter transition-all border-2 ${activeMuscleFilter === "PIERNA" ? 'bg-gym-primary text-black border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-neutral-900 text-gym-primary border-neutral-800'}`}
+                        >
+                            PIERNA
+                        </button>
+                        {["CUÁDRICEPS", "ISQUIOTIBIALES", "GLÚTEOS", "PANTORRILLAS", "ADUCTORES"].map(sub => (
+                            <button
+                                type="button"
+                                key={sub}
+                                onClick={() => scrollToCategory(sub)}
+                                className={`shrink-0 px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all border ${activeMuscleFilter === sub ? 'bg-white text-black border-white' : 'bg-neutral-800 text-neutral-400 border-neutral-700'}`}
+                            >
+                                {sub}
+                            </button>
+                        ))}
+
+                        <div className="w-px h-6 bg-neutral-800 mx-2 shrink-0" />
+
+                        {/* --- CORE --- */}
+                        <button
+                            type="button"
+                            onClick={() => scrollToCategory("CORE")}
+                            className={`shrink-0 px-5 py-2 rounded-xl text-xs font-black italic uppercase tracking-tighter transition-all border-2 ${activeMuscleFilter === "CORE" ? 'bg-gym-primary text-black border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-neutral-900 text-gym-primary border-neutral-800'}`}
+                        >
+                            CORE
+                        </button>
+                        {["ABDOMINALES", "LUMBARES", "CUELLO"].map(sub => (
+                            <button
+                                type="button"
+                                key={sub}
+                                onClick={() => scrollToCategory(sub)}
+                                className={`shrink-0 px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all border ${activeMuscleFilter === sub ? 'bg-white text-black border-white' : 'bg-neutral-800 text-neutral-400 border-neutral-700'}`}
+                            >
+                                {sub}
+                            </button>
+                        ))}
                     </div>
                 </div>
             </div>
 
             {/* MAIN CONTENT AREA */}
-            <div className="max-w-7xl mx-auto px-4 md:px-6 pb-32 w-full relative">
-
-
-
-
-                {/* Visual Stats Bar */}
-                <div className="flex items-center gap-2 mb-4 px-1">
-                    <div className="px-3 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-[10px] font-bold text-neutral-400 whitespace-nowrap">
-                        {inventory.length} Total
-                    </div>
-                    <div className="px-3 py-1 rounded-full bg-gym-primary/10 border border-gym-primary/20 text-[10px] font-bold text-gym-primary whitespace-nowrap">
-                        {selectedItems.size} Selected
-                    </div>
+            <div 
+                ref={catalogScrollRef} 
+                className="flex-1 overflow-y-auto min-h-0 px-4 md:px-6 pb-36 pt-4 w-full bg-black/40 rounded-2xl border border-neutral-900/60"
+            >
+                <div className="max-w-7xl mx-auto">
+                    <ArsenalGrid
+                        inventory={effectiveInventory}
+                        selectedItems={selectedItems}
+                        userSettings={userSettings}
+                        searchTerm={searchTerm}
+                        onToggleSelection={toggleSelection}
+                        onOpenCatalog={handleOpenCatalog}
+                        onEditItem={handleEditEquipment}
+                        routineConfigs={routineConfigs}
+                        sectionOrder={[
+                            'PECHO', 'HOMBRO', 'TRÍCEPS',
+                            'ESPALDA', 'BÍCEPS', 'ANTEBRAZO',
+                            'CUÁDRICEPS', 'ISQUIOTIBIALES', 'GLÚTEOS', 'PANTORRILLAS', 'ADUCTORES',
+                            'ABDOMINALES', 'LUMBARES', 'CUELLO'
+                        ]}
+                    />
                 </div>
-
-                <ArsenalGrid
-                    inventory={effectiveInventory}
-                    selectedItems={selectedItems}
-                    userSettings={userSettings}
-                    searchTerm={searchTerm}
-                    onToggleSelection={toggleSelection}
-                    onOpenCatalog={handleOpenCatalog}
-                    onEditItem={handleEditEquipment}
-                    routineConfigs={routineConfigs}
-                />
             </div>
 
             {addingMode && (
@@ -1107,49 +1209,17 @@ export const MyArsenal = () => {
                 />
             )}
 
-            {/* ROUTINE NAME & SAVE BAR (Floating at bottom for Creation Mode) */}
-            {addingMode === false && (
-                <div className="fixed bottom-0 left-0 right-0 p-4 bg-neutral-950/90 backdrop-blur-xl border-t border-white/10 z-[60] animate-in slide-in-from-bottom-5">
-                    <div className="max-w-7xl mx-auto flex items-center gap-4">
-                        <div className="flex-1 max-w-xl relative group">
-                            <div className="absolute inset-0 bg-gradient-to-r from-gym-primary/20 to-transparent blur-xl opacity-0 group-hover:opacity-100 transition-opacity rounded-full pointer-events-none"></div>
-                            <input
-                                type="text"
-                                placeholder="Nombre de la Nueva Rutina..."
-                                className="w-full bg-black/50 border-2 border-white/10 rounded-2xl px-6 py-4 text-xl font-bold text-white placeholder-neutral-600 focus:border-gym-primary focus:outline-none focus:ring-4 focus:ring-gym-primary/10 transition-all shadow-inner"
-                                value={routineName}
-                                onChange={(e) => setRoutineName(e.target.value)}
-                            />
-                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-600 pointer-events-none">
-                                <Edit2 size={18} />
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                            <button
-                                onClick={handleCreateNew} // Cancel/Clear
-                                className="p-4 rounded-xl bg-neutral-900 border border-neutral-800 text-neutral-500 hover:text-white hover:bg-neutral-800 transition-all"
-                            >
-                                <X size={20} />
-                            </button>
-
-                            <button
-                                onClick={handleSaveRoutine}
-                                disabled={!routineName || isSaving || selectedItems.size === 0}
-                                className="bg-gym-primary text-black px-8 py-4 rounded-xl font-black tracking-wide hover:shadow-[0_0_20px_rgba(250,204,21,0.4)] hover:scale-105 transition-all text-sm sm:text-base flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group relative overflow-hidden"
-                            >
-                                {/* Shimmer Effect */}
-                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:animate-shimmer" />
-
-                                {isSaving ? (
-                                    <Loader size={20} className="animate-spin" />
-                                ) : (
-                                    <Save size={20} strokeWidth={2.5} />
-                                )}
-                                <span>{editingRoutineId ? 'ACTUALIZAR' : 'CREAR RUTINA'}</span>
-                            </button>
-                        </div>
-                    </div>
+            {/* Floating Batch Save Action Button */}
+            {selectedItems.size > 0 && (
+                <div className="fixed bottom-6 left-0 right-0 px-6 flex justify-center pointer-events-none z-[100]">
+                    <button
+                        onClick={handleSaveRoutine}
+                        disabled={!routineName.trim() || isSaving}
+                        className="pointer-events-auto bg-gym-primary text-black font-black uppercase py-4 px-12 rounded-2xl shadow-[0_10px_40px_rgba(250,204,21,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center gap-3 text-base md:text-lg border-2 border-yellow-400 animate-in slide-in-from-bottom-4 duration-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    >
+                        {isSaving ? <Loader className="animate-spin" size={24} /> : <Check size={24} strokeWidth={3} />}
+                        <span>{editingRoutineId ? 'ACTUALIZAR ESTRATEGIA' : 'CREAR ESTRATEGIA'} ({selectedItems.size})</span>
+                    </button>
                 </div>
             )}
 
