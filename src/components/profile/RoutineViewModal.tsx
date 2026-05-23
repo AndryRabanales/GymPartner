@@ -60,40 +60,39 @@ export const RoutineViewModal: React.FC<RoutineViewModalProps> = ({ routine, onC
 
                                             {/* Icon / Image - Centered */}
                                             <div className="flex-1 flex items-center justify-center w-full z-10 pb-2 pt-2">
-                                                {ex.image_url ? (
-                                                    /* Image Handling */
-                                                    <img
-                                                        src={ex.image_url}
-                                                        alt={ex.name}
-                                                        className="w-16 h-16 object-contain drop-shadow-md filter brightness-110"
-                                                    />
-                                                ) : (
-                                                    /* Fallback Icon handling (emojis) */
-                                                    <span className="text-5xl leading-none drop-shadow-md filter brightness-110 grayscale-[0.2] select-none">
-                                                        {(() => {
-                                                            // 1. Direct Icon (DB)
-                                                            if (ex.icon) return ex.icon;
+                                                {(() => {
+                                                    const normalize = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+                                                    const normTarget = normalize(ex.name || '');
+                                                    const seed = COMMON_EQUIPMENT_SEEDS.find(s => normalize(s.name) === normTarget);
+                                                    const imageUrl = ex.image_url || seed?.image_url;
 
-                                                            // 2. Hydration by Seed Name (Fuzzy Match)
-                                                            const normalize = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-                                                            const normTarget = normalize(ex.name || '');
-                                                            const seed = COMMON_EQUIPMENT_SEEDS.find(s => normalize(s.name) === normTarget);
-                                                            if (seed?.icon) return seed.icon;
+                                                    if (imageUrl) {
+                                                        return (
+                                                            <img
+                                                                src={imageUrl}
+                                                                alt={ex.name}
+                                                                className="w-14 h-14 object-contain drop-shadow-md filter brightness-110"
+                                                            />
+                                                        );
+                                                    }
 
-                                                            // 3. Lookup by Key (Standard)
-                                                            // @ts-ignore
-                                                            if (EQUIPMENT_CATEGORIES[ex.muscle_group]?.icon) return EQUIPMENT_CATEGORIES[ex.muscle_group].icon;
+                                                    // Fallback Icon handling (emojis)
+                                                    const icon = ex.icon || seed?.icon || (() => {
+                                                        // @ts-ignore
+                                                        if (ex.muscle_group && EQUIPMENT_CATEGORIES[ex.muscle_group]?.icon) return EQUIPMENT_CATEGORIES[ex.muscle_group].icon;
+                                                        const foundEntry = Object.values(EQUIPMENT_CATEGORIES).find((cat: any) =>
+                                                            ex.muscle_group && cat.label?.toLowerCase() === ex.muscle_group?.toLowerCase()
+                                                        );
+                                                        if (foundEntry) return (foundEntry as any).icon;
+                                                        return '⚡';
+                                                    })();
 
-                                                            // 4. Lookup by Label (Spanish -> English Key match)
-                                                            const foundEntry = Object.values(EQUIPMENT_CATEGORIES).find((cat: any) =>
-                                                                cat.label?.toLowerCase() === ex.muscle_group?.toLowerCase()
-                                                            );
-                                                            if (foundEntry) return (foundEntry as any).icon;
-
-                                                            return '⚡';
-                                                        })()}
-                                                    </span>
-                                                )}
+                                                    return (
+                                                        <span className="text-5xl leading-none drop-shadow-md filter brightness-110 grayscale-[0.2] select-none">
+                                                            {icon}
+                                                        </span>
+                                                    );
+                                                })()}
                                             </div>
 
                                             {/* Title - Anchored Bottom */}
