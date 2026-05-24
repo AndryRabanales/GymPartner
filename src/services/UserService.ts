@@ -573,6 +573,15 @@ class UserService {
         if (!userId || userId.startsWith('bot-')) return [];
 
         try {
+            // Fetch profile custom settings first to check if profile is public
+            const { data: profileData } = await supabase
+                .from('profiles')
+                .select('custom_settings')
+                .eq('id', userId)
+                .maybeSingle();
+
+            const isProfilePublic = profileData?.custom_settings?.is_history_public === true;
+
             // 1. Get all routine IDs for this user
             const { data: routines, error } = await supabase
                 .from('routines')
@@ -583,34 +592,41 @@ class UserService {
             if (error) throw error;
             if (!routines || routines.length === 0) return [];
 
-            let allowedRoutines = routines.filter(r => r.is_public);
+            let allowedRoutines = [];
 
-            // If we have a currentUserId, we can also fetch private routines shared with them
-            if (currentUserId && currentUserId !== userId) {
-                try {
-                    const { data: shares, error: shareError } = await supabase
-                        .from('routine_shares')
-                        .select('routine_id')
-                        .eq('shared_with', currentUserId)
-                        .eq('shared_by', userId);
-
-                    if (!shareError && shares && shares.length > 0) {
-                        const sharedIds = new Set(shares.map(s => s.routine_id));
-                        const sharedRoutines = routines.filter(r => sharedIds.has(r.id));
-                        
-                        // Merge allowed public routines and private shared routines
-                        const mergedSet = new Set([
-                            ...allowedRoutines.map(r => r.id),
-                            ...sharedRoutines.map(r => r.id)
-                        ]);
-                        allowedRoutines = routines.filter(r => mergedSet.has(r.id));
-                    }
-                } catch (shareErr) {
-                    console.warn("Could not check routine shares (migration might not be applied yet):", shareErr);
-                }
-            } else if (currentUserId === userId) {
-                // The owner looking at their own profile can see all of them!
+            if (isProfilePublic) {
+                // If profile/history is public, ALL routines are visible in the profile!
                 allowedRoutines = routines;
+            } else {
+                allowedRoutines = routines.filter(r => r.is_public);
+
+                // If we have a currentUserId, we can also fetch private routines shared with them
+                if (currentUserId && currentUserId !== userId) {
+                    try {
+                        const { data: shares, error: shareError } = await supabase
+                            .from('routine_shares')
+                            .select('routine_id')
+                            .eq('shared_with', currentUserId)
+                            .eq('shared_by', userId);
+
+                        if (!shareError && shares && shares.length > 0) {
+                            const sharedIds = new Set(shares.map(s => s.routine_id));
+                            const sharedRoutines = routines.filter(r => sharedIds.has(r.id));
+                            
+                            // Merge allowed public routines and private shared routines
+                            const mergedSet = new Set([
+                                ...allowedRoutines.map(r => r.id),
+                                ...sharedRoutines.map(r => r.id)
+                            ]);
+                            allowedRoutines = routines.filter(r => mergedSet.has(r.id));
+                        }
+                    } catch (shareErr) {
+                        console.warn("Could not check routine shares (migration might not be applied yet):", shareErr);
+                    }
+                } else if (currentUserId === userId) {
+                    // The owner looking at their own profile can see all of them!
+                    allowedRoutines = routines;
+                }
             }
 
             if (allowedRoutines.length === 0) return [];

@@ -102,11 +102,16 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
                 setRoutinesRequestSent(!!routReq);
 
                 // 4. Get public routines count
-                const { count } = await supabase
-                    .from('routines')
-                    .select('id', { count: 'exact', head: true })
-                    .eq('user_id', user.id)
-                    .eq('is_public', true);
+                const { count } = isHistoryPublic
+                    ? await supabase
+                        .from('routines')
+                        .select('id', { count: 'exact', head: true })
+                        .eq('user_id', user.id)
+                    : await supabase
+                        .from('routines')
+                        .select('id', { count: 'exact', head: true })
+                        .eq('user_id', user.id)
+                        .eq('is_public', true);
                 
                 setPublicRoutinesCount(count || 0);
 

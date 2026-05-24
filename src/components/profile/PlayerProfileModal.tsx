@@ -848,29 +848,31 @@ export const PlayerProfileModal = ({ player, onClose, onFollowToggle }: PlayerPr
                                 ))}
 
                                 {/* Request routines button */}
-                                <button
-                                    onClick={handleRequestRoutines}
-                                    disabled={routinesRequestSent || requestingRoutines}
-                                    className={`w-full py-3.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all mt-4 border flex items-center justify-center gap-2 ${
-                                        routinesRequestSent
-                                            ? 'bg-neutral-800 border-neutral-700 text-neutral-500 cursor-not-allowed'
-                                            : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/20 active:scale-[0.98]'
-                                    }`}
-                                >
-                                    {requestingRoutines ? (
-                                        <>
-                                            <Loader className="animate-spin" size={14} />
-                                            Enviando solicitud...
-                                        </>
-                                    ) : routinesRequestSent ? (
-                                        "Solicitud de Rutinas Enviada ⏳"
-                                    ) : (
-                                        <>
-                                            <Swords size={14} />
-                                            📥 Solicitar Rutinas Privadas
-                                        </>
-                                    )}
-                                </button>
+                                {customSettings?.is_history_public !== true && (
+                                    <button
+                                        onClick={handleRequestRoutines}
+                                        disabled={routinesRequestSent || requestingRoutines}
+                                        className={`w-full py-3.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all mt-4 border flex items-center justify-center gap-2 ${
+                                            routinesRequestSent
+                                                ? 'bg-neutral-800 border-neutral-700 text-neutral-500 cursor-not-allowed'
+                                                : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/20 active:scale-[0.98]'
+                                        }`}
+                                    >
+                                        {requestingRoutines ? (
+                                            <>
+                                                <Loader className="animate-spin" size={14} />
+                                                Enviando solicitud...
+                                            </>
+                                        ) : routinesRequestSent ? (
+                                            "Solicitud de Rutinas Enviada ⏳"
+                                        ) : (
+                                            <>
+                                                <Swords size={14} />
+                                                📥 Solicitar Rutinas Privadas
+                                            </>
+                                        )}
+                                    </button>
+                                )}
 
                                 {/* NEW: GYM PASSPORT SHOWCASE */}
                                 {publicGyms.length > 0 && (
