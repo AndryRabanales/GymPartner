@@ -88,26 +88,67 @@ export const notificationService = {
     },
 
     /**
-     * Actualizar estado de la invitación (Aceptada/Rechazada)
+     * Actualizar estado de la invitación (Aceptada/Rechazada) para todas las invitaciones del mismo remitente
      */
     async updateInvitationStatus(notification: Notification, status: 'accepted' | 'rejected') {
-        const newData = {
-            ...notification.data,
-            status: status
-        };
+        const senderId = notification.data?.sender_id;
+        const currentUserId = notification.user_id;
 
-        const { error } = await supabase
-            .from('notifications')
-            .update({
-                is_read: true,
-                data: newData
-            })
-            .eq('id', notification.id);
+        try {
+            if (senderId && currentUserId) {
+                // Fetch all pending/unresolved invitations from this sender to the current user
+                const { data: siblingInvites } = await supabase
+                    .from('notifications')
+                    .select('id, data')
+                    .eq('user_id', currentUserId)
+                    .eq('type', 'invitation');
 
-        if (error) {
-            console.error('Error updating invitation status:', error);
-            throw error;
-        } else {
+                if (siblingInvites) {
+                    const targetIds = siblingInvites
+                        .filter(invite => invite.data?.sender_id === senderId && (!invite.data?.status || invite.data?.status !== status))
+                        .map(invite => invite.id);
+
+                    if (targetIds.length > 0) {
+                        // Update all of them to be read and set status in one batch or loop
+                        const promises = targetIds.map(async (id) => {
+                            const { data: currentItem } = await supabase
+                                .from('notifications')
+                                .select('data')
+                                .eq('id', id)
+                                .single();
+
+                            const currentData = currentItem?.data || {};
+                            await supabase
+                                .from('notifications')
+                                .update({
+                                    is_read: true,
+                                    data: {
+                                        ...currentData,
+                                        status: status
+                                    }
+                                })
+                                .eq('id', id);
+                        });
+                        await Promise.all(promises);
+                    }
+                }
+            } else {
+                // Fallback for single update
+                const newData = {
+                    ...notification.data,
+                    status: status
+                };
+                await supabase
+                    .from('notifications')
+                    .update({
+                        is_read: true,
+                        data: newData
+                    })
+                    .eq('id', notification.id);
+            }
+        } catch (err) {
+            console.error('Error in self-healing updateInvitationStatus:', err);
+        } finally {
             // Invalidate cache
             lastFetchTime = 0;
             cachedUnreadCount = Math.max(0, cachedUnreadCount - 1);

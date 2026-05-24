@@ -44,6 +44,7 @@ export const Radar = () => {
     const [direction, setDirection] = useState<'left' | 'right' | null>(null);
     const [isBoostModalOpen, setIsBoostModalOpen] = useState(false);
     const [isBoosting, setIsBoosting] = useState(false);
+    const [isInviting, setIsInviting] = useState(false);
     const [userProfile, setUserProfile] = useState<any>(null);
     const currentUser = nearbyUsers[currentIndex];
 
@@ -338,7 +339,8 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
     };
 
     const handleInvite = async () => {
-        if (!currentUser) return;
+        if (!currentUser || isInviting) return;
+        setIsInviting(true);
         try {
             const success = await notificationService.sendInvitation(currentUser.id, currentUser.username);
             if (success) {
@@ -354,6 +356,8 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
             }
         } catch (error) {
             toast.error("Error al enviar invitación");
+        } finally {
+            setIsInviting(false);
         }
     };
 

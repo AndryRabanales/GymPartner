@@ -21,6 +21,7 @@ export const PublicProfile = () => {
     const [profile, setProfile] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [isFollowing, setIsFollowing] = useState(false);
+    const [isInviting, setIsInviting] = useState(false);
 
     useEffect(() => {
         if (username) {
@@ -135,12 +136,15 @@ export const PublicProfile = () => {
     };
 
     const handleInvite = async () => {
-        if (!profile || profile.id === 'unknown') return;
+        if (!profile || profile.id === 'unknown' || isInviting) return;
+        setIsInviting(true);
         try {
             const success = await notificationService.sendInvitation(profile.id, profile.username);
             if (success) toast.success("Desafío enviado!");
         } catch (e) {
             toast.error("Error al enviar invitación");
+        } finally {
+            setIsInviting(false);
         }
     };
 

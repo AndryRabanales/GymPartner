@@ -95,8 +95,20 @@ export const InboxPage = () => {
         if (allInvites) {
             const pending = allInvites.filter(invite => !invite.data?.status);
 
-            if (pending.length > 0) {
-                const senderIds = Array.from(new Set(pending.map(n => n.data?.sender_id).filter(Boolean)));
+            // Deduplicate pending invitations by sender_id to ensure only one pending invite per person is displayed
+            const seenSenders = new Set<string>();
+            const uniquePending = pending.filter(invite => {
+                const senderId = invite.data?.sender_id;
+                if (!senderId) return true;
+                if (seenSenders.has(senderId)) {
+                    return false;
+                }
+                seenSenders.add(senderId);
+                return true;
+            });
+
+            if (uniquePending.length > 0) {
+                const senderIds = Array.from(new Set(uniquePending.map(n => n.data?.sender_id).filter(Boolean)));
                 if (senderIds.length > 0) {
                     const { data: profiles } = await supabase
                         .from('profiles')
@@ -108,13 +120,13 @@ export const InboxPage = () => {
                         return acc;
                     }, {});
 
-                    const enriched = pending.map(n => ({
+                    const enriched = uniquePending.map(n => ({
                         ...n,
                         sender: profileMap[n.data?.sender_id]
                     }));
                     setInvitations(enriched);
                 } else {
-                    setInvitations(pending);
+                    setInvitations(uniquePending);
                 }
             } else {
                 setInvitations([]);
