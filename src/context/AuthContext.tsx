@@ -8,6 +8,7 @@ interface AuthContextType {
     session: Session | null;
     loading: boolean;
     signInWithGoogle: () => Promise<void>;
+    signInWithMeta: () => Promise<void>;
     signInWithEmail: (email: string) => Promise<void>;
     signInAsDev: () => Promise<void>;
     signOut: () => Promise<void>;
@@ -18,6 +19,7 @@ const AuthContext = createContext<AuthContextType>({
     session: null,
     loading: true,
     signInWithGoogle: async () => { },
+    signInWithMeta: async () => { },
     signInWithEmail: async () => { },
     signInAsDev: async () => { },
     signOut: async () => { },
@@ -142,6 +144,35 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (error) console.error("Auth Error:", error);
     };
 
+    const signInWithMeta = async () => {
+        if (!isSupabaseConfigured() || !supabase) {
+            throw new Error("Supabase no está configurado.");
+        }
+
+        let redirectUrl = window.location.origin;
+        if (import.meta.env.DEV) {
+            redirectUrl = 'http://localhost:5173';
+        }
+
+        const storedRef = sessionStorage.getItem('gym_referral_id');
+        if (storedRef) {
+            redirectUrl = `${redirectUrl}?ref=${storedRef}`;
+            console.log("🔗 Persisting Referral in Meta Redirect:", redirectUrl);
+        }
+
+        console.log("🔐 Initiating Meta Auth with redirect:", redirectUrl);
+
+        const { error } = await supabase.auth.signInWithOAuth({
+            provider: 'facebook',
+            options: {
+                redirectTo: redirectUrl,
+                skipBrowserRedirect: false
+            }
+        });
+
+        if (error) console.error("Meta Auth Error:", error);
+    };
+
     const signInWithEmail = async (email: string) => {
         if (!isSupabaseConfigured() || !supabase) {
             throw new Error("Supabase no está configurado.");
@@ -200,7 +231,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, session, loading, signInWithGoogle, signInWithEmail, signInAsDev, signOut }}>
+        <AuthContext.Provider value={{ user, session, loading, signInWithGoogle, signInWithMeta, signInWithEmail, signInAsDev, signOut }}>
             {!loading && children}
         </AuthContext.Provider>
     );
