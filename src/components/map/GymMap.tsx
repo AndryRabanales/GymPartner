@@ -472,7 +472,7 @@ export const GymMap = () => {
                 <div className="mt-4 w-full max-w-md mx-auto pointer-events-auto relative">
                     <div className="flex gap-2">
                         <div className="relative flex-1" id="tut-map-search-input">
-                            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 z-10" />
+                            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 z-20" />
                             <input
                                 type="text"
                                 placeholder="Busca tu gimnasio..."
@@ -490,12 +490,12 @@ export const GymMap = () => {
                                 onFocus={() => {
                                     if (suggestions.length > 0) setShowSuggestions(true);
                                 }}
-                                className="w-full bg-black/60 backdrop-blur-md border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder-neutral-400 focus:outline-none focus:border-gym-primary/50 transition-all text-sm relative z-10"
+                                className="w-full bg-neutral-950/80 backdrop-blur-xl border border-white/10 rounded-full pl-11 pr-4 py-3.5 text-white placeholder-neutral-400 focus:outline-none focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400/30 transition-all text-sm relative z-10 shadow-[0_4px_25px_rgba(0,0,0,0.5)]"
                             />
 
                             {/* Autocomplete Suggestions Dropdown */}
                             {showSuggestions && suggestions.length > 0 && (
-                                <div className="absolute top-full left-0 right-0 mt-2 bg-black/90 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                                <div className="absolute top-full left-0 right-0 mt-2 bg-neutral-950/95 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.8)] z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                                     {suggestions.map((suggestion) => (
                                         <button
                                             key={suggestion.place_id}
@@ -503,14 +503,14 @@ export const GymMap = () => {
                                                 setSearchQuery(suggestion.structured_formatting.main_text);
                                                 handleSearch(suggestion.structured_formatting.main_text);
                                             }}
-                                            className="w-full text-left px-4 py-3 hover:bg-white/10 transition-colors border-b border-white/5 last:border-b-0 group"
+                                            className="w-full text-left px-4 py-3.5 hover:bg-white/5 transition-colors border-b border-white/5 last:border-b-0 group"
                                         >
                                             <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-lg bg-gym-primary/10 flex items-center justify-center shrink-0 group-hover:bg-gym-primary/20 transition-colors">
-                                                    <MapPin size={16} className="text-gym-primary" />
+                                                <div className="w-8 h-8 rounded-xl bg-yellow-400/10 flex items-center justify-center shrink-0 group-hover:bg-yellow-400/20 transition-colors">
+                                                    <MapPin size={16} className="text-yellow-400" />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <div className="text-white font-bold text-sm truncate">
+                                                    <div className="text-white font-bold text-sm truncate group-hover:text-yellow-400 transition-colors">
                                                         {suggestion.structured_formatting.main_text}
                                                     </div>
                                                     <div className="text-neutral-400 text-xs truncate">
@@ -526,12 +526,12 @@ export const GymMap = () => {
                         <button
                             onClick={() => handleSearch()}
                             disabled={isSearching || !searchQuery.trim()}
-                            className="bg-gym-primary hover:bg-yellow-400 disabled:bg-neutral-700 disabled:cursor-not-allowed text-black font-bold px-6 py-3 rounded-xl transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(250,204,21,0.3)] disabled:shadow-none"
+                            className="bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-300 hover:to-yellow-400 disabled:from-neutral-800 disabled:to-neutral-900 disabled:text-neutral-500 disabled:cursor-not-allowed text-black font-black px-6 py-3.5 rounded-full transition-all duration-300 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(250,204,21,0.35)] disabled:shadow-none hover:scale-[1.02] active:scale-[0.98]"
                         >
                             {isSearching ? (
                                 <Loader size={18} className="animate-spin" />
                             ) : (
-                                <Search size={18} />
+                                <Search size={18} strokeWidth={2.5} />
                             )}
                             <span className="hidden md:inline">BUSCAR</span>
                         </button>
@@ -813,21 +813,24 @@ export const GymMap = () => {
                 </div>
             )}
 
-            {/* Legend Overlay - Tactical Footer (Moved to bottom to avoid HUD overlap) */}
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 sm:left-6 sm:translate-x-0 bg-black/60 backdrop-blur-xl px-6 py-2.5 rounded-2xl border border-white/10 z-20 flex items-center justify-center gap-6 shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
-                <div className="flex items-center gap-2 group cursor-help transition-all hover:scale-105">
+            {/* Legend Overlay - Tactical Top Right Widget */}
+            <div className="absolute top-[85px] right-4 bg-neutral-950/85 backdrop-blur-xl p-3.5 rounded-2xl border border-white/10 z-20 flex flex-col gap-3.5 shadow-[0_10px_35px_rgba(0,0,0,0.6)] animate-in fade-in duration-300">
+                <div className="text-[8px] font-black text-neutral-500 tracking-[0.2em] uppercase border-b border-white/5 pb-1">
+                    CANDADOS / MAPA
+                </div>
+                <div className="flex items-center gap-2.5 group cursor-help transition-all hover:translate-x-1">
                     <div className="w-2.5 h-2.5 rounded-full bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.8)] animate-pulse"></div>
-                    <span className="text-[10px] md:text-xs font-bold text-neutral-200 uppercase tracking-widest group-hover:text-yellow-400 transition-colors">GYM PRINCIPAL</span>
+                    <span className="text-[9px] font-black text-neutral-300 uppercase tracking-wider group-hover:text-yellow-400 transition-colors">Sede Principal</span>
                 </div>
-                <div className="w-px h-4 bg-white/10"></div>
-                <div className="flex items-center gap-2 group cursor-help transition-all hover:scale-105">
+                <div className="flex items-center gap-2.5 group cursor-help transition-all hover:translate-x-1">
                     <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]"></div>
-                    <span className="text-[10px] md:text-xs font-bold text-neutral-200 uppercase tracking-widest group-hover:text-blue-400 transition-colors">DESBLOQUEADOS</span>
+                    <span className="text-[9px] font-black text-neutral-300 uppercase tracking-wider group-hover:text-blue-400 transition-colors">Desbloqueado</span>
                 </div>
-                <div className="w-px h-4 bg-white/10"></div>
-                <div className="flex items-center gap-2 group cursor-help transition-all hover:scale-105">
-                    <Lock size={12} className="text-neutral-500 group-hover:text-white transition-colors" />
-                    <span className="text-[10px] md:text-xs font-bold text-neutral-500 uppercase tracking-widest group-hover:text-white transition-colors">BLOQUEADOS</span>
+                <div className="flex items-center gap-2.5 group cursor-help transition-all hover:translate-x-1">
+                    <div className="w-2.5 h-2.5 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center">
+                        <Lock size={8} className="text-neutral-500" />
+                    </div>
+                    <span className="text-[9px] font-black text-neutral-500 uppercase tracking-wider group-hover:text-white transition-colors">Bloqueado</span>
                 </div>
             </div>
             {tutorialStep === 5 && !selectedGym && (
