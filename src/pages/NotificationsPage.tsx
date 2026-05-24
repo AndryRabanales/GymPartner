@@ -222,11 +222,11 @@ const WorkoutNotificationCard = ({ n, setSelectedPlayer, navigate }: WorkoutNoti
                                     <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping"></span>
                                     SELECCIONANDO AHORA ({liveExercises.length})
                                 </p>
-                                <div className="flex flex-col items-start gap-1.5 mt-2 max-h-[96px] overflow-y-auto pr-1 custom-scrollbar">
+                                <div className="flex gap-2 mt-2 overflow-x-auto no-scrollbar scroll-smooth py-1" onClick={(e) => e.stopPropagation()}>
                                     {liveExercises.map((ex: any, idx: number) => (
                                         <span 
                                             key={ex.id || idx} 
-                                            className="bg-red-500/10 border border-red-500/20 text-red-400 text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg block truncate"
+                                            className="bg-red-500/10 border border-red-500/20 text-red-400 text-[9px] font-black uppercase tracking-wider px-3 py-1.5 rounded-lg whitespace-nowrap shrink-0 block"
                                         >
                                             🏋️ {ex.equipmentName.toUpperCase()}
                                         </span>
