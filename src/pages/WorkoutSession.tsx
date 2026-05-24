@@ -320,7 +320,7 @@ export const WorkoutSession = () => {
         COMMON_EQUIPMENT_SEEDS.forEach(seed => {
             if (!effectiveInv.some(i => normalizeText(i.name) === normalizeText(seed.name))) {
                 effectiveInv.push({
-                    id: seed.id,
+                    id: `virtual-${seed.name}`,
                     name: seed.name,
                     category: seed.category,
                     target_muscle_group: seed.category,
@@ -328,10 +328,6 @@ export const WorkoutSession = () => {
                 } as any);
             }
         });
-
-        // 2. Identify keeping, adding, and removing exercises
-        // Find existing exercises to keep (those whose equipmentId is still in selectedCatalogItems)
-        const exercisesToKeep = activeExercises.filter(e => e.equipmentId && selectedCatalogItems.has(e.equipmentId));
 
         // Find which selected equipment IDs are new (not already in activeExercises)
         const existingEquipmentIds = new Set(activeExercises.map(e => e.equipmentId).filter(Boolean));
@@ -359,15 +355,17 @@ export const WorkoutSession = () => {
             } as WorkoutExercise;
         });
 
-        const nextActiveExercises = [...exercisesToKeep, ...newExercises];
+        // Append new exercises without removing any existing ones
+        const nextActiveExercises = [...activeExercises, ...newExercises];
         setActiveExercises(nextActiveExercises);
-        setIsRoutineModified(true); // Structural change: exercises synchronized
+        setIsRoutineModified(true); // Structural change: exercises added
 
         // 3. Cleanup
         setSelectedCatalogItems(new Set());
         setShowAddModal(false);
         setSearchTerm('');
     };
+
 
 
     // Computed: Merge Seeds (Virtual) only if not already present by NAME in the real/global list
