@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Loader, Calendar, MapPin, Clock, Dumbbell, Share2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Loader, Calendar, MapPin, Clock, Dumbbell, Share2, Trash2, CheckCircle2, Circle, Loader2 } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { PublicTeaser } from '../components/common/PublicTeaser';
 import { ShareHistoryModal } from '../components/profile/ShareHistoryModal';
+import { workoutService } from '../services/WorkoutService';
+import toast from 'react-hot-toast';
 
 interface WorkoutRecord {
     id: string;
@@ -19,6 +21,70 @@ interface WorkoutRecord {
 export const HistoryPage = () => {
     const { user } = useAuth();
     const [showShareModal, setShowShareModal] = useState(false);
+    const [isSelectionMode, setIsSelectionMode] = useState(false);
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [deleting, setDeleting] = useState(false);
+
+    let pressTimer: any;
+    const handlePressStart = (id: string) => {
+        pressTimer = setTimeout(() => {
+            setIsSelectionMode(true);
+            setSelectedIds(new Set([id]));
+        }, 600);
+    };
+    const handlePressEnd = () => {
+        clearTimeout(pressTimer);
+    };
+
+    const toggleSelect = (id: string) => {
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
+
+    const handleSelectAll = () => {
+        if (selectedIds.size === history.length) {
+            setSelectedIds(new Set());
+        } else {
+            setSelectedIds(new Set(history.map(item => item.id)));
+        }
+    };
+
+    const handleDeleteSelected = async () => {
+        if (selectedIds.size === 0) return;
+
+        const count = selectedIds.size;
+        const confirmed = window.confirm(
+            count === 1
+                ? `¿Estás seguro de que deseas eliminar este entrenamiento?`
+                : `¿Estás seguro de que deseas eliminar los ${count} entrenamientos seleccionados?`
+        );
+        if (!confirmed) return;
+
+        setDeleting(true);
+        try {
+            const idsArray = Array.from(selectedIds);
+            await Promise.all(idsArray.map(id => workoutService.deleteSession(id)));
+            
+            toast.success(
+                count === 1
+                    ? "¡Entrenamiento eliminado correctamente! ⚔️"
+                    : `¡${count} entrenamientos eliminados correctamente! ⚔️`
+            );
+            
+            setSelectedIds(new Set());
+            setIsSelectionMode(false);
+            loadHistory();
+        } catch (err: any) {
+            console.error("Error deleting sessions:", err);
+            alert(`Error al eliminar: ${err.message || 'Error desconocido'}`);
+        } finally {
+            setDeleting(false);
+        }
+    };
 
     if (!user) {
         return (
@@ -201,20 +267,52 @@ export const HistoryPage = () => {
                     </h1>
                     <p className="text-neutral-400 text-sm">Registro completo de tus entrenamientos</p>
                 </div>
-                <div className="flex justify-center gap-3">
-                    <button
-                        onClick={loadHistory}
-                        className="bg-neutral-800 hover:bg-neutral-700 text-white border border-neutral-700 px-4 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95 uppercase tracking-wider"
-                    >
-                        🔄 Recargar
-                    </button>
-                    <button
-                        onClick={() => setShowShareModal(true)}
-                        className="bg-gym-primary hover:bg-yellow-400 text-black px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 active:scale-95 shadow-[0_0_15px_rgba(229,255,0,0.15)] uppercase tracking-wider"
-                    >
-                        <Share2 size={14} strokeWidth={2.5} />
-                        Compartir Historial
-                    </button>
+                <div className="flex justify-center flex-wrap gap-3">
+                    {isSelectionMode ? (
+                        <>
+                            <button
+                                onClick={() => { setIsSelectionMode(false); setSelectedIds(new Set()); }}
+                                className="bg-neutral-800 hover:bg-neutral-700 text-white border border-neutral-700 px-4 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95 uppercase tracking-wider"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleSelectAll}
+                                className="bg-neutral-900 border border-gym-primary/40 text-gym-primary hover:bg-gym-primary/10 px-4 py-2.5 rounded-xl text-xs font-black transition-all active:scale-95 uppercase tracking-wider"
+                            >
+                                {selectedIds.size === history.length ? 'Deseleccionar Todo' : 'Seleccionar Todo'}
+                            </button>
+                            <button
+                                onClick={handleDeleteSelected}
+                                disabled={deleting || selectedIds.size === 0}
+                                className="bg-red-950/20 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/30 px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider"
+                            >
+                                {deleting ? (
+                                    <Loader2 size={14} className="animate-spin" />
+                                ) : (
+                                    <Trash2 size={14} />
+                                )}
+                                {deleting ? 'Eliminando...' : `Eliminar (${selectedIds.size})`}
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <button
+                                onClick={() => setIsSelectionMode(true)}
+                                className="bg-neutral-950 hover:bg-red-500/10 text-red-500 border border-red-500/20 px-4 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center gap-2 uppercase tracking-wider"
+                            >
+                                <Trash2 size={14} />
+                                Eliminar
+                            </button>
+                            <button
+                                onClick={() => setShowShareModal(true)}
+                                className="bg-gym-primary hover:bg-yellow-400 text-black px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 active:scale-95 shadow-[0_0_15px_rgba(229,255,0,0.15)] uppercase tracking-wider"
+                            >
+                                <Share2 size={14} strokeWidth={2.5} />
+                                Compartir Historial
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
 
@@ -235,9 +333,16 @@ export const HistoryPage = () => {
                             <h2 className="text-xl font-bold text-white uppercase tracking-wide">{month}</h2>
                             <div className="h-px flex-1 bg-neutral-800"></div>
                         </div>
-
                         {sessions.map(session => (
-                            <WorkoutCard key={session.id} session={session} />
+                            <WorkoutCard 
+                                key={session.id} 
+                                session={session} 
+                                isSelectionMode={isSelectionMode}
+                                isSelected={selectedIds.has(session.id)}
+                                onToggleSelect={toggleSelect}
+                                onPressStart={handlePressStart}
+                                onPressEnd={handlePressEnd}
+                            />
                         ))}
                     </div>
                 ))}
@@ -250,20 +355,60 @@ export const HistoryPage = () => {
     );
 };
 
-const WorkoutCard = ({ session }: { session: WorkoutRecord }) => {
+const WorkoutCard = ({ 
+    session, 
+    isSelectionMode, 
+    isSelected, 
+    onToggleSelect,
+    onPressStart,
+    onPressEnd
+}: { 
+    session: WorkoutRecord;
+    isSelectionMode: boolean;
+    isSelected: boolean;
+    onToggleSelect: (id: string) => void;
+    onPressStart: (id: string) => void;
+    onPressEnd: () => void;
+}) => {
+    const navigate = useNavigate();
     const date = new Date(session.started_at);
     const dayName = date.toLocaleDateString('es-ES', { weekday: 'short' });
     const dayNum = date.getDate();
     const monthShort = date.toLocaleDateString('es-ES', { month: 'short' });
 
+    const handleClick = (e: React.MouseEvent) => {
+        if (isSelectionMode) {
+            e.preventDefault();
+            onToggleSelect(session.id);
+        } else {
+            navigate(`/history/${session.id}`);
+        }
+    };
+
     return (
-        <Link
-            to={`/history/${session.id}`}
-            className="block bg-neutral-900 border border-neutral-800 rounded-2xl p-4 md:p-6 hover:border-gym-primary/50 transition-all group relative overflow-hidden cursor-pointer"
+        <div
+            onClick={handleClick}
+            onMouseDown={() => onPressStart(session.id)}
+            onMouseUp={onPressEnd}
+            onMouseLeave={onPressEnd}
+            onTouchStart={() => onPressStart(session.id)}
+            onTouchEnd={onPressEnd}
+            className={`block bg-neutral-900 border ${isSelected ? 'border-gym-primary shadow-[0_0_15px_rgba(229,255,0,0.1)]' : 'border-neutral-800'} rounded-3xl p-4 md:p-6 hover:border-gym-primary/50 transition-all group relative overflow-hidden cursor-pointer select-none`}
         >
             <div className="absolute inset-0 bg-gradient-to-r from-gym-primary/0 via-gym-primary/5 to-gym-primary/0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
 
-            <div className="flex gap-4 relative z-10">
+            <div className="flex items-center gap-4 relative z-10">
+                {/* Selection Indicator checkbox */}
+                {isSelectionMode && (
+                    <div className="shrink-0 mr-1 animate-in slide-in-from-left-4 duration-300">
+                        {isSelected ? (
+                            <CheckCircle2 className="text-gym-primary shrink-0" size={24} fill="currentColor" stroke="black" />
+                        ) : (
+                            <Circle className="text-neutral-600 shrink-0" size={24} />
+                        )}
+                    </div>
+                )}
+
                 {/* Date Badge */}
                 <div className="shrink-0">
                     <div className="bg-neutral-800 border border-neutral-700 rounded-xl w-16 h-16 md:w-20 md:h-20 flex flex-col items-center justify-center group-hover:border-gym-primary/50 transition-colors">
@@ -283,7 +428,7 @@ const WorkoutCard = ({ session }: { session: WorkoutRecord }) => {
                         </div>
                     </div>
 
-                    {/* Muscles Trained - PROMINENTE */}
+                    {/* Muscles Trained */}
                     {session.muscles_trained.length > 0 && (
                         <div className="flex flex-wrap gap-2">
                             {session.muscles_trained.map(muscle => (
@@ -310,6 +455,6 @@ const WorkoutCard = ({ session }: { session: WorkoutRecord }) => {
                     </div>
                 </div>
             </div>
-        </Link>
+        </div>
     );
 };

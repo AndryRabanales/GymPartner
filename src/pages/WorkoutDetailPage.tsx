@@ -271,20 +271,6 @@ export default function WorkoutDetailPage() {
                         </h1>
                     </div>
 
-                    {workout.user_id === currentUser?.id && (
-                        <button
-                            onClick={handleDeleteWorkout}
-                            disabled={deleting}
-                            className="mt-6 bg-red-950/20 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/30 rounded-2xl px-4 py-2.5 font-black text-[10px] tracking-wider uppercase transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {deleting ? (
-                                <Loader2 size={14} className="animate-spin" />
-                            ) : (
-                                <Trash2 size={14} />
-                            )}
-                            {deleting ? 'Eliminando...' : 'Eliminar'}
-                        </button>
-                    )}
                 </div>
 
                 <div className="flex flex-col gap-1 mb-4 text-neutral-400">
