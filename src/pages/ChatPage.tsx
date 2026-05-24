@@ -103,20 +103,25 @@ export const ChatPage = () => {
     const loadChatDetails = async () => {
         if (!chatId || !user) return;
 
-        setLoading(true);
-        // 1. Fetch chat metadata
-        const { data: chat, error: chatError } = await supabase
-            .from('chats')
-            .select('*')
-            .eq('id', chatId)
-            .single();
+        const isFirstLoad = messages.length === 0;
+        if (isFirstLoad) {
+            setLoading(true);
+        }
 
-        if (chatError || !chat) {
-            console.error("Error loading chat metadata:", chatError);
+        // 1. Fetch chat metadata and message history in parallel
+        const [chatRes, historyRes] = await Promise.all([
+            supabase.from('chats').select('*').eq('id', chatId).single(),
+            supabase.from('chat_messages').select('*').eq('chat_id', chatId).order('created_at', { ascending: true })
+        ]);
+
+        if (chatRes.error || !chatRes.data) {
+            console.error("Error loading chat metadata:", chatRes.error);
             navigate('/inbox');
             setLoading(false);
             return;
         }
+
+        const chat = chatRes.data;
 
         // 2. Identify the other participant
         const otherId = chat.user_a === user.id ? chat.user_b : chat.user_a;
@@ -132,15 +137,8 @@ export const ChatPage = () => {
             setOtherUser(profile);
         }
 
-        // 4. Fetch message history
-        const { data: history } = await supabase
-            .from('chat_messages')
-            .select('*')
-            .eq('chat_id', chatId)
-            .order('created_at', { ascending: true });
-
-        if (history) {
-            setMessages(history);
+        if (historyRes.data) {
+            setMessages(historyRes.data);
             // Mark messages as read
             markAsRead();
         }

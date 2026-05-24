@@ -123,7 +123,10 @@ export const InboxPage = () => {
     };
 
     const loadData = async () => {
-        setLoading(true);
+        const isFirstLoad = chats.length === 0 && invitations.length === 0;
+        if (isFirstLoad) {
+            setLoading(true);
+        }
         await Promise.all([loadChats(), loadInvitations()]);
         setLoading(false);
     };
