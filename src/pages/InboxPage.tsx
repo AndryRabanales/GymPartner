@@ -165,17 +165,17 @@ export const InboxPage = () => {
             {/* Header & Tabs */}
             <div className="sticky top-0 z-40 bg-neutral-950/90 backdrop-blur-xl border-b border-white/5 pb-0 flex flex-col relative shrink-0">
                 {/* CENTERED TITLING */}
-                <div className="px-4 pt-5 pb-2 flex flex-col items-center justify-center text-center">
-                    <h1 className="text-2xl font-black italic uppercase tracking-[0.25em] text-center select-none bg-gradient-to-r from-white via-gym-primary to-white bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(255,215,0,0.1)]">
+                <div className="px-4 pt-3 pb-1 flex flex-col items-center justify-center text-center">
+                    <h1 className="text-xl font-black italic uppercase tracking-[0.25em] text-center select-none bg-gradient-to-r from-white via-gym-primary to-white bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(255,215,0,0.1)]">
                         SALA
                     </h1>
-                    <p className="text-[7.5px] font-black text-neutral-500 tracking-[0.45em] uppercase mt-1 select-none">
+                    <p className="text-[7px] font-black text-neutral-500 tracking-[0.45em] uppercase mt-0.5 select-none">
                         Centro de Operaciones
                     </p>
                 </div>
 
                 {/* PREMIUM TACTICAL CAPSULE TABS */}
-                <div className="px-4 pb-4 pt-1.5 flex justify-center bg-transparent">
+                <div className="px-4 pb-2.5 pt-1 flex justify-center bg-transparent">
                     <div className="p-1 bg-neutral-900/80 border border-white/10 rounded-full flex items-center w-full max-w-[320px] shadow-[inset_0_2px_5px_rgba(0,0,0,0.8)] backdrop-blur-md relative">
                         <button
                             onClick={() => setActiveTab('chats')}
