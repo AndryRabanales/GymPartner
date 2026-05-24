@@ -1010,7 +1010,6 @@ export const WorkoutSession = () => {
 
             // Clear legacy global timer
             if (restTimerSetKey === `${exerciseIndex}-${setIndex}`) {
-                setRestTimerStart(null);
                 setRestTimerSetKey(null);
             }
 
@@ -1027,7 +1026,6 @@ export const WorkoutSession = () => {
             set.restAccumulated = 0;
 
             // Set Legacy Global Timer (Visual backup)
-            setRestTimerStart(Date.now());
             setRestTimerSetKey(`${exerciseIndex}-${setIndex}`);
 
             // FREEZE PREVIOUS TIMER
@@ -1701,17 +1699,18 @@ export const WorkoutSession = () => {
                                                                 {exercise.metrics.weight && (
                                                                     <div className="min-w-[75px] w-[75px]">
                                                                         <label
-                                                                            onClick={() => toggleExerciseUnit(mapIndex)}
-                                                                            className="text-[9px] font-bold text-neutral-500 block text-center mb-1 cursor-pointer hover:text-gym-primary transition-colors select-none"
+                                                                            onClick={() => !set.locked && toggleExerciseUnit(mapIndex)}
+                                                                            className={`text-[9px] font-bold text-neutral-500 block text-center mb-1 select-none ${set.locked ? 'cursor-not-allowed' : 'cursor-pointer hover:text-gym-primary transition-colors'}`}
                                                                         >
                                                                             PESO ({(exercise.weightUnit || 'kg').toUpperCase()})
                                                                         </label>
                                                                         <input
                                                                             type="number"
                                                                             inputMode="decimal"
+                                                                            disabled={set.locked}
                                                                             value={set.weight === 0 ? '' : toDisplayWeight(set.weight, exercise.weightUnit || 'kg')}
                                                                             onChange={(e) => updateSet(mapIndex, setIndex, 'weight', toInternalWeight(e.target.value, exercise.weightUnit || 'kg'))}
-                                                                            className={`w-full bg-neutral-800 text-center font-black text-xl rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${isCompleted ? 'text-neutral-500' : 'text-white'}`}
+                                                                            className={`w-full bg-neutral-800 text-center font-black text-xl rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${isCompleted ? 'text-neutral-500' : 'text-white'} ${set.locked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                             placeholder="0"
                                                                         />
                                                                     </div>
@@ -1722,9 +1721,10 @@ export const WorkoutSession = () => {
                                                                         <input
                                                                             type="number"
                                                                             inputMode="numeric"
+                                                                            disabled={set.locked}
                                                                             value={set.reps === 0 ? '' : set.reps}
                                                                             onChange={(e) => updateSet(mapIndex, setIndex, 'reps', e.target.value)}
-                                                                            className={`w-full bg-neutral-800 text-center font-black text-xl rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${isCompleted ? 'text-neutral-500' : 'text-white'}`}
+                                                                            className={`w-full bg-neutral-800 text-center font-black text-xl rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${isCompleted ? 'text-neutral-500' : 'text-white'} ${set.locked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                             placeholder="0"
                                                                         />
                                                                     </div>
@@ -1735,9 +1735,10 @@ export const WorkoutSession = () => {
                                                                         <input
                                                                             type="number"
                                                                             inputMode="numeric"
+                                                                            disabled={set.locked}
                                                                             value={set.time || ''}
                                                                             onChange={(e) => updateSet(mapIndex, setIndex, 'time', e.target.value)}
-                                                                            className="w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none"
+                                                                            className={`w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none ${set.locked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                             placeholder="0s"
                                                                         />
                                                                     </div>
@@ -1748,9 +1749,10 @@ export const WorkoutSession = () => {
                                                                         <input
                                                                             type="number"
                                                                             inputMode="decimal"
+                                                                            disabled={set.locked}
                                                                             value={set.distance === 0 ? '' : set.distance}
                                                                             onChange={(e) => updateSet(mapIndex, setIndex, 'distance', e.target.value)}
-                                                                            className="w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none"
+                                                                            className={`w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none ${set.locked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                             placeholder="0m"
                                                                         />
                                                                     </div>
@@ -1762,9 +1764,10 @@ export const WorkoutSession = () => {
                                                                             type="number"
                                                                             inputMode="numeric"
                                                                             max={10}
+                                                                            disabled={set.locked}
                                                                             value={set.rpe || ''}
                                                                             onChange={(e) => updateSet(mapIndex, setIndex, 'rpe', e.target.value)}
-                                                                            className="w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none"
+                                                                            className={`w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none ${set.locked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                             placeholder="-"
                                                                         />
                                                                     </div>
@@ -1779,9 +1782,10 @@ export const WorkoutSession = () => {
                                                                             <input
                                                                                 type="number"
                                                                                 inputMode="decimal"
+                                                                                disabled={set.locked}
                                                                                 value={set.custom?.[key] || ''}
                                                                                 onChange={(e) => updateSet(mapIndex, setIndex, key, e.target.value, true)} // isCustom=true
-                                                                                className="w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white focus:ring-2 focus:ring-gym-primary outline-none"
+                                                                                className={`w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white focus:ring-2 focus:ring-gym-primary outline-none ${set.locked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                             />
                                                                         </div>
                                                                     )
