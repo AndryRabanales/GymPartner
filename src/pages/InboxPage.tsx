@@ -193,7 +193,7 @@ export const InboxPage = () => {
                                         ? 'bg-neutral-950 text-gym-primary'
                                         : 'bg-gym-primary text-neutral-950'
                                 }`}>
-                                    {totalUnreadMessages}
+                                    {totalUnreadMessages > 99 ? '+99' : totalUnreadMessages}
                                 </span>
                             )}
                         </button>
@@ -365,7 +365,7 @@ export const InboxPage = () => {
 
                                                 {hasUnread && (
                                                     <span className="bg-gym-primary text-neutral-950 text-[9px] font-black w-5 h-5 rounded-full flex items-center justify-center shrink-0 shadow-[0_0_10px_rgba(255,215,0,0.3)] animate-bounce ml-auto">
-                                                        {chat.unread_count}
+                                                        {chat.unread_count > 99 ? '+99' : chat.unread_count}
                                                     </span>
                                                 )}
                                             </button>
