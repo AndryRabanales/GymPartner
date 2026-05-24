@@ -182,20 +182,13 @@ const WorkoutNotificationCard = ({ n, setSelectedPlayer, navigate }: WorkoutNoti
                             onClick={() => {
                                 if (!isCurrentlyLive && n.data?.session_id) {
                                     navigate(`/history/${n.data.session_id}`);
-                                } else if (isCurrentlyLive) {
-                                    // Open profile modal so they can see full live details
-                                    if (n.data?.sender_id) {
-                                        setSelectedPlayer({
-                                            id: n.data.sender_id,
-                                            username: n.sender?.username || n.data?.sender_name || 'Guerrero',
-                                            avatar_url: n.sender?.avatar_url || '',
-                                            rank: 999,
-                                            gym_name: n.data?.gym_name || 'un Gimnasio'
-                                        });
-                                    }
                                 }
                             }}
-                            className="mt-3 bg-black/30 border border-white/5 rounded-xl p-3 space-y-2 select-none cursor-pointer hover:border-gym-primary/30 hover:bg-neutral-950/40 active:scale-[0.99] transition-all"
+                            className={`mt-3 bg-black/30 border border-white/5 rounded-xl p-3 space-y-2 select-none transition-all ${
+                                !isCurrentlyLive && n.data?.session_id
+                                    ? 'cursor-pointer hover:border-gym-primary/30 hover:bg-neutral-950/40 active:scale-[0.99]'
+                                    : ''
+                            }`}
                         >
                             <div className="flex items-center gap-1.5 text-[10px] text-neutral-400 font-bold uppercase">
                                 <MapPin size={10} className="text-gym-primary" />
