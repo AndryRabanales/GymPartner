@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { socialService } from './SocialService';
+import toast from 'react-hot-toast';
 
 export interface Notification {
     id: string;
@@ -146,6 +147,32 @@ export const notificationService = {
         if (!user) return false;
 
         const senderName = user.user_metadata?.full_name || user.user_metadata?.username || passedName || "Un GymRat";
+
+        // Check if there is already a pending match invitation sent by this user to the target user
+        try {
+            const { data: existingInvites, error: checkError } = await supabase
+                .from('notifications')
+                .select('id, data')
+                .eq('user_id', targetUserId)
+                .eq('type', 'invitation');
+
+            if (checkError) throw checkError;
+
+            if (existingInvites && existingInvites.length > 0) {
+                const hasPending = existingInvites.some(invite => {
+                    const senderId = invite.data?.sender_id;
+                    const status = invite.data?.status;
+                    return senderId === user.id && (!status || (status !== 'accepted' && status !== 'rejected' && status !== 'cancelled'));
+                });
+
+                if (hasPending) {
+                    toast.error("¡Ya has enviado un desafío a este guerrero! Está pendiente.");
+                    return false;
+                }
+            }
+        } catch (checkErr) {
+            console.error('Error checking existing invites:', checkErr);
+        }
 
         // 1. AUTO-FOLLOW Logic
         try {

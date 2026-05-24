@@ -1,18 +1,20 @@
 import { useState, useEffect } from 'react';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, Zap, Check, X, Swords } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { chatService } from '../services/ChatService';
 import type { ChatPreview } from '../services/ChatService';
 import { FadeInImage } from '../components/ui/FadeInImage';
+import { notificationService } from '../services/NotificationService';
 
 export const InboxPage = () => {
     const [chats, setChats] = useState<ChatPreview[]>([]);
+    const [invitations, setInvitations] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
-        loadChats();
+        loadData();
     }, []);
 
     // REAL-TIME SUBSCRIPTIONS
@@ -42,6 +44,17 @@ export const InboxPage = () => {
                 )
                 .subscribe();
             subs.push(chatSubB);
+
+            // Subscribe to notifications (to live update invitations/matches)
+            const notifySub = supabase
+                .channel('inbox-notifications')
+                .on(
+                    'postgres_changes',
+                    { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+                    () => loadInvitations()
+                )
+                .subscribe();
+            subs.push(notifySub);
         };
 
         setupSubs();
@@ -52,10 +65,80 @@ export const InboxPage = () => {
     }, []);
 
     const loadChats = async () => {
-        setLoading(true);
         const data = await chatService.getMyChats();
         setChats(data);
+    };
+
+    const loadInvitations = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: allInvites } = await supabase
+            .from('notifications')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('type', 'invitation')
+            .order('created_at', { ascending: false });
+
+        if (allInvites) {
+            const pending = allInvites.filter(invite => !invite.data?.status);
+            
+            if (pending.length > 0) {
+                const senderIds = Array.from(new Set(pending.map(n => n.data?.sender_id).filter(Boolean)));
+                if (senderIds.length > 0) {
+                    const { data: profiles } = await supabase
+                        .from('profiles')
+                        .select('id, username, avatar_url')
+                        .in('id', senderIds);
+                    
+                    const profileMap = (profiles || []).reduce((acc: Record<string, any>, p) => {
+                        acc[p.id] = p;
+                        return acc;
+                    }, {});
+
+                    const enriched = pending.map(n => ({
+                        ...n,
+                        sender: profileMap[n.data?.sender_id]
+                    }));
+                    setInvitations(enriched);
+                } else {
+                    setInvitations(pending);
+                }
+            } else {
+                setInvitations([]);
+            }
+        }
+    };
+
+    const loadData = async () => {
+        setLoading(true);
+        await Promise.all([loadChats(), loadInvitations()]);
         setLoading(false);
+    };
+
+    const handleAccept = async (notification: any) => {
+        const senderId = notification.data?.sender_id;
+        if (!senderId) return;
+
+        try {
+            await notificationService.updateInvitationStatus(notification, 'accepted');
+            const chatId = await notificationService.acceptInvitation(senderId);
+            if (chatId) {
+                navigate(`/chat/${chatId}`);
+            }
+            loadData();
+        } catch (error) {
+            console.error("Error accepting invite:", error);
+        }
+    };
+
+    const handleReject = async (notification: any) => {
+        try {
+            await notificationService.updateInvitationStatus(notification, 'rejected');
+            loadData();
+        } catch (error) {
+            console.error("Error rejecting invite:", error);
+        }
     };
 
     const handleChatClick = (chatId: string) => {
@@ -81,48 +164,115 @@ export const InboxPage = () => {
                     </div>
                 ) : (
                     // MESSAGES VIEW
-                    <div className="flex flex-col max-w-2xl mx-auto w-full space-y-2">
-                        {chats.length === 0 ? (
-                            <div className="p-12 text-center text-neutral-500 text-sm flex flex-col items-center gap-4 mt-8 animate-in fade-in zoom-in-95 duration-500">
-                                <MessageCircle size={48} className="opacity-10" />
-                                <h3 className="text-xl font-black text-white italic mb-2 uppercase tracking-tighter">SILENCIO TOTAL</h3>
-                                <p className="text-xs text-neutral-500 max-w-xs font-medium">No tienes mensajes activos. Los chats aparecen cuando aceptas un reto.</p>
-                            </div>
-                        ) : (
-                            chats.map(chat => (
-                                <button
-                                    key={chat.id}
-                                    onClick={() => handleChatClick(chat.id)}
-                                    className="flex items-center gap-4 p-4 text-left w-full bg-black/20 hover:bg-white/5 border border-white/5 rounded-3xl transition-all group active:scale-95 shadow-lg"
-                                >
-                                    <div className="relative shrink-0">
-                                        <div className="w-14 h-14 rounded-full bg-neutral-900 overflow-hidden shrink-0 border border-white/10 group-hover:border-gym-primary/50 transition-colors">
-                                            {chat.other_user?.avatar_url ? (
-                                                <FadeInImage src={chat.other_user.avatar_url} alt={chat.other_user.username} className="w-full h-full object-cover" />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-lg font-black text-gym-primary italic bg-gradient-to-br from-neutral-800 to-black">
-                                                    {chat.other_user?.username?.[0] || '?'}
+                    <div className="flex flex-col max-w-2xl mx-auto w-full">
+                        {/* PENDING MATCHES (CHALLENGES) */}
+                        {invitations.length > 0 && (
+                            <div className="mb-6 animate-in fade-in slide-in-from-top-4 duration-500">
+                                <h2 className="text-[10px] font-black tracking-[0.2em] text-gym-primary uppercase italic mb-3 pl-1 flex items-center gap-2">
+                                    <Swords size={12} fill="currentColor" /> Desafíos de Entrenamiento Recibidos ({invitations.length})
+                                </h2>
+                                <div className="space-y-3">
+                                    {invitations.map(invite => (
+                                        <div 
+                                            key={invite.id} 
+                                            className="bg-neutral-900/60 backdrop-blur-md border border-white/5 rounded-3xl p-4 shadow-lg transition-all hover:border-gym-primary/30"
+                                        >
+                                            <div className="flex items-start gap-4">
+                                                <div className="w-12 h-12 rounded-full bg-neutral-900 overflow-hidden shrink-0 border border-white/10 relative">
+                                                    {invite.sender?.avatar_url ? (
+                                                        <FadeInImage src={invite.sender.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <div className="w-full h-full bg-gradient-to-br from-neutral-800 to-black flex items-center justify-center text-sm font-black text-gym-primary italic">
+                                                            {invite.sender?.username?.[0].toUpperCase() || 'G'}
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            )}
-                                        </div>
-                                    </div>
 
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex justify-between items-baseline mb-1">
-                                            <span className="text-sm font-black text-white truncate group-hover:text-gym-primary transition-colors uppercase italic tracking-tight">
-                                                {chat.other_user?.username || 'Usuario'}
-                                            </span>
-                                            <span className="text-[9px] text-neutral-600 shrink-0 ml-2 font-mono">
-                                                {chat.last_message_at ? new Date(chat.last_message_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                                            </span>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center justify-between gap-2 mb-1">
+                                                        <span className="text-xs font-black text-white uppercase italic tracking-tight truncate">
+                                                            @{invite.sender?.username || invite.data?.sender_name || 'Guerrero'}
+                                                        </span>
+                                                        <span className="text-[8px] font-mono text-neutral-600 shrink-0">
+                                                            {new Date(invite.created_at).toLocaleDateString()}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-xs text-neutral-400 font-medium leading-relaxed">
+                                                        Te ha enviado un desafío de gimnasio. ¿Aceptas entrenar?
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-4 flex items-center gap-2">
+                                                <button
+                                                    onClick={() => handleReject(invite)}
+                                                    className="flex-1 py-2 px-3 rounded-2xl bg-neutral-950 text-neutral-500 font-black text-[9px] uppercase tracking-wider border border-white/5 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                                                >
+                                                    <X size={12} />
+                                                    IGNORAR
+                                                </button>
+                                                <button
+                                                    onClick={() => handleAccept(invite)}
+                                                    className="flex-1 py-2 px-3 rounded-2xl bg-white text-black font-black text-[9px] uppercase tracking-wider hover:bg-gym-primary transition-all active:scale-95 shadow-md flex items-center justify-center gap-1.5"
+                                                >
+                                                    <Zap size={12} fill="currentColor" />
+                                                    ACEPTAR RETO
+                                                </button>
+                                            </div>
                                         </div>
-                                        <p className="text-xs text-neutral-400 truncate font-medium group-hover:text-white transition-colors">
-                                            {chat.last_message || 'Inicia la conversación...'}
-                                        </p>
-                                    </div>
-                                </button>
-                            ))
+                                    ))}
+                                </div>
+                            </div>
                         )}
+
+                        {/* MESSAGES / CHATS */}
+                        <div className="space-y-2">
+                            <h2 className="text-[10px] font-black tracking-[0.2em] text-neutral-500 uppercase italic mb-3 pl-1 flex items-center gap-2">
+                                <MessageCircle size={12} /> Conversaciones Activas
+                            </h2>
+
+                            {chats.length === 0 ? (
+                                <div className="p-12 text-center text-neutral-500 text-sm flex flex-col items-center gap-4 mt-8 animate-in fade-in zoom-in-95 duration-500">
+                                    <MessageCircle size={48} className="opacity-10" />
+                                    <h3 className="text-xl font-black text-white italic mb-2 uppercase tracking-tighter">SILENCIO TOTAL</h3>
+                                    <p className="text-xs text-neutral-500 max-w-xs font-medium">No tienes mensajes activos. Los chats aparecen cuando aceptas un reto.</p>
+                                </div>
+                            ) : (
+                                chats.map(chat => (
+                                    <button
+                                        key={chat.id}
+                                        onClick={() => handleChatClick(chat.id)}
+                                        className="flex items-center gap-4 p-4 text-left w-full bg-black/20 hover:bg-white/5 border border-white/5 rounded-3xl transition-all group active:scale-95 shadow-lg"
+                                    >
+                                        <div className="relative shrink-0">
+                                            <div className="w-14 h-14 rounded-full bg-neutral-900 overflow-hidden shrink-0 border border-white/10 group-hover:border-gym-primary/50 transition-colors">
+                                                {chat.other_user?.avatar_url ? (
+                                                    <FadeInImage src={chat.other_user.avatar_url} alt={chat.other_user.username} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center text-lg font-black text-gym-primary italic bg-gradient-to-br from-neutral-800 to-black">
+                                                        {chat.other_user?.username?.[0] || '?'}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex justify-between items-baseline mb-1">
+                                                <span className="text-sm font-black text-white truncate group-hover:text-gym-primary transition-colors uppercase italic tracking-tight">
+                                                    {chat.other_user?.username || 'Usuario'}
+                                                </span>
+                                                <span className="text-[9px] text-neutral-600 shrink-0 ml-2 font-mono">
+                                                    {chat.last_message_at ? new Date(chat.last_message_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-neutral-400 truncate font-medium group-hover:text-white transition-colors">
+                                                {chat.last_message || 'Inicia la conversación...'}
+                                            </p>
+                                        </div>
+                                    </button>
+                                ))
+                            )}
+                        </div>
                     </div>
                 )}
             </div>
