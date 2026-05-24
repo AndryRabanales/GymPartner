@@ -11,6 +11,9 @@ node_modules
 dist
 dist-ssr
 *.local
+android/
+ios/
+.railwayignore
 
 # Editor directories and files
 .vscode/*

@@ -10,6 +10,7 @@ export interface ChatPreview {
         username: string;
         avatar_url: string;
     } | null;
+    unread_count?: number;
 }
 
 export const chatService = {
@@ -54,13 +55,22 @@ export const chatService = {
                 .eq('chat_id', chat.id)
                 .order('created_at', { ascending: false })
                 .limit(1)
-                .single();
+                .maybeSingle();
+
+            // Get unread messages count for this chat (sent by other user and is_read is false)
+            const { count: unreadCount } = await supabase
+                .from('chat_messages')
+                .select('id', { count: 'exact', head: true })
+                .eq('chat_id', chat.id)
+                .neq('sender_id', user.id)
+                .eq('is_read', false);
 
             return {
                 id: chat.id,
                 last_message_at: chat.last_message_at,
                 last_message: lastMsg?.content || 'Nueva conversación',
-                other_user: profile
+                other_user: profile,
+                unread_count: unreadCount || 0
             };
         }));
 
