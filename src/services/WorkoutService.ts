@@ -75,22 +75,26 @@ class WorkoutService {
                 .eq('shared_by', userId);
 
             if (shares && shares.length > 0) {
-                const notificationsPayload = shares.map(share => ({
-                    user_id: share.shared_with,
-                    type: 'system',
-                    title: '🔴 EN VIVO - ENTRENANDO AHORA',
-                    message: `¡${displayName} comenzó a entrenar en ${gymLabel}!`,
-                    data: {
-                        sender_id: userId,
-                        sender_name: displayName,
-                        session_id: data.id,
-                        gym_name: gymLabel,
-                        status: 'started',
-                        started_at: data.started_at
-                    }
-                }));
+                const notificationsPayload = shares
+                    .filter(share => share.shared_with !== userId) // 🚫 Do not notify oneself
+                    .map(share => ({
+                        user_id: share.shared_with,
+                        type: 'system',
+                        title: '🔴 EN VIVO - ENTRENANDO AHORA',
+                        message: `¡${displayName} comenzó a entrenar en ${gymLabel}!`,
+                        data: {
+                            sender_id: userId,
+                            sender_name: displayName,
+                            session_id: data.id,
+                            gym_name: gymLabel,
+                            status: 'started',
+                            started_at: data.started_at
+                        }
+                    }));
 
-                await supabase.from('notifications').insert(notificationsPayload);
+                if (notificationsPayload.length > 0) {
+                    await supabase.from('notifications').insert(notificationsPayload);
+                }
             }
         } catch (notifyErr) {
             console.error('Error sending start live notification:', notifyErr);
@@ -196,27 +200,31 @@ class WorkoutService {
                     .eq('shared_by', userId);
 
                 if (shares && shares.length > 0) {
-                    const notificationsPayload = shares.map(share => ({
-                        user_id: share.shared_with,
-                        type: 'system',
-                        title: '✅ ENTRENAMIENTO FINALIZADO',
-                        message: `¡${displayName} terminó su entrenamiento en ${gymLabel}! Duración: ${duration} min.`,
-                        data: {
-                            sender_id: userId,
-                            sender_name: displayName,
-                            session_id: sessionId,
-                            gym_name: gymLabel,
-                            status: 'finished',
-                            started_at: session.started_at,
-                            finished_at: now,
-                            duration: duration,
-                            volume: Math.round(totalVolume),
-                            exercises: exercisesList,
-                            muscles: musclesList
-                        }
-                    }));
+                    const notificationsPayload = shares
+                        .filter(share => share.shared_with !== userId) // 🚫 Do not notify oneself
+                        .map(share => ({
+                            user_id: share.shared_with,
+                            type: 'system',
+                            title: '✅ ENTRENAMIENTO FINALIZADO',
+                            message: `¡${displayName} terminó su entrenamiento en ${gymLabel}! Duración: ${duration} min.`,
+                            data: {
+                                sender_id: userId,
+                                sender_name: displayName,
+                                session_id: sessionId,
+                                gym_name: gymLabel,
+                                status: 'finished',
+                                started_at: session.started_at,
+                                finished_at: now,
+                                duration: duration,
+                                volume: Math.round(totalVolume),
+                                exercises: exercisesList,
+                                muscles: musclesList
+                            }
+                        }));
 
-                    await supabase.from('notifications').insert(notificationsPayload);
+                    if (notificationsPayload.length > 0) {
+                        await supabase.from('notifications').insert(notificationsPayload);
+                    }
                 }
             }
         } catch (notifyErr) {

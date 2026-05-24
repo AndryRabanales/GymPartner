@@ -682,8 +682,9 @@ export const NotificationsPage = () => {
     const loadNotifications = async () => {
         setLoading(true);
         try {
+            const { data: { user } } = await supabase.auth.getUser();
             const raw = await notificationService.getNotifications(50);
-            const all = raw.filter(n => n.type !== 'invitation');
+            const all = raw.filter(n => n.type !== 'invitation' && n.data?.sender_id !== user?.id);
             
             const senderIds = Array.from(new Set(all.map(n => 
                 n.data?.sender_id || 
