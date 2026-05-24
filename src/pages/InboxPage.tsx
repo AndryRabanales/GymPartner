@@ -94,7 +94,7 @@ export const InboxPage = () => {
 
         if (allInvites) {
             const pending = allInvites.filter(invite => !invite.data?.status);
-            
+
             if (pending.length > 0) {
                 const senderIds = Array.from(new Set(pending.map(n => n.data?.sender_id).filter(Boolean)));
                 if (senderIds.length > 0) {
@@ -102,7 +102,7 @@ export const InboxPage = () => {
                         .from('profiles')
                         .select('id, username, avatar_url')
                         .in('id', senderIds);
-                    
+
                     const profileMap = (profiles || []).reduce((acc: Record<string, any>, p) => {
                         acc[p.id] = p;
                         return acc;
@@ -165,13 +165,10 @@ export const InboxPage = () => {
             {/* Header & Tabs */}
             <div className="sticky top-0 z-40 bg-neutral-950/90 backdrop-blur-xl border-b border-white/5 pb-0 flex flex-col relative shrink-0">
                 {/* CENTERED TITLING */}
-                <div className="px-4 pt-3 pb-1 flex flex-col items-center justify-center text-center">
+                <div className="px-4 pt-3 pb-0.5 flex flex-col items-center justify-center text-center">
                     <h1 className="text-xl font-black italic uppercase tracking-[0.25em] text-center select-none bg-gradient-to-r from-white via-gym-primary to-white bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(255,215,0,0.1)]">
                         SALA
                     </h1>
-                    <p className="text-[7px] font-black text-neutral-500 tracking-[0.45em] uppercase mt-0.5 select-none">
-                        Centro de Operaciones
-                    </p>
                 </div>
 
                 {/* PREMIUM TACTICAL CAPSULE TABS */}
@@ -179,20 +176,18 @@ export const InboxPage = () => {
                     <div className="p-1 bg-neutral-900/80 border border-white/10 rounded-full flex items-center w-full max-w-[320px] shadow-[inset_0_2px_5px_rgba(0,0,0,0.8)] backdrop-blur-md relative">
                         <button
                             onClick={() => setActiveTab('chats')}
-                            className={`flex-1 py-2.5 rounded-full text-center font-black uppercase text-[10px] tracking-wider transition-all duration-300 flex items-center justify-center gap-2 relative active:scale-95 ${
-                                activeTab === 'chats'
+                            className={`flex-1 py-2.5 rounded-full text-center font-black uppercase text-[10px] tracking-wider transition-all duration-300 flex items-center justify-center gap-2 relative active:scale-95 ${activeTab === 'chats'
                                     ? 'bg-gradient-to-r from-gym-primary to-yellow-500 text-neutral-950 font-black shadow-[0_2px_15px_rgba(255,215,0,0.25)]'
                                     : 'text-neutral-400 hover:text-neutral-200'
-                            }`}
+                                }`}
                         >
                             <MessageCircle size={13} className={activeTab === 'chats' ? 'text-neutral-950' : 'text-gym-primary'} />
                             <span>Mensajes</span>
                             {totalUnreadMessages > 0 && (
-                                <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full shrink-0 shadow-[0_0_8px_rgba(255,215,0,0.3)] animate-pulse ${
-                                    activeTab === 'chats'
+                                <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full shrink-0 shadow-[0_0_8px_rgba(255,215,0,0.3)] animate-pulse ${activeTab === 'chats'
                                         ? 'bg-neutral-950 text-gym-primary'
                                         : 'bg-gym-primary text-neutral-950'
-                                }`}>
+                                    }`}>
                                     {totalUnreadMessages > 99 ? '+99' : totalUnreadMessages}
                                 </span>
                             )}
@@ -200,20 +195,18 @@ export const InboxPage = () => {
 
                         <button
                             onClick={() => setActiveTab('matches')}
-                            className={`flex-1 py-2.5 rounded-full text-center font-black uppercase text-[10px] tracking-wider transition-all duration-300 flex items-center justify-center gap-2 relative active:scale-95 ${
-                                activeTab === 'matches'
+                            className={`flex-1 py-2.5 rounded-full text-center font-black uppercase text-[10px] tracking-wider transition-all duration-300 flex items-center justify-center gap-2 relative active:scale-95 ${activeTab === 'matches'
                                     ? 'bg-gradient-to-r from-gym-primary to-yellow-500 text-neutral-950 font-black shadow-[0_2px_15px_rgba(255,215,0,0.25)]'
                                     : 'text-neutral-400 hover:text-neutral-200'
-                            }`}
+                                }`}
                         >
                             <Swords size={13} className={activeTab === 'matches' ? 'text-neutral-950' : 'text-yellow-500'} />
                             <span>Desafíos</span>
                             {invitations.length > 0 && (
-                                <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full shrink-0 shadow-[0_0_8px_rgba(234,179,8,0.3)] animate-pulse ${
-                                    activeTab === 'matches'
+                                <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full shrink-0 shadow-[0_0_8px_rgba(234,179,8,0.3)] animate-pulse ${activeTab === 'matches'
                                         ? 'bg-neutral-950 text-yellow-500'
                                         : 'bg-yellow-500 text-neutral-950'
-                                }`}>
+                                    }`}>
                                     {invitations.length}
                                 </span>
                             )}
@@ -243,12 +236,12 @@ export const InboxPage = () => {
                                     </div>
                                 ) : (
                                     invitations.map(invite => (
-                                        <div 
-                                            key={invite.id} 
+                                        <div
+                                            key={invite.id}
                                             className="bg-neutral-900/40 backdrop-blur-md border border-white/5 rounded-2xl p-5 shadow-[0_4px_25px_rgba(0,0,0,0.3)] transition-all hover:border-yellow-500/20 hover:bg-neutral-900/60 relative overflow-hidden group"
                                         >
                                             <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-yellow-500/5 to-transparent pointer-events-none rounded-full blur-xl"></div>
-                                            
+
                                             <div className="flex items-start gap-4">
                                                 <div className="w-12 h-12 rounded-full bg-neutral-950 overflow-hidden shrink-0 border border-white/10 ring-2 ring-yellow-500/10 group-hover:ring-yellow-500/30 transition-all relative">
                                                     {invite.sender?.avatar_url ? (
@@ -312,22 +305,20 @@ export const InboxPage = () => {
                                             <button
                                                 key={chat.id}
                                                 onClick={() => handleChatClick(chat.id)}
-                                                className={`flex items-center gap-4 p-4 text-left w-full backdrop-blur-md border rounded-2xl transition-all duration-300 group active:scale-[0.98] shadow-md relative overflow-hidden ${
-                                                    hasUnread
+                                                className={`flex items-center gap-4 p-4 text-left w-full backdrop-blur-md border rounded-2xl transition-all duration-300 group active:scale-[0.98] shadow-md relative overflow-hidden ${hasUnread
                                                         ? 'bg-neutral-900/60 border-gym-primary/20 shadow-[0_4px_20px_rgba(255,215,0,0.03)]'
                                                         : 'bg-neutral-900/40 border-white/5 hover:border-gym-primary/30 hover:bg-neutral-900/60'
-                                                }`}
+                                                    }`}
                                             >
                                                 {hasUnread && (
                                                     <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gym-primary"></div>
                                                 )}
 
                                                 <div className="relative shrink-0">
-                                                    <div className={`w-14 h-14 rounded-full bg-neutral-950 overflow-hidden shrink-0 border-2 transition-all duration-300 relative ${
-                                                        hasUnread 
-                                                            ? 'border-gym-primary shadow-[0_0_12px_rgba(255,215,0,0.25)] ring-2 ring-gym-primary/10' 
+                                                    <div className={`w-14 h-14 rounded-full bg-neutral-950 overflow-hidden shrink-0 border-2 transition-all duration-300 relative ${hasUnread
+                                                            ? 'border-gym-primary shadow-[0_0_12px_rgba(255,215,0,0.25)] ring-2 ring-gym-primary/10'
                                                             : 'border-white/10 group-hover:border-gym-primary/50'
-                                                    }`}>
+                                                        }`}>
                                                         {chat.other_user?.avatar_url ? (
                                                             <FadeInImage src={chat.other_user.avatar_url} alt={chat.other_user.username} className="w-full h-full object-cover" />
                                                         ) : (
@@ -343,22 +334,19 @@ export const InboxPage = () => {
 
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex justify-between items-baseline mb-1">
-                                                        <span className={`text-sm font-black truncate group-hover:text-gym-primary transition-colors uppercase italic tracking-tight ${
-                                                            hasUnread ? 'text-gym-primary font-black' : 'text-white'
-                                                        }`}>
+                                                        <span className={`text-sm font-black truncate group-hover:text-gym-primary transition-colors uppercase italic tracking-tight ${hasUnread ? 'text-gym-primary font-black' : 'text-white'
+                                                            }`}>
                                                             {chat.other_user?.username || 'Usuario'}
                                                         </span>
-                                                        <span className={`text-[8px] shrink-0 ml-2 font-mono ${
-                                                            hasUnread ? 'text-gym-primary font-bold' : 'text-neutral-500'
-                                                        }`}>
+                                                        <span className={`text-[8px] shrink-0 ml-2 font-mono ${hasUnread ? 'text-gym-primary font-bold' : 'text-neutral-500'
+                                                            }`}>
                                                             {chat.last_message_at ? new Date(chat.last_message_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                                                         </span>
                                                     </div>
-                                                    <p className={`text-xs truncate transition-colors ${
-                                                        hasUnread 
-                                                            ? 'text-white font-bold' 
+                                                    <p className={`text-xs truncate transition-colors ${hasUnread
+                                                            ? 'text-white font-bold'
                                                             : 'text-neutral-400 group-hover:text-white font-medium'
-                                                    }`}>
+                                                        }`}>
                                                         {chat.last_message || 'Inicia la conversación...'}
                                                     </p>
                                                 </div>
