@@ -87,7 +87,8 @@ export default function WorkoutDetailPage() {
                     distance,
                     metrics_data,
                     is_pr,
-                    equipment:exercise_id ( name )
+                    category_snapshot,
+                    equipment:exercise_id ( name, target_muscle_group )
                 `)
                 .eq('session_id', id)
                 .order('exercise_id')
@@ -105,7 +106,7 @@ export default function WorkoutDetailPage() {
                     exerciseMap.set(exId, {
                         exercise_id: exId,
                         exercise_name: log.equipment?.name || 'Ejercicio Desconocido',
-                        muscle_group: (log.equipment as any)?.target_muscle_group || 'General',
+                        muscle_group: log.category_snapshot || log.equipment?.target_muscle_group || 'General',
                         sets: []
                     });
                 }

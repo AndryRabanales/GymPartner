@@ -1403,13 +1403,17 @@ export const WorkoutSession = () => {
                         const distanceToSave = Number(set.distance) || 0;
 
                         // Point 4: Add Timestamps to Metrics
+                        let finalRestDuration = set.restAccumulated || 0;
+                        if (set.restStatus === 'running' && set.restLastStartTime) {
+                            finalRestDuration += (Date.now() - set.restLastStartTime);
+                        }
+
                         const extendedMetrics = {
                             ...(set.custom || {}),
                             ...(set.completed ? { _checklist_timestamp: set.completedAt || Date.now() } : {}),
                             ...(exercise.weightUnit === 'lb' ? { _weight_unit: 'lb' } : {}),
-                            _rest_duration_ms: set.restAccumulated || 0,
-                            // _rest_status is string, might need cast if DB expects number map, but usually metrics_data is JSONB
-                            _rest_status: set.restStatus
+                            _rest_duration_ms: finalRestDuration,
+                            _rest_status: set.restStatus === 'running' ? 'completed' : set.restStatus
                         } as any;
 
                         savePromises.push(workoutService.logSet({
