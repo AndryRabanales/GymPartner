@@ -118,16 +118,44 @@ export const GymMap = () => {
         return () => google.maps.event.removeListener(listener);
     }, [map, searchNearbyGyms]);
 
+    // Re-trigger search when internal DB data loads or changes
+    useEffect(() => {
+        if (placesService && dbGyms.length > 0) {
+            searchNearbyGyms();
+        }
+    }, [placesService, dbGyms, userGyms, searchNearbyGyms]);
+
     const loadInternalData = async () => {
         // 1. Load All Known DB Gyms
         const worldGyms = await userService.getAllGyms();
         setDbGyms(worldGyms);
 
+        let myGyms: UserPrimaryGym[] = [];
         if (user) {
             // 2. Load My Conquests
-            const myGyms = await userService.getUserGyms(user.id);
+            myGyms = await userService.getUserGyms(user.id);
             setUserGyms(myGyms);
         }
+
+        // 3. Pre-populate displayGyms instantly from DB data!
+        const initialMarkers: GymMarker[] = worldGyms.map(gym => {
+            const existingUserGym = myGyms.find(ug => ug.gym_id === gym.id);
+            return {
+                id: gym.id,
+                place_id: gym.place_id || '',
+                name: gym.name,
+                lat: gym.lat,
+                lng: gym.lng,
+                is_database: true,
+                is_unlocked: !!existingUserGym,
+                is_home_base: existingUserGym?.is_home_base || false,
+                favorites_count: gym.gym_favorites?.[0]?.count || 0,
+                rating: gym.rating || 4.5,
+                address: gym.address,
+                photoUrl: undefined
+            };
+        });
+        setDisplayGyms(initialMarkers);
     };
 
     const mergeAndDisplayGyms = (googleResults: google.maps.places.PlaceResult[]) => {
@@ -161,6 +189,30 @@ export const GymMap = () => {
                 rating: place.rating,
                 address: place.vicinity,
                 photoUrl: photoUrl
+            });
+        });
+
+        // 2. Keep all dbGyms that are NOT in the googleResults so they don't disappear
+        const googlePlaceIds = new Set(markers.map(m => m.place_id));
+        dbGyms.forEach(gym => {
+            if (gym.place_id && googlePlaceIds.has(gym.place_id)) return;
+
+            // Check if user has conquered it
+            const existingUserGym = userGyms.find(ug => ug.gym_id === gym.id);
+
+            markers.push({
+                id: gym.id,
+                place_id: gym.place_id || '',
+                name: gym.name,
+                lat: gym.lat,
+                lng: gym.lng,
+                is_database: true,
+                is_unlocked: !!existingUserGym,
+                is_home_base: existingUserGym?.is_home_base || false,
+                favorites_count: gym.gym_favorites?.[0]?.count || 0,
+                rating: gym.rating || 4.5,
+                address: gym.address,
+                photoUrl: undefined
             });
         });
 
@@ -613,26 +665,28 @@ export const GymMap = () => {
                         onClick={() => setSelectedGym(gym)}
                     >
                         {gym.is_unlocked ? (
-                            <div className="relative group">
-                                <Pin
-                                    background={gym.is_home_base ? '#FACC15' : '#3B82F6'}
-                                    glyphColor={'#000'}
-                                    borderColor={'#000'}
-                                />
-                                {gym.is_home_base && <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-yellow-500 text-black text-[10px] font-bold px-1.5 py-0.5 rounded shadow-lg animate-bounce">SEDE</div>}
+                            <div className="relative group flex flex-col items-center">
+                                <div className={`w-9 h-9 ${gym.is_home_base ? 'bg-yellow-500 border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.6)] text-black' : 'bg-blue-600 border-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.6)] text-white'} rounded-full border-2 flex items-center justify-center transition-all duration-300 hover:scale-110 cursor-pointer`}>
+                                    <MapPin size={16} strokeWidth={2.5} />
+                                </div>
+                                <div className={`w-2 h-2 ${gym.is_home_base ? 'bg-yellow-400' : 'bg-blue-400'} rotate-45 -mt-1`}></div>
+
+                                {gym.is_home_base && <div className="absolute -top-7 bg-yellow-500 text-black text-[9px] font-black px-1.5 py-0.5 rounded shadow-lg uppercase tracking-wider animate-bounce">SEDE</div>}
                                 {(gym.favorites_count && gym.favorites_count > 0) ? (
-                                    <div className={`absolute ${gym.is_home_base ? '-top-12' : '-top-6'} left-1/2 -translate-x-1/2 bg-neutral-900 border border-red-500 text-red-500 text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-lg flex items-center gap-1 z-20 transition-all group-hover:scale-110`}>
+                                    <div className={`absolute ${gym.is_home_base ? '-top-12' : '-top-7'} bg-neutral-900 border border-red-500 text-red-500 text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-lg flex items-center gap-1 z-20 transition-all group-hover:scale-110`}>
                                         <Heart size={10} fill="currentColor" /> {gym.favorites_count}
                                     </div>
                                 ) : null}
                             </div>
                         ) : (
-                            <div className="relative group">
-                                <div className={`bg-neutral-900/90 p-1.5 rounded-full border border-neutral-700 shadow-xl hover:scale-110 transition-transform cursor-pointer ${tutorialStep === 5 ? 'ring-2 ring-yellow-500 animate-pulse shadow-yellow-500/50' : ''}`}>
-                                    <Lock size={16} className={`text-neutral-500 ${tutorialStep === 5 ? 'text-yellow-500 animate-bounce' : ''}`} />
+                            <div className="relative group flex flex-col items-center">
+                                <div className={`w-9 h-9 bg-neutral-950/95 backdrop-blur-md rounded-full border-2 ${tutorialStep === 5 ? 'border-yellow-500 shadow-[0_0_15px_rgba(250,204,21,0.6)]' : 'border-neutral-700 shadow-[0_0_12px_rgba(0,0,0,0.6)]'} flex items-center justify-center transition-all duration-300 hover:scale-110 cursor-pointer`}>
+                                    <Lock size={14} className={tutorialStep === 5 ? 'text-yellow-500 animate-pulse' : 'text-neutral-400'} />
                                 </div>
+                                <div className={`w-2 h-2 ${tutorialStep === 5 ? 'bg-yellow-500' : 'bg-neutral-700'} rotate-45 -mt-1`}></div>
+                                
                                 {(gym.favorites_count && gym.favorites_count > 0) ? (
-                                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-neutral-900 border border-red-500 text-red-500 text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-lg flex items-center gap-1 z-20 transition-all group-hover:scale-110">
+                                    <div className="absolute -top-7 bg-neutral-900 border border-red-500 text-red-500 text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-lg flex items-center gap-1 z-20 transition-all group-hover:scale-110">
                                         <Heart size={10} fill="currentColor" /> {gym.favorites_count}
                                     </div>
                                 ) : null}
