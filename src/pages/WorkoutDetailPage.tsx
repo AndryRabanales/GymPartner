@@ -221,11 +221,11 @@ export default function WorkoutDetailPage() {
             {/* Header */}
             <div className="bg-gradient-to-b from-neutral-900 to-black border-b border-neutral-800 p-6">
                 <button
-                    onClick={() => navigate('/history')}
+                    onClick={() => navigate(-1)}
                     className="flex items-center gap-2 text-gym-primary mb-4 hover:underline"
                 >
                     <ChevronLeft size={20} />
-                    Volver al Historial
+                    Volver
                 </button>
 
                 <h1 className="text-2xl md:text-3xl font-black uppercase italic mb-2">
