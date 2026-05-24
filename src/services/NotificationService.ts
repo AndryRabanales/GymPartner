@@ -139,34 +139,69 @@ export const notificationService = {
     /**
      * Enviar una invitación de entrenamiento
      */
-    /**
-     * Enviar una invitación de entrenamiento
-     */
     async sendInvitation(targetUserId: string, passedName?: string): Promise<boolean> {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return false;
 
         const senderName = user.user_metadata?.full_name || user.user_metadata?.username || passedName || "Un GymRat";
 
-        // Check if there is already a pending match invitation sent by this user to the target user
+        // 🛡️ 1. Check if they already have an active chat/connection
         try {
-            const { data: existingInvites, error: checkError } = await supabase
+            const { data: existingChat, error: chatError } = await supabase
+                .from('chats')
+                .select('id')
+                .or(`and(user_a.eq.${user.id},user_b.eq.${targetUserId}),and(user_a.eq.${targetUserId},user_b.eq.${user.id})`)
+                .maybeSingle();
+
+            if (!chatError && existingChat) {
+                toast.error("¡Ya estás conectado con este guerrero!");
+                alert("⚠️ Ya estás conectado con este guerrero en la sección de chats.");
+                return false;
+            }
+        } catch (chatErr) {
+            console.error("Error checking existing chat:", chatErr);
+        }
+
+        // 🛡️ 2. Check if there is already a pending match invitation between these two users (either direction)
+        try {
+            // Check invitations where user_id (recipient) is targetUserId and sender is current user
+            const { data: sentInvites } = await supabase
                 .from('notifications')
                 .select('id, data')
                 .eq('user_id', targetUserId)
                 .eq('type', 'invitation');
 
-            if (checkError) throw checkError;
-
-            if (existingInvites && existingInvites.length > 0) {
-                const hasPending = existingInvites.some(invite => {
+            if (sentInvites && sentInvites.length > 0) {
+                const hasPendingSent = sentInvites.some(invite => {
                     const senderId = invite.data?.sender_id;
                     const status = invite.data?.status;
                     return senderId === user.id && (!status || (status !== 'accepted' && status !== 'rejected' && status !== 'cancelled'));
                 });
 
-                if (hasPending) {
-                    toast.error("¡Ya has enviado un desafío a este guerrero! Está pendiente.");
+                if (hasPendingSent) {
+                    toast.error("¡Desafío pendiente! Ya enviaste una invitación.");
+                    alert("⚠️ Ya has enviado un desafío a este guerrero y se encuentra pendiente.");
+                    return false;
+                }
+            }
+
+            // Check invitations where user_id (recipient) is current user and sender is targetUserId
+            const { data: receivedInvites } = await supabase
+                .from('notifications')
+                .select('id, data')
+                .eq('user_id', user.id)
+                .eq('type', 'invitation');
+
+            if (receivedInvites && receivedInvites.length > 0) {
+                const hasPendingReceived = receivedInvites.some(invite => {
+                    const senderId = invite.data?.sender_id;
+                    const status = invite.data?.status;
+                    return senderId === targetUserId && (!status || (status !== 'accepted' && status !== 'rejected' && status !== 'cancelled'));
+                });
+
+                if (hasPendingReceived) {
+                    toast.error("¡Desafío recibido! Tienes una invitación pendiente.");
+                    alert("⚠️ Este guerrero ya te ha enviado un desafío. Revisa tu bandeja de entrada.");
                     return false;
                 }
             }

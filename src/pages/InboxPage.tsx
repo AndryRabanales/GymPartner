@@ -11,6 +11,7 @@ export const InboxPage = () => {
     const [chats, setChats] = useState<ChatPreview[]>([]);
     const [invitations, setInvitations] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
+    const [activeTab, setActiveTab] = useState<'chats' | 'matches'>('chats');
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -147,12 +148,57 @@ export const InboxPage = () => {
 
     return (
         <div className="flex-1 flex flex-col bg-transparent pb-20">
-            {/* Header */}
-            <div className="sticky top-0 z-40 bg-neutral-950/80 backdrop-blur-xl border-b border-white/5 px-4 py-4 flex items-center gap-3">
-                <h1 className="text-xl font-black italic uppercase text-white tracking-widest flex items-center gap-2">
-                    <MessageCircle size={20} className="text-gym-primary" />
-                    Mensajes
-                </h1>
+            {/* Header & Tabs */}
+            <div className="sticky top-0 z-40 bg-neutral-950/90 backdrop-blur-xl border-b border-white/5 pb-0 flex flex-col">
+                <div className="px-4 pt-4 pb-3 flex items-center gap-3">
+                    <h1 className="text-xl font-black italic uppercase text-white tracking-widest flex items-center gap-2">
+                        <MessageCircle size={20} className="text-gym-primary" />
+                        Sala de Guerra
+                    </h1>
+                </div>
+
+                {/* PREMIUM TABS */}
+                <div className="flex px-4 border-t border-white/5 bg-black/20">
+                    <button
+                        onClick={() => setActiveTab('chats')}
+                        className={`flex-1 py-4 text-center font-black uppercase text-xs tracking-wider transition-all flex items-center justify-center gap-2 relative ${
+                            activeTab === 'chats'
+                                ? 'text-white'
+                                : 'text-neutral-500 hover:text-neutral-300'
+                        }`}
+                    >
+                        <MessageCircle size={14} />
+                        Mensajes
+                        {chats.length > 0 && (
+                            <span className="bg-gym-primary text-black text-[9px] font-black px-1.5 py-0.5 rounded-full shrink-0">
+                                {chats.length}
+                            </span>
+                        )}
+                        {activeTab === 'chats' && (
+                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gym-primary rounded-full shadow-[0_0_10px_#E5FF00]"></div>
+                        )}
+                    </button>
+
+                    <button
+                        onClick={() => setActiveTab('matches')}
+                        className={`flex-1 py-4 text-center font-black uppercase text-xs tracking-wider transition-all flex items-center justify-center gap-2 relative ${
+                            activeTab === 'matches'
+                                ? 'text-white'
+                                : 'text-neutral-500 hover:text-neutral-300'
+                        }`}
+                    >
+                        <Swords size={14} />
+                        Desafíos (Matches)
+                        {invitations.length > 0 && (
+                            <span className="bg-yellow-500 text-black text-[9px] font-black px-1.5 py-0.5 rounded-full shrink-0">
+                                {invitations.length}
+                            </span>
+                        )}
+                        {activeTab === 'matches' && (
+                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-yellow-500 rounded-full shadow-[0_0_10px_#EAB308]"></div>
+                        )}
+                    </button>
+                </div>
             </div>
 
             {/* Content Area */}
@@ -160,19 +206,20 @@ export const InboxPage = () => {
                 {loading ? (
                     <div className="h-64 flex flex-col items-center justify-center text-neutral-500 gap-3">
                         <div className="w-8 h-8 border-2 border-gym-primary border-t-transparent rounded-full animate-spin"></div>
-                        <span className="text-[10px] font-black uppercase tracking-widest">Cargando...</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest">Sincronizando...</span>
                     </div>
                 ) : (
-                    // MESSAGES VIEW
                     <div className="flex flex-col max-w-2xl mx-auto w-full">
-                        {/* PENDING MATCHES (CHALLENGES) */}
-                        {invitations.length > 0 && (
-                            <div className="mb-6 animate-in fade-in slide-in-from-top-4 duration-500">
-                                <h2 className="text-[10px] font-black tracking-[0.2em] text-gym-primary uppercase italic mb-3 pl-1 flex items-center gap-2">
-                                    <Swords size={12} fill="currentColor" /> Desafíos de Entrenamiento Recibidos ({invitations.length})
-                                </h2>
-                                <div className="space-y-3">
-                                    {invitations.map(invite => (
+                        {activeTab === 'matches' && (
+                            <div className="animate-in fade-in slide-in-from-top-4 duration-500 space-y-3">
+                                {invitations.length === 0 ? (
+                                    <div className="p-12 text-center text-neutral-500 text-sm flex flex-col items-center gap-4 mt-8 animate-in fade-in zoom-in-95 duration-500">
+                                        <Swords size={48} className="opacity-10 text-neutral-600" />
+                                        <h3 className="text-xl font-black text-white italic mb-2 uppercase tracking-tighter">SIN RETOS PENDIENTES</h3>
+                                        <p className="text-xs text-neutral-500 max-w-xs font-medium">No has recibido invitaciones nuevas por ahora. Busca aliados en el Radar para lanzar un desafío.</p>
+                                    </div>
+                                ) : (
+                                    invitations.map(invite => (
                                         <div 
                                             key={invite.id} 
                                             className="bg-neutral-900/60 backdrop-blur-md border border-white/5 rounded-3xl p-4 shadow-lg transition-all hover:border-gym-primary/30"
@@ -220,59 +267,56 @@ export const InboxPage = () => {
                                                 </button>
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
+                                    ))
+                                )}
                             </div>
                         )}
 
-                        {/* MESSAGES / CHATS */}
-                        <div className="space-y-2">
-                            <h2 className="text-[10px] font-black tracking-[0.2em] text-neutral-500 uppercase italic mb-3 pl-1 flex items-center gap-2">
-                                <MessageCircle size={12} /> Conversaciones Activas
-                            </h2>
-
-                            {chats.length === 0 ? (
-                                <div className="p-12 text-center text-neutral-500 text-sm flex flex-col items-center gap-4 mt-8 animate-in fade-in zoom-in-95 duration-500">
-                                    <MessageCircle size={48} className="opacity-10" />
-                                    <h3 className="text-xl font-black text-white italic mb-2 uppercase tracking-tighter">SILENCIO TOTAL</h3>
-                                    <p className="text-xs text-neutral-500 max-w-xs font-medium">No tienes mensajes activos. Los chats aparecen cuando aceptas un reto.</p>
-                                </div>
-                            ) : (
-                                chats.map(chat => (
-                                    <button
-                                        key={chat.id}
-                                        onClick={() => handleChatClick(chat.id)}
-                                        className="flex items-center gap-4 p-4 text-left w-full bg-black/20 hover:bg-white/5 border border-white/5 rounded-3xl transition-all group active:scale-95 shadow-lg"
-                                    >
-                                        <div className="relative shrink-0">
-                                            <div className="w-14 h-14 rounded-full bg-neutral-900 overflow-hidden shrink-0 border border-white/10 group-hover:border-gym-primary/50 transition-colors">
-                                                {chat.other_user?.avatar_url ? (
-                                                    <FadeInImage src={chat.other_user.avatar_url} alt={chat.other_user.username} className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <div className="w-full h-full flex items-center justify-center text-lg font-black text-gym-primary italic bg-gradient-to-br from-neutral-800 to-black">
-                                                        {chat.other_user?.username?.[0] || '?'}
-                                                    </div>
-                                                )}
+                        {activeTab === 'chats' && (
+                            <div className="animate-in fade-in slide-in-from-top-4 duration-500 space-y-2">
+                                {chats.length === 0 ? (
+                                    <div className="p-12 text-center text-neutral-500 text-sm flex flex-col items-center gap-4 mt-8 animate-in fade-in zoom-in-95 duration-500">
+                                        <MessageCircle size={48} className="opacity-10 text-neutral-600" />
+                                        <h3 className="text-xl font-black text-white italic mb-2 uppercase tracking-tighter">SILENCIO TOTAL</h3>
+                                        <p className="text-xs text-neutral-500 max-w-xs font-medium">No tienes mensajes activos. Los chats aparecen cuando aceptas un reto de entrenamiento.</p>
+                                    </div>
+                                ) : (
+                                    chats.map(chat => (
+                                        <button
+                                            key={chat.id}
+                                            onClick={() => handleChatClick(chat.id)}
+                                            className="flex items-center gap-4 p-4 text-left w-full bg-black/20 hover:bg-white/5 border border-white/5 rounded-3xl transition-all group active:scale-95 shadow-lg"
+                                        >
+                                            <div className="relative shrink-0">
+                                                <div className="w-14 h-14 rounded-full bg-neutral-900 overflow-hidden shrink-0 border border-white/10 group-hover:border-gym-primary/50 transition-colors">
+                                                    {chat.other_user?.avatar_url ? (
+                                                        <FadeInImage src={chat.other_user.avatar_url} alt={chat.other_user.username} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center text-lg font-black text-gym-primary italic bg-gradient-to-br from-neutral-800 to-black">
+                                                            {chat.other_user?.username?.[0] || '?'}
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
-                                        </div>
 
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex justify-between items-baseline mb-1">
-                                                <span className="text-sm font-black text-white truncate group-hover:text-gym-primary transition-colors uppercase italic tracking-tight">
-                                                    {chat.other_user?.username || 'Usuario'}
-                                                </span>
-                                                <span className="text-[9px] text-neutral-600 shrink-0 ml-2 font-mono">
-                                                    {chat.last_message_at ? new Date(chat.last_message_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                                                </span>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex justify-between items-baseline mb-1">
+                                                    <span className="text-sm font-black text-white truncate group-hover:text-gym-primary transition-colors uppercase italic tracking-tight">
+                                                        {chat.other_user?.username || 'Usuario'}
+                                                    </span>
+                                                    <span className="text-[9px] text-neutral-600 shrink-0 ml-2 font-mono">
+                                                        {chat.last_message_at ? new Date(chat.last_message_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                                                    </span>
+                                                </div>
+                                                <p className="text-xs text-neutral-400 truncate font-medium group-hover:text-white transition-colors">
+                                                    {chat.last_message || 'Inicia la conversación...'}
+                                                </p>
                                             </div>
-                                            <p className="text-xs text-neutral-400 truncate font-medium group-hover:text-white transition-colors">
-                                                {chat.last_message || 'Inicia la conversación...'}
-                                            </p>
-                                        </div>
-                                    </button>
-                                ))
-                            )}
-                        </div>
+                                        </button>
+                                    ))
+                                )}
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
