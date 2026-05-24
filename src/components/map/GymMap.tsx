@@ -815,19 +815,16 @@ export const GymMap = () => {
 
             {/* Legend Overlay - Tactical Top Right Widget (Transparent) */}
             <div className="absolute top-[60px] right-4 z-20 flex flex-col gap-2 p-2 select-none text-right items-end drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)] pointer-events-none animate-in fade-in duration-300">
-                <div className="text-[7px] font-black text-neutral-400 tracking-[0.25em] uppercase">
-                    LEYENDA RADAR
-                </div>
                 <div className="flex items-center gap-2">
-                    <span className="text-[8px] font-black text-neutral-300 uppercase tracking-widest">Sede Principal</span>
+                    <span className="text-[8px] font-black text-white uppercase tracking-widest">Sede Principal</span>
                     <div className="w-2 h-2 rounded-full bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.9)] animate-pulse"></div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <span className="text-[8px] font-black text-neutral-300 uppercase tracking-widest">Desbloqueado</span>
+                    <span className="text-[8px] font-black text-white uppercase tracking-widest">Desbloqueado</span>
                     <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.9)]"></div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <span className="text-[8px] font-black text-neutral-500 uppercase tracking-widest">Bloqueado</span>
+                    <span className="text-[8px] font-black text-neutral-400 uppercase tracking-widest">Bloqueado</span>
                     <div className="w-2 h-2 rounded-full bg-neutral-900 border border-neutral-700 flex items-center justify-center">
                         <Lock size={6} className="text-neutral-500" />
                     </div>
