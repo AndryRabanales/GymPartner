@@ -30,6 +30,8 @@ const WorkoutNotificationCard = ({ n, setSelectedPlayer, navigate }: WorkoutNoti
     const [isCurrentlyLive, setIsCurrentlyLive] = useState(staticIsLive);
     const gymLabel = n.data?.gym_name || 'un Gimnasio';
     const muscles = n.data?.muscles || [];
+    const IGNORED_TAGS = ['free_weight', 'strength_machine', 'cable', 'pulley', 'polea', 'strength', 'accessory', 'custom', 'other', 'unknown'];
+    const filteredMuscles = muscles.filter((m: string) => !IGNORED_TAGS.includes(m.toLowerCase()));
     const duration = n.data?.duration;
     const volume = n.data?.volume;
 
@@ -226,9 +228,9 @@ const WorkoutNotificationCard = ({ n, setSelectedPlayer, navigate }: WorkoutNoti
                                 </div>
                             )}
 
-                            {!isCurrentlyLive && muscles.length > 0 && (
+                            {!isCurrentlyLive && filteredMuscles.length > 0 && (
                                 <div className="flex flex-wrap gap-1 mt-2">
-                                    {muscles.map((muscle: string, idx: number) => {
+                                    {filteredMuscles.map((muscle: string, idx: number) => {
                                         const emojiMap: Record<string, string> = {
                                             'Pecho': '💪', 'Espalda': '🦅', 'Pierna': '🦵', 'Hombro': '🛡️',
                                             'Bíceps': '🔥', 'Tríceps': '⚡', 'Core': '🛡️', 'Cardio': '🏃'
@@ -320,9 +322,11 @@ const WorkoutNotificationCard = ({ n, setSelectedPlayer, navigate }: WorkoutNoti
                                             {ex.equipmentName}
                                         </p>
                                         <div className="flex gap-2.5 mt-1.5">
-                                            <span className="text-[9px] font-black text-red-400 uppercase tracking-wider bg-red-500/5 px-2 py-0.5 rounded border border-red-500/10">
-                                                {ex.category || 'Músculo'}
-                                            </span>
+                                            {ex.category && !IGNORED_TAGS.includes(ex.category.toLowerCase()) && (
+                                                <span className="text-[9px] font-black text-red-400 uppercase tracking-wider bg-red-500/5 px-2 py-0.5 rounded border border-red-500/10">
+                                                    {ex.category}
+                                                </span>
+                                            )}
                                             {ex.setsCount > 0 && (
                                                 <span className="text-[9px] font-bold text-neutral-400 uppercase">
                                                     💪 {ex.setsCount} Series
