@@ -82,6 +82,35 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
             // REFERRAL PROCESSING (On Login/Register)
             if (currentUser && !isProcessingReferral.current) {
+                // Ensure profile is initialized instantly on first access
+                try {
+                    const { data: existingProfile } = await supabase
+                        .from('profiles')
+                        .select('id')
+                        .eq('id', currentUser.id)
+                        .maybeSingle();
+
+                    if (!existingProfile) {
+                        console.log("🆕 [PROFILE INITIALIZATION] No profile row found. Initializing profile dynamically...");
+                        const fullName = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || 'Guerrero';
+                        const username = currentUser.user_metadata?.username || currentUser.user_metadata?.user_name || `guerrero_${Math.random().toString(36).substring(2, 7)}`;
+                        const avatarUrl = currentUser.user_metadata?.avatar_url || null;
+
+                        await supabase
+                            .from('profiles')
+                            .insert({
+                                id: currentUser.id,
+                                username: username.toLowerCase().replace(/\s+/g, '_'),
+                                display_name: fullName,
+                                avatar_url: avatarUrl,
+                                checkins_count: 0,
+                                g_points: 1000
+                            });
+                    }
+                } catch (profileErr) {
+                    console.error("Error checking/creating profile on login:", profileErr);
+                }
+
                 const storedRefId = sessionStorage.getItem('gym_referral_id');
                 const alreadyReferred = currentUser.user_metadata?.referred_by;
 
