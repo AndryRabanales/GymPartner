@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, Send, MoreVertical, Loader, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, Send, MoreVertical, Loader, ShieldAlert, Trash2, UserX, Ban } from 'lucide-react';
+import { chatService } from '../services/ChatService';
 
 interface Message {
     id: string;
@@ -21,6 +22,11 @@ export const ChatPage = () => {
     const [loading, setLoading] = useState(true);
     const [otherUser, setOtherUser] = useState<{ id: string, username: string, avatar_url: string } | null>(null);
     const [sending, setSending] = useState(false);
+
+    // Dynamic Menu & Modal States
+    const [showMenu, setShowMenu] = useState(false);
+    const [confirmAction, setConfirmAction] = useState<'clear' | 'delete' | 'block' | null>(null);
+    const [actionLoading, setActionLoading] = useState(false);
 
     // Auto-scroll ref
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -43,12 +49,43 @@ export const ChatPage = () => {
         }
     };
 
+    const handleClearChat = async () => {
+        if (!chatId) return;
+        setActionLoading(true);
+        const success = await chatService.clearChatMessages(chatId);
+        if (success) {
+            setMessages([]);
+            setConfirmAction(null);
+            setShowMenu(false);
+        }
+        setActionLoading(false);
+    };
+
+    const handleDeleteChat = async () => {
+        if (!chatId) return;
+        setActionLoading(true);
+        const success = await chatService.deleteChat(chatId);
+        if (success) {
+            navigate('/inbox');
+        }
+        setActionLoading(false);
+    };
+
+    const handleBlockUser = async () => {
+        if (!otherUser?.id) return;
+        setActionLoading(true);
+        const success = await chatService.blockUser(otherUser.id);
+        if (success) {
+            navigate('/inbox');
+        }
+        setActionLoading(false);
+    };
+
     useEffect(() => {
         let unsubscribe: (() => void) | undefined;
 
         if (chatId && user?.id) {
             loadChatDetails();
-            loadMessages();
             unsubscribe = subscribeToMessages();
         }
 
@@ -58,45 +95,53 @@ export const ChatPage = () => {
     }, [chatId, user?.id]);
 
     useEffect(() => {
-        scrollToBottom();
+        if (messages.length > 0) {
+            scrollToBottom();
+        }
     }, [messages]);
 
     const loadChatDetails = async () => {
         if (!chatId || !user) return;
 
-        // Get chat participants to identify "other" user
-        const { data: chat } = await supabase
+        setLoading(true);
+        // 1. Fetch chat metadata
+        const { data: chat, error: chatError } = await supabase
             .from('chats')
-            .select('user_a, user_b')
+            .select('*')
             .eq('id', chatId)
             .single();
 
-        if (chat) {
-            const otherId = chat.user_a === user.id ? chat.user_b : chat.user_a;
-
-            // Get Other User Profile
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('id, username, avatar_url')
-                .eq('id', otherId)
-                .single();
-
-            if (profile) setOtherUser(profile);
+        if (chatError || !chat) {
+            console.error("Error loading chat metadata:", chatError);
+            navigate('/inbox');
+            setLoading(false);
+            return;
         }
-    };
 
-    const loadMessages = async () => {
-        if (!chatId) return;
-        setLoading(true);
-        const { data } = await supabase
+        // 2. Identify the other participant
+        const otherId = chat.user_a === user.id ? chat.user_b : chat.user_a;
+
+        // 3. Fetch profile details of the other user
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('id, username, avatar_url')
+            .eq('id', otherId)
+            .single();
+
+        if (profile) {
+            setOtherUser(profile);
+        }
+
+        // 4. Fetch message history
+        const { data: history } = await supabase
             .from('chat_messages')
             .select('*')
             .eq('chat_id', chatId)
             .order('created_at', { ascending: true });
 
-        if (data) {
-            setMessages(data);
-            // Mark immediately as read on enter
+        if (history) {
+            setMessages(history);
+            // Mark messages as read
             markAsRead();
         }
         setLoading(false);
@@ -196,9 +241,53 @@ export const ChatPage = () => {
                     <p className="text-[9px] font-bold text-gym-primary/70 tracking-widest uppercase italic animate-pulse">Conexión Segura</p>
                 </div>
 
-                <button className="p-2 text-neutral-400 hover:text-white transition-colors rounded-full hover:bg-white/5">
-                    <MoreVertical size={18} />
-                </button>
+                <div className="relative">
+                    <button 
+                        onClick={() => setShowMenu(!showMenu)}
+                        className="p-2 text-neutral-400 hover:text-white transition-colors rounded-full hover:bg-white/5 active:scale-95"
+                    >
+                        <MoreVertical size={18} />
+                    </button>
+
+                    {showMenu && (
+                        <>
+                            <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)}></div>
+                            
+                            <div className="absolute right-0 mt-2 w-48 bg-neutral-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                                <button
+                                    onClick={() => {
+                                        setConfirmAction('clear');
+                                        setShowMenu(false);
+                                    }}
+                                    className="w-full px-4 py-3 text-left text-xs font-bold text-neutral-300 hover:bg-white/5 hover:text-white flex items-center gap-2.5 transition-colors"
+                                >
+                                    <Trash2 size={14} className="text-yellow-500" />
+                                    Borrar Mensajes
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setConfirmAction('delete');
+                                        setShowMenu(false);
+                                    }}
+                                    className="w-full px-4 py-3 text-left text-xs font-bold text-neutral-300 hover:bg-white/5 hover:text-white flex items-center gap-2.5 transition-colors border-t border-white/5"
+                                >
+                                    <UserX size={14} className="text-gym-primary" />
+                                    Eliminar Chat / Match
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setConfirmAction('block');
+                                        setShowMenu(false);
+                                    }}
+                                    className="w-full px-4 py-3 text-left text-xs font-black text-red-500 hover:bg-red-500/10 flex items-center gap-2.5 transition-colors border-t border-white/5"
+                                >
+                                    <Ban size={14} />
+                                    BLOQUEAR PERSONA
+                                </button>
+                            </div>
+                        </>
+                    )}
+                </div>
 
                 <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-gym-primary/20 to-transparent"></div>
             </div>
@@ -257,6 +346,66 @@ export const ChatPage = () => {
                     <Send size={16} className={sending ? 'animate-pulse' : ''} fill="currentColor" />
                 </button>
             </form>
+
+            {/* TACTICAL CONFIRMATION OVERLAY */}
+            {confirmAction && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-6 animate-in fade-in duration-300">
+                    <div className="bg-neutral-900/90 border border-white/10 max-w-sm w-full rounded-3xl p-6 shadow-[0_0_50px_rgba(0,0,0,0.8)] animate-in zoom-in-95 duration-300 relative overflow-hidden">
+                        <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-transparent via-gym-primary to-transparent"></div>
+                        
+                        <div className="flex flex-col items-center text-center gap-4">
+                            <div className="w-12 h-12 rounded-full bg-neutral-950 flex items-center justify-center border border-white/10 ring-4 ring-white/5 animate-pulse">
+                                {confirmAction === 'clear' && <Trash2 className="text-yellow-500" size={20} />}
+                                {confirmAction === 'delete' && <UserX className="text-gym-primary" size={20} />}
+                                {confirmAction === 'block' && <Ban className="text-red-500" size={20} />}
+                            </div>
+
+                            <h3 className="text-base font-black uppercase italic tracking-widest text-white">
+                                {confirmAction === 'clear' && '¿Borrar Mensajes?'}
+                                {confirmAction === 'delete' && '¿Eliminar Conexión?'}
+                                {confirmAction === 'block' && '¿Bloquear Guerrero?'}
+                            </h3>
+
+                            <p className="text-xs text-neutral-400 font-medium leading-relaxed">
+                                {confirmAction === 'clear' && 'Se eliminará todo el historial de conversación en este chat localmente, pero mantendrás tu match activo.'}
+                                {confirmAction === 'delete' && 'Esta acción cancelará tu match, eliminará permanentemente esta sala de chat y todo su historial.'}
+                                {confirmAction === 'block' && `Bloquearás permanentemente a @${otherUser?.username || 'este usuario'}. Se cancelará el match y no podrán interactuar de nuevo.`}
+                            </p>
+
+                            <div className="mt-4 flex items-center gap-3 w-full">
+                                <button
+                                    disabled={actionLoading}
+                                    onClick={() => setConfirmAction(null)}
+                                    className="flex-1 py-3 px-4 rounded-xl bg-neutral-950 text-neutral-400 border border-white/5 hover:bg-white/5 hover:text-white font-bold text-[10px] uppercase tracking-wider transition-all disabled:opacity-50"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    disabled={actionLoading}
+                                    onClick={() => {
+                                        if (confirmAction === 'clear') handleClearChat();
+                                        if (confirmAction === 'delete') handleDeleteChat();
+                                        if (confirmAction === 'block') handleBlockUser();
+                                    }}
+                                    className={`flex-1 py-3 px-4 rounded-xl font-black text-[10px] uppercase tracking-wider shadow-lg transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-1.5 ${
+                                        confirmAction === 'block' 
+                                            ? 'bg-red-600 text-white hover:bg-red-500 hover:shadow-[0_0_15px_rgba(239,68,68,0.4)]'
+                                            : confirmAction === 'clear'
+                                            ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-neutral-950 hover:shadow-[0_0_15px_rgba(234,179,8,0.4)]'
+                                            : 'bg-gradient-to-r from-gym-primary to-yellow-500 text-neutral-950 hover:shadow-[0_0_15px_rgba(255,215,0,0.4)]'
+                                    }`}
+                                >
+                                    {actionLoading ? (
+                                        <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                                    ) : (
+                                        'Confirmar'
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

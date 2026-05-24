@@ -75,5 +75,85 @@ export const chatService = {
         }));
 
         return enrichedChats;
+    },
+
+    /**
+     * Delete a chat completely (deletes chat and all messages due to cascade delete)
+     */
+    async deleteChat(chatId: string): Promise<boolean> {
+        const { error } = await supabase
+            .from('chats')
+            .delete()
+            .eq('id', chatId);
+
+        if (error) {
+            console.error('Error deleting chat:', error);
+            return false;
+        }
+        return true;
+    },
+
+    /**
+     * Clear all messages in a chat without deleting the chat connection
+     */
+    async clearChatMessages(chatId: string): Promise<boolean> {
+        const { error } = await supabase
+            .from('chat_messages')
+            .delete()
+            .eq('chat_id', chatId);
+
+        if (error) {
+            console.error('Error clearing chat messages:', error);
+            return false;
+        }
+        return true;
+    },
+
+    /**
+     * Block a user. To block:
+     * 1. Delete the chat between these users (this cancels their match/connection and clears messages).
+     * 2. Delete any follow relationship between them.
+     * 3. Insert a block record (tries user_blocks table).
+     */
+    async blockUser(blockedUserId: string): Promise<boolean> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return false;
+
+        try {
+            // A. Find and delete any chat between them
+            const { data: chats } = await supabase
+                .from('chats')
+                .select('id')
+                .or(`and(user_a.eq.${user.id},user_b.eq.${blockedUserId}),and(user_a.eq.${blockedUserId},user_b.eq.${user.id})`);
+
+            if (chats && chats.length > 0) {
+                for (const chat of chats) {
+                    await this.deleteChat(chat.id);
+                }
+            }
+
+            // B. Unfollow each other
+            await supabase.from('follows').delete().eq('follower_id', user.id).eq('following_id', blockedUserId);
+            await supabase.from('follows').delete().eq('follower_id', blockedUserId).eq('following_id', user.id);
+
+            // C. Delete any pending/received match invitations between them in notifications
+            await supabase.from('notifications')
+                .delete()
+                .eq('type', 'invitation')
+                .or(`and(user_id.eq.${user.id},data->>sender_id.eq.${blockedUserId}),and(user_id.eq.${blockedUserId},data->>sender_id.eq.${user.id})`);
+
+            // D. Try to insert into user_blocks table (will fail gracefully if table not created yet)
+            await supabase
+                .from('user_blocks')
+                .insert({
+                    blocked_by: user.id,
+                    blocked_user: blockedUserId
+                });
+
+            return true;
+        } catch (error) {
+            console.error('Error in blockUser:', error);
+            return false;
+        }
     }
 };
