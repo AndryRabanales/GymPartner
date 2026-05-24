@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Swords, MapPin, UserPlus, UserCheck, Star, ExternalLink, Lock, Calendar, Clock, Dumbbell, History, Loader } from 'lucide-react';
+import { X, Swords, MapPin, UserPlus, UserCheck, Star, ExternalLink, Lock, Calendar, Clock, Dumbbell, History, Loader, Activity } from 'lucide-react';
 import { FeedViewerOverlay } from '../social/FeedViewerOverlay';
 import { useAuth } from '../../context/AuthContext';
 import { userService } from '../../services/UserService';
