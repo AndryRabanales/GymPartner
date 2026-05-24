@@ -7,7 +7,12 @@ export const LoginPage = () => {
     const [error, setError] = useState<string | null>(null);
     const [isAutoRedirecting, setIsAutoRedirecting] = useState(false);
 
+    // 🛑 CAMBIA ESTO A 'true' UNA VEZ QUE HABILITES META EN TU CONSOLA DE SUPABASE
+    const ENABLE_AUTO_META_REDIRECT = false;
+
     useEffect(() => {
+        if (!ENABLE_AUTO_META_REDIRECT) return;
+
         // Detect if the user is loading the app inside Meta's In-App Browser (Instagram or Facebook)
         const ua = navigator.userAgent || navigator.vendor || (window as any).opera;
         const isMetaBrowser = ua.includes('Instagram') || ua.includes('FBAN') || ua.includes('FBAV');
