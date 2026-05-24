@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import { notificationService } from '../services/NotificationService';
 import type { Notification } from '../services/NotificationService';
 import { FadeInImage } from '../components/ui/FadeInImage';
-import { Zap, UserPlus, MapPin, Check, X, Bell, History, Swords, Loader, Loader2, Bookmark, Activity } from 'lucide-react';
+import { Zap, UserPlus, MapPin, Check, X, Bell, History, Swords, Loader, Loader2, Bookmark, Activity, ChevronRight } from 'lucide-react';
 import { socialService } from '../services/SocialService';
 import { workoutService } from '../services/WorkoutService';
 import { ShareRoutinesToUserModal } from '../components/profile/ShareRoutinesToUserModal';
@@ -35,6 +35,7 @@ const WorkoutNotificationCard = ({ n, setSelectedPlayer, navigate }: WorkoutNoti
 
     const [liveSession, setLiveSession] = useState<any | null>(null);
     const [liveExercises, setLiveExercises] = useState<any[]>([]);
+    const [showExercisesModal, setShowExercisesModal] = useState(false);
 
     // If it is a live workout, subscribe to live session updates in real-time
     useEffect(() => {
@@ -109,152 +110,247 @@ const WorkoutNotificationCard = ({ n, setSelectedPlayer, navigate }: WorkoutNoti
     }, [staticIsLive, n.data?.sender_id, n.data?.session_id]);
 
     return (
-        <div 
-            className={`bg-black/40 backdrop-blur-2xl border rounded-[2rem] p-5 shadow-[0_15px_40px_rgba(0,0,0,0.4)] transition-all group my-3 text-left ${isCurrentlyLive ? 'border-red-500/20 hover:border-red-500/40 bg-red-950/5' : 'border-green-500/20 hover:border-green-500/40 bg-green-950/5'}`}
-        >
-            <div className="flex items-start gap-4">
-                <div className="relative shrink-0">
-                    <div className={`absolute -inset-1 rounded-full blur-md opacity-0 group-hover:opacity-20 transition-opacity ${isCurrentlyLive ? 'bg-red-500' : 'bg-green-500'}`}></div>
-                    <div className="w-14 h-14 rounded-full p-0.5 bg-gradient-to-tr from-neutral-800 to-neutral-600">
+        <>
+            <div 
+                className={`bg-black/40 backdrop-blur-2xl border rounded-[2rem] p-5 shadow-[0_15px_40px_rgba(0,0,0,0.4)] transition-all group my-3 text-left ${isCurrentlyLive ? 'border-red-500/20 hover:border-red-500/40 bg-red-950/5' : 'border-green-500/20 hover:border-green-500/40 bg-green-950/5'}`}
+            >
+                <div className="flex items-start gap-4">
+                    <div className="relative shrink-0">
+                        <div className={`absolute -inset-1 rounded-full blur-md opacity-0 group-hover:opacity-20 transition-opacity ${isCurrentlyLive ? 'bg-red-500' : 'bg-green-500'}`}></div>
+                        <div className="w-14 h-14 rounded-full p-0.5 bg-gradient-to-tr from-neutral-800 to-neutral-600">
+                            <div 
+                                className="w-full h-full rounded-full bg-neutral-900 overflow-hidden flex items-center justify-center border border-white/10 relative cursor-pointer" 
+                                onClick={() => {
+                                    if (n.data?.sender_id) {
+                                        setSelectedPlayer({
+                                            id: n.data.sender_id,
+                                            username: n.sender?.username || n.data?.sender_name || 'Guerrero',
+                                            avatar_url: n.sender?.avatar_url || '',
+                                            rank: 999,
+                                            gym_name: n.data?.gym_name || 'un Gimnasio'
+                                        });
+                                    }
+                                }}
+                            >
+                                {n.sender?.avatar_url ? (
+                                    <FadeInImage src={n.sender.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full bg-gradient-to-br from-neutral-800 to-black flex items-center justify-center">
+                                        <span className="text-lg font-black text-gym-primary italic">
+                                            {n.sender?.username?.[0].toUpperCase() || 'G'}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        <div className={`absolute -bottom-1 -right-1 p-1 rounded-full border-2 border-black shadow-lg ${isCurrentlyLive ? 'bg-red-500 text-white animate-pulse' : 'bg-green-500 text-black'}`}>
+                            <Activity size={10} strokeWidth={3} />
+                        </div>
+                    </div>
+
+                    <div className="flex-1 min-w-0 flex flex-col text-left">
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                            <span className={`text-[9px] font-black italic uppercase tracking-wider px-2 py-0.5 rounded-full ${isCurrentlyLive ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-green-500/20 text-green-400 border border-green-500/30'}`}>
+                                {isCurrentlyLive ? '🔴 EN VIVO' : '✅ COMPLETADO'}
+                            </span>
+                            <span className="text-[9px] font-bold text-neutral-600 shrink-0">
+                                {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                        </div>
+                        
+                        <p className="text-xs font-bold leading-normal text-white mt-1">
+                            <span 
+                                className="text-gym-primary font-black uppercase mr-1 cursor-pointer hover:underline" 
+                                onClick={() => {
+                                    if (n.data?.sender_id) {
+                                        setSelectedPlayer({
+                                            id: n.data.sender_id,
+                                            username: n.sender?.username || n.data?.sender_name || 'Guerrero',
+                                            avatar_url: n.sender?.avatar_url || '',
+                                            rank: 999,
+                                            gym_name: n.data?.gym_name || 'un Gimnasio'
+                                        });
+                                    }
+                                }}
+                            >
+                                @{n.sender?.username || n.data?.sender_name || 'Tu amigo'}
+                            </span>
+                            {isCurrentlyLive ? `comenzó a entrenar en ${gymLabel}` : `finalizó su entrenamiento en ${gymLabel}`}
+                        </p>
+
                         <div 
-                            className="w-full h-full rounded-full bg-neutral-900 overflow-hidden flex items-center justify-center border border-white/10 relative cursor-pointer" 
                             onClick={() => {
-                                if (n.data?.sender_id) {
-                                    setSelectedPlayer({
-                                        id: n.data.sender_id,
-                                        username: n.sender?.username || n.data?.sender_name || 'Guerrero',
-                                        avatar_url: n.sender?.avatar_url || '',
-                                        rank: 999,
-                                        gym_name: n.data?.gym_name || 'un Gimnasio'
-                                    });
+                                if (!isCurrentlyLive && n.data?.session_id) {
+                                    navigate(`/history/${n.data.session_id}`);
+                                } else if (isCurrentlyLive) {
+                                    // Open profile modal so they can see full live details
+                                    if (n.data?.sender_id) {
+                                        setSelectedPlayer({
+                                            id: n.data.sender_id,
+                                            username: n.sender?.username || n.data?.sender_name || 'Guerrero',
+                                            avatar_url: n.sender?.avatar_url || '',
+                                            rank: 999,
+                                            gym_name: n.data?.gym_name || 'un Gimnasio'
+                                        });
+                                    }
                                 }
                             }}
+                            className="mt-3 bg-black/30 border border-white/5 rounded-xl p-3 space-y-2 select-none cursor-pointer hover:border-gym-primary/30 hover:bg-neutral-950/40 active:scale-[0.99] transition-all"
                         >
-                            {n.sender?.avatar_url ? (
-                                <FadeInImage src={n.sender.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-                            ) : (
-                                <div className="w-full h-full bg-gradient-to-br from-neutral-800 to-black flex items-center justify-center">
-                                    <span className="text-lg font-black text-gym-primary italic">
-                                        {n.sender?.username?.[0].toUpperCase() || 'G'}
-                                    </span>
+                            <div className="flex items-center gap-1.5 text-[10px] text-neutral-400 font-bold uppercase">
+                                <MapPin size={10} className="text-gym-primary" />
+                                <span className="truncate">{gymLabel}</span>
+                            </div>
+
+                            {!isCurrentlyLive && (
+                                <div className="flex flex-wrap gap-x-4 gap-y-1.5 border-t border-white/5 pt-2">
+                                    {duration && (
+                                        <div className="flex items-center gap-1 text-[10px] font-black text-blue-400 uppercase">
+                                            ⏱️ {duration} MIN
+                                        </div>
+                                    )}
+                                    {volume && volume > 0 && (
+                                        <div className="flex items-center gap-1 text-[10px] font-black text-yellow-500 uppercase">
+                                            💪 {volume.toLocaleString()} KG VOL
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Real-time Live Selected Exercises */}
+                            {isCurrentlyLive && liveExercises.length > 0 && (
+                                <div className="border-t border-white/5 pt-2.5 mt-2" onClick={(e) => e.stopPropagation()}>
+                                    <button
+                                        onClick={() => setShowExercisesModal(true)}
+                                        className="w-full flex items-center justify-between bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/40 text-red-400 font-black py-2.5 px-4 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] select-none text-[9px] tracking-wider uppercase"
+                                    >
+                                        <span className="flex items-center gap-2">
+                                            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                                            VER EJERCICIOS EN VIVO ({liveExercises.length})
+                                        </span>
+                                        <ChevronRight size={12} strokeWidth={3} />
+                                    </button>
+                                </div>
+                            )}
+
+                            {!isCurrentlyLive && muscles.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-2">
+                                    {muscles.map((muscle: string, idx: number) => {
+                                        const emojiMap: Record<string, string> = {
+                                            'Pecho': '💪', 'Espalda': '🦅', 'Pierna': '🦵', 'Hombro': '🛡️',
+                                            'Bíceps': '🔥', 'Tríceps': '⚡', 'Core': '🛡️', 'Cardio': '🏃'
+                                        };
+                                        const emoji = emojiMap[muscle] || '🏋️';
+                                        return (
+                                            <span key={idx} className="bg-neutral-800 border border-white/5 text-neutral-300 text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded">
+                                                {emoji} {muscle.toUpperCase()}
+                                            </span>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
                     </div>
-                    <div className={`absolute -bottom-1 -right-1 p-1 rounded-full border-2 border-black shadow-lg ${isCurrentlyLive ? 'bg-red-500 text-white animate-pulse' : 'bg-green-500 text-black'}`}>
-                        <Activity size={10} strokeWidth={3} />
-                    </div>
-                </div>
-
-                <div className="flex-1 min-w-0 flex flex-col text-left">
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                        <span className={`text-[9px] font-black italic uppercase tracking-wider px-2 py-0.5 rounded-full ${isCurrentlyLive ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-green-500/20 text-green-400 border border-green-500/30'}`}>
-                            {isCurrentlyLive ? '🔴 EN VIVO' : '✅ COMPLETADO'}
-                        </span>
-                        <span className="text-[9px] font-bold text-neutral-600 shrink-0">
-                            {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                    </div>
-                    
-                    <p className="text-xs font-bold leading-normal text-white mt-1">
-                        <span 
-                            className="text-gym-primary font-black uppercase mr-1 cursor-pointer hover:underline" 
-                            onClick={() => {
-                                if (n.data?.sender_id) {
-                                    setSelectedPlayer({
-                                        id: n.data.sender_id,
-                                        username: n.sender?.username || n.data?.sender_name || 'Guerrero',
-                                        avatar_url: n.sender?.avatar_url || '',
-                                        rank: 999,
-                                        gym_name: n.data?.gym_name || 'un Gimnasio'
-                                    });
-                                }
-                            }}
-                        >
-                            @{n.sender?.username || n.data?.sender_name || 'Tu amigo'}
-                        </span>
-                        {isCurrentlyLive ? `comenzó a entrenar en ${gymLabel}` : `finalizó su entrenamiento en ${gymLabel}`}
-                    </p>
-
-                    <div 
-                        onClick={() => {
-                            if (!isCurrentlyLive && n.data?.session_id) {
-                                navigate(`/history/${n.data.session_id}`);
-                            } else if (isCurrentlyLive) {
-                                // Open profile modal so they can see full live details
-                                if (n.data?.sender_id) {
-                                    setSelectedPlayer({
-                                        id: n.data.sender_id,
-                                        username: n.sender?.username || n.data?.sender_name || 'Guerrero',
-                                        avatar_url: n.sender?.avatar_url || '',
-                                        rank: 999,
-                                        gym_name: n.data?.gym_name || 'un Gimnasio'
-                                    });
-                                }
-                            }
-                        }}
-                        className="mt-3 bg-black/30 border border-white/5 rounded-xl p-3 space-y-2 select-none cursor-pointer hover:border-gym-primary/30 hover:bg-neutral-950/40 active:scale-[0.99] transition-all"
-                    >
-                        <div className="flex items-center gap-1.5 text-[10px] text-neutral-400 font-bold uppercase">
-                            <MapPin size={10} className="text-gym-primary" />
-                            <span className="truncate">{gymLabel}</span>
-                        </div>
-
-                        {!isCurrentlyLive && (
-                            <div className="flex flex-wrap gap-x-4 gap-y-1.5 border-t border-white/5 pt-2">
-                                {duration && (
-                                    <div className="flex items-center gap-1 text-[10px] font-black text-blue-400 uppercase">
-                                        ⏱️ {duration} MIN
-                                    </div>
-                                )}
-                                {volume && volume > 0 && (
-                                    <div className="flex items-center gap-1 text-[10px] font-black text-yellow-500 uppercase">
-                                        💪 {volume.toLocaleString()} KG VOL
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {/* Real-time Live Selected Exercises */}
-                        {isCurrentlyLive && liveExercises.length > 0 && (
-                            <div className="border-t border-white/5 pt-2 mt-2 space-y-1.5" onClick={(e) => e.stopPropagation()}>
-                                <p className="text-[8px] font-black text-red-400 uppercase tracking-widest flex items-center gap-1">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping"></span>
-                                    SELECCIONANDO AHORA ({liveExercises.length})
-                                </p>
-                                <div className="flex gap-2 mt-2 overflow-x-auto no-scrollbar scroll-smooth py-1" onClick={(e) => e.stopPropagation()}>
-                                    {liveExercises.map((ex: any, idx: number) => (
-                                        <span 
-                                            key={ex.id || idx} 
-                                            className="bg-red-500/10 border border-red-500/20 text-red-400 text-[9px] font-black uppercase tracking-wider px-3 py-1.5 rounded-lg whitespace-nowrap shrink-0 block"
-                                        >
-                                            🏋️ {ex.equipmentName.toUpperCase()}
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {!isCurrentlyLive && muscles.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-2">
-                                {muscles.map((muscle: string, idx: number) => {
-                                    const emojiMap: Record<string, string> = {
-                                        'Pecho': '💪', 'Espalda': '🦅', 'Pierna': '🦵', 'Hombro': '🛡️',
-                                        'Bíceps': '🔥', 'Tríceps': '⚡', 'Core': '🛡️', 'Cardio': '🏃'
-                                    };
-                                    const emoji = emojiMap[muscle] || '🏋️';
-                                    return (
-                                        <span key={idx} className="bg-neutral-800 border border-white/5 text-neutral-300 text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded">
-                                            {emoji} {muscle.toUpperCase()}
-                                        </span>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </div>
                 </div>
             </div>
-        </div>
+
+            {/* Modal de Ejercicios en Vivo */}
+            {showExercisesModal && (
+                <div 
+                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200"
+                    onClick={() => setShowExercisesModal(false)}
+                >
+                    <div 
+                        className="bg-neutral-900 border border-red-500/30 w-full max-w-sm rounded-[2.5rem] p-6 relative shadow-[0_25px_60px_rgba(220,38,38,0.25)] overflow-hidden animate-in zoom-in-95 duration-200 text-left flex flex-col max-h-[75vh]"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Header decorativo de gradiente */}
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 via-orange-500 to-red-500"></div>
+
+                        {/* Botón de cerrar */}
+                        <button 
+                            onClick={() => setShowExercisesModal(false)}
+                            className="absolute top-4 right-4 text-neutral-400 hover:text-white bg-neutral-800 hover:bg-neutral-700 transition-colors p-2 rounded-full"
+                        >
+                            <X size={14} strokeWidth={2.5} />
+                        </button>
+
+                        {/* Perfil del Guerrero */}
+                        <div className="flex items-center gap-3.5 mb-5 mt-2">
+                            <div className="w-12 h-12 rounded-full p-0.5 bg-gradient-to-tr from-red-600 to-red-400 shrink-0">
+                                <div className="w-full h-full rounded-full bg-neutral-900 overflow-hidden border border-white/10 flex items-center justify-center">
+                                    {n.sender?.avatar_url ? (
+                                        <img src={n.sender.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full bg-gradient-to-br from-neutral-800 to-black flex items-center justify-center">
+                                            <span className="text-base font-black text-gym-primary italic">
+                                                {n.sender?.username?.[0].toUpperCase() || 'G'}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="min-w-0">
+                                <h3 className="text-sm font-black text-white uppercase tracking-wide truncate">
+                                    @{n.sender?.username || n.data?.sender_name || 'Guerrero'}
+                                </h3>
+                                <p className="text-[9px] font-black text-red-400 uppercase tracking-widest flex items-center gap-1 mt-0.5">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping"></span>
+                                    Entrenando En Vivo
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Nombre del Gimnasio */}
+                        <div className="bg-black/40 border border-white/5 rounded-xl p-3.5 mb-4 flex items-center gap-2 text-xs text-neutral-300 font-bold">
+                            <MapPin size={14} className="text-red-500 shrink-0" />
+                            <span className="truncate uppercase">{gymLabel}</span>
+                        </div>
+
+                        {/* Título de la sección de ejercicios */}
+                        <h4 className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-3 px-1">
+                            Ejercicios Seleccionados ({liveExercises.length})
+                        </h4>
+
+                        {/* Lista de Ejercicios */}
+                        <div className="flex-1 overflow-y-auto pr-1 space-y-2.5 custom-scrollbar max-h-[35vh]">
+                            {liveExercises.map((ex: any, idx: number) => (
+                                <div 
+                                    key={ex.id || idx} 
+                                    className="flex items-center gap-3 bg-neutral-950/60 border border-neutral-800/80 rounded-2xl p-3.5 hover:border-red-500/20 transition-colors"
+                                >
+                                    <div className="w-8 h-8 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-lg shrink-0">
+                                        🏋️
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-xs font-black text-white uppercase tracking-wide leading-tight truncate">
+                                            {ex.equipmentName}
+                                        </p>
+                                        <div className="flex gap-2.5 mt-1.5">
+                                            <span className="text-[9px] font-black text-red-400 uppercase tracking-wider bg-red-500/5 px-2 py-0.5 rounded border border-red-500/10">
+                                                {ex.category || 'Músculo'}
+                                            </span>
+                                            {ex.setsCount > 0 && (
+                                                <span className="text-[9px] font-bold text-neutral-400 uppercase">
+                                                    💪 {ex.setsCount} Series
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Footer informativo */}
+                        <div className="mt-5 pt-4 border-t border-white/5 text-center">
+                            <p className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider">
+                                GymPartner Live Tracker
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
     );
 };
 
