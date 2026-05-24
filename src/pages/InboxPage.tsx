@@ -163,55 +163,62 @@ export const InboxPage = () => {
     return (
         <div className="flex-1 flex flex-col bg-transparent pb-20 relative overflow-hidden">
             {/* Header & Tabs */}
-            <div className="sticky top-0 z-40 bg-neutral-950/90 backdrop-blur-xl border-b border-white/5 pb-0 flex flex-col relative">
-                <div className="px-4 pt-4 pb-3 flex items-center gap-3">
-                    <h1 className="text-xl font-black italic uppercase text-white tracking-widest flex items-center gap-2 select-none">
-                        <MessageCircle size={20} className="text-gym-primary animate-pulse" />
-                        Sala de Guerra
+            <div className="sticky top-0 z-40 bg-neutral-950/90 backdrop-blur-xl border-b border-white/5 pb-0 flex flex-col relative shrink-0">
+                {/* CENTERED TITLING */}
+                <div className="px-4 pt-5 pb-2 flex flex-col items-center justify-center text-center">
+                    <h1 className="text-2xl font-black italic uppercase tracking-[0.25em] text-center select-none bg-gradient-to-r from-white via-gym-primary to-white bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(255,215,0,0.1)]">
+                        SALA
                     </h1>
+                    <p className="text-[7.5px] font-black text-neutral-500 tracking-[0.45em] uppercase mt-1 select-none">
+                        Centro de Operaciones
+                    </p>
                 </div>
 
-                {/* PREMIUM TABS */}
-                <div className="flex px-4 border-t border-white/5 bg-black/40">
-                    <button
-                        onClick={() => setActiveTab('chats')}
-                        className={`flex-1 py-4 text-center font-black uppercase text-xs tracking-wider transition-all flex items-center justify-center gap-2 relative group ${
-                            activeTab === 'chats'
-                                ? 'text-white'
-                                : 'text-neutral-500 hover:text-neutral-300'
-                        }`}
-                    >
-                        <MessageCircle size={14} className={activeTab === 'chats' ? 'text-gym-primary' : ''} />
-                        Mensajes
-                        {totalUnreadMessages > 0 && (
-                            <span className="bg-gym-primary text-neutral-950 text-[9px] font-black px-1.5 py-0.5 rounded-full shrink-0 shadow-[0_0_8px_rgba(255,215,0,0.5)] animate-pulse">
-                                {totalUnreadMessages}
-                            </span>
-                        )}
-                        {activeTab === 'chats' && (
-                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gym-primary rounded-full shadow-[0_0_12px_#ffd700]"></div>
-                        )}
-                    </button>
+                {/* PREMIUM TACTICAL CAPSULE TABS */}
+                <div className="px-4 pb-4 pt-1.5 flex justify-center bg-transparent">
+                    <div className="p-1 bg-neutral-900/80 border border-white/10 rounded-full flex items-center w-full max-w-[320px] shadow-[inset_0_2px_5px_rgba(0,0,0,0.8)] backdrop-blur-md relative">
+                        <button
+                            onClick={() => setActiveTab('chats')}
+                            className={`flex-1 py-2.5 rounded-full text-center font-black uppercase text-[10px] tracking-wider transition-all duration-300 flex items-center justify-center gap-2 relative active:scale-95 ${
+                                activeTab === 'chats'
+                                    ? 'bg-gradient-to-r from-gym-primary to-yellow-500 text-neutral-950 font-black shadow-[0_2px_15px_rgba(255,215,0,0.25)]'
+                                    : 'text-neutral-400 hover:text-neutral-200'
+                            }`}
+                        >
+                            <MessageCircle size={13} className={activeTab === 'chats' ? 'text-neutral-950' : 'text-gym-primary'} />
+                            <span>Mensajes</span>
+                            {totalUnreadMessages > 0 && (
+                                <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full shrink-0 shadow-[0_0_8px_rgba(255,215,0,0.3)] animate-pulse ${
+                                    activeTab === 'chats'
+                                        ? 'bg-neutral-950 text-gym-primary'
+                                        : 'bg-gym-primary text-neutral-950'
+                                }`}>
+                                    {totalUnreadMessages}
+                                </span>
+                            )}
+                        </button>
 
-                    <button
-                        onClick={() => setActiveTab('matches')}
-                        className={`flex-1 py-4 text-center font-black uppercase text-xs tracking-wider transition-all flex items-center justify-center gap-2 relative group ${
-                            activeTab === 'matches'
-                                ? 'text-white'
-                                : 'text-neutral-500 hover:text-neutral-300'
-                        }`}
-                    >
-                        <Swords size={14} className={activeTab === 'matches' ? 'text-yellow-500 animate-bounce' : ''} />
-                        Desafíos
-                        {invitations.length > 0 && (
-                            <span className="bg-yellow-500 text-neutral-950 text-[9px] font-black px-1.5 py-0.5 rounded-full shrink-0 shadow-[0_0_8px_rgba(234,179,8,0.5)] animate-pulse">
-                                {invitations.length}
-                            </span>
-                        )}
-                        {activeTab === 'matches' && (
-                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-yellow-500 rounded-full shadow-[0_0_12px_#EAB308]"></div>
-                        )}
-                    </button>
+                        <button
+                            onClick={() => setActiveTab('matches')}
+                            className={`flex-1 py-2.5 rounded-full text-center font-black uppercase text-[10px] tracking-wider transition-all duration-300 flex items-center justify-center gap-2 relative active:scale-95 ${
+                                activeTab === 'matches'
+                                    ? 'bg-gradient-to-r from-gym-primary to-yellow-500 text-neutral-950 font-black shadow-[0_2px_15px_rgba(255,215,0,0.25)]'
+                                    : 'text-neutral-400 hover:text-neutral-200'
+                            }`}
+                        >
+                            <Swords size={13} className={activeTab === 'matches' ? 'text-neutral-950' : 'text-yellow-500'} />
+                            <span>Desafíos</span>
+                            {invitations.length > 0 && (
+                                <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full shrink-0 shadow-[0_0_8px_rgba(234,179,8,0.3)] animate-pulse ${
+                                    activeTab === 'matches'
+                                        ? 'bg-neutral-950 text-yellow-500'
+                                        : 'bg-yellow-500 text-neutral-950'
+                                }`}>
+                                    {invitations.length}
+                                </span>
+                            )}
+                        </button>
+                    </div>
                 </div>
 
                 <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/5 to-transparent"></div>
