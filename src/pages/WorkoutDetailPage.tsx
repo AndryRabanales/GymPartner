@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { ChevronLeft, Clock, Dumbbell, MapPin, Calendar } from 'lucide-react';
+import { ChevronLeft, Clock, Dumbbell, MapPin, Calendar, Trash2, Loader2 } from 'lucide-react';
+import { workoutService } from '../services/WorkoutService';
+import toast from 'react-hot-toast';
 
 interface ExerciseDetail {
     exercise_id: string;
@@ -36,6 +38,7 @@ interface ExerciseDetail {
 
 interface WorkoutDetail {
     id: string;
+    user_id: string;
     started_at: string;
     end_time: string;
     gym_name: string;
@@ -49,13 +52,44 @@ export default function WorkoutDetailPage() {
     const { sessionId } = useParams<{ sessionId: string }>();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
+    const [deleting, setDeleting] = useState(false);
     const [workout, setWorkout] = useState<WorkoutDetail | null>(null);
+    const [currentUser, setCurrentUser] = useState<any | null>(null);
+
+    useEffect(() => {
+        supabase.auth.getUser().then(({ data: { user } }) => {
+            setCurrentUser(user);
+        });
+    }, []);
 
     useEffect(() => {
         if (sessionId) {
             loadWorkoutDetail(sessionId);
         }
     }, [sessionId]);
+
+    const handleDeleteWorkout = async () => {
+        if (!workout) return;
+        
+        const confirmed = window.confirm("¿Estás seguro de que deseas eliminar este entrenamiento? Esta acción no se puede deshacer y borrará permanentemente sus estadísticas del radar.");
+        if (!confirmed) return;
+
+        setDeleting(true);
+        try {
+            const { success, error } = await workoutService.deleteSession(workout.id);
+            if (success) {
+                toast.success("¡Entrenamiento eliminado correctamente! ⚔️");
+                navigate(-1);
+            } else {
+                alert(`Error al eliminar: ${error?.message || 'Error desconocido'}`);
+            }
+        } catch (err: any) {
+            console.error("Error deleting session:", err);
+            alert(`Error al eliminar: ${err.message || 'Error desconocido'}`);
+        } finally {
+            setDeleting(false);
+        }
+    };
 
     const loadWorkoutDetail = async (id: string) => {
         try {
@@ -64,6 +98,7 @@ export default function WorkoutDetailPage() {
                 .from('workout_sessions')
                 .select(`
                     id,
+                    user_id,
                     started_at,
                     end_time,
                     gyms ( name, id )
@@ -166,6 +201,7 @@ export default function WorkoutDetailPage() {
 
             setWorkout({
                 id: session.id,
+                user_id: session.user_id,
                 started_at: session.started_at,
                 end_time: session.end_time,
                 gym_name: gymData?.name || 'Gimnasio Desconocido',
@@ -220,17 +256,36 @@ export default function WorkoutDetailPage() {
         <div className="min-h-screen bg-black text-white pb-24">
             {/* Header */}
             <div className="bg-gradient-to-b from-neutral-900 to-black border-b border-neutral-800 p-6">
-                <button
-                    onClick={() => navigate(-1)}
-                    className="flex items-center gap-2 text-gym-primary mb-4 hover:underline"
-                >
-                    <ChevronLeft size={20} />
-                    Volver
-                </button>
+                <div className="flex justify-between items-start gap-4">
+                    <div>
+                        <button
+                            onClick={() => navigate(-1)}
+                            className="flex items-center gap-2 text-gym-primary mb-4 hover:underline"
+                        >
+                            <ChevronLeft size={20} />
+                            Volver
+                        </button>
 
-                <h1 className="text-2xl md:text-3xl font-black uppercase italic mb-2">
-                    Detalles de Sesión
-                </h1>
+                        <h1 className="text-2xl md:text-3xl font-black uppercase italic mb-2">
+                            Detalles de Sesión
+                        </h1>
+                    </div>
+
+                    {workout.user_id === currentUser?.id && (
+                        <button
+                            onClick={handleDeleteWorkout}
+                            disabled={deleting}
+                            className="mt-6 bg-red-950/20 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/30 rounded-2xl px-4 py-2.5 font-black text-[10px] tracking-wider uppercase transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {deleting ? (
+                                <Loader2 size={14} className="animate-spin" />
+                            ) : (
+                                <Trash2 size={14} />
+                            )}
+                            {deleting ? 'Eliminando...' : 'Eliminar'}
+                        </button>
+                    )}
+                </div>
 
                 <div className="flex flex-col gap-1 mb-4 text-neutral-400">
                     <div className="flex items-center gap-2 text-sm">
