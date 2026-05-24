@@ -682,7 +682,8 @@ export const NotificationsPage = () => {
     const loadNotifications = async () => {
         setLoading(true);
         try {
-            const all = await notificationService.getNotifications(50);
+            const raw = await notificationService.getNotifications(50);
+            const all = raw.filter(n => n.type !== 'invitation');
             
             const senderIds = Array.from(new Set(all.map(n => 
                 n.data?.sender_id || 

@@ -51,6 +51,7 @@ export const notificationService = {
         const { count, error } = await supabase
             .from('notifications')
             .select('id', { count: 'exact' })
+            .neq('type', 'invitation')
             .eq('is_read', false);
 
         if (error) {
@@ -114,7 +115,7 @@ export const notificationService = {
     },
 
     /**
-     * Marcar todas como leídas
+     * Marcar todas como leídas (excluyendo invitaciones de entrenamiento)
      */
     async markAllAsRead() {
         // Obtenemos el usuario actual primero para asegurar la policy
@@ -125,6 +126,7 @@ export const notificationService = {
             .from('notifications')
             .update({ is_read: true })
             .eq('user_id', user.id)
+            .neq('type', 'invitation')
             .eq('is_read', false);
 
         if (error) {
