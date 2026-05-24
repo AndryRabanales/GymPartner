@@ -773,14 +773,16 @@ class WorkoutService {
 
     // Share a routine with multiple users
     async shareRoutine(routineId: string, sharedBy: string, sharedWithUserIds: string[]) {
-        if (sharedWithUserIds.length === 0) return { success: true };
-
         try {
             // First, delete any existing shares for this routine so we can rewrite them cleanly
             await supabase
                 .from('routine_shares')
                 .delete()
                 .eq('routine_id', routineId);
+
+            if (sharedWithUserIds.length === 0) {
+                return { success: true };
+            }
 
             const payload = sharedWithUserIds.map(userId => ({
                 routine_id: routineId,

@@ -46,7 +46,8 @@ export const ShareRoutinesToUserModal = ({
                 const { data: sharedData, error: sharedError } = await supabase
                     .from('routine_shares')
                     .select('routine_id')
-                    .eq('shared_with', requesterId);
+                    .eq('shared_with', requesterId)
+                    .eq('shared_by', userId);
 
                 if (sharedError && sharedError.code !== '42P01') throw sharedError;
 
