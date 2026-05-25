@@ -458,7 +458,7 @@ export const UserProfile = () => {
             {/* ... content ... */}
             {/* Header Profile Card - Premium Hextech Cybernetic Design */}
             <div
-                className="bg-neutral-900/60 backdrop-blur-xl border border-white/10 hover:border-gym-primary/30 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 relative overflow-hidden transition-all shadow-[0_20px_50px_rgba(0,0,0,0.6)] group min-h-[350px] sm:min-h-0"
+                className="bg-neutral-900/60 backdrop-blur-xl border border-white/10 hover:border-gym-primary/30 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 relative overflow-hidden transition-all shadow-[0_20px_50px_rgba(0,0,0,0.6)] group min-h-[240px] sm:min-h-0"
                 style={profile?.custom_settings?.banner_url ? {
                     backgroundImage: `url(${profile.custom_settings.banner_url})`,
                     backgroundSize: 'cover',
