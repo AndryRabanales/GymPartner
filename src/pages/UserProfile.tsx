@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { MapPin, Edit2, LogIn, Loader, Swords, Dumbbell, LineChart, History, Star, Search, ArrowLeft, ArrowRight, Crown, Map as MapIcon, Image as ImageIcon, Palette, Dices, Coins, Share2, Trash2, Heart } from 'lucide-react'; // Added Dices, Share2, Trash2
+import { MapPin, Edit2, LogIn, Loader, Swords, Dumbbell, LineChart, History, Star, Search, ArrowLeft, ArrowRight, Crown, Map as MapIcon, Image as ImageIcon, Palette, Dices, Coins, Share2, Trash2, Heart, X } from 'lucide-react'; // Added Dices, Share2, Trash2
 // import { UserPlus, Grid } from 'lucide-react'; // UNUSED: Hidden Community Features
 // import { Grid } from 'lucide-react'; // UNUSED: Hidden Community Features
 import { Link, useNavigate } from 'react-router-dom';
@@ -57,6 +57,7 @@ export const UserProfile = () => {
     const [showEditProfile, setShowEditProfile] = useState(false);
     const [showSocialProfile, setShowSocialProfile] = useState(false);
     const [showGymsModal, setShowGymsModal] = useState(false);
+    const [showAllTagsModal, setShowAllTagsModal] = useState(false);
     const [skipOnboarding, setSkipOnboarding] = useState(true); // Default to TRUE: Skip onboarding completely and show main dashboard directly
 
     const hasSeededRef = useRef(false); // Track if we've run the seeder
@@ -613,7 +614,7 @@ export const UserProfile = () => {
 
                     {/* Gym Tags & Share - CARD FOOTER */}
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-3 pt-2 border-t border-white/5 w-full">
-                        <div className="flex flex-wrap items-center gap-1.5 justify-center sm:justify-start w-full sm:w-auto">
+                        <div className="flex flex-wrap items-center gap-1 justify-center sm:justify-start w-[95%] sm:w-auto mx-auto sm:mx-0">
                             {(() => {
                                 // Sort gyms: Home Base first, then Favorites, then others
                                 const sortedGyms = [...userGyms].sort((a, b) => {
@@ -624,7 +625,7 @@ export const UserProfile = () => {
                                     return 0;
                                 });
 
-                                const limit = 3;
+                                const limit = 6;
                                 const displayGyms = sortedGyms.slice(0, limit);
                                 const hasMore = sortedGyms.length > limit;
                                 const remainingCount = sortedGyms.length - limit;
@@ -634,8 +635,8 @@ export const UserProfile = () => {
                                         {displayGyms.map(gym => {
                                             let textColor = "text-neutral-300 hover:text-white";
                                             let iconColor = "text-neutral-500";
-                                            let bgColor = "bg-neutral-800 hover:bg-neutral-700";
-                                            let borderColor = "border-neutral-700/50 hover:border-neutral-500";
+                                            let bgColor = "bg-neutral-800/80 hover:bg-neutral-700/90";
+                                            let borderColor = "border-neutral-800/50 hover:border-neutral-500";
                                             let shadow = "hover:shadow-sm";
 
                                             if (gym.is_favorite) {
@@ -656,10 +657,10 @@ export const UserProfile = () => {
                                                 <Link
                                                     key={gym.gym_id}
                                                     to={`/territory/${gym.gym_id}`}
-                                                    className={`px-2 py-1 rounded-full flex items-center gap-1 text-[10px] sm:text-xs transition-all no-underline border inline-flex shrink-0 ${borderColor} ${textColor} ${bgColor} ${shadow}`}
+                                                    className={`px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-full flex items-center gap-1 text-[9px] sm:text-[10px] transition-all no-underline border inline-flex shrink-0 ${borderColor} ${textColor} ${bgColor} ${shadow}`}
                                                 >
-                                                    <MapPin size={10} className={`sm:w-3 sm:h-3 ${iconColor}`} />
-                                                    <span className="truncate max-w-[85px] sm:max-w-[120px]">{gym.gym_name}</span>
+                                                    <MapPin size={8} className={`sm:w-3 sm:h-3 ${iconColor}`} />
+                                                    <span className="truncate max-w-[75px] sm:max-w-[120px]">{gym.gym_name}</span>
                                                 </Link>
                                             );
                                         })}
@@ -668,9 +669,9 @@ export const UserProfile = () => {
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    setShowGymsModal(true);
+                                                    setShowAllTagsModal(true);
                                                 }}
-                                                className="px-2 py-1 rounded-full flex items-center gap-1 text-[10px] sm:text-xs transition-all border border-gym-primary/30 text-gym-primary bg-gym-primary/10 hover:bg-gym-primary hover:text-black font-black uppercase tracking-wider shrink-0 cursor-pointer"
+                                                className="px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-full flex items-center gap-1 text-[9px] sm:text-[10px] transition-all border border-gym-primary/30 text-gym-primary bg-gym-primary/10 hover:bg-gym-primary hover:text-black font-black uppercase tracking-wider shrink-0 cursor-pointer"
                                                 title={`Ver ${remainingCount} gimnasios más`}
                                             >
                                                 <span>+{remainingCount}</span>
@@ -1088,6 +1089,71 @@ export const UserProfile = () => {
                         <div className="w-3 h-3 bg-yellow-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
                         <div className="w-3 h-3 bg-yellow-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
                         <div className="w-3 h-3 bg-yellow-500 rounded-full animate-bounce"></div>
+                    </div>
+                </div>
+            )}
+            {/* ALL TAGS MINI MODAL */}
+            {showAllTagsModal && (
+                <div className="fixed inset-0 z-[110] bg-black/85 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setShowAllTagsModal(false)}>
+                    <div 
+                        className="bg-neutral-950/95 border border-white/10 rounded-[2rem] p-5 w-full max-w-sm flex flex-col relative animate-in zoom-in duration-200 shadow-[0_20px_50px_rgba(0,0,0,0.8)]"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <button 
+                            onClick={() => setShowAllTagsModal(false)}
+                            className="absolute top-4 right-4 text-neutral-400 hover:text-white transition-colors cursor-pointer w-8 h-8 rounded-full bg-white/5 flex items-center justify-center border border-white/10"
+                        >
+                            <X size={16} />
+                        </button>
+                        <h3 className="font-black text-xs text-neutral-400 uppercase tracking-widest mb-4 pr-10 flex items-center gap-1.5 italic">
+                            <MapPin size={14} className="text-gym-primary" />
+                            Gimnasios Registrados ({userGyms.length})
+                        </h3>
+                        <div className="flex flex-wrap gap-1.5 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin justify-center sm:justify-start w-full">
+                            {(() => {
+                                const sortedGyms = [...userGyms].sort((a, b) => {
+                                    if (a.is_home_base && !b.is_home_base) return -1;
+                                    if (!a.is_home_base && b.is_home_base) return 1;
+                                    if (a.is_favorite && !b.is_favorite) return -1;
+                                    if (!a.is_favorite && b.is_favorite) return 1;
+                                    return 0;
+                                });
+
+                                return sortedGyms.map(gym => {
+                                    let textColor = "text-neutral-300 hover:text-white";
+                                    let iconColor = "text-neutral-500";
+                                    let bgColor = "bg-neutral-800/80 hover:bg-neutral-700/90";
+                                    let borderColor = "border-neutral-800/50 hover:border-neutral-500";
+                                    let shadow = "hover:shadow-sm";
+
+                                    if (gym.is_favorite) {
+                                        borderColor = "border-red-500/50 hover:border-red-500";
+                                        textColor = "text-red-400 hover:text-red-300";
+                                        iconColor = "text-red-500";
+                                        bgColor = "bg-red-500/10 hover:bg-red-500/20";
+                                        shadow = "hover:shadow-[0_0_15px_rgba(239,68,68,0.2)]";
+                                    } else if (gym.is_home_base) {
+                                        borderColor = "border-yellow-500/50 hover:border-yellow-500";
+                                        textColor = "text-yellow-400 hover:text-yellow-300";
+                                        iconColor = "text-yellow-500";
+                                        bgColor = "bg-yellow-500/10 hover:bg-yellow-500/20";
+                                        shadow = "hover:shadow-[0_0_15px_rgba(234,179,8,0.2)]";
+                                    }
+
+                                    return (
+                                        <Link
+                                            key={gym.gym_id}
+                                            to={`/territory/${gym.gym_id}`}
+                                            onClick={() => setShowAllTagsModal(false)}
+                                            className={`px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-full flex items-center gap-1 text-[9px] sm:text-[10px] transition-all no-underline border inline-flex shrink-0 ${borderColor} ${textColor} ${bgColor} ${shadow}`}
+                                        >
+                                            <MapPin size={8} className={`sm:w-3 sm:h-3 ${iconColor}`} />
+                                            <span className="truncate max-w-[95px] sm:max-w-[120px]">{gym.gym_name}</span>
+                                        </Link>
+                                    );
+                                });
+                            })()}
+                        </div>
                     </div>
                 </div>
             )}
