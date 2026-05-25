@@ -59,6 +59,10 @@ export const Radar = () => {
     }, [authUser]);
 
     const loadNearbyUsers = async () => {
+        if (!authUser?.id) {
+            console.log("🛰️ [RADAR] Waiting for authUser session to be fully resolved...");
+            return;
+        }
         setLoading(true);
         try {
             console.log("🛰️ [RADAR] Escaneando guerreros...");

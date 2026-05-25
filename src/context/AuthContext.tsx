@@ -121,10 +121,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                             const fullName = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || 'Guerrero';
                             // Normalize username to remove any spaces or special characters
                             const baseUsername = currentUser.user_metadata?.username || currentUser.user_metadata?.user_name || fullName;
-                            const formattedUsername = baseUsername
+                            let formattedUsername = baseUsername
                                 .toLowerCase()
                                 .replace(/[^a-z0-9_]/g, '_')
-                                .substring(0, 30);
+                                .substring(0, 25);
+                            
+                            // 🚀 COLLISION-PROOF OAUTH USERNAMES: Append a random 4-digit number to guarantee uniqueness!
+                            const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+                            formattedUsername = `${formattedUsername}_${randomSuffix}`;
                             
                             const avatarUrl = currentUser.user_metadata?.avatar_url || null;
 

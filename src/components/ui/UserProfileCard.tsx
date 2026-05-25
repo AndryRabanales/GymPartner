@@ -211,12 +211,12 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
                             {user.avatar_url ? (
                                 <FadeInImage
                                     src={cloudinaryService.getOptimizedImageUrl(user.avatar_url, { width: 150, height: 150 })}
-                                    alt={user.username}
+                                    alt={user.username || 'Atleta'}
                                     className="w-full h-full object-cover"
                                 />
                             ) : (
                                 <div className="w-full h-full bg-gradient-to-br from-neutral-800 to-black flex items-center justify-center">
-                                    <span className="text-3xl font-black text-gym-primary italic">{user.username[0].toUpperCase()}</span>
+                                    <span className="text-3xl font-black text-gym-primary italic">{(user.username?.[0] || 'G').toUpperCase()}</span>
                                 </div>
                             )}
                             {user.is_pro && (
@@ -231,7 +231,7 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
                 {/* Name & Gym */}
                 <div className="text-center mt-3 pb-4 border-b border-white/5 w-full">
                     <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase leading-tight drop-shadow-lg px-4">
-                        {user.username.replace('_', ' ')}
+                        {(user.username || 'Guerrero').replace('_', ' ')}
                     </h2>
                     {user.gym_name ? (
                         <p className="text-[10px] font-bold text-neutral-500 mt-1 flex items-center justify-center gap-1.5 uppercase tracking-widest">
