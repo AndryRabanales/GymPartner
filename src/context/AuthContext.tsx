@@ -43,7 +43,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         console.log("✅ [AuthContext] Supabase is configured correctly. Triggering initAuth...");
 
-        // Check active session
+        // 🚨 GLOBAL FAIL-SAFE TIMEOUT: Force unblock the UI if anything hangs for more than 2.5 seconds!
+        const failSafeTimeout = setTimeout(() => {
+            console.warn("⏰ [AuthContext Fail-Safe] Auth initialization took too long (>2.5s). Forcing loading = false to unblock UI.");
+            setLoading(false);
+        }, 2500);
+
+        // Check active session with a strict 1500ms timeout to prevent storage read hangs
         const initAuth = async () => {
             console.log("⚙️ [AuthContext] initAuth execution started...");
             try {
@@ -51,19 +57,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 const isAuthCallback = window.location.hash.includes('access_token') || window.location.search.includes('code=');
                 if (isAuthCallback) console.log("⏳ [AuthContext Callback] Auth Callback Detected - Initializing Session...");
 
-                const { data: { session }, error } = await supabase.auth.getSession();
+                console.log("⚙️ [AuthContext] Fetching session with 1.5s timeout...");
+                const sessionPromise = supabase.auth.getSession();
+                const timeoutPromise = new Promise<{ data: { session: null }; error: Error }>((_, reject) => 
+                    setTimeout(() => reject(new Error("Timeout getting session")), 1500)
+                );
+
+                const { data: { session }, error } = await Promise.race([
+                    sessionPromise,
+                    timeoutPromise as any
+                ]);
 
                 if (error) console.error("❌ [AuthContext Error] Session Init Error:", error);
                 if (session) {
                     console.log("✅ [AuthContext Session] Restored for user:", session.user.email);
                     setSession(session);
                     setUser(session.user);
+                    clearTimeout(failSafeTimeout);
                 } else {
                     console.log("ℹ️ [AuthContext Session] No active session found via getSession.");
                     if (isAuthCallback) {
                         console.warn("⚠️ [AuthContext Callback] Params present but no session returned from getSession. Waiting for onAuthStateChange...");
                         // We don't set loading false yet, we let the listener handle it or a timeout
-                        // detailed safety: set timeout to force loading false if it hangs
                         setTimeout(() => {
                             console.log("⏰ [AuthContext Timeout] Forcing loading to false due to auth callback delay.");
                             setLoading(false);
@@ -76,6 +91,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             } finally {
                 console.log("⚙️ [AuthContext] initAuth finished. Setting loading state to false.");
                 setLoading(false);
+                clearTimeout(failSafeTimeout);
             }
         };
 
@@ -92,6 +108,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log("📡 [AuthContext Listener] Registering onAuthStateChange listener...");
         // Listen for changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+            clearTimeout(failSafeTimeout);
             console.log("📡 [AuthContext Listener] Auth State Changed! Event:", _event, "Session exists:", !!session);
             try {
                 setSession(session);
