@@ -94,16 +94,19 @@ export const Radar = () => {
                 fallbackQueryPromise
             ]);
 
-            const profiles = result.data;
+            const profiles = result.data || [];
             const pError = result.error;
 
-            if (pError) throw pError;
-
-            if (result.isFallback) {
-                console.log("ℹ️ [RADAR] Successfully loaded profiles using the resilient direct select fallback!");
+            if (pError) {
+                console.error("❌ [RADAR] Failed to load profiles (Error):", pError);
+                throw pError;
             }
 
-            if (profiles) {
+            if (result.isFallback) {
+                console.log(`ℹ️ [RADAR] Successfully loaded profiles using the resilient direct select fallback! Count: ${profiles.length}. Error (if any):`, pError);
+            }
+
+            if (profiles && profiles.length > 0) {
                 // 2. Fetch ALL Gym Passports for these users in one batch
                 const profileIds = profiles.map(p => p.id);
                 const { data: passportsData, error: passError } = await supabase

@@ -45,6 +45,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const isAuthCallback = window.location.hash.includes('access_token') || window.location.search.includes('code=');
         console.log("✅ [AuthContext] Supabase is configured correctly. isAuthCallback:", isAuthCallback);
 
+        if (isAuthCallback) {
+            // Clean the URL hash/query parameters instantly to prevent infinite token-refresh/parsing loops!
+            try {
+                const cleanUrl = window.location.origin + window.location.pathname;
+                window.history.replaceState(null, '', cleanUrl);
+                console.log("🧹 [AuthContext] URL cleaned instantly from OAuth credentials.");
+            } catch (historyErr) {
+                console.error("⚠️ [AuthContext] Failed to clean URL history:", historyErr);
+            }
+        }
+
         // 🚨 GLOBAL FAIL-SAFE TIMEOUT: Force unblock the UI if anything hangs!
         // We set a 3-second fail-safe timeout for normal loads, and 8 seconds for callbacks.
         const failSafeDuration = isAuthCallback ? 8000 : 3000;
