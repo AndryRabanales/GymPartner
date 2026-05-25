@@ -215,6 +215,13 @@ class CloudinaryService {
             return `${url}?width=${width}&height=${height}&resize=${crop === 'fill' ? 'cover' : 'contain'}`;
         }
 
+        // 3.5. Facebook Graph Image Optimization to prevent pixelation
+        if (url.includes('graph.facebook.com')) {
+            const baseUrl = url.split('?')[0];
+            // Request high-resolution image from Facebook
+            return `${baseUrl}?width=${width}&height=${height}`;
+        }
+
         // 4. Universal Proxy REMOVED due to 401 Unauthorized (restricted in dashboard)
         // If it's not Cloudinary, Unsplash or Supabase, return original URL
         return url;

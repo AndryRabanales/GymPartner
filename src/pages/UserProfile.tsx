@@ -13,6 +13,7 @@ import { LocationAccessModal } from '../components/common/LocationAccessModal';
 import { ReferralModal } from '../components/common/ReferralModal';
 import { PlayerProfileModal } from '../components/profile/PlayerProfileModal';
 import { BoostModal } from '../components/profile/BoostModal';
+import { cloudinaryService } from '../services/CloudinaryService';
 
 
 import { userService } from '../services/UserService';
@@ -523,7 +524,7 @@ export const UserProfile = () => {
                         {/* Avatar Image - INCREASED SIZE FOR VISIBILITY */}
                         <div className={`w-[115px] h-[115px] sm:w-[150px] sm:h-[150px] rounded-full overflow-hidden border-4 z-10 bg-neutral-800 shadow-inner relative transition-colors duration-500 ${currentTier.borderColor}`}>
                             <img
-                                src={userAvatar}
+                                src={cloudinaryService.getOptimizedImageUrl(userAvatar, { width: 300, height: 300 })}
                                 alt="Profile"
                                 className="w-full h-full object-cover scale-110" // Slight zoom to appreciate face better
                             />
