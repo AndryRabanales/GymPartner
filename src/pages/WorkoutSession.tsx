@@ -21,7 +21,7 @@ import { Loader2, ArrowLeft, Image as ImageIcon, MapPin, Search, Plus, Save, Act
 import { getCurrentPosition } from '../utils/geolocationUtils';
 import type { GymPlace, Database } from '../types/database';
 import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 interface WorkoutSet {
     id: string; // Temporary ID for UI
@@ -103,6 +103,7 @@ export const WorkoutSession = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const { gymId: routeGymId } = useParams<{ gymId: string }>();
+    const [searchParams] = useSearchParams();
 
     // State
     const [loading, setLoading] = useState(true);
@@ -633,8 +634,18 @@ export const WorkoutSession = () => {
                     }
                 }
             } else {
-                if (localRoutines.length === 0) setShowAddModal(true);
-                else setShowStartOptionsModal(true);
+                const routineIdParam = searchParams.get('routineId');
+                const autoRoutine = routineIdParam ? localRoutines.find(r => r.id === routineIdParam) : null;
+
+                if (autoRoutine) {
+                    console.log("⚡ Auto-loading routine from search parameter:", autoRoutine.name);
+                    setCurrentRoutineName(autoRoutine.name);
+                    const result = await startNewSession(targetGymId || undefined);
+                    await loadRoutine(autoRoutine, result?.freshArsenal || mergedInventory);
+                } else {
+                    if (localRoutines.length === 0) setShowAddModal(true);
+                    else setShowStartOptionsModal(true);
+                }
             }
 
         } catch (error) {

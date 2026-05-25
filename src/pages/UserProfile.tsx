@@ -24,6 +24,7 @@ import { getCurrentPosition } from '../utils/geolocationUtils';
 import { normalizeText, getMuscleGroup } from '../utils/inventoryUtils';
 import { StreakFlame } from '../components/gamification/StreakFlame';
 import { alphaService } from '../services/AlphaService';
+import { workoutService } from '../services/WorkoutService';
 import { useBottomNav } from '../context/BottomNavContext';
 import { TierService } from '../services/TierService';
 import { seedExercisesCatalog } from '../services/ExerciseSeeder';
@@ -52,6 +53,7 @@ export const UserProfile = () => {
     const [profile, setProfile] = useState<ProfileData | null>(null);
     const [loading, setLoading] = useState(true);
     const [userGyms, setUserGyms] = useState<UserPrimaryGym[]>([]);
+    const [routines, setRoutines] = useState<any[]>([]);
 
 
     const [showEditProfile, setShowEditProfile] = useState(false);
@@ -267,6 +269,40 @@ export const UserProfile = () => {
                 setUserGyms(sortedGyms);
             } catch (gymsErr) {
                 console.error("❌ [loadUserData] User gyms fetch failed:", gymsErr);
+            }
+        })();
+
+        // Load and sort routines in background
+        (async () => {
+            try {
+                if (!user) return;
+                const [allRoutines, sessionHistory] = await Promise.all([
+                    workoutService.getUserRoutines(user.id, null),
+                    supabase
+                        .from('workout_sessions')
+                        .select('routine_name')
+                        .eq('user_id', user.id)
+                        .not('finished_at', 'is', null)
+                ]);
+
+                // Count frequency of each routine name
+                const frequencyMap: Record<string, number> = {};
+                sessionHistory.data?.forEach(s => {
+                    if (s.routine_name) {
+                        frequencyMap[s.routine_name] = (frequencyMap[s.routine_name] || 0) + 1;
+                    }
+                });
+
+                // Sort routines by frequency descending
+                const sorted = [...allRoutines].sort((a, b) => {
+                    const countA = frequencyMap[a.name] || 0;
+                    const countB = frequencyMap[b.name] || 0;
+                    return countB - countA;
+                });
+
+                setRoutines(sorted);
+            } catch (err) {
+                console.error("❌ [loadUserData] Routines fetch failed:", err);
             }
         })();
     };
@@ -737,6 +773,69 @@ export const UserProfile = () => {
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 translate-x-[-200%] group-hover:animate-shine pointer-events-none" />
                     </div>
                 </button>
+
+                {/* --- QUICK START ROUTINES (INICIO RÁPIDO) --- */}
+                <div className="flex flex-col gap-2 w-full mt-1">
+                    <div className="flex items-center justify-between px-1">
+                        <span className="font-black text-[9px] sm:text-[10px] text-neutral-500 uppercase tracking-[0.2em] flex items-center gap-1.5 italic">
+                            <span className="w-1.5 h-1.5 rounded-full bg-gym-primary animate-pulse"></span>
+                            ⚡ Inicio Rápido de Rutinas
+                        </span>
+                        <Link 
+                            to="/arsenal" 
+                            className="font-bold text-[9px] sm:text-[10px] text-gym-primary/70 hover:text-gym-primary transition-colors uppercase tracking-wider no-underline italic"
+                        >
+                            Ver Todo &rarr;
+                        </Link>
+                    </div>
+
+                    <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-none snap-x snap-mandatory w-full max-w-full">
+                        {routines.length === 0 ? (
+                            <Link 
+                                to="/arsenal"
+                                className="w-full bg-neutral-900/40 hover:bg-neutral-900/60 border border-white/5 hover:border-white/10 rounded-2xl p-4 flex items-center justify-between backdrop-blur-sm no-underline transition-all group shrink-0"
+                            >
+                                <div className="flex items-center gap-3 text-left">
+                                    <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-neutral-400 group-hover:text-gym-primary transition-colors">
+                                        <Dumbbell size={14} />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="font-black text-[10px] sm:text-xs text-neutral-300 uppercase italic">¡Crea tu primera rutina!</span>
+                                        <span className="text-[9px] text-neutral-500 font-bold uppercase tracking-wider mt-0.5">Diseña tu arsenal en la pestaña de Rutinas</span>
+                                    </div>
+                                </div>
+                                <ArrowRight size={14} className="text-neutral-500 group-hover:text-white transition-colors" />
+                            </Link>
+                        ) : (
+                            routines.slice(0, 5).map(routine => {
+                                const exerciseCount = routine.equipment_ids?.length || routine.routine_exercises?.length || 0;
+                                return (
+                                    <div
+                                        key={routine.id}
+                                        onClick={() => navigate(`/workout?routineId=${routine.id}`)}
+                                        className="snap-start shrink-0 w-[85%] sm:w-[260px] bg-neutral-900/60 hover:bg-neutral-900/90 border border-white/5 hover:border-gym-primary/30 rounded-2xl p-3.5 flex items-center justify-between backdrop-blur-sm cursor-pointer active:scale-95 transition-all shadow-[0_4px_20px_rgba(0,0,0,0.4)] group relative overflow-hidden select-none"
+                                    >
+                                        {/* Premium Subtle Ambient Aura */}
+                                        <div className="absolute top-0 right-0 w-24 h-24 bg-gym-primary/5 rounded-full blur-2xl group-hover:bg-gym-primary/10 transition-colors pointer-events-none" />
+                                        
+                                        <div className="flex flex-col items-start text-left min-w-0 pr-2 relative z-10">
+                                            <span className="font-black text-[11px] sm:text-xs text-white group-hover:text-gym-primary transition-colors uppercase italic truncate max-w-full">
+                                                {routine.name}
+                                            </span>
+                                            <span className="text-[8px] sm:text-[9px] text-neutral-400 font-bold uppercase tracking-wider mt-0.5">
+                                                {exerciseCount} {exerciseCount === 1 ? 'Ejercicio' : 'Ejercicios'}
+                                            </span>
+                                        </div>
+
+                                        <div className="w-8 h-8 rounded-full bg-gym-primary/10 border border-gym-primary/20 text-gym-primary flex items-center justify-center shrink-0 shadow-lg shadow-gym-primary/5 group-hover:bg-gym-primary group-hover:text-black group-hover:scale-105 group-hover:rotate-12 transition-all relative z-10">
+                                            <Swords size={12} strokeWidth={2.5} />
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+                </div>
             </div>
 
             {/* Quick Actions Grid - 2x2 Layout */}
