@@ -118,52 +118,26 @@ export const ArsenalGrid = ({
                         
                         {METRIC_DEFS.map((metric) => {
                             const isActive = globalMetrics![metric.id] ?? false;
-                            const isHovered = hoveredMetric === metric.id;
                             
                             return (
                                 <button
                                     key={metric.id}
                                     type="button"
                                     onClick={() => onToggleGlobalMetric!(metric.id)}
-                                    onMouseEnter={() => setHoveredMetric(metric.id)}
-                                    onMouseLeave={() => setHoveredMetric(null)}
                                     className={`
-                                        shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg
-                                        text-[9px] font-black uppercase tracking-wider
-                                        transition-all duration-300 ease-out cursor-pointer
-                                        border select-none relative overflow-hidden
+                                        shrink-0 flex items-center gap-1 px-2 py-1 rounded-md
+                                        text-[9px] font-bold uppercase tracking-wider
+                                        transition-all duration-200 cursor-pointer border select-none
                                         ${isActive
-                                            ? `text-white border-white/20 shadow-lg ${metric.activeColor}`
-                                            : 'bg-neutral-900/80 text-neutral-500 border-neutral-800 hover:bg-neutral-800 hover:text-neutral-300 hover:border-neutral-700'
+                                            ? 'bg-gym-primary/10 text-gym-primary border-gym-primary/50 shadow-[0_0_10px_rgba(250,204,21,0.1)]'
+                                            : 'bg-neutral-900/50 text-neutral-500 border-neutral-800 hover:bg-neutral-800 hover:text-neutral-400'
                                         }
-                                        ${isHovered ? 'scale-105' : 'scale-100'}
                                         active:scale-95
                                     `}
-                                    title={`Activar/Desactivar ${metric.label} en ${metric.defaultFor === 'strength' ? 'ejercicios de fuerza' : metric.defaultFor === 'cardio' ? 'ejercicios de cardio' : 'todos los ejercicios'}`}
+                                    title={`Activar/Desactivar ${metric.label}`}
                                 >
-                                    {/* Subtle glow effect when active */}
-                                    {isActive && (
-                                        <div className="absolute inset-0 opacity-30 rounded-lg" 
-                                             style={{ 
-                                                 background: `radial-gradient(circle at center, white 0%, transparent 70%)`,
-                                                 animation: 'pulse 2s ease-in-out infinite' 
-                                             }} 
-                                        />
-                                    )}
-                                    
-                                    <span className="relative z-10 flex items-center gap-1">
-                                        {metric.icon}
-                                        <span>{metric.label}</span>
-                                    </span>
-
-                                    {/* Category indicator dot */}
-                                    <span className={`
-                                        relative z-10 w-1 h-1 rounded-full shrink-0
-                                        ${metric.defaultFor === 'strength' ? 'bg-amber-400' : 
-                                          metric.defaultFor === 'cardio' ? 'bg-blue-400' : 
-                                          'bg-neutral-400'}
-                                        ${isActive ? 'opacity-70' : 'opacity-30'}
-                                    `} />
+                                    {metric.icon}
+                                    <span>{metric.label}</span>
                                 </button>
                             );
                         })}
@@ -189,6 +163,20 @@ export const ArsenalGrid = ({
                         <div className={gridClassName}>
                             {items.map(item => {
                                 const isSelected = selectedItems.has(item.id);
+                                let effectiveConfig = routineConfigs.get(item.id);
+                                
+                                // Preview global metrics for unselected items
+                                if (!isSelected && globalMetrics) {
+                                    const isCardio = section === 'CARDIO' || getMuscleGroup(item, userSettings) === 'CARDIO';
+                                    effectiveConfig = {
+                                        track_weight: !isCardio ? globalMetrics.weight : false,
+                                        track_reps: !isCardio ? globalMetrics.reps : false,
+                                        track_time: isCardio ? globalMetrics.time : false,
+                                        track_distance: isCardio ? globalMetrics.distance : false,
+                                        track_rpe: globalMetrics.rpe
+                                    };
+                                }
+
                                 return (
                                     <div key={item.id} className="cursor-pointer" onClick={() => onToggleSelection(item.id)}>
                                         <ArsenalCard
@@ -197,7 +185,7 @@ export const ArsenalGrid = ({
                                             isSelected={isSelected}
                                             userSettings={userSettings}
                                             onEdit={onEditItem}
-                                            configOverride={routineConfigs.get(item.id)}
+                                            configOverride={effectiveConfig}
                                         />
                                     </div>
                                 );

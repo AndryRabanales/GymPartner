@@ -132,18 +132,18 @@ export const ArsenalCard = ({ item, isSelected, userSettings, onEdit, configOver
 
                 {/* Footer / Stats - Distinct background */}
                 <div className={`border-t ${isSelected ? 'border-black/10' : 'border-white/5'} w-full bg-black/40 backdrop-blur-sm`}>
-                    <div className="flex flex-wrap gap-1 justify-center w-full py-1">
+                    <div className="flex flex-wrap gap-[2px] justify-center w-full py-0.5 px-0.5">
                         {activeMetricIds.map(mid => {
                             const info = getMetricInfo(mid);
                             if (!info) return null;
                             return (
                                 <span key={mid} className={`
-                                    text-[6px] font-bold px-1 py-0.5 rounded-[2px]
-                                    flex items-center gap-0.5 leading-none
-                                    ${isSelected ? 'text-black bg-white/20' : 'text-neutral-400'}
+                                    text-[5px] font-black px-1 py-[2px] rounded-[2px]
+                                    flex items-center gap-[2px] leading-none
+                                    ${isSelected ? 'text-black bg-white/20' : 'bg-white/5 text-neutral-400'}
                                 `}>
                                     <span>{info.icon}</span>
-                                    <span className="tracking-wide uppercase">{info.label}</span>
+                                    <span className="tracking-widest uppercase">{info.label}</span>
                                 </span>
                             );
                         })}
