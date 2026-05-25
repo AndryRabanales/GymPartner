@@ -1,6 +1,6 @@
 import { useAuth } from '../context/AuthContext';
-import { Copy, CheckCircle, ExternalLink } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
+import { ExternalLink } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 // ── Detect Meta / Instagram in-app browser ──────────────────────────────────
 function detectMetaIAB() {
@@ -17,78 +17,47 @@ function detectMetaIAB() {
 
 // ── Premium Instagram escape screen ─────────────────────────────────────────
 const InstagramEscapeScreen = () => {
-    const [copied, setCopied] = useState(false);
     const [pulse, setPulse] = useState(true);
-    const currentUrl = window.location.href;
 
-    // Keep pulsing the dot indicator forever to draw attention
     useEffect(() => {
         const interval = setInterval(() => setPulse(p => !p), 900);
         return () => clearInterval(interval);
     }, []);
 
-    const handleCopy = async () => {
-        try {
-            await navigator.clipboard.writeText(currentUrl);
-        } catch (_) {
-            // Fallback for older iOS
-            const el = document.createElement('textarea');
-            el.value = currentUrl;
-            el.style.position = 'fixed';
-            el.style.opacity = '0';
-            document.body.appendChild(el);
-            el.focus();
-            el.select();
-            document.execCommand('copy');
-            document.body.removeChild(el);
-        }
-        setCopied(true);
-        setTimeout(() => setCopied(false), 4000);
-    };
-
     return (
         <div className="fixed inset-0 bg-black flex flex-col" style={{ zIndex: 9999 }}>
 
-            {/* Simulated browser top bar — mirrors Instagram IAB chrome */}
-            <div className="relative flex items-center justify-between px-4 pt-12 pb-3 bg-neutral-950 border-b border-neutral-800">
-                <div className="w-8" /> {/* Spacer for X button */}
-                <span className="text-neutral-400 text-xs font-medium truncate max-w-[60%]">
-                    gympartner-production.up.railway.app
-                </span>
-
-                {/* The ⋯ button — highlighted with pulsing ring */}
-                <div className="relative flex items-center justify-center w-8 h-8">
-                    {/* Pulsing glow ring */}
+            {/* Animated arrow fixed to top-right — points at the real ⋯ button */}
+            <div className="absolute top-14 right-3 flex flex-col items-center gap-1 z-50">
+                {/* Pulsing dot over the ⋯ */}
+                <div className="relative w-10 h-10 flex items-center justify-center">
                     <div
                         className="absolute inset-0 rounded-full border-2 border-gym-primary"
                         style={{
-                            transform: pulse ? 'scale(1.5)' : 'scale(1.1)',
+                            transform: pulse ? 'scale(1.6)' : 'scale(1)',
                             opacity: pulse ? 0 : 0.9,
                             transition: 'all 0.9s ease-in-out',
                         }}
                     />
                     <div
-                        className="absolute inset-0 rounded-full bg-gym-primary/30"
+                        className="absolute inset-0 rounded-full bg-gym-primary/25"
                         style={{
-                            transform: pulse ? 'scale(1.3)' : 'scale(1)',
-                            opacity: pulse ? 0 : 0.5,
+                            transform: pulse ? 'scale(1.4)' : 'scale(1)',
+                            opacity: pulse ? 0 : 0.7,
                             transition: 'all 0.9s ease-in-out',
                         }}
                     />
-                    <span className="text-white text-lg font-black relative z-10">•••</span>
                 </div>
-            </div>
-
-            {/* Animated arrow pointing UP to the ⋯ button */}
-            <div className="flex justify-end pr-5 pt-2">
+                {/* Arrow pointing up */}
                 <div
-                    className="text-gym-primary"
                     style={{
-                        transform: pulse ? 'translateY(-4px)' : 'translateY(4px)',
+                        transform: pulse ? 'translateY(4px)' : 'translateY(-4px)',
                         transition: 'transform 0.9s ease-in-out',
+                        color: '#E5FF00',
+                        marginTop: '-8px',
                     }}
                 >
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M12 19V5" />
                         <polyline points="5 12 12 5 19 12" />
                     </svg>
@@ -96,70 +65,36 @@ const InstagramEscapeScreen = () => {
             </div>
 
             {/* Main content */}
-            <div className="flex-1 flex flex-col items-center justify-center px-6 pb-16">
+            {/* Main content — centered, simple */}
+            <div className="flex-1 flex flex-col items-center justify-center px-8 pb-10">
 
                 {/* App icon */}
-                <div className="w-16 h-16 bg-neutral-900 border border-neutral-800 rounded-2xl flex items-center justify-center mb-6 shadow-xl">
+                <div className="w-16 h-16 bg-neutral-900 border border-neutral-800 rounded-2xl flex items-center justify-center mb-8 shadow-xl">
                     <span className="text-2xl">🔥</span>
                 </div>
 
-                <h1 className="text-2xl font-black text-white uppercase tracking-wider mb-2 text-center italic">
-                    Un paso más
+                <h1 className="text-xl font-black text-white uppercase tracking-wider mb-3 text-center italic">
+                    Toca <span className="text-gym-primary">⋯</span> arriba a la derecha
                 </h1>
                 <p className="text-neutral-400 text-sm text-center leading-relaxed mb-10 max-w-xs">
-                    Estás en el navegador de Instagram. Para continuar, toca{' '}
-                    <span className="text-white font-bold">⋯</span> arriba a la derecha y selecciona:
+                    Luego selecciona esta opción:
                 </p>
 
-                {/* The option to tap — styled like Instagram's native menu item */}
-                <div className="w-full max-w-xs bg-neutral-900 border border-neutral-700 rounded-2xl overflow-hidden mb-8 shadow-2xl">
+                {/* Visual of the option they'll see */}
+                <div className="w-full max-w-xs bg-neutral-900 border border-neutral-700 rounded-2xl overflow-hidden shadow-2xl">
                     <div className="flex items-center gap-4 px-5 py-4">
                         <div className="w-9 h-9 rounded-xl bg-neutral-800 flex items-center justify-center flex-shrink-0">
                             <ExternalLink size={18} className="text-gym-primary" />
                         </div>
-                        <div className="text-left">
-                            <p className="text-white font-bold text-sm leading-tight">Abrir en navegador externo</p>
-                            <p className="text-neutral-500 text-xs mt-0.5">Safari / Chrome</p>
-                        </div>
-                        {/* Animated selection dot */}
-                        <div className="ml-auto">
-                            <div
-                                className="w-2 h-2 rounded-full bg-gym-primary"
-                                style={{
-                                    boxShadow: pulse ? '0 0 8px 3px #E5FF00' : '0 0 2px 0px #E5FF00',
-                                    transition: 'box-shadow 0.9s ease-in-out',
-                                }}
-                            />
-                        </div>
-                    </div>
-                    {/* Divider */}
-                    <div className="h-px bg-neutral-800 mx-5" />
-                    <div className="flex items-center gap-4 px-5 py-3 opacity-30">
-                        <div className="w-9 h-9 rounded-xl bg-neutral-800 flex items-center justify-center flex-shrink-0">
-                            <Copy size={16} className="text-neutral-400" />
-                        </div>
-                        <p className="text-neutral-400 text-sm">Copiar enlace</p>
+                        <p className="text-white font-bold text-sm">Abrir en navegador externo</p>
                     </div>
                 </div>
 
-                {/* Fallback: copy URL */}
-                <p className="text-neutral-600 text-xs mb-3 text-center">
-                    ¿No ves esa opción? Copia el enlace y pégalo en Safari o Chrome.
-                </p>
-                <button
-                    onClick={handleCopy}
-                    className="flex items-center gap-2 bg-neutral-800 border border-neutral-700 text-sm font-bold py-3 px-6 rounded-xl transition-all active:scale-95"
-                    style={{ color: copied ? '#4ade80' : '#e5e5e5' }}
-                >
-                    {copied
-                        ? <><CheckCircle size={15} style={{ color: '#4ade80' }} /> ¡Enlace copiado al portapapeles!</>
-                        : <><Copy size={15} /> Copiar enlace</>
-                    }
-                </button>
             </div>
         </div>
     );
 };
+
 
 // ── Main Login Page ──────────────────────────────────────────────────────────
 export const LoginPage = () => {
