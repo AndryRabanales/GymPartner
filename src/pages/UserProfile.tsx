@@ -773,6 +773,57 @@ export const UserProfile = () => {
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 translate-x-[-200%] group-hover:animate-shine pointer-events-none" />
                     </div>
                 </button>
+
+                {/* --- QUICK START ROUTINES (INICIO RÁPIDO) --- */}
+                {routines.length > 0 && (
+                    <div className="flex flex-col gap-2 w-full mt-2 sm:mt-3">
+                        <div className="flex items-center justify-between px-1">
+                            <span className="font-black text-[9px] sm:text-[10px] text-neutral-500 uppercase tracking-[0.2em] flex items-center gap-1.5 italic">
+                                <span className="w-1.5 h-1.5 rounded-full bg-gym-primary animate-pulse shadow-[0_0_8px_rgba(250,204,21,0.6)]"></span>
+                                Inicio Rápido
+                            </span>
+                            <Link 
+                                to="/arsenal" 
+                                className="font-bold text-[9px] sm:text-[10px] text-gym-primary/70 hover:text-gym-primary transition-colors uppercase tracking-wider no-underline italic"
+                            >
+                                Ver Todo
+                            </Link>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 w-full">
+                            {routines.slice(0, 8).map(routine => {
+                                const exerciseCount = routine.equipment_ids?.length || routine.routine_exercises?.length || 0;
+                                return (
+                                    <button
+                                        key={routine.id}
+                                        onClick={() => navigate(`/workout?routineId=${routine.id}`)}
+                                        className="group relative overflow-hidden bg-gradient-to-r from-yellow-400 to-orange-500 rounded-[14px] p-[1px] sm:p-[1.5px] shadow-[0_0_10px_rgba(250,204,21,0.15)] hover:shadow-[0_0_20px_rgba(250,204,21,0.3)] hover:-translate-y-0.5 transition-all duration-300 active:scale-95 w-full text-left"
+                                    >
+                                        {/* Inner Glass Container - Ultra compact horizontal layout */}
+                                        <div className="relative bg-black/10 backdrop-blur-sm w-full h-full rounded-[12px] px-2.5 py-2 flex items-center justify-between border border-white/20 group-hover:bg-transparent transition-all z-10 gap-1.5">
+                                            <div className="flex items-center gap-2 min-w-0 w-full">
+                                                <div className="w-6 h-6 rounded-full bg-white text-black flex items-center justify-center shadow-lg group-hover:scale-105 group-hover:rotate-12 transition-all duration-500 shrink-0">
+                                                    <Swords className="w-3.5 h-3.5" strokeWidth={2.5} />
+                                                </div>
+                                                <div className="flex flex-col min-w-0 text-left">
+                                                    <span className="font-black text-black text-[10px] sm:text-xs italic uppercase tracking-tighter truncate max-w-full leading-tight">
+                                                        {routine.name}
+                                                    </span>
+                                                    <span className="font-bold text-black/80 text-[7px] sm:text-[8px] tracking-wider uppercase leading-none mt-0.5">
+                                                        {exerciseCount} Ej.
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Hover Shine Effect */}
+                                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 translate-x-[-200%] group-hover:animate-shine pointer-events-none z-20" />
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Quick Actions Grid - 2x2 Layout */}
@@ -809,51 +860,6 @@ export const UserProfile = () => {
                     <span className="font-bold text-neutral-200 group-hover:text-white text-xs uppercase tracking-widest">Historial</span>
                 </Link>
             </div>
-
-            {/* --- QUICK START ROUTINES (INICIO RÁPIDO) --- */}
-            {routines.length > 0 && (
-                <div className="flex flex-col gap-3 w-full mt-4">
-                    <div className="flex justify-end px-2">
-                        <Link 
-                            to="/arsenal" 
-                            className="font-black text-[10px] sm:text-xs text-gym-primary/70 hover:text-gym-primary transition-colors uppercase tracking-widest no-underline italic"
-                        >
-                            Ver Todo
-                        </Link>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 sm:gap-4 w-full">
-                        {routines.slice(0, 8).map(routine => {
-                            const exerciseCount = routine.equipment_ids?.length || routine.routine_exercises?.length || 0;
-                            return (
-                                <button
-                                    key={routine.id}
-                                    onClick={() => navigate(`/workout?routineId=${routine.id}`)}
-                                    className="group relative overflow-hidden bg-gradient-to-r from-yellow-400 to-orange-500 rounded-[20px] p-[2px] shadow-[0_0_15px_rgba(250,204,21,0.2)] hover:shadow-[0_0_25px_rgba(250,204,21,0.4)] hover:-translate-y-0.5 transition-all duration-300 active:scale-95 w-full"
-                                >
-                                    {/* Inner Glass Container exactly like main button */}
-                                    <div className="relative bg-black/10 backdrop-blur-sm w-full h-full rounded-[18px] px-3 py-4 flex flex-col items-center justify-center border border-white/20 group-hover:bg-transparent transition-all z-10 gap-2 text-center">
-                                        <div className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:rotate-12 transition-all duration-500 shrink-0">
-                                            <Swords className="w-5 h-5" strokeWidth={2.5} />
-                                        </div>
-                                        <div className="flex flex-col items-center w-full min-w-0">
-                                            <span className="font-black text-black text-sm sm:text-base italic uppercase tracking-tighter truncate w-full px-1">
-                                                {routine.name}
-                                            </span>
-                                            <span className="font-bold text-black/80 text-[9px] sm:text-[10px] tracking-widest uppercase">
-                                                {exerciseCount} Ejercicios
-                                            </span>
-                                        </div>
-                                    </div>
-                                    
-                                    {/* Hover Shine Effect */}
-                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 translate-x-[-200%] group-hover:animate-shine pointer-events-none z-20" />
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
-            )}
 
             {/* TERRITORIES SECTION (PASSPORT) - MODAL */}
             {showGymsModal && (
