@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 import { userService } from '../services/UserService';
@@ -29,324 +29,227 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
     const [session, setSession] = useState<Session | null>(null);
     const [loading, setLoading] = useState(true);
-
-    // Ref to prevent double-processing
-    const isProcessingReferral = React.useRef(false);
+    const isProcessingReferral = useRef(false);
+    const hasInitialized = useRef(false);
 
     useEffect(() => {
-        console.log("🔑 [AuthContext] useEffect initialized. Checking Supabase configuration...");
+        console.log('🔑 [AuthContext] Initializing...');
+
         if (!isSupabaseConfigured() || !supabase) {
-            console.warn("⚠️ [AuthContext] Supabase not configured. Auth is disabled.");
+            console.warn('⚠️ [AuthContext] Supabase not configured.');
             setLoading(false);
             return;
         }
 
-        // Detect potential auth callback early to adjust safety timeouts
-        const isAuthCallback = window.location.hash.includes('access_token') || window.location.search.includes('code=');
-        console.log("✅ [AuthContext] Supabase is configured correctly. isAuthCallback:", isAuthCallback);
+        // ─────────────────────────────────────────────────────────────
+        // ARCHITECTURE: onAuthStateChange is the SINGLE source of truth.
+        // It fires immediately on mount with the current session (if any),
+        // INCLUDING when returning from an OAuth redirect with a hash token.
+        // We do NOT call getSession() separately to avoid race conditions.
+        // ─────────────────────────────────────────────────────────────
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+            console.log(`📡 [Auth] Event: ${event} | Session: ${!!newSession}`);
 
-        if (isAuthCallback) {
-            // Clean the URL hash/query parameters instantly to prevent infinite token-refresh/parsing loops!
-            try {
-                const cleanUrl = window.location.origin + window.location.pathname;
-                window.history.replaceState(null, '', cleanUrl);
-                console.log("🧹 [AuthContext] URL cleaned instantly from OAuth credentials.");
-            } catch (historyErr) {
-                console.error("⚠️ [AuthContext] Failed to clean URL history:", historyErr);
-            }
-        }
+            setSession(newSession);
+            setUser(newSession?.user ?? null);
 
-        // 🚨 GLOBAL FAIL-SAFE TIMEOUT: Force unblock the UI if anything hangs!
-        // We set a 3-second fail-safe timeout for normal loads, and 8 seconds for callbacks.
-        const failSafeDuration = isAuthCallback ? 8000 : 3000;
-        const failSafeTimeout = setTimeout(() => {
-            console.warn(`⏰ [AuthContext Fail-Safe] Auth initialization took too long (>${failSafeDuration/1000}s). Forcing loading = false to unblock UI.`);
-            setLoading(false);
-        }, failSafeDuration);
-
-        // Check active session on mount
-        const initAuth = async () => {
-            console.log("⚙️ [AuthContext] initAuth execution started...");
-            try {
-                // Instantly retrieve the parsed session (no network request under implicit flow)
-                const { data: { session }, error } = await supabase.auth.getSession();
-                if (error) console.error("❌ [AuthContext Error] Session Init Error:", error);
-                
-                if (session) {
-                    console.log("✅ [AuthContext Session] Restored session for:", session.user.email);
-                    setSession(session);
-                    setUser(session.user);
-                } else {
-                    console.log("ℹ️ [AuthContext Session] No active session found on mount.");
-                }
-            } catch (err) {
-                console.error("❌ [AuthContext Error] Unhandled error during initAuth:", err);
-            } finally {
-                console.log("⚙️ [AuthContext] initAuth finished. Setting loading state to false.");
+            // Unblock the UI on the very first event (INITIAL_SESSION, SIGNED_IN, etc.)
+            if (!hasInitialized.current) {
+                hasInitialized.current = true;
                 setLoading(false);
-                clearTimeout(failSafeTimeout);
+                console.log('🔓 [Auth] Loading unblocked on first auth event.');
             }
-        };
 
-        initAuth();
+            // Clean the OAuth hash from the URL AFTER Supabase has consumed it
+            if (newSession && window.location.hash.includes('access_token')) {
+                try {
+                    window.history.replaceState(null, '', window.location.origin + window.location.pathname);
+                    console.log('🧹 [Auth] OAuth hash cleaned from URL.');
+                } catch (_) { /* ignore */ }
+            }
 
-        // REFERRAL LOGIC: Capture ?ref= from URL
+            // Background tasks on sign-in
+            const currentUser = newSession?.user;
+            if (currentUser && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+                ensureProfileExists(currentUser).catch(e =>
+                    console.error('❌ [Auth] ensureProfileExists failed:', e)
+                );
+            }
+        });
+
+        // Safety net: if onAuthStateChange never fires (e.g. Supabase SDK issue),
+        // unblock the UI after 5 seconds so user isn't stuck on a blank screen.
+        const safetyNet = setTimeout(() => {
+            if (!hasInitialized.current) {
+                console.warn('⏰ [Auth] Safety net triggered after 5s. Unblocking UI.');
+                hasInitialized.current = true;
+                setLoading(false);
+            }
+        }, 5000);
+
+        // Capture ?ref= referral code from URL before anything else modifies it
         const params = new URLSearchParams(window.location.search);
         const refId = params.get('ref');
         if (refId) {
-            console.log("🔗 [AuthContext Referral] Referral Detected in URL:", refId);
             sessionStorage.setItem('gym_referral_id', refId);
+            console.log('🔗 [Auth] Referral captured:', refId);
         }
 
-        console.log("📡 [AuthContext Listener] Registering onAuthStateChange listener...");
-        // Listen for changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-            clearTimeout(failSafeTimeout);
-            console.log("📡 [AuthContext Listener] Auth State Changed! Event:", _event, "Session exists:", !!session);
-            try {
-                setSession(session);
-                const currentUser = session?.user ?? null;
-                setUser(currentUser);
-
-                // 🔓 UNBLOCK UI INSTANTLY: Set loading to false immediately to render the actual layout.
-                setLoading(false);
-                console.log("🔓 [AuthContext Listener] UI unblocked (loading=false) instantly!");
-
-                // REFERRAL & PROFILE PROCESSING (On Login/Register) - Asynchronous Background Tasks
-                if (currentUser && !isProcessingReferral.current) {
-                    // Ensure profile is initialized instantly on first access
-                    try {
-                        console.log("🔍 [PROFILE CHECK] Querying profile for user ID in background:", currentUser.id);
-                        const { data: existingProfile, error: profileCheckError } = await supabase
-                            .from('profiles')
-                            .select('id')
-                            .eq('id', currentUser.id)
-                            .maybeSingle();
-
-                        if (profileCheckError) {
-                            console.error("❌ [PROFILE CHECK] Database check failed:", profileCheckError);
-                        }
-
-                        if (!existingProfile) {
-                            console.log("🆕 [PROFILE INITIALIZATION] No profile row found. Initializing profile dynamically...");
-                            const fullName = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || 'Guerrero';
-                            // Normalize username to remove any spaces or special characters
-                            const baseUsername = currentUser.user_metadata?.username || currentUser.user_metadata?.user_name || fullName;
-                            let formattedUsername = baseUsername
-                                .toLowerCase()
-                                .replace(/[^a-z0-9_]/g, '_')
-                                .substring(0, 25);
-                            
-                            // 🚀 COLLISION-PROOF OAUTH USERNAMES: Append a random 4-digit number to guarantee uniqueness!
-                            const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-                            formattedUsername = `${formattedUsername}_${randomSuffix}`;
-                            
-                            const avatarUrl = currentUser.user_metadata?.avatar_url || null;
-
-                            console.log("🆕 [PROFILE INITIALIZATION] Creating profile row with:", {
-                                id: currentUser.id,
-                                username: formattedUsername,
-                                avatar_url: avatarUrl
-                            });
-
-                            const { error: insertError } = await supabase
-                                .from('profiles')
-                                .insert({
-                                    id: currentUser.id,
-                                    username: formattedUsername,
-                                    avatar_url: avatarUrl,
-                                    checkins_count: 0,
-                                    g_points: 1000
-                                });
-
-                            if (insertError) {
-                                console.error("❌ [PROFILE INITIALIZATION] Database insert failed:", insertError);
-                            } else {
-                                console.log("✅ [PROFILE INITIALIZATION] Profile row successfully created!");
-                            }
-                        } else {
-                            console.log("✅ [PROFILE CHECK] Profile row already exists for user ID:", currentUser.id);
-                        }
-                    } catch (profileErr) {
-                        console.error("❌ [PROFILE ERROR] Unexpected error in check/create routine:", profileErr);
-                    }
-
-                    const storedRefId = sessionStorage.getItem('gym_referral_id');
-                    const alreadyReferred = currentUser.user_metadata?.referred_by;
-
-                    if (storedRefId && !alreadyReferred && storedRefId !== currentUser.id) {
-                        isProcessingReferral.current = true;
-                        console.log("🎁 Automatic Referral Processing...");
-
-                        try {
-                            // Immediately remove to prevent loop/race condition
-                            sessionStorage.removeItem('gym_referral_id');
-
-                            const success = await userService.processReferral(currentUser.id, storedRefId);
-                            if (success) {
-                                console.log("✅ Referral Processed. +250 XP to Referrer.");
-                            } else {
-                                // Only restore if it was a genuine failure that should be retried (optional, but risky)
-                                // For now, failure means we consumed the attempt. User can try link again manually if needed.
-                                console.warn("❌ Referral Processing Failed.");
-                            }
-                        } catch (err) {
-                            console.error("Referral Error", err);
-                        } finally {
-                            isProcessingReferral.current = false;
-                        }
-                    }
-                }
-            } catch (err) {
-                console.error("Unhandled error in onAuthStateChange:", err);
-            }
-        });
-
-        return () => subscription.unsubscribe();
+        return () => {
+            subscription.unsubscribe();
+            clearTimeout(safetyNet);
+        };
     }, []);
 
+    // ─── Helper: ensure profile row exists in public.profiles ───
+    const ensureProfileExists = async (currentUser: User) => {
+        if (!supabase) return;
+
+        try {
+            console.log('🔍 [Profile] Checking profile for:', currentUser.id);
+            const { data: existing, error: checkErr } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('id', currentUser.id)
+                .maybeSingle();
+
+            if (checkErr) {
+                console.error('❌ [Profile] Check failed:', checkErr);
+                return;
+            }
+
+            if (!existing) {
+                console.log('🆕 [Profile] No profile found. Creating...');
+                const meta = currentUser.user_metadata ?? {};
+                const fullName: string = meta.full_name || meta.name || 'Guerrero';
+                const baseUsername: string = meta.username || meta.user_name || fullName;
+                const suffix = Math.floor(1000 + Math.random() * 9000);
+                const username = `${baseUsername.toLowerCase().replace(/[^a-z0-9_]/g, '_').substring(0, 22)}_${suffix}`;
+                const avatarUrl: string | null = meta.avatar_url || null;
+
+                const { error: insertErr } = await supabase
+                    .from('profiles')
+                    .insert({ id: currentUser.id, username, avatar_url: avatarUrl, checkins_count: 0, g_points: 1000 });
+
+                if (insertErr) {
+                    console.error('❌ [Profile] Insert failed:', insertErr);
+                } else {
+                    console.log('✅ [Profile] Created successfully:', username);
+                }
+            } else {
+                console.log('✅ [Profile] Already exists.');
+            }
+
+            // Referral processing
+            if (!isProcessingReferral.current) {
+                const storedRef = sessionStorage.getItem('gym_referral_id');
+                if (storedRef && storedRef !== currentUser.id && !currentUser.user_metadata?.referred_by) {
+                    isProcessingReferral.current = true;
+                    sessionStorage.removeItem('gym_referral_id');
+                    try {
+                        const ok = await userService.processReferral(currentUser.id, storedRef);
+                        console.log(ok ? '✅ Referral processed.' : '⚠️ Referral failed.');
+                    } catch (e) {
+                        console.error('❌ Referral error:', e);
+                    } finally {
+                        isProcessingReferral.current = false;
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('❌ [Profile] Unexpected error:', e);
+        }
+    };
+
+    // ─── Sign-in helpers ───
+    const getRedirectUrl = () => {
+        // In dev, always use localhost. In prod use the real origin.
+        if (import.meta.env.DEV) return 'http://localhost:5173';
+        return window.location.origin;
+    };
+
     const signInWithGoogle = async () => {
-        if (!isSupabaseConfigured() || !supabase) {
-            throw new Error("Supabase no está configurado.");
-        }
-
-        // Force localhost in dev mode to ensure we request it explicitly
-        let redirectUrl = window.location.origin;
-        if (import.meta.env.DEV) {
-            redirectUrl = 'http://localhost:5173';
-        }
-
-        // PERSIST REFERRAL ID IN REDIRECT URL (Crucial for Google Auth)
-        const storedRef = sessionStorage.getItem('gym_referral_id');
-        if (storedRef) {
-            redirectUrl = `${redirectUrl}?ref=${storedRef}`;
-            console.log("🔗 Persisting Referral in OAuth Redirect:", redirectUrl);
-        }
-
-        console.log("🔐 Initiating Google Auth with redirect:", redirectUrl);
-
+        if (!isSupabaseConfigured() || !supabase) throw new Error('Supabase no configurado.');
+        const redirectTo = getRedirectUrl();
+        console.log('🔐 [Auth] Google OAuth redirect to:', redirectTo);
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
-            options: {
-                redirectTo: redirectUrl,
-                skipBrowserRedirect: false // Ensure we redirect
-            }
+            options: { redirectTo }
         });
-
-        if (error) console.error("Auth Error:", error);
+        if (error) { console.error('Google Auth Error:', error); throw error; }
     };
 
     const signInWithMeta = async () => {
-        if (!isSupabaseConfigured() || !supabase) {
-            throw new Error("Supabase no está configurado.");
-        }
-
-        let redirectUrl = window.location.origin;
-        if (import.meta.env.DEV) {
-            redirectUrl = 'http://localhost:5173';
-        }
-
-        const storedRef = sessionStorage.getItem('gym_referral_id');
-        if (storedRef) {
-            redirectUrl = `${redirectUrl}?ref=${storedRef}`;
-            console.log("🔗 Persisting Referral in Meta Redirect:", redirectUrl);
-        }
-
-        console.log("🔐 Initiating Meta Auth with redirect:", redirectUrl);
-
+        if (!isSupabaseConfigured() || !supabase) throw new Error('Supabase no configurado.');
+        const redirectTo = getRedirectUrl();
+        console.log('🔐 [Auth] Meta OAuth redirect to:', redirectTo);
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'facebook',
-            options: {
-                redirectTo: redirectUrl,
-                skipBrowserRedirect: false
-            }
+            options: { redirectTo }
         });
-
-        if (error) console.error("Meta Auth Error:", error);
+        if (error) { console.error('Meta Auth Error:', error); throw error; }
     };
 
     const signInWithEmail = async (email: string) => {
-        if (!isSupabaseConfigured() || !supabase) {
-            throw new Error("Supabase no está configurado.");
-        }
+        if (!isSupabaseConfigured() || !supabase) throw new Error('Supabase no configurado.');
         const { error } = await supabase.auth.signInWithOtp({
             email,
-            options: {
-                emailRedirectTo: window.location.origin
-            }
+            options: { emailRedirectTo: getRedirectUrl() }
         });
-        if (error) {
-            throw error;
-        }
+        if (error) throw error;
     };
 
-
-
     const signInAsDev = async () => {
-        // MOCK USER for Localhost Testing (Bypass Supabase Redirect)
         const mockUser: any = {
             id: 'dev-user-local',
             aud: 'authenticated',
             role: 'authenticated',
             email: 'dev@localhost.com',
             email_confirmed_at: new Date().toISOString(),
-            phone: '',
             user_metadata: {
                 full_name: 'Desarrollador (Local)',
-                avatar_url: 'https://cdn-icons-png.flaticon.com/512/2919/2919600.png', // Robot Icon
+                avatar_url: 'https://cdn-icons-png.flaticon.com/512/2919/2919600.png',
             },
             created_at: new Date().toISOString(),
         };
-
-        const mockSession: any = {
-            access_token: 'mock-token',
-            token_type: 'bearer',
-            expires_in: 3600,
-            refresh_token: 'mock-refresh',
-            user: mockUser
-        };
-
         setUser(mockUser);
-        setSession(mockSession);
+        setSession({ access_token: 'mock-token', token_type: 'bearer', expires_in: 3600, refresh_token: 'mock-refresh', user: mockUser } as any);
         console.log("🔓 Dev Access Granted: Logged in as 'dev-user-local'");
     };
 
     const signOut = async () => {
-        console.log("🚪 [AuthContext] signOut execution started...");
-        
-        // 1. Immediately clean up local state and storage FIRST to guarantee instant logout!
+        console.log('🚪 [Auth] Signing out...');
+
+        // 1. Clear state immediately so UI reflects logout right away
         setUser(null);
         setSession(null);
-        
+        hasInitialized.current = false;
+
+        // 2. Wipe all Supabase keys from localStorage
         try {
-            const keysToRemove: string[] = [];
+            const toRemove: string[] = [];
             for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key && (key.startsWith('sb-') || key.includes('supabase') || key.includes('auth'))) {
-                    keysToRemove.push(key);
-                }
+                const k = localStorage.key(i);
+                if (k && (k.startsWith('sb-') || k.includes('supabase'))) toRemove.push(k);
             }
-            keysToRemove.forEach(key => localStorage.removeItem(key));
+            toRemove.forEach(k => localStorage.removeItem(k));
             sessionStorage.clear();
-        } catch (storageErr) {
-            console.error("⚠️ [AuthContext] Error cleaning storage:", storageErr);
+        } catch (_) { /* ignore */ }
+
+        // 3. Fire Supabase network sign-out in background (don't await — it can hang)
+        if (supabase) {
+            supabase.auth.signOut().catch(e =>
+                console.error('⚠️ [Auth] Background signOut failed:', e)
+            );
         }
 
-        // 2. Trigger Supabase network signOut asynchronously in the background so it never hangs the UI!
-        if (session?.user?.id && !session.user.id.startsWith('dev-') && supabase) {
-            supabase.auth.signOut().catch(err => {
-                console.error("⚠️ [AuthContext] Background Supabase signOut failed:", err);
-            });
-        }
-
-        console.log("⚙️ [AuthContext] Local auth cleared. Redirecting to landing page.");
-        // Hard redirect to root to clear all state/cache clean and pristine
+        // 4. Hard redirect to landing
         window.location.href = '/';
     };
 
     return (
         <AuthContext.Provider value={{ user, session, loading, signInWithGoogle, signInWithMeta, signInWithEmail, signInAsDev, signOut }}>
-            {!loading && children}
+            {loading ? null : children}
         </AuthContext.Provider>
     );
 };

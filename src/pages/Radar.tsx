@@ -86,7 +86,7 @@ export const Radar = () => {
                     } catch (err) {
                         resolve({ data: null, error: err, isFallback: true });
                     }
-                }, 1500);
+                }, 4000); // Increased timeout to 4 seconds for slow network/cold starts
             });
 
             const result = await Promise.race([
