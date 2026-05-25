@@ -53,6 +53,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setLoading(false);
         }, failSafeDuration);
 
+        // Check active session on mount
+        const initAuth = async () => {
+            console.log("⚙️ [AuthContext] initAuth execution started...");
+            try {
+                // Instantly retrieve the parsed session (no network request under implicit flow)
+                const { data: { session }, error } = await supabase.auth.getSession();
+                if (error) console.error("❌ [AuthContext Error] Session Init Error:", error);
+                
+                if (session) {
+                    console.log("✅ [AuthContext Session] Restored session for:", session.user.email);
+                    setSession(session);
+                    setUser(session.user);
+                } else {
+                    console.log("ℹ️ [AuthContext Session] No active session found on mount.");
+                }
+            } catch (err) {
+                console.error("❌ [AuthContext Error] Unhandled error during initAuth:", err);
+            } finally {
+                console.log("⚙️ [AuthContext] initAuth finished. Setting loading state to false.");
+                setLoading(false);
+                clearTimeout(failSafeTimeout);
+            }
+        };
+
+        initAuth();
+
         // REFERRAL LOGIC: Capture ?ref= from URL
         const params = new URLSearchParams(window.location.search);
         const refId = params.get('ref');
