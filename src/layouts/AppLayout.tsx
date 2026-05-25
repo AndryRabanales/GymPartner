@@ -180,7 +180,16 @@ export const AppLayout = () => {
                                 </nav>
 
                                 <div className="flex items-center gap-3 sm:gap-5">
-                                    {user && <GPointsDisplay />}
+                                    {user && (
+										<Link
+											to="/map"
+											className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-yellow-500/10 border border-yellow-500 flex items-center justify-center text-yellow-500 hover:bg-yellow-500 hover:text-black transition-all backdrop-blur-md shadow-[0_0_15px_rgba(234,179,8,0.4)] animate-pulse shrink-0 mr-1"
+											title="Ver Mapa"
+										>
+											<MapPin size={16} />
+										</Link>
+									)}
+									{user && <GPointsDisplay />}
                                     
                                     <div className="flex items-center gap-2">
                                         {user && <NotificationBell />}

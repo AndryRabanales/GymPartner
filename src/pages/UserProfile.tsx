@@ -458,7 +458,7 @@ export const UserProfile = () => {
             {/* ... content ... */}
             {/* Header Profile Card - Premium Hextech Cybernetic Design */}
             <div
-                className={`bg-neutral-900/60 backdrop-blur-xl border ${currentTier.borderColor} rounded-3xl p-4 sm:p-8 flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-8 relative overflow-hidden transition-all shadow-[0_20px_50px_rgba(0,0,0,0.6)] group`}
+                className={`bg-neutral-900/60 backdrop-blur-xl border ${currentTier.borderColor} rounded-2xl p-3 sm:p-5 flex flex-col sm:flex-row items-center sm:items-start gap-3 sm:gap-6 relative overflow-hidden transition-all shadow-[0_20px_50px_rgba(0,0,0,0.6)] group`}
                 style={profile?.custom_settings?.banner_url ? {
                     backgroundImage: `url(${profile.custom_settings.banner_url})`,
                     backgroundSize: 'cover',
@@ -468,38 +468,12 @@ export const UserProfile = () => {
                 {/* Banner Overlay for Readability */}
                 <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/75 to-neutral-950/20 z-0"></div>
 
-                {/* Share Button - ELEGANT GLASS ACTION */}
-                <div className="absolute top-4 left-4 z-20">
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            handleShareProfile();
-                        }}
-                        className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-neutral-400 hover:text-gym-primary hover:bg-white/10 hover:border-gym-primary/30 transition-all backdrop-blur-md shadow-sm group"
-                        title="Compartir Perfil"
-                    >
-                        <Share2 size={18} className="group-hover:scale-110 transition-transform" />
-                    </button>
-                </div>
-
-                {/* Right Side Controls (Map & Tier) */}
-                <div className="absolute top-4 right-4 z-20 flex flex-col items-end gap-2">
-                    {/* Map Button - Blinking Yellow */}
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            navigate('/map');
-                        }}
-                        className="w-10 h-10 rounded-full bg-yellow-500/10 border border-yellow-500 flex items-center justify-center text-yellow-500 hover:bg-yellow-500 hover:text-black transition-all backdrop-blur-md shadow-[0_0_15px_rgba(234,179,8,0.5)] animate-pulse"
-                        title="Ver Mapa"
-                    >
-                        <MapPin size={18} />
-                    </button>
-
+                {/* Right Side Controls (Tier) */}
+                <div className="absolute top-3 right-3 z-20">
                     {/* Cybernetic Tier Capsule */}
-                    <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/60 border border-white/10 backdrop-blur-md shadow-lg">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400">RANGO:</span>
-                        <span className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 ${currentTier.color}`}>
+                    <div className="flex items-center gap-1 py-0.5 px-2 rounded-full bg-black/60 border border-white/10 backdrop-blur-md shadow-lg">
+                        <span className="text-[8px] font-black uppercase tracking-widest text-neutral-400">RANGO:</span>
+                        <span className={`text-[9px] font-black uppercase tracking-widest flex items-center gap-1 ${currentTier.color}`}>
                             <span>{currentTier.icon}</span>
                             <span className="italic">{currentTier.name}</span>
                         </span>
@@ -508,10 +482,10 @@ export const UserProfile = () => {
 
                 {/* Avatar Section: LoL Style Ring (CONTAINED AND CENTERED) */}
                 <div className="relative shrink-0 z-10 transition-all flex flex-col items-center">
-                    <div className="relative w-36 h-36 sm:w-44 sm:h-44 flex items-center justify-center">
+                    <div className="relative w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center">
 
                         {/* 0. Tier Glow (Dynamic Color) */}
-                        <div className={`absolute inset-0 rounded-full blur-2xl transform scale-100 pointer-events-none transition-colors duration-500 ${currentTier.color.replace('text-', 'bg-')}/15`}></div>
+                        <div className={`absolute inset-0 rounded-full blur-xl transform scale-100 pointer-events-none transition-colors duration-500 ${currentTier.color.replace('text-', 'bg-')}/15`}></div>
 
                         {/* 1. Base Ring (Dark Metal) */}
                         <svg className="absolute inset-0 w-full h-full -rotate-90 drop-shadow-lg overflow-visible" viewBox="0 0 160 160">
@@ -537,8 +511,8 @@ export const UserProfile = () => {
                             />
                         </svg>
 
-                        {/* Avatar Image - INCREASED SIZE FOR VISIBILITY */}
-                        <div className={`w-[115px] h-[115px] sm:w-[138px] sm:h-[138px] rounded-full overflow-hidden border-4 z-10 bg-neutral-800 shadow-inner relative transition-colors duration-500 ${currentTier.borderColor}`}>
+                        {/* Avatar Image */}
+                        <div className={`w-[76px] h-[76px] sm:w-[88px] sm:h-[88px] rounded-full overflow-hidden border-2 z-10 bg-neutral-800 shadow-inner relative transition-colors duration-500 ${currentTier.borderColor}`}>
                             <img
                                 src={cloudinaryService.getOptimizedImageUrl(userAvatar, { width: 300, height: 300 })}
                                 alt="Profile"
@@ -548,9 +522,9 @@ export const UserProfile = () => {
                     </div>
 
                     {/* Progress Text below avatar */}
-                    <div className="mt-2 bg-black/40 border border-white/5 px-2 py-0.5 rounded-md backdrop-blur-sm">
-                        <span className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">
-                            PROGRESO: {Math.round(tierProgress)}%
+                    <div className="mt-1 bg-black/40 border border-white/5 px-1.5 py-0.5 rounded backdrop-blur-sm">
+                        <span className="text-[8px] font-black text-neutral-400 uppercase tracking-widest">
+                            {Math.round(tierProgress)}%
                         </span>
                     </div>
                 </div>
@@ -683,40 +657,53 @@ export const UserProfile = () => {
                         </div>
                     )}
 
-                    {/* Gym Tags - DYNAMIC COLORS BASED ON STATUS */}
-                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 mt-4 pt-2 border-t border-white/5">
-                        {userGyms.map(gym => {
-                            let textColor = "text-neutral-300 hover:text-white";
-                            let iconColor = "text-neutral-500";
-                            let bgColor = "bg-neutral-800 hover:bg-neutral-700";
-                            let borderColor = "border-neutral-700/50 hover:border-neutral-500";
-                            let shadow = "hover:shadow-sm";
+                    {/* Gym Tags & Share - CARD FOOTER */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 mt-4 pt-2 border-t border-white/5 w-full">
+                        <div className="flex flex-wrap items-center gap-1.5 justify-center sm:justify-start">
+                            {userGyms.map(gym => {
+                                let textColor = "text-neutral-300 hover:text-white";
+                                let iconColor = "text-neutral-500";
+                                let bgColor = "bg-neutral-800 hover:bg-neutral-700";
+                                let borderColor = "border-neutral-700/50 hover:border-neutral-500";
+                                let shadow = "hover:shadow-sm";
 
-                            if (gym.is_favorite) {
-                                borderColor = "border-red-500/50 hover:border-red-500";
-                                textColor = "text-red-400 hover:text-red-300";
-                                iconColor = "text-red-500";
-                                bgColor = "bg-red-500/10 hover:bg-red-500/20";
-                                shadow = "hover:shadow-[0_0_15px_rgba(239,68,68,0.2)]";
-                            } else if (gym.is_home_base) {
-                                borderColor = "border-yellow-500/50 hover:border-yellow-500";
-                                textColor = "text-yellow-400 hover:text-yellow-300";
-                                iconColor = "text-yellow-500";
-                                bgColor = "bg-yellow-500/10 hover:bg-yellow-500/20";
-                                shadow = "hover:shadow-[0_0_15px_rgba(234,179,8,0.2)]";
-                            }
+                                if (gym.is_favorite) {
+                                    borderColor = "border-red-500/50 hover:border-red-500";
+                                    textColor = "text-red-400 hover:text-red-300";
+                                    iconColor = "text-red-500";
+                                    bgColor = "bg-red-500/10 hover:bg-red-500/20";
+                                    shadow = "hover:shadow-[0_0_15px_rgba(239,68,68,0.2)]";
+                                } else if (gym.is_home_base) {
+                                    borderColor = "border-yellow-500/50 hover:border-yellow-500";
+                                    textColor = "text-yellow-400 hover:text-yellow-300";
+                                    iconColor = "text-yellow-500";
+                                    bgColor = "bg-yellow-500/10 hover:bg-yellow-500/20";
+                                    shadow = "hover:shadow-[0_0_15px_rgba(234,179,8,0.2)]";
+                                }
 
-                            return (
-                                <Link
-                                    key={gym.gym_id}
-                                    to={`/territory/${gym.gym_id}`}
-                                    className={`px-2 py-1 rounded-full flex items-center gap-1.5 text-[10px] sm:text-xs transition-all no-underline border ${borderColor} ${textColor} ${bgColor} ${shadow}`}
-                                >
-                                    <MapPin size={12} className={`sm:w-4 sm:h-4 ${iconColor}`} />
-                                    <span className="truncate max-w-[90px] sm:max-w-[120px]">{gym.gym_name}</span>
-                                </Link>
-                            );
-                        })}
+                                return (
+                                    <Link
+                                        key={gym.gym_id}
+                                        to={`/territory/${gym.gym_id}`}
+                                        className={`px-2 py-1 rounded-full flex items-center gap-1.5 text-[10px] sm:text-xs transition-all no-underline border ${borderColor} ${textColor} ${bgColor} ${shadow}`}
+                                    >
+                                        <MapPin size={12} className={`sm:w-4 sm:h-4 ${iconColor}`} />
+                                        <span className="truncate max-w-[90px] sm:max-w-[120px]">{gym.gym_name}</span>
+                                    </Link>
+                                );
+                            })}
+                        </div>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleShareProfile();
+                            }}
+                            className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 flex items-center gap-1.5 text-[10px] sm:text-xs text-neutral-400 hover:text-gym-primary hover:bg-white/10 hover:border-gym-primary/30 transition-all backdrop-blur-md shrink-0"
+                            title="Compartir Perfil"
+                        >
+                            <Share2 size={12} />
+                            <span>Compartir</span>
+                        </button>
                     </div>
                 </div>
             </div>
