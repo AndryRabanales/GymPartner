@@ -157,97 +157,108 @@ export const UserProfile = () => {
 
     const loadUserData = async () => {
         console.log("📥 [loadUserData] Started loading profile for user ID:", user?.id);
-        try {
-            setLoading(true);
-            console.log("📥 [loadUserData] Fetching profiles table row via Supabase...");
-            let { data, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', user!.id)
-                .maybeSingle();
+        
+        // 1. PRE-POPULATE INSTANTLY: Set loading to false and fill with safe defaults to UNBLOCK THE RENDER TREE!
+        const fullName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'Atleta';
+        const defaultUsername = fullName
+            .toLowerCase()
+            .replace(/[^a-z0-9_]/g, '_')
+            .substring(0, 30);
+        const defaultAvatar = user?.user_metadata?.avatar_url || '';
 
-            if (error) {
-                console.error("❌ [loadUserData Error] Supabase profiles fetch failed:", error);
-                throw error;
-            }
+        const fallbackProfile = {
+            id: user!.id,
+            username: defaultUsername,
+            avatar_url: defaultAvatar,
+            description: '¡Hola! Soy un nuevo atleta en GymPartner.',
+            g_points: 1000,
+            total_referrals: 0,
+            checkins_count: 0
+        };
 
-            console.log("📥 [loadUserData] Profiles fetch complete. Found row:", !!data);
+        setProfile(fallbackProfile);
+        setLoading(false);
+        console.log("🔓 [loadUserData] UI unblocked instantly! Pre-populated with fallback profile.");
 
-            let profileData = data;
-            if (!profileData) {
-                console.log("⚠️ [loadUserData] Profile not found in database. Auto-creating profile...");
-                const fullName = user?.user_metadata?.full_name || user?.user_metadata?.name || 'gymrat';
-                const defaultUsername = fullName
-                    .toLowerCase()
-                    .replace(/[^a-z0-9_]/g, '_')
-                    .substring(0, 30);
-                const defaultAvatar = user?.user_metadata?.avatar_url || '';
-                
-                const newProfile = {
-                    id: user!.id,
-                    username: defaultUsername,
-                    avatar_url: defaultAvatar,
-                    description: '¡Hola! Soy un nuevo atleta en GymPartner.',
-                    g_points: 0,
-                    total_referrals: 0,
-                    checkins_count: 0
-                };
-
-                console.log("📥 [loadUserData] Auto-inserting profiles row with:", newProfile);
-                const { data: insertedData, error: insertError } = await supabase
+        // 2. BACKGROUND FETCH: Query the actual database values asynchronously in the background
+        (async () => {
+            try {
+                console.log("📥 [loadUserData Background] Fetching profiles table row via Supabase...");
+                let { data, error } = await supabase
                     .from('profiles')
-                    .insert(newProfile)
-                    .select()
-                    .single();
+                    .select('*')
+                    .eq('id', user!.id)
+                    .maybeSingle();
 
-                if (insertError) {
-                    console.error("❌ [loadUserData Error] Client auto-profile insert failed:", insertError);
-                } else {
-                    console.log("✅ [loadUserData] Client auto-profile successfully created!");
-                    profileData = insertedData;
+                if (error) {
+                    console.error("❌ [loadUserData Background Error] Supabase profiles fetch failed:", error);
+                    return;
                 }
-            }
 
-            if (profileData) {
-                console.log("📥 [loadUserData] Setting local profile state:", profileData);
-                setProfile(profileData);
-            } else {
-                console.warn("⚠️ [loadUserData] No profileData could be loaded or created. Setting fallback mock profile.");
-                // Fallback mock to prevent crashing
-                setProfile({
-                    id: user!.id,
-                    username: (user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'gymrat').toLowerCase().replace(/[^a-z0-9_]/g, '_'),
-                    avatar_url: user?.user_metadata?.avatar_url || '',
-                    description: '¡Hola! Soy un nuevo atleta en GymPartner.',
-                    g_points: 0,
-                    total_referrals: 0,
-                    checkins_count: 0
-                });
-            }
+                console.log("📥 [loadUserData Background] Profiles fetch complete. Found row:", !!data);
 
-            // REFERRAL CHECK: If user has a pending referral code and hasn't been referred yet
-            const pendingRef = sessionStorage.getItem('gym_referral_id');
-            if (pendingRef && data && !data.referred_by && pendingRef !== user!.id) {
-                console.log("🔗 [loadUserData Referral] Processing pending referral code:", pendingRef);
-                const { error: refError } = await supabase
-                    .from('profiles')
-                    .update({ referred_by: pendingRef })
-                    .eq('id', user!.id);
+                let profileData = data;
+                if (!profileData) {
+                    console.log("⚠️ [loadUserData Background] Profile not found in database. Auto-creating profile in background...");
+                    const newProfile = {
+                        id: user!.id,
+                        username: defaultUsername,
+                        avatar_url: defaultAvatar,
+                        description: '¡Hola! Soy un nuevo atleta en GymPartner.',
+                        g_points: 1000,
+                        total_referrals: 0,
+                        checkins_count: 0
+                    };
 
-                if (!refError) {
-                    sessionStorage.removeItem('gym_referral_id');
-                    console.log("✅ [loadUserData Referral] Referral successfully recorded!");
-                    alert("🎖️ ¡Has sido registrado con éxito! Quien te refirió recibirá su recompensa pronto.");
-                } else {
-                    console.error("❌ [loadUserData Referral Error] Referral check failed:", refError);
+                    console.log("📥 [loadUserData Background] Auto-inserting profiles row with:", newProfile);
+                    const { data: insertedData, error: insertError } = await supabase
+                        .from('profiles')
+                        .insert(newProfile)
+                        .select()
+                        .single();
+
+                    if (insertError) {
+                        console.error("❌ [loadUserData Background Error] Client auto-profile insert failed:", insertError);
+                    } else {
+                        console.log("✅ [loadUserData Background] Client auto-profile successfully created!");
+                        profileData = insertedData;
+                    }
                 }
-            }
 
-            const loadGyms = async () => {
+                if (profileData) {
+                    console.log("📥 [loadUserData Background] Setting real profile state:", profileData);
+                    setProfile(profileData);
+
+                    // REFERRAL CHECK: If user has a pending referral code and hasn't been referred yet
+                    const pendingRef = sessionStorage.getItem('gym_referral_id');
+                    if (pendingRef && !profileData.referred_by && pendingRef !== user!.id) {
+                        console.log("🔗 [loadUserData Background Referral] Processing pending referral code:", pendingRef);
+                        const { error: refError } = await supabase
+                            .from('profiles')
+                            .update({ referred_by: pendingRef })
+                            .eq('id', user!.id);
+
+                        if (!refError) {
+                            sessionStorage.removeItem('gym_referral_id');
+                            console.log("✅ [loadUserData Background Referral] Referral successfully recorded!");
+                            alert("🎖️ ¡Has sido registrado con éxito! Quien te refirió recibirá su recompensa pronto.");
+                        } else {
+                            console.error("❌ [loadUserData Background Referral Error] Referral check failed:", refError);
+                        }
+                    }
+                }
+            } catch (bgErr) {
+                console.error("❌ [loadUserData Background Error] Unexpected background profile fetch error:", bgErr);
+            }
+        })();
+
+        // 3. BACKGROUND GYMS FETCH: Load gyms asynchronously in the background
+        (async () => {
+            try {
                 if (!user) return;
-                console.log("📥 [loadUserData] Querying user gyms (Passport)...");
+                console.log("📥 [loadUserData Background] Querying user gyms (Passport)...");
                 const gyms = await userService.getUserGyms(user.id);
-                console.log("📥 [loadUserData] User gyms query complete. Count:", gyms.length);
+                console.log("📥 [loadUserData Background] User gyms query complete. Count:", gyms.length);
 
                 // Sort: Home Base First
                 const sortedGyms = gyms.sort((a, b) => {
@@ -256,17 +267,10 @@ export const UserProfile = () => {
                 });
 
                 setUserGyms(sortedGyms);
-            };
-            await loadGyms();
-
-            console.log("📥 [loadUserData] loadUserData completed successfully!");
-        } catch (error) {
-            console.error('❌ [loadUserData Error] Unexpected error:', error);
-            // DO NOT reset profile to null here. Keep potentially stale data or just show toast.
-        } finally {
-            console.log("📥 [loadUserData] loadUserData finally block. Setting loading state to false.");
-            setLoading(false);
-        }
+            } catch (gymsErr) {
+                console.error("❌ [loadUserData Background Error] User gyms fetch failed:", gymsErr);
+            }
+        })();
     };
 
     const loadAlphaData = async () => {
