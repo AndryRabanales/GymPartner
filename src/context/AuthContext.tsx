@@ -41,49 +41,57 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             return;
         }
 
-        console.log("✅ [AuthContext] Supabase is configured correctly. Triggering initAuth...");
+        // Detect potential auth callback early to adjust safety timeouts
+        const isAuthCallback = window.location.hash.includes('access_token') || window.location.search.includes('code=');
+        console.log("✅ [AuthContext] Supabase is configured correctly. isAuthCallback:", isAuthCallback);
 
-        // 🚨 GLOBAL FAIL-SAFE TIMEOUT: Force unblock the UI if anything hangs for more than 2.5 seconds!
+        // 🚨 GLOBAL FAIL-SAFE TIMEOUT: Force unblock the UI if anything hangs!
+        // During OAuth callback exchange, we allow up to 10 seconds for remote network queries.
+        // During normal loads, we unblock strictly after 2.5 seconds.
+        const failSafeDuration = isAuthCallback ? 10000 : 2500;
         const failSafeTimeout = setTimeout(() => {
-            console.warn("⏰ [AuthContext Fail-Safe] Auth initialization took too long (>2.5s). Forcing loading = false to unblock UI.");
+            console.warn(`⏰ [AuthContext Fail-Safe] Auth initialization took too long (>${failSafeDuration/1000}s). Forcing loading = false to unblock UI.`);
             setLoading(false);
-        }, 2500);
+        }, failSafeDuration);
 
-        // Check active session with a strict 1500ms timeout to prevent storage read hangs
+        // Check active session
         const initAuth = async () => {
             console.log("⚙️ [AuthContext] initAuth execution started...");
             try {
-                // Detect potential auth callback to avoid premature empty state
-                const isAuthCallback = window.location.hash.includes('access_token') || window.location.search.includes('code=');
-                if (isAuthCallback) console.log("⏳ [AuthContext Callback] Auth Callback Detected - Initializing Session...");
-
-                console.log("⚙️ [AuthContext] Fetching session with 1.5s timeout...");
-                const sessionPromise = supabase.auth.getSession();
-                const timeoutPromise = new Promise<{ data: { session: null }; error: Error }>((_, reject) => 
-                    setTimeout(() => reject(new Error("Timeout getting session")), 1500)
-                );
-
-                const { data: { session }, error } = await Promise.race([
-                    sessionPromise,
-                    timeoutPromise as any
-                ]);
-
-                if (error) console.error("❌ [AuthContext Error] Session Init Error:", error);
-                if (session) {
-                    console.log("✅ [AuthContext Session] Restored for user:", session.user.email);
-                    setSession(session);
-                    setUser(session.user);
-                    clearTimeout(failSafeTimeout);
+                if (isAuthCallback) {
+                    console.log("⏳ [AuthContext Callback] Auth Callback Detected - Exchanging OAuth code...");
+                    // No strict 1.5s timeout during callback since we MUST await code exchange network request
+                    const { data: { session }, error } = await supabase.auth.getSession();
+                    
+                    if (error) console.error("❌ [AuthContext Error] Session Init Error:", error);
+                    if (session) {
+                        console.log("✅ [AuthContext Session] Restored callback session for:", session.user.email);
+                        setSession(session);
+                        setUser(session.user);
+                        clearTimeout(failSafeTimeout);
+                    } else {
+                        console.log("ℹ️ [AuthContext Session] No callback session found via getSession. Letting listener handle it.");
+                    }
                 } else {
-                    console.log("ℹ️ [AuthContext Session] No active session found via getSession.");
-                    if (isAuthCallback) {
-                        console.warn("⚠️ [AuthContext Callback] Params present but no session returned from getSession. Waiting for onAuthStateChange...");
-                        // We don't set loading false yet, we let the listener handle it or a timeout
-                        setTimeout(() => {
-                            console.log("⏰ [AuthContext Timeout] Forcing loading to false due to auth callback delay.");
-                            setLoading(false);
-                        }, 5000);
-                        return;
+                    console.log("⚙️ [AuthContext] Fetching normal session with 1.5s timeout...");
+                    const sessionPromise = supabase.auth.getSession();
+                    const timeoutPromise = new Promise<{ data: { session: null }; error: Error }>((_, reject) => 
+                        setTimeout(() => reject(new Error("Timeout getting session")), 1500)
+                    );
+
+                    const { data: { session }, error } = await Promise.race([
+                        sessionPromise,
+                        timeoutPromise as any
+                    ]);
+
+                    if (error) console.error("❌ [AuthContext Error] Session Init Error:", error);
+                    if (session) {
+                        console.log("✅ [AuthContext Session] Restored for user:", session.user.email);
+                        setSession(session);
+                        setUser(session.user);
+                        clearTimeout(failSafeTimeout);
+                    } else {
+                        console.log("ℹ️ [AuthContext Session] No active session found via getSession.");
                     }
                 }
             } catch (err) {
