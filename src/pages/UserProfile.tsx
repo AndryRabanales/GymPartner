@@ -454,7 +454,7 @@ export const UserProfile = () => {
     // const nextTier = TierService.getNextTier(currentTier.level);
 
     return (
-        <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-8 pb-24">
+        <div className="w-[98%] max-w-7xl mx-auto px-1 py-3 sm:p-6 space-y-3 sm:space-y-4 pb-24">
             {/* ... content ... */}
             {/* Header Profile Card - Premium Hextech Cybernetic Design */}
             <div
@@ -663,7 +663,7 @@ export const UserProfile = () => {
             </div>
 
             {/* Primary Action & Quick Access */}
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2 sm:gap-4">
 
                 <button
                     onClick={() => {
@@ -706,7 +706,7 @@ export const UserProfile = () => {
             </div>
 
             {/* Quick Actions Grid - 2x2 Layout */}
-            <div className="grid grid-cols-2 gap-3 md:gap-4">
+            <div className="grid grid-cols-2 gap-2 sm:gap-4">
                 {/* 1. RUTINAS */}
                 <Link to="/arsenal" className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-blue-500/50 p-4 rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-3 text-center no-underline shadow-sm hover:shadow-md">
                     <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform border border-blue-500/20">
