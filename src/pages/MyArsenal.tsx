@@ -390,6 +390,8 @@ export const MyArsenal = () => {
 
 
     const toggleSelection = (id: string) => {
+        const willAdd = !selectedItems.has(id);
+
         setSelectedItems(prev => {
             const next = new Set(prev);
             if (next.has(id)) {
@@ -400,15 +402,22 @@ export const MyArsenal = () => {
             return next;
         });
 
-        // TUTORIAL RELEASE: If in Step 4 and selecting an item, finish tutorial
-        // [FIX] REMOVED: This was killing the tutorial before saving! 
-        // We want to keep it at 4 until they click SAVE.
-        /*
-        if (tutorialStep === 4) {
-            setTutorialStep(0);
-            localStorage.setItem('tutorial_step', '0');
+        if (willAdd && !metricOverrides.has(id)) {
+            const isCardio = isCardioItem(id);
+            setRoutineConfigs(prevConfigs => {
+                const nextConfigs = new Map(prevConfigs);
+                const existing = nextConfigs.get(id) || {};
+                nextConfigs.set(id, {
+                    ...existing,
+                    track_weight: !isCardio ? globalMetrics.weight : false,
+                    track_reps: !isCardio ? globalMetrics.reps : false,
+                    track_time: isCardio ? globalMetrics.time : false,
+                    track_distance: isCardio ? globalMetrics.distance : false,
+                    track_rpe: globalMetrics.rpe
+                });
+                return nextConfigs;
+            });
         }
-        */
     };
 
     const handleEditRoutine = async (routine: any) => {

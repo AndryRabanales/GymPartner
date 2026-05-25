@@ -87,14 +87,14 @@ export const ArsenalGrid = ({
     // Toolbar animation state
     const [hoveredMetric, setHoveredMetric] = useState<string | null>(null);
 
-    const showToolbar = globalMetrics && onToggleGlobalMetric && selectedItems.size > 0;
+    const showToolbar = globalMetrics && onToggleGlobalMetric;
 
     return (
         <div className="space-y-6" id="tut-arsenal-grid">
             {/* Visual Stats Bar + Global Metrics Toolbar */}
-            <div className="flex flex-col gap-2.5 mb-4 px-1">
-                {/* Row 1: Counts */}
-                <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 mb-4 px-1 overflow-x-auto no-scrollbar py-1">
+                {/* Counts */}
+                <div className="flex items-center gap-2 shrink-0">
                     <div className="px-3 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-[10px] font-bold text-neutral-400 whitespace-nowrap">
                         {inventory.length} Total
                     </div>
@@ -103,13 +103,16 @@ export const ArsenalGrid = ({
                     </div>
                 </div>
 
-                {/* Row 2: Global Metrics Toolbar — elegant pill bar */}
+                {/* Vertical Divider */}
+                {showToolbar && <div className="w-px h-6 bg-neutral-800 mx-1 shrink-0" />}
+
+                {/* Global Metrics Toolbar — elegant pill bar */}
                 {showToolbar && (
                     <div 
-                        className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1"
+                        className="flex items-center gap-1.5 shrink-0"
                         style={{ animation: 'slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards' }}
                     >
-                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-neutral-600 shrink-0 mr-1 select-none">
+                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-neutral-600 shrink-0 mr-1 select-none hidden sm:inline-block">
                             Métricas
                         </span>
                         
