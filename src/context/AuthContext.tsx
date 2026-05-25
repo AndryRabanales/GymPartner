@@ -42,26 +42,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         // Check active session
         const initAuth = async () => {
-            // Detect potential auth callback to avoid premature empty state
-            const isAuthCallback = window.location.hash.includes('access_token') || window.location.search.includes('code=');
-            if (isAuthCallback) console.log("⏳ Auth Callback Detected - Initializing Session...");
+            try {
+                // Detect potential auth callback to avoid premature empty state
+                const isAuthCallback = window.location.hash.includes('access_token') || window.location.search.includes('code=');
+                if (isAuthCallback) console.log("⏳ Auth Callback Detected - Initializing Session...");
 
-            const { data: { session }, error } = await supabase.auth.getSession();
+                const { data: { session }, error } = await supabase.auth.getSession();
 
-            if (error) console.error("Session Init Error:", error);
-            if (session) {
-                console.log("✅ Session Restored:", session.user.email);
-                setSession(session);
-                setUser(session.user);
-            } else if (isAuthCallback) {
-                console.warn("⚠️ Params present but no session returned from getSession. Waiting for onAuthStateChange...");
-                // We don't set loading false yet, we let the listener handle it or a timeout
-                // detailed safety: set timeout to force loading false if it hangs
-                setTimeout(() => setLoading(false), 5000);
-                return;
+                if (error) console.error("Session Init Error:", error);
+                if (session) {
+                    console.log("✅ Session Restored:", session.user.email);
+                    setSession(session);
+                    setUser(session.user);
+                } else if (isAuthCallback) {
+                    console.warn("⚠️ Params present but no session returned from getSession. Waiting for onAuthStateChange...");
+                    // We don't set loading false yet, we let the listener handle it or a timeout
+                    // detailed safety: set timeout to force loading false if it hangs
+                    setTimeout(() => setLoading(false), 5000);
+                    return;
+                }
+            } catch (err) {
+                console.error("Unhandled error during initAuth:", err);
+            } finally {
+                setLoading(false);
             }
-
-            setLoading(false);
         };
 
         initAuth();
@@ -76,68 +80,73 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         // Listen for changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-            setSession(session);
-            const currentUser = session?.user ?? null;
-            setUser(currentUser);
+            try {
+                setSession(session);
+                const currentUser = session?.user ?? null;
+                setUser(currentUser);
 
-            // REFERRAL PROCESSING (On Login/Register)
-            if (currentUser && !isProcessingReferral.current) {
-                // Ensure profile is initialized instantly on first access
-                try {
-                    const { data: existingProfile } = await supabase
-                        .from('profiles')
-                        .select('id')
-                        .eq('id', currentUser.id)
-                        .maybeSingle();
-
-                    if (!existingProfile) {
-                        console.log("🆕 [PROFILE INITIALIZATION] No profile row found. Initializing profile dynamically...");
-                        const fullName = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || 'Guerrero';
-                        const username = currentUser.user_metadata?.username || currentUser.user_metadata?.user_name || `guerrero_${Math.random().toString(36).substring(2, 7)}`;
-                        const avatarUrl = currentUser.user_metadata?.avatar_url || null;
-
-                        await supabase
-                            .from('profiles')
-                            .insert({
-                                id: currentUser.id,
-                                username: username.toLowerCase().replace(/\s+/g, '_'),
-                                display_name: fullName,
-                                avatar_url: avatarUrl,
-                                checkins_count: 0,
-                                g_points: 1000
-                            });
-                    }
-                } catch (profileErr) {
-                    console.error("Error checking/creating profile on login:", profileErr);
-                }
-
-                const storedRefId = sessionStorage.getItem('gym_referral_id');
-                const alreadyReferred = currentUser.user_metadata?.referred_by;
-
-                if (storedRefId && !alreadyReferred && storedRefId !== currentUser.id) {
-                    isProcessingReferral.current = true;
-                    console.log("🎁 Automatic Referral Processing...");
-
+                // REFERRAL PROCESSING (On Login/Register)
+                if (currentUser && !isProcessingReferral.current) {
+                    // Ensure profile is initialized instantly on first access
                     try {
-                        // Immediately remove to prevent loop/race condition
-                        sessionStorage.removeItem('gym_referral_id');
+                        const { data: existingProfile } = await supabase
+                            .from('profiles')
+                            .select('id')
+                            .eq('id', currentUser.id)
+                            .maybeSingle();
 
-                        const success = await userService.processReferral(currentUser.id, storedRefId);
-                        if (success) {
-                            console.log("✅ Referral Processed. +250 XP to Referrer.");
-                        } else {
-                            // Only restore if it was a genuine failure that should be retried (optional, but risky)
-                            // For now, failure means we consumed the attempt. User can try link again manually if needed.
-                            console.warn("❌ Referral Processing Failed.");
+                        if (!existingProfile) {
+                            console.log("🆕 [PROFILE INITIALIZATION] No profile row found. Initializing profile dynamically...");
+                            const fullName = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || 'Guerrero';
+                            const username = currentUser.user_metadata?.username || currentUser.user_metadata?.user_name || `guerrero_${Math.random().toString(36).substring(2, 7)}`;
+                            const avatarUrl = currentUser.user_metadata?.avatar_url || null;
+
+                            await supabase
+                                .from('profiles')
+                                .insert({
+                                    id: currentUser.id,
+                                    username: username.toLowerCase().replace(/\s+/g, '_'),
+                                    display_name: fullName,
+                                    avatar_url: avatarUrl,
+                                    checkins_count: 0,
+                                    g_points: 1000
+                                });
                         }
-                    } catch (err) {
-                        console.error("Referral Error", err);
-                    } finally {
-                        isProcessingReferral.current = false;
+                    } catch (profileErr) {
+                        console.error("Error checking/creating profile on login:", profileErr);
+                    }
+
+                    const storedRefId = sessionStorage.getItem('gym_referral_id');
+                    const alreadyReferred = currentUser.user_metadata?.referred_by;
+
+                    if (storedRefId && !alreadyReferred && storedRefId !== currentUser.id) {
+                        isProcessingReferral.current = true;
+                        console.log("🎁 Automatic Referral Processing...");
+
+                        try {
+                            // Immediately remove to prevent loop/race condition
+                            sessionStorage.removeItem('gym_referral_id');
+
+                            const success = await userService.processReferral(currentUser.id, storedRefId);
+                            if (success) {
+                                console.log("✅ Referral Processed. +250 XP to Referrer.");
+                            } else {
+                                // Only restore if it was a genuine failure that should be retried (optional, but risky)
+                                // For now, failure means we consumed the attempt. User can try link again manually if needed.
+                                console.warn("❌ Referral Processing Failed.");
+                            }
+                        } catch (err) {
+                            console.error("Referral Error", err);
+                        } finally {
+                            isProcessingReferral.current = false;
+                        }
                     }
                 }
+            } catch (err) {
+                console.error("Unhandled error in onAuthStateChange:", err);
+            } finally {
+                setLoading(false);
             }
-            setLoading(false);
         });
 
         return () => subscription.unsubscribe();
