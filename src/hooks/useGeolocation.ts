@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Geolocation, PositionOptions } from '@capacitor/geolocation';
+import { Geolocation } from '@capacitor/geolocation';
 import { Capacitor } from '@capacitor/core';
 
 export interface Location {

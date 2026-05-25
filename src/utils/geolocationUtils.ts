@@ -1,4 +1,5 @@
-import { Geolocation, PositionOptions as CapPositionOptions } from '@capacitor/geolocation';
+import { Geolocation } from '@capacitor/geolocation';
+import type { PositionOptions as CapPositionOptions } from '@capacitor/geolocation';
 import { Capacitor } from '@capacitor/core';
 
 export const getCurrentPosition = async (options?: CapPositionOptions): Promise<{ lat: number, lng: number } | null> => {
