@@ -98,11 +98,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 const currentUser = session?.user ?? null;
                 setUser(currentUser);
 
-                // REFERRAL PROCESSING (On Login/Register)
+                // 🔓 UNBLOCK UI INSTANTLY: Set loading to false immediately to render the actual layout.
+                // Profile validation and creation will run in the background asynchronously without blocking the UI.
+                setLoading(false);
+                console.log("🔓 [AuthContext Listener] UI unblocked (loading=false) instantly!");
+
+                // REFERRAL & PROFILE PROCESSING (On Login/Register) - Asynchronous Background Tasks
                 if (currentUser && !isProcessingReferral.current) {
                     // Ensure profile is initialized instantly on first access
                     try {
-                        console.log("🔍 [PROFILE CHECK] Querying profile for user ID:", currentUser.id);
+                        console.log("🔍 [PROFILE CHECK] Querying profile for user ID in background:", currentUser.id);
                         const { data: existingProfile, error: profileCheckError } = await supabase
                             .from('profiles')
                             .select('id')
@@ -181,8 +186,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 }
             } catch (err) {
                 console.error("Unhandled error in onAuthStateChange:", err);
-            } finally {
-                setLoading(false);
             }
         });
 
