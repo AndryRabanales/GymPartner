@@ -464,10 +464,11 @@ export const WorkoutSession = () => {
             ]);
 
             // Always respect route parameter if explicitly navigated to a gym, otherwise start libre
-            const targetGymId = routeGymId || null;
+            // Normalize "personal" string to null to prevent database casting errors
+            const targetGymId = (routeGymId && routeGymId !== 'personal') ? routeGymId : null;
 
-            // Set initial name only if we have a specific route ID, otherwise "Buscando ubicación..."
-            if (routeGymId) {
+            // Set initial name only if we have a specific route ID (excluding "personal"), otherwise "Buscando ubicación..."
+            if (routeGymId && routeGymId !== 'personal') {
                 const routeGym = gyms.find(g => g.gym_id === routeGymId);
                 if (routeGym) setDetectedGymName(routeGym.gym_name || '');
             } else {
@@ -480,7 +481,7 @@ export const WorkoutSession = () => {
             // 2. PHASE 2: Fetch Inventory and Routines using predicted gym
             const [items, localRoutines, activeResult, personalItems] = await Promise.all([
                 equipmentService.getInventory(targetGymId || ''),
-                workoutService.getUserRoutines(userId, targetGymId || ''),
+                workoutService.getUserRoutines(userId, targetGymId),
                 workoutService.getActiveSession(userId),
                 equipmentService.getPersonalInventory(userId)
             ]);
@@ -497,7 +498,7 @@ export const WorkoutSession = () => {
                             return await getCurrentPosition({ enableHighAccuracy: false, timeout: 2000 });
                         });
 
-                    if (gpsPosition && !routeGymId) {
+                    if (gpsPosition && !targetGymId) {
                         const userLat = gpsPosition.lat;
                         const userLng = gpsPosition.lng;
 
@@ -524,7 +525,7 @@ export const WorkoutSession = () => {
                             setDetectedGymName("Entrenamiento Libre");
                             setResolvedGymId(null);
                         }
-                    } else if (!gpsPosition && !routeGymId) {
+                    } else if (!gpsPosition && !targetGymId) {
                         console.log("📍 GPS failed or disabled. Training Libre.");
                         setDetectedGymName("Entrenamiento Libre");
                         setResolvedGymId(null);
@@ -578,6 +579,32 @@ export const WorkoutSession = () => {
                 setSessionId(active.id);
                 setStartTime(new Date(active.started_at));
 
+                // If active session has a gym_id and it is different from targetGymId, re-fetch items and routines
+                let currentItems = items;
+                if (active.gym_id && active.gym_id !== targetGymId) {
+                    setResolvedGymId(active.gym_id);
+                    const activeGym = gyms.find(g => g.gym_id === active.gym_id);
+                    if (activeGym) {
+                        setDetectedGymName(activeGym.gym_name || '');
+                    }
+                    
+                    try {
+                        const [newItems, newRoutines] = await Promise.all([
+                            equipmentService.getInventory(active.gym_id),
+                            workoutService.getUserRoutines(userId, active.gym_id)
+                        ]);
+                        setRoutines(newRoutines);
+                        currentItems = newItems;
+                        const merged = [...newItems, ...personalItems.filter(i => !newItems.some(existing => existing.id === i.id))];
+                        setArsenal(merged);
+                    } catch (e) {
+                        console.error("Error re-fetching active gym data:", e);
+                    }
+                } else if (!active.gym_id) {
+                    setResolvedGymId(null);
+                    setDetectedGymName("Entrenamiento Libre");
+                }
+
                 // Hydrate from Draft or DB
                 const savedDraft = localStorage.getItem(`workout_draft_${active.id}`);
                 if (savedDraft) {
@@ -600,7 +627,7 @@ export const WorkoutSession = () => {
                         logs.forEach((log: any) => {
                             const exName = log.exercise?.name || 'Unknown Exercise';
                             const exId = log.exercise_id;
-                            const equipItem = items.find(i => normalizeText(i.name) === normalizeText(exName));
+                            const equipItem = currentItems.find(i => normalizeText(i.name) === normalizeText(exName));
                             const defaultMetrics = { weight: true, reps: true, time: false, distance: false, rpe: false };
 
                             let exercise = exerciseMap.get(exId);
