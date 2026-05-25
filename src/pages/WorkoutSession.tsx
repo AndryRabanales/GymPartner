@@ -999,6 +999,63 @@ export const WorkoutSession = () => {
         setActiveExercises(updated);
     };
 
+    // [NEW] Auto-complete when leaving input if all data is filled
+    const handleInputBlur = (exerciseIndex: number, setIndex: number, e: React.FocusEvent<HTMLInputElement>) => {
+        // Prevent auto-completion if the user is just clicking another input
+        const relatedTarget = e.relatedTarget as HTMLElement;
+        if (relatedTarget && relatedTarget.tagName === 'INPUT') {
+            return;
+        }
+
+        const exercise = activeExercises[exerciseIndex];
+        if (!exercise) return;
+        const set = exercise.sets[setIndex];
+        if (!set || set.completed) return;
+
+        let isComplete = true;
+        let hasAnyMetric = false;
+
+        if (exercise.metrics.weight) {
+            hasAnyMetric = true;
+            if (set.weight === undefined || set.weight <= 0) isComplete = false;
+        }
+        if (exercise.metrics.reps) {
+            hasAnyMetric = true;
+            if (set.reps === undefined || set.reps <= 0) isComplete = false;
+        }
+        if (exercise.metrics.time) {
+            hasAnyMetric = true;
+            if (set.time === undefined || set.time <= 0) isComplete = false;
+        }
+        if (exercise.metrics.distance) {
+            hasAnyMetric = true;
+            if (set.distance === undefined || set.distance <= 0) isComplete = false;
+        }
+        if (exercise.metrics.rpe) {
+            hasAnyMetric = true;
+            if (set.rpe === undefined || set.rpe <= 0) isComplete = false;
+        }
+
+        Object.keys(exercise.metrics).forEach(key => {
+            if (['weight', 'reps', 'time', 'distance', 'rpe'].includes(key)) return;
+            if (exercise.metrics[key as keyof typeof exercise.metrics]) {
+                hasAnyMetric = true;
+                if (!set.custom || set.custom[key] === undefined || set.custom[key] <= 0) isComplete = false;
+            }
+        });
+
+        if (isComplete && hasAnyMetric) {
+            toggleComplete(exerciseIndex, setIndex);
+        }
+    };
+
+    // [NEW] Handle Enter key to trigger blur
+    const handleInputKeyDown = (exerciseIndex: number, setIndex: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            e.currentTarget.blur();
+        }
+    };
+
     // [NEW] Remove Single Set (Fixed Immutability & Logic)
     const removeSet = (exerciseIndex: number, setIndex: number) => {
         // Deep copy needed for safety
@@ -1756,6 +1813,8 @@ export const WorkoutSession = () => {
                                                                             disabled={set.locked}
                                                                             value={set.weight === 0 ? '' : toDisplayWeight(set.weight, exercise.weightUnit || 'kg')}
                                                                             onChange={(e) => updateSet(mapIndex, setIndex, 'weight', toInternalWeight(e.target.value, exercise.weightUnit || 'kg'))}
+                                                                            onBlur={(e) => handleInputBlur(mapIndex, setIndex, e)}
+                                                                            onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
                                                                             className={`w-full bg-neutral-800 text-center font-black text-xl rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${isCompleted ? 'text-neutral-500' : 'text-white'} ${set.locked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                             placeholder="0"
                                                                         />
@@ -1770,6 +1829,8 @@ export const WorkoutSession = () => {
                                                                             disabled={set.locked}
                                                                             value={set.reps === 0 ? '' : set.reps}
                                                                             onChange={(e) => updateSet(mapIndex, setIndex, 'reps', e.target.value)}
+                                                                            onBlur={(e) => handleInputBlur(mapIndex, setIndex, e)}
+                                                                            onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
                                                                             className={`w-full bg-neutral-800 text-center font-black text-xl rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${isCompleted ? 'text-neutral-500' : 'text-white'} ${set.locked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                             placeholder="0"
                                                                         />
@@ -1784,6 +1845,8 @@ export const WorkoutSession = () => {
                                                                             disabled={set.locked}
                                                                             value={set.time || ''}
                                                                             onChange={(e) => updateSet(mapIndex, setIndex, 'time', e.target.value)}
+                                                                            onBlur={(e) => handleInputBlur(mapIndex, setIndex, e)}
+                                                                            onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
                                                                             className={`w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none ${set.locked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                             placeholder="0s"
                                                                         />
@@ -1798,6 +1861,8 @@ export const WorkoutSession = () => {
                                                                             disabled={set.locked}
                                                                             value={set.distance === 0 ? '' : set.distance}
                                                                             onChange={(e) => updateSet(mapIndex, setIndex, 'distance', e.target.value)}
+                                                                            onBlur={(e) => handleInputBlur(mapIndex, setIndex, e)}
+                                                                            onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
                                                                             className={`w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none ${set.locked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                             placeholder="0m"
                                                                         />
@@ -1813,6 +1878,8 @@ export const WorkoutSession = () => {
                                                                             disabled={set.locked}
                                                                             value={set.rpe || ''}
                                                                             onChange={(e) => updateSet(mapIndex, setIndex, 'rpe', e.target.value)}
+                                                                            onBlur={(e) => handleInputBlur(mapIndex, setIndex, e)}
+                                                                            onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
                                                                             className={`w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none ${set.locked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                             placeholder="-"
                                                                         />
@@ -1831,6 +1898,8 @@ export const WorkoutSession = () => {
                                                                                 disabled={set.locked}
                                                                                 value={set.custom?.[key] || ''}
                                                                                 onChange={(e) => updateSet(mapIndex, setIndex, key, e.target.value, true)} // isCustom=true
+                                                                                onBlur={(e) => handleInputBlur(mapIndex, setIndex, e)}
+                                                                                onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
                                                                                 className={`w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white focus:ring-2 focus:ring-gym-primary outline-none ${set.locked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                             />
                                                                         </div>
