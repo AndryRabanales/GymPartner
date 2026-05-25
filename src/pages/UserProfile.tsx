@@ -806,7 +806,9 @@ export const UserProfile = () => {
                                                     {routine.name}
                                                 </span>
                                             </div>
-                                            <ArrowRight className="text-yellow-400/80 w-3.5 h-3.5 shrink-0 group-hover:translate-x-0.5 transition-transform" />
+                                            <div className="w-5 h-5 rounded-full bg-black/30 text-yellow-400 flex items-center justify-center shrink-0 border border-white/5 group-hover:bg-yellow-400 group-hover:text-black transition-all duration-300">
+                                                <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                                            </div>
                                         </div>
                                         
                                         {/* Hover Shine Effect */}
