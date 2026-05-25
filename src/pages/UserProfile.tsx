@@ -56,6 +56,7 @@ export const UserProfile = () => {
 
     const [showEditProfile, setShowEditProfile] = useState(false);
     const [showSocialProfile, setShowSocialProfile] = useState(false);
+    const [showGymsModal, setShowGymsModal] = useState(false);
     const [skipOnboarding, setSkipOnboarding] = useState(true); // Default to TRUE: Skip onboarding completely and show main dashboard directly
 
     const hasSeededRef = useRef(false); // Track if we've run the seeder
@@ -481,13 +482,28 @@ export const UserProfile = () => {
                     </button>
                 </div>
 
-                {/* Cybernetic Tier Capsule Top Right */}
-                <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/60 border border-white/10 backdrop-blur-md shadow-lg">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400">RANGO:</span>
-                    <span className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 ${currentTier.color}`}>
-                        <span>{currentTier.icon}</span>
-                        <span className="italic">{currentTier.name}</span>
-                    </span>
+                {/* Right Side Controls (Map & Tier) */}
+                <div className="absolute top-4 right-4 z-20 flex flex-col items-end gap-2">
+                    {/* Map Button - Blinking Yellow */}
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            navigate('/map');
+                        }}
+                        className="w-10 h-10 rounded-full bg-yellow-500/10 border border-yellow-500 flex items-center justify-center text-yellow-500 hover:bg-yellow-500 hover:text-black transition-all backdrop-blur-md shadow-[0_0_15px_rgba(234,179,8,0.5)] animate-pulse"
+                        title="Ver Mapa"
+                    >
+                        <MapPin size={18} />
+                    </button>
+
+                    {/* Cybernetic Tier Capsule */}
+                    <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/60 border border-white/10 backdrop-blur-md shadow-lg">
+                        <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400">RANGO:</span>
+                        <span className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 ${currentTier.color}`}>
+                            <span>{currentTier.icon}</span>
+                            <span className="italic">{currentTier.name}</span>
+                        </span>
+                    </div>
                 </div>
 
                 {/* Avatar Section: LoL Style Ring (CONTAINED AND CENTERED) */}
@@ -758,13 +774,13 @@ export const UserProfile = () => {
                     <span className="font-bold text-neutral-200 group-hover:text-white text-xs uppercase tracking-widest">Rutinas</span>
                 </Link>
 
-                {/* 2. MAPA */}
-                <Link to="/map" className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-gym-primary/50 p-4 rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-3 text-center no-underline shadow-sm hover:shadow-md">
+                {/* 2. MIS GIMNASIOS */}
+                <button onClick={() => setShowGymsModal(true)} className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-gym-primary/50 p-4 rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-3 text-center shadow-sm hover:shadow-md w-full">
                     <div className="w-10 h-10 rounded-full bg-gym-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform border border-gym-primary/20">
                         <MapPin className="text-gym-primary w-5 h-5" />
                     </div>
-                    <span className="font-bold text-neutral-200 group-hover:text-white text-xs uppercase tracking-widest">Mapa</span>
-                </Link>
+                    <span className="font-bold text-neutral-200 group-hover:text-white text-xs uppercase tracking-widest">Mis Gimnasios</span>
+                </button>
 
                 {/* 3. STATS */}
                 <Link to="/stats" className="group bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-green-500/50 p-4 rounded-2xl transition-all duration-300 flex flex-col items-center justify-center gap-3 text-center no-underline shadow-sm hover:shadow-md">
@@ -783,22 +799,27 @@ export const UserProfile = () => {
                 </Link>
             </div >
 
-            {/* TERRITORIES SECTION (PASSPORT) */}
-            <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-bold text-white flex items-center gap-2 tracking-tight">
-                        <MapPin className="text-gym-primary" />
-                        Mis Ubicaciones
-                    </h2>
-                    <button
-
-                        onClick={() => navigate('/map')}
-                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-gym-primary/10 border border-gym-primary/30 text-gym-primary text-xs font-black uppercase tracking-widest hover:bg-gym-primary hover:text-black transition-all hover:scale-105 hover:shadow-[0_0_15px_rgba(229,255,0,0.3)]"
-                    >
-                        <Search size={14} strokeWidth={3} />
-                        Encontrar Gimnasios
-                    </button>
-                </div>
+            {/* TERRITORIES SECTION (PASSPORT) - MODAL */}
+            {showGymsModal && (
+                <div className="fixed inset-0 z-[100] bg-neutral-950/95 backdrop-blur-xl flex flex-col p-4 md:p-8 overflow-y-auto">
+                    <div className="max-w-4xl w-full mx-auto mt-4 md:mt-8 space-y-6 pb-24">
+                        {/* Modal Header */}
+                        <div className="flex items-center gap-4 border-b border-white/10 pb-4">
+                            <button onClick={() => setShowGymsModal(false)} className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-white/10 transition-colors">
+                                <ArrowLeft size={20} />
+                            </button>
+                            <h2 className="text-2xl font-bold text-white flex items-center gap-2 tracking-tight">
+                                <MapPin className="text-gym-primary" />
+                                Mis Gimnasios
+                            </h2>
+                            <button
+                                onClick={() => { setShowGymsModal(false); navigate('/map'); }}
+                                className="ml-auto flex items-center gap-2 px-4 py-2 rounded-full bg-gym-primary/10 border border-gym-primary/30 text-gym-primary text-xs font-black uppercase tracking-widest hover:bg-gym-primary hover:text-black transition-all hover:scale-105 hover:shadow-[0_0_15px_rgba(229,255,0,0.3)]"
+                            >
+                                <Search size={14} strokeWidth={3} />
+                                <span className="hidden sm:inline">Encontrar Gimnasios</span>
+                            </button>
+                        </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {userGyms.map((gym) => {
@@ -947,6 +968,8 @@ export const UserProfile = () => {
 
                 </div>
             </div>
+        </div>
+        )}
 
             {/* Add Gym Modal */}
 
