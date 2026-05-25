@@ -775,67 +775,62 @@ export const UserProfile = () => {
                 </button>
 
                 {/* --- QUICK START ROUTINES (INICIO RÁPIDO) --- */}
-                <div className="flex flex-col gap-2 w-full mt-1">
-                    <div className="flex items-center justify-between px-1">
-                        <span className="font-black text-[9px] sm:text-[10px] text-neutral-500 uppercase tracking-[0.2em] flex items-center gap-1.5 italic">
-                            <span className="w-1.5 h-1.5 rounded-full bg-gym-primary animate-pulse"></span>
-                            ⚡ Inicio Rápido de Rutinas
-                        </span>
-                        <Link 
-                            to="/arsenal" 
-                            className="font-bold text-[9px] sm:text-[10px] text-gym-primary/70 hover:text-gym-primary transition-colors uppercase tracking-wider no-underline italic"
-                        >
-                            Ver Todo &rarr;
-                        </Link>
-                    </div>
-
-                    <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-none snap-x snap-mandatory w-full max-w-full">
-                        {routines.length === 0 ? (
+                {routines.length > 0 && (
+                    <div className="flex flex-col gap-2 w-full mt-2">
+                        <div className="flex items-center justify-between px-2 mb-1">
+                            <span className="font-black text-[10px] sm:text-xs text-neutral-400 uppercase tracking-[0.2em] flex items-center gap-2 italic">
+                                <span className="w-1.5 h-1.5 rounded-full bg-gym-primary animate-pulse shadow-[0_0_10px_rgba(250,204,21,0.8)]"></span>
+                                RUTINAS FRECUENTES
+                            </span>
                             <Link 
-                                to="/arsenal"
-                                className="w-full bg-neutral-900/40 hover:bg-neutral-900/60 border border-white/5 hover:border-white/10 rounded-2xl p-4 flex items-center justify-between backdrop-blur-sm no-underline transition-all group shrink-0"
+                                to="/arsenal" 
+                                className="font-bold text-[10px] sm:text-xs text-gym-primary/70 hover:text-gym-primary transition-colors uppercase tracking-wider no-underline italic"
                             >
-                                <div className="flex items-center gap-3 text-left">
-                                    <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-neutral-400 group-hover:text-gym-primary transition-colors">
-                                        <Dumbbell size={14} />
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className="font-black text-[10px] sm:text-xs text-neutral-300 uppercase italic">¡Crea tu primera rutina!</span>
-                                        <span className="text-[9px] text-neutral-500 font-bold uppercase tracking-wider mt-0.5">Diseña tu arsenal en la pestaña de Rutinas</span>
-                                    </div>
-                                </div>
-                                <ArrowRight size={14} className="text-neutral-500 group-hover:text-white transition-colors" />
+                                Ver Todo
                             </Link>
-                        ) : (
-                            routines.slice(0, 5).map(routine => {
+                        </div>
+
+                        <div className="flex flex-col gap-2 w-full">
+                            {routines.slice(0, 3).map(routine => {
                                 const exerciseCount = routine.equipment_ids?.length || routine.routine_exercises?.length || 0;
                                 return (
-                                    <div
+                                    <button
                                         key={routine.id}
                                         onClick={() => navigate(`/workout?routineId=${routine.id}`)}
-                                        className="snap-start shrink-0 w-[85%] sm:w-[260px] bg-neutral-900/60 hover:bg-neutral-900/90 border border-white/5 hover:border-gym-primary/30 rounded-2xl p-3.5 flex items-center justify-between backdrop-blur-sm cursor-pointer active:scale-95 transition-all shadow-[0_4px_20px_rgba(0,0,0,0.4)] group relative overflow-hidden select-none"
+                                        className="group relative overflow-hidden bg-gradient-to-r from-yellow-400/80 to-orange-500/80 rounded-2xl p-[1px] shadow-[0_0_15px_rgba(250,204,21,0.15)] hover:shadow-[0_0_25px_rgba(250,204,21,0.3)] hover:-translate-y-0.5 transition-all duration-300 active:scale-95 w-full text-left"
                                     >
-                                        {/* Premium Subtle Ambient Aura */}
-                                        <div className="absolute top-0 right-0 w-24 h-24 bg-gym-primary/5 rounded-full blur-2xl group-hover:bg-gym-primary/10 transition-colors pointer-events-none" />
-                                        
-                                        <div className="flex flex-col items-start text-left min-w-0 pr-2 relative z-10">
-                                            <span className="font-black text-[11px] sm:text-xs text-white group-hover:text-gym-primary transition-colors uppercase italic truncate max-w-full">
-                                                {routine.name}
-                                            </span>
-                                            <span className="text-[8px] sm:text-[9px] text-neutral-400 font-bold uppercase tracking-wider mt-0.5">
-                                                {exerciseCount} {exerciseCount === 1 ? 'Ejercicio' : 'Ejercicios'}
-                                            </span>
-                                        </div>
+                                        {/* Inner Dark Glass Container */}
+                                        <div className="relative bg-neutral-950/95 backdrop-blur-xl w-full h-full rounded-[15px] px-4 py-3 sm:py-4 flex items-center justify-between group-hover:bg-neutral-900/90 transition-all z-10">
+                                            
+                                            {/* Left Side: Icon & Details */}
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-full bg-gym-primary/10 flex items-center justify-center border border-gym-primary/20 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300">
+                                                    <Swords className="text-gym-primary w-5 h-5" strokeWidth={2.5} />
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="font-black text-white text-sm sm:text-base italic uppercase tracking-tighter truncate max-w-[180px] sm:max-w-[220px] group-hover:text-gym-primary transition-colors">
+                                                        {routine.name}
+                                                    </span>
+                                                    <span className="font-bold text-neutral-500 text-[9px] sm:text-[10px] tracking-widest uppercase">
+                                                        {exerciseCount} {exerciseCount === 1 ? 'Ejercicio' : 'Ejercicios'}
+                                                    </span>
+                                                </div>
+                                            </div>
 
-                                        <div className="w-8 h-8 rounded-full bg-gym-primary/10 border border-gym-primary/20 text-gym-primary flex items-center justify-center shrink-0 shadow-lg shadow-gym-primary/5 group-hover:bg-gym-primary group-hover:text-black group-hover:scale-105 group-hover:rotate-12 transition-all relative z-10">
-                                            <Swords size={12} strokeWidth={2.5} />
+                                            {/* Right Side: Action Arrow */}
+                                            <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-gym-primary/20 transition-all duration-300 border border-transparent group-hover:border-gym-primary/30">
+                                                <ArrowRight className="text-gym-primary w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                                            </div>
                                         </div>
-                                    </div>
+                                        
+                                        {/* Hover Shine Effect */}
+                                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12 translate-x-[-200%] group-hover:animate-shine pointer-events-none z-20" />
+                                    </button>
                                 );
-                            })
-                        )}
+                            })}
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
 
             {/* Quick Actions Grid - 2x2 Layout */}
