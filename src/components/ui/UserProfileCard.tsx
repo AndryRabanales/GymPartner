@@ -233,9 +233,13 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
                     <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase leading-tight drop-shadow-lg px-4">
                         {user.username.replace('_', ' ')}
                     </h2>
-                    {user.gym_name && (
+                    {user.gym_name ? (
                         <p className="text-[10px] font-bold text-neutral-500 mt-1 flex items-center justify-center gap-1.5 uppercase tracking-widest">
                             <MapPin size={10} className="text-gym-primary" /> {user.gym_name}
+                        </p>
+                    ) : (
+                        <p className="text-[10px] font-bold text-neutral-500 mt-1 flex items-center justify-center gap-1.5 uppercase tracking-widest animate-pulse">
+                            <Activity size={10} className="text-gym-primary" /> EXPLORADOR LIBRE
                         </p>
                     )}
                 </div>
@@ -292,7 +296,7 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
                         )}
 
                 {/* Base Card */}
-                {user.gym_name && (
+                {user.gym_name ? (
                     <div 
                         className="rounded-[2.5rem] border border-white/5 relative overflow-hidden group shadow-2xl min-h-[140px]"
                         style={{ backgroundColor: user.gym_color || '#E5FF00' }}
@@ -318,6 +322,15 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
                                 {user.gym_name.toUpperCase()}
                             </p>
                         </div>
+                    </div>
+                ) : (
+                    <div className="rounded-[2.5rem] border border-dashed border-white/10 bg-white/[0.01] p-5 text-center min-h-[140px] flex flex-col items-center justify-center space-y-2">
+                        <span className="text-[8px] font-black text-neutral-500 uppercase tracking-[0.2em] italic">
+                            Sin Gimnasio Principal
+                        </span>
+                        <p className="text-xs text-neutral-400 font-medium leading-relaxed max-w-[220px]">
+                            Este guerrero aún está explorando el mapa o entrena de forma libre.
+                        </p>
                     </div>
                 )}
 
