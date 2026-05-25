@@ -614,38 +614,71 @@ export const UserProfile = () => {
                     {/* Gym Tags & Share - CARD FOOTER */}
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-3 pt-2 border-t border-white/5 w-full">
                         <div className="flex flex-wrap items-center gap-1.5 justify-center sm:justify-start w-full sm:w-auto">
-                            {userGyms.map(gym => {
-                                let textColor = "text-neutral-300 hover:text-white";
-                                let iconColor = "text-neutral-500";
-                                let bgColor = "bg-neutral-800 hover:bg-neutral-700";
-                                let borderColor = "border-neutral-700/50 hover:border-neutral-500";
-                                let shadow = "hover:shadow-sm";
+                            {(() => {
+                                // Sort gyms: Home Base first, then Favorites, then others
+                                const sortedGyms = [...userGyms].sort((a, b) => {
+                                    if (a.is_home_base && !b.is_home_base) return -1;
+                                    if (!a.is_home_base && b.is_home_base) return 1;
+                                    if (a.is_favorite && !b.is_favorite) return -1;
+                                    if (!a.is_favorite && b.is_favorite) return 1;
+                                    return 0;
+                                });
 
-                                if (gym.is_favorite) {
-                                    borderColor = "border-red-500/50 hover:border-red-500";
-                                    textColor = "text-red-400 hover:text-red-300";
-                                    iconColor = "text-red-500";
-                                    bgColor = "bg-red-500/10 hover:bg-red-500/20";
-                                    shadow = "hover:shadow-[0_0_15px_rgba(239,68,68,0.2)]";
-                                } else if (gym.is_home_base) {
-                                    borderColor = "border-yellow-500/50 hover:border-yellow-500";
-                                    textColor = "text-yellow-400 hover:text-yellow-300";
-                                    iconColor = "text-yellow-500";
-                                    bgColor = "bg-yellow-500/10 hover:bg-yellow-500/20";
-                                    shadow = "hover:shadow-[0_0_15px_rgba(234,179,8,0.2)]";
-                                }
+                                const limit = 3;
+                                const displayGyms = sortedGyms.slice(0, limit);
+                                const hasMore = sortedGyms.length > limit;
+                                const remainingCount = sortedGyms.length - limit;
 
                                 return (
-                                    <Link
-                                        key={gym.gym_id}
-                                        to={`/territory/${gym.gym_id}`}
-                                        className={`px-2 py-1 rounded-full flex items-center gap-1 text-[10px] sm:text-xs transition-all no-underline border inline-flex shrink-0 ${borderColor} ${textColor} ${bgColor} ${shadow}`}
-                                    >
-                                        <MapPin size={10} className={`sm:w-3 sm:h-3 ${iconColor}`} />
-                                        <span className="truncate max-w-[85px] sm:max-w-[120px]">{gym.gym_name}</span>
-                                    </Link>
+                                    <>
+                                        {displayGyms.map(gym => {
+                                            let textColor = "text-neutral-300 hover:text-white";
+                                            let iconColor = "text-neutral-500";
+                                            let bgColor = "bg-neutral-800 hover:bg-neutral-700";
+                                            let borderColor = "border-neutral-700/50 hover:border-neutral-500";
+                                            let shadow = "hover:shadow-sm";
+
+                                            if (gym.is_favorite) {
+                                                borderColor = "border-red-500/50 hover:border-red-500";
+                                                textColor = "text-red-400 hover:text-red-300";
+                                                iconColor = "text-red-500";
+                                                bgColor = "bg-red-500/10 hover:bg-red-500/20";
+                                                shadow = "hover:shadow-[0_0_15px_rgba(239,68,68,0.2)]";
+                                            } else if (gym.is_home_base) {
+                                                borderColor = "border-yellow-500/50 hover:border-yellow-500";
+                                                textColor = "text-yellow-400 hover:text-yellow-300";
+                                                iconColor = "text-yellow-500";
+                                                bgColor = "bg-yellow-500/10 hover:bg-yellow-500/20";
+                                                shadow = "hover:shadow-[0_0_15px_rgba(234,179,8,0.2)]";
+                                            }
+
+                                            return (
+                                                <Link
+                                                    key={gym.gym_id}
+                                                    to={`/territory/${gym.gym_id}`}
+                                                    className={`px-2 py-1 rounded-full flex items-center gap-1 text-[10px] sm:text-xs transition-all no-underline border inline-flex shrink-0 ${borderColor} ${textColor} ${bgColor} ${shadow}`}
+                                                >
+                                                    <MapPin size={10} className={`sm:w-3 sm:h-3 ${iconColor}`} />
+                                                    <span className="truncate max-w-[85px] sm:max-w-[120px]">{gym.gym_name}</span>
+                                                </Link>
+                                            );
+                                        })}
+                                        
+                                        {hasMore && (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setShowGymsModal(true);
+                                                }}
+                                                className="px-2 py-1 rounded-full flex items-center gap-1 text-[10px] sm:text-xs transition-all border border-gym-primary/30 text-gym-primary bg-gym-primary/10 hover:bg-gym-primary hover:text-black font-black uppercase tracking-wider shrink-0 cursor-pointer"
+                                                title={`Ver ${remainingCount} gimnasios más`}
+                                            >
+                                                <span>+{remainingCount}</span>
+                                            </button>
+                                        )}
+                                    </>
                                 );
-                            })}
+                            })()}
                         </div>
                         <button
                             onClick={(e) => {
