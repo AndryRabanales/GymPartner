@@ -297,13 +297,36 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     const signOut = async () => {
-        if (session?.user?.id.startsWith('dev-')) {
+        console.log("🚪 [AuthContext] signOut execution started...");
+        try {
+            if (session?.user?.id && !session.user.id.startsWith('dev-') && supabase) {
+                await supabase.auth.signOut();
+            }
+        } catch (err) {
+            console.error("⚠️ [AuthContext] Supabase signOut threw error:", err);
+        } finally {
+            // ALWAYS clean state no matter what
             setUser(null);
             setSession(null);
-            return;
-        }
-        if (supabase) {
-            await supabase.auth.signOut();
+            
+            // Clean local storage supabase keys
+            try {
+                const keysToRemove: string[] = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && (key.startsWith('sb-') || key.includes('supabase') || key.includes('auth'))) {
+                        keysToRemove.push(key);
+                    }
+                }
+                keysToRemove.forEach(key => localStorage.removeItem(key));
+                sessionStorage.clear();
+            } catch (storageErr) {
+                console.error("⚠️ [AuthContext] Error cleaning storage:", storageErr);
+            }
+
+            console.log("⚙️ [AuthContext] Local auth cleared. Redirecting to landing page.");
+            // Hard redirect to root to clear all state/cache clean and pristine
+            window.location.href = '/';
         }
     };
 
