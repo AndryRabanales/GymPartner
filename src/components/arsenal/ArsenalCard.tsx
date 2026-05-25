@@ -29,6 +29,7 @@ export const ArsenalCard = ({ item, isSelected, userSettings, onEdit, configOver
         if (configOverride.track_time) activeMetricIds.push('time');
         if (configOverride.track_distance) activeMetricIds.push('distance');
         if (configOverride.track_rpe) activeMetricIds.push('rpe');
+        if (configOverride.custom_metric) activeMetricIds.push(configOverride.custom_metric);
 
         // Custom? Routine configs might store them in a specific way or just assume item metrics.
     } else {

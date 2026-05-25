@@ -227,8 +227,12 @@ export const MyArsenal = () => {
 
                     if (shouldApply) {
                         const existing = next.get(itemId) || {};
-                        const metricToTrackKey = `track_${metricId}`;
-                        next.set(itemId, { ...existing, [metricToTrackKey]: newValue });
+                        if (['weight', 'reps', 'time', 'distance', 'rpe'].includes(metricId)) {
+                            const metricToTrackKey = `track_${metricId}`;
+                            next.set(itemId, { ...existing, [metricToTrackKey]: newValue });
+                        } else {
+                            next.set(itemId, { ...existing, custom_metric: newValue ? metricId : null });
+                        }
                     }
                 });
                 return next;
@@ -407,13 +411,19 @@ export const MyArsenal = () => {
             setRoutineConfigs(prevConfigs => {
                 const nextConfigs = new Map(prevConfigs);
                 const existing = nextConfigs.get(id) || {};
+
+                const activeCustomMetric = Object.keys(globalMetrics).find(
+                    k => !['weight', 'reps', 'time', 'distance', 'rpe'].includes(k) && globalMetrics[k]
+                );
+
                 nextConfigs.set(id, {
                     ...existing,
                     track_weight: !isCardio ? globalMetrics.weight : false,
                     track_reps: !isCardio ? globalMetrics.reps : false,
                     track_time: isCardio ? globalMetrics.time : false,
                     track_distance: isCardio ? globalMetrics.distance : false,
-                    track_rpe: globalMetrics.rpe
+                    track_rpe: globalMetrics.rpe,
+                    custom_metric: activeCustomMetric || null
                 });
                 return nextConfigs;
             });

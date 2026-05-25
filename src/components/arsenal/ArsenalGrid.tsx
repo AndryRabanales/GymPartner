@@ -92,9 +92,9 @@ export const ArsenalGrid = ({
     return (
         <div className="space-y-6" id="tut-arsenal-grid">
             {/* Visual Stats Bar + Global Metrics Toolbar */}
-            <div className="flex items-center gap-2 mb-4 px-1 overflow-x-auto no-scrollbar py-1">
-                {/* Counts */}
-                <div className="flex items-center gap-2 shrink-0">
+            <div className="flex flex-col gap-2 mb-4 px-1">
+                {/* Row 1: Counts */}
+                <div className="flex items-center gap-2">
                     <div className="px-3 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-[10px] font-bold text-neutral-400 whitespace-nowrap">
                         {inventory.length} Total
                     </div>
@@ -103,20 +103,17 @@ export const ArsenalGrid = ({
                     </div>
                 </div>
 
-                {/* Vertical Divider */}
-                {showToolbar && <div className="w-px h-6 bg-neutral-800 mx-1 shrink-0" />}
-
-                {/* Global Metrics Toolbar — elegant pill bar */}
+                {/* Row 2: Global Metrics Toolbar */}
                 {showToolbar && (
                     <div 
-                        className="flex items-center gap-1.5 shrink-0"
+                        className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1"
                         style={{ animation: 'slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards' }}
                     >
                         <span className="text-[8px] font-black uppercase tracking-[0.2em] text-neutral-600 shrink-0 mr-1 select-none hidden sm:inline-block">
                             Métricas
                         </span>
                         
-                        {METRIC_DEFS.map((metric) => {
+                        {[...METRIC_DEFS, ...(userSettings.metrics || []).map(m => ({ id: m.id, label: m.label, icon: m.icon, defaultFor: 'all' as const }))].map((metric) => {
                             const isActive = globalMetrics![metric.id] ?? false;
                             
                             return (
@@ -136,7 +133,7 @@ export const ArsenalGrid = ({
                                     `}
                                     title={`Activar/Desactivar ${metric.label}`}
                                 >
-                                    {metric.icon}
+                                    <span>{metric.icon}</span>
                                     <span>{metric.label}</span>
                                 </button>
                             );
@@ -168,12 +165,16 @@ export const ArsenalGrid = ({
                                 // Preview global metrics for unselected items
                                 if (!isSelected && globalMetrics) {
                                     const isCardio = section === 'CARDIO' || getMuscleGroup(item, userSettings) === 'CARDIO';
+                                    const activeCustomMetric = Object.keys(globalMetrics).find(
+                                        k => !['weight', 'reps', 'time', 'distance', 'rpe'].includes(k) && globalMetrics[k]
+                                    );
                                     effectiveConfig = {
                                         track_weight: !isCardio ? globalMetrics.weight : false,
                                         track_reps: !isCardio ? globalMetrics.reps : false,
                                         track_time: isCardio ? globalMetrics.time : false,
                                         track_distance: isCardio ? globalMetrics.distance : false,
-                                        track_rpe: globalMetrics.rpe
+                                        track_rpe: globalMetrics.rpe,
+                                        custom_metric: activeCustomMetric || null
                                     };
                                 }
 
