@@ -741,31 +741,31 @@ export const UserProfile = () => {
                         // The WorkoutSession page handles GPS/Gym resolution while showing the intro animation
                         navigate('/workout');
                     }}
-                    className="group relative overflow-hidden bg-gradient-to-r from-yellow-400 to-orange-500 rounded-3xl p-1 shadow-[0_0_20px_rgba(250,204,21,0.3)] hover:shadow-[0_0_40px_rgba(250,204,21,0.6)] hover:-translate-y-1 transition-all duration-300 active:scale-95 ring-4 ring-yellow-400/20 w-full"
+                    className="group relative overflow-hidden bg-gradient-to-r from-yellow-500 via-amber-600 to-black rounded-3xl p-[3px] shadow-[0_0_20px_rgba(234,179,8,0.2)] hover:shadow-[0_0_40px_rgba(234,179,8,0.5)] hover:-translate-y-1 transition-all duration-300 active:scale-95 ring-4 ring-yellow-600/30 w-full"
                 >
                     {/* Inner Glass Container */}
-                    <div className="relative bg-black/10 backdrop-blur-sm w-full h-full rounded-[20px] px-4 md:px-8 py-4 md:py-6 flex items-center justify-between border border-white/20 group-hover:bg-transparent transition-all">
+                    <div className="relative bg-black/25 backdrop-blur-md w-full h-full rounded-[22px] px-4 md:px-8 py-4 md:py-6 flex items-center justify-between border border-white/10 group-hover:bg-transparent transition-all">
 
                         {/* Left Side: Icon & Text */}
                         <div className="flex items-center gap-4 md:gap-6">
                             {/* Icon Circle */}
-                            <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-white text-black flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:rotate-12 transition-all duration-500 shrink-0 animate-bounce">
+                            <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-yellow-400 text-black flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:rotate-12 transition-all duration-500 shrink-0 animate-bounce">
                                 {startLoading ? <Loader className="animate-spin w-6 h-6 md:w-8 md:h-8" /> : <Swords className="w-6 h-6 md:w-8 md:h-8" strokeWidth={2.5} />}
                             </div>
 
                             {/* Text Stack */}
                             <div className="flex flex-col items-start gap-0.5 md:gap-1 text-left">
-                                <span className="font-black text-black text-2xl md:text-4xl italic uppercase tracking-tighter leading-none drop-shadow-sm">
+                                <span className="font-black text-yellow-400 text-2xl md:text-4xl italic uppercase tracking-tighter leading-none drop-shadow-sm group-hover:text-white transition-colors">
                                     {startLoading ? 'INICIANDO...' : 'INICIAR'}
                                 </span>
-                                <span className="font-bold text-black/80 text-[10px] md:text-xs tracking-[0.2em] uppercase">
+                                <span className="font-bold text-neutral-300 text-[10px] md:text-xs tracking-[0.2em] uppercase">
                                     Entrenamiento
                                 </span>
                             </div>
                         </div>
 
                         {/* Right Side: Action Arrow */}
-                        <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-black/10 flex items-center justify-center opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
+                        <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-yellow-400 flex items-center justify-center opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
                             <ArrowRight className="text-black w-5 h-5 md:w-6 md:h-6" />
                         </div>
 
@@ -794,23 +794,23 @@ export const UserProfile = () => {
                                     <button
                                         key={routine.id}
                                         onClick={() => navigate(`/workout?routineId=${routine.id}`)}
-                                        className="group relative overflow-hidden bg-gradient-to-r from-yellow-400 via-amber-400 to-orange-500 rounded-[12px] p-[1px] sm:p-[1.5px] shadow-[0_0_10px_rgba(250,204,21,0.15)] hover:shadow-[0_0_20px_rgba(250,204,21,0.3)] hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-300 active:scale-95 w-full text-left"
+                                        className="group relative overflow-hidden bg-gradient-to-r from-yellow-500/80 to-neutral-700/80 rounded-[12px] p-[1.5px] shadow-[0_4px_12px_rgba(0,0,0,0.3)] hover:shadow-[0_4px_20px_rgba(0,0,0,0.5)] hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-300 active:scale-95 w-full text-left"
                                     >
-                                        {/* Inner Glass Container - Ultra compact horizontal layout with arrow */}
-                                        <div className="relative bg-black/10 backdrop-blur-sm w-full h-full rounded-[10px] px-2.5 py-1.5 flex items-center justify-between border border-white/20 group-hover:bg-transparent transition-all z-10 gap-1.5">
+                                        {/* Inner Glass Container - Dark neutral layout with soft gold accents */}
+                                        <div className="relative bg-neutral-900/95 backdrop-blur-md w-full h-full rounded-[10px] px-2.5 py-2 flex items-center justify-between border border-white/5 transition-all z-10 gap-1.5">
                                             <div className="flex items-center gap-2 min-w-0">
-                                                <div className="w-6 h-6 rounded-full bg-white text-black flex items-center justify-center shadow-lg animate-bounce shrink-0">
+                                                <div className="w-6 h-6 rounded-full bg-neutral-800 text-yellow-400 flex items-center justify-center shadow-lg animate-bounce shrink-0 border border-neutral-700/50">
                                                     <Swords className="w-3.5 h-3.5" strokeWidth={2.5} />
                                                 </div>
-                                                <span className="font-black text-black text-[10px] sm:text-xs italic uppercase tracking-tighter truncate max-w-[85px] sm:max-w-[125px] leading-tight">
+                                                <span className="font-black text-neutral-200 text-[10px] sm:text-xs italic uppercase tracking-tighter truncate max-w-[85px] sm:max-w-[125px] leading-tight group-hover:text-yellow-400 transition-colors">
                                                     {routine.name}
                                                 </span>
                                             </div>
-                                            <ArrowRight className="text-black w-3.5 h-3.5 shrink-0 opacity-80 group-hover:translate-x-0.5 transition-transform" />
+                                            <ArrowRight className="text-yellow-400/80 w-3.5 h-3.5 shrink-0 group-hover:translate-x-0.5 transition-transform" />
                                         </div>
                                         
                                         {/* Hover Shine Effect */}
-                                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 translate-x-[-200%] group-hover:animate-shine pointer-events-none z-20" />
+                                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12 translate-x-[-200%] group-hover:animate-shine pointer-events-none z-20" />
                                     </button>
                                 );
                             })}
