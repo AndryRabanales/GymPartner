@@ -92,11 +92,38 @@ const InstagramEscapeScreen = () => {
 export const LoginPage = () => {
     const { signInWithGoogle, signInWithMeta, signInAsDev } = useAuth();
     const [error, setError] = useState<string | null>(null);
+    const [isAutoLoggingIn, setIsAutoLoggingIn] = useState(false);
 
     // Show escape screen immediately if inside Instagram/Meta IAB
     if (detectMetaIAB()) {
         return <InstagramEscapeScreen />;
     }
+
+    // Auto-login trigger when coming from Instagram source
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const fromInstagram =
+            params.get('utm_source') === 'instagram' ||
+            params.get('ref') === 'instagram' ||
+            params.get('ref') === 'ig' ||
+            document.referrer.includes('instagram.com') ||
+            document.referrer.includes('facebook.com');
+
+        if (fromInstagram) {
+            console.log("⚡ [Auto-Login] Detected Instagram entry! Triggering direct Meta auth...");
+            setIsAutoLoggingIn(true);
+            
+            // Short delay to let the premium loading screen mount and show smooth transition
+            const timer = setTimeout(() => {
+                signInWithMeta().catch(err => {
+                    console.error("❌ Auto-login failed:", err);
+                    setError(err.message || 'Error al iniciar sesión automáticamente con Meta.');
+                    setIsAutoLoggingIn(false);
+                });
+            }, 600);
+            return () => clearTimeout(timer);
+        }
+    }, []);
 
     const handleGoogleLogin = async () => {
         try {
@@ -115,6 +142,40 @@ export const LoginPage = () => {
             setError(err.message || 'Error al conectar con Meta.');
         }
     };
+
+    if (isAutoLoggingIn) {
+        return (
+            <div className="min-h-screen fixed inset-0 bg-neutral-950 flex flex-col items-center justify-center p-6 z-[99999] overflow-hidden">
+                {/* Immersive background glow */}
+                <div className="absolute w-[350px] h-[350px] bg-gym-primary/10 rounded-full blur-[100px] pointer-events-none animate-pulse"></div>
+
+                <div className="relative z-10 flex flex-col items-center max-w-sm text-center space-y-6 animate-in fade-in zoom-in duration-500">
+                    {/* GymPartner metallic logo */}
+                    <div className="flex flex-col items-center">
+                        <span className="text-3xl font-black italic tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-gym-primary to-yellow-300 uppercase">
+                            GymPartner
+                        </span>
+                        <div className="h-[2px] w-12 bg-gym-primary mt-1.5 rounded-full" />
+                    </div>
+
+                    {/* Premium Cyber Loader */}
+                    <div className="relative w-16 h-16 flex items-center justify-center">
+                        <div className="absolute inset-0 border-4 border-neutral-800 rounded-full"></div>
+                        <div className="absolute inset-0 border-4 border-gym-primary border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <h2 className="text-white text-lg font-black uppercase tracking-wider italic">
+                            ACCESO INSTANTÁNEO
+                        </h2>
+                        <p className="text-neutral-400 text-xs tracking-wider leading-relaxed px-4">
+                            Conectando con tu cuenta de Instagram de forma segura. Redirigiendo...
+                        </p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-[80vh] flex items-center justify-center p-4">

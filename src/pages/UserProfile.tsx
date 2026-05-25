@@ -134,7 +134,23 @@ export const UserProfile = () => {
         }
     }, [user]);
 
-    // Load Alpha data when userGyms is ready
+    // Auto-redirect guest if entering from Instagram/Meta
+    useEffect(() => {
+        if (!authLoading && !user) {
+            const params = new URLSearchParams(window.location.search);
+            const fromInstagram =
+                params.get('utm_source') === 'instagram' ||
+                params.get('ref') === 'instagram' ||
+                params.get('ref') === 'ig' ||
+                document.referrer.includes('instagram.com') ||
+                document.referrer.includes('facebook.com');
+
+            if (fromInstagram) {
+                console.log("⚡ [UserProfile Auto-Redirect] Redirecting Instagram guest to login page for instant auth...");
+                navigate(`/login${window.location.search}`);
+            }
+        }
+    }, [user, authLoading]);
     useEffect(() => {
         if (user && userGyms.length > 0) {
             loadAlphaData();
@@ -439,9 +455,9 @@ export const UserProfile = () => {
     return (
         <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-8 pb-24">
             {/* ... content ... */}
-            {/* Header Profile Card - LoL/Gymrat Design - FIXED LAYOUT */}
+            {/* Header Profile Card - Premium Hextech Cybernetic Design */}
             <div
-                className="bg-neutral-900 border border-neutral-800 rounded-3xl p-2 sm:p-6 flex flex-col sm:flex-row items-center sm:items-start gap-2 sm:gap-6 relative overflow-hidden transition-all shadow-2xl group"
+                className={`bg-neutral-900/60 backdrop-blur-xl border ${currentTier.borderColor} rounded-3xl p-4 sm:p-8 flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-8 relative overflow-hidden transition-all shadow-[0_20px_50px_rgba(0,0,0,0.6)] group`}
                 style={profile?.custom_settings?.banner_url ? {
                     backgroundImage: `url(${profile.custom_settings.banner_url})`,
                     backgroundSize: 'cover',
@@ -449,9 +465,7 @@ export const UserProfile = () => {
                 } : {}}
             >
                 {/* Banner Overlay for Readability */}
-                {profile?.custom_settings?.banner_url && (
-                    <div className="absolute inset-0 bg-black/60 z-0 transition-opacity group-hover:bg-black/50"></div>
-                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/75 to-neutral-950/20 z-0"></div>
 
                 {/* Share Button - ELEGANT GLASS ACTION */}
                 <div className="absolute top-4 left-4 z-20">
@@ -467,15 +481,21 @@ export const UserProfile = () => {
                     </button>
                 </div>
 
-                {/* Background Texture REMOVED - Clean Dark Gradient instead */}
-                <div className="absolute top-0 right-0 w-full h-full pointer-events-none bg-gradient-to-bl from-neutral-800/10 to-transparent z-0"></div>
+                {/* Cybernetic Tier Capsule Top Right */}
+                <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/60 border border-white/10 backdrop-blur-md shadow-lg">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400">RANGO:</span>
+                    <span className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 ${currentTier.color}`}>
+                        <span>{currentTier.icon}</span>
+                        <span className="italic">{currentTier.name}</span>
+                    </span>
+                </div>
 
                 {/* Avatar Section: LoL Style Ring (CONTAINED AND CENTERED) */}
-                <div className="relative shrink-0 z-10 transition-all">
-                    <div className="relative w-36 h-36 sm:w-48 sm:h-48 flex items-center justify-center">
+                <div className="relative shrink-0 z-10 transition-all flex flex-col items-center">
+                    <div className="relative w-36 h-36 sm:w-44 sm:h-44 flex items-center justify-center">
 
                         {/* 0. Tier Glow (Dynamic Color) */}
-                        <div className={`absolute inset-0 rounded-full blur-2xl transform scale-100 pointer-events-none transition-colors duration-500 ${currentTier.color.replace('text-', 'bg-')}/20`}></div>
+                        <div className={`absolute inset-0 rounded-full blur-2xl transform scale-100 pointer-events-none transition-colors duration-500 ${currentTier.color.replace('text-', 'bg-')}/15`}></div>
 
                         {/* 1. Base Ring (Dark Metal) */}
                         <svg className="absolute inset-0 w-full h-full -rotate-90 drop-shadow-lg overflow-visible" viewBox="0 0 160 160">
@@ -494,7 +514,7 @@ export const UserProfile = () => {
                                 fill="transparent"
                                 stroke="currentColor"
                                 strokeWidth="6"
-                                strokeDasharray="465" /* 2 * PI * 74 ≈ 465 */
+                                strokeDasharray="465"
                                 strokeDashoffset={465 - (Math.min(tierProgress, 100) / 100) * 465}
                                 strokeLinecap="round"
                                 className="transition-all duration-1000 ease-out"
@@ -502,161 +522,153 @@ export const UserProfile = () => {
                         </svg>
 
                         {/* Avatar Image - INCREASED SIZE FOR VISIBILITY */}
-                        <div className={`w-[115px] h-[115px] sm:w-[150px] sm:h-[150px] rounded-full overflow-hidden border-4 z-10 bg-neutral-800 shadow-inner relative transition-colors duration-500 ${currentTier.borderColor}`}>
+                        <div className={`w-[115px] h-[115px] sm:w-[138px] sm:h-[138px] rounded-full overflow-hidden border-4 z-10 bg-neutral-800 shadow-inner relative transition-colors duration-500 ${currentTier.borderColor}`}>
                             <img
                                 src={cloudinaryService.getOptimizedImageUrl(userAvatar, { width: 300, height: 300 })}
                                 alt="Profile"
-                                className="w-full h-full object-cover scale-110" // Slight zoom to appreciate face better
+                                className="w-full h-full object-cover scale-110 group-hover:scale-125 transition-transform duration-700"
                             />
                         </div>
+                    </div>
 
-
+                    {/* Progress Text below avatar */}
+                    <div className="mt-2 bg-black/40 border border-white/5 px-2 py-0.5 rounded-md backdrop-blur-sm">
+                        <span className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">
+                            PROGRESO: {Math.round(tierProgress)}%
+                        </span>
                     </div>
                 </div>
 
                 {/* User Info Section */}
-                <div className="flex-1 text-center sm:text-left space-y-1 z-10 pt-2 w-full">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                        <div className="space-y-0 text-center sm:text-left">
-                            {/* Name: Golden Shock (High Visibility & Energy) */}
-                            <h1 className={`text-3xl sm:text-4xl font-black ${currentTier.color} tracking-tighter uppercase italic drop-shadow-[0_0_20px_rgba(255,255,255,0.2)] animate-pulse leading-none mb-1`}>
-                                {profile?.username || user.user_metadata.full_name}
-                            </h1>
-
-                            {/* Rank: Dark Glass Pill */}
-                            <div className="flex flex-col sm:flex-row items-center sm:items-center gap-3 mb-4">
-
-
-                                {/* STREAK FLAME */}
-                                <StreakFlame userId={user.id} />
-
-                                <span className="text-neutral-500 text-xs font-bold tracking-[0.2em] uppercase hidden sm:block">
-                                    {userGyms.find(g => g.is_home_base) ? (
-                                        <div className="flex items-center gap-2 text-yellow-500 animate-pulse">
-                                            <Star size={14} fill="currentColor" />
-                                            <span className="truncate max-w-[200px]">{userGyms.find(g => g.is_home_base)?.gym_name}</span>
-                                        </div>
-                                    ) : (
-                                        <div className="flex items-center gap-2 text-neutral-500 group-hover:text-blue-400 transition-colors">
-                                            <Swords size={14} />
-                                            <span>AGENTE LIBRE</span>
-                                        </div>
-                                    )}
-                                </span>
-                            </div>
-
-                            {/* SOCIAL STATS ROW (Unified Design) */}
-                            {/* SOCIAL STATS ROW (Grid for Perfect Symmetry) */}
-                            <div className="grid grid-cols-2 divide-x divide-white/10 bg-black/60 backdrop-blur-md rounded-2xl py-3 border border-white/10 shadow-xl mt-4 w-full max-w-xs mx-auto">
-                                <div className="flex flex-col items-center justify-center group cursor-pointer hover:bg-white/5 transition-colors py-1" onClick={() => setShowSocialProfile(true)}>
-                                    <span className="font-black text-xl text-white leading-none mb-1 drop-shadow-md">{socialStats.followersCount}</span>
-                                    <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest text-shadow-sm">Seguidores</span>
-                                </div>
-                                <div className="flex flex-col items-center justify-center group cursor-pointer hover:bg-white/5 transition-colors py-1" onClick={() => setShowSocialProfile(true)}>
-                                    <span className="font-black text-xl text-white leading-none mb-1 drop-shadow-md">{socialStats.followingCount}</span>
-                                    <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest text-shadow-sm">Seguidos</span>
-                                </div>
-                            </div>
-
-                            {/* RANKING STATUS - TOP 10 */}
-                            {loading ? (
-                                // Skeleton loader mientras carga
-                                <div className="bg-neutral-800/50 border border-neutral-700 rounded-lg p-3 mt-4 w-full max-w-xs mx-auto animate-pulse">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-6 h-6 bg-neutral-700 rounded"></div>
-                                        <div className="flex-1">
-                                            <div className="h-4 bg-neutral-700 rounded w-32 mb-1"></div>
-                                            <div className="h-3 bg-neutral-700 rounded w-24"></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : userRanking !== null ? (
-                                // Badge de Ranking cuando está cargado
-                                <div className={`
-                                    bg-gradient-to-r rounded-lg p-3 mt-4 w-full max-w-xs mx-auto animate-in fade-in duration-500 border-2
-                                    ${userRanking === 1 ? 'from-yellow-500/20 to-orange-500/20 border-yellow-500' :
-                                        userRanking === 2 ? 'from-gray-400/20 to-gray-500/20 border-gray-400' :
-                                            userRanking === 3 ? 'from-amber-700/20 to-amber-800/20 border-amber-600' :
-                                                'from-blue-500/20 to-blue-600/20 border-blue-500'}
-                                `}>
-                                    <div className="flex items-center gap-2">
-                                        <Crown size={24} className={`
-                                            fill-current
-                                            ${userRanking === 1 ? 'text-yellow-500 animate-pulse' :
-                                                userRanking === 2 ? 'text-gray-400' :
-                                                    userRanking === 3 ? 'text-amber-600' :
-                                                        'text-blue-500'}
-                                        `} />
-                                        <div>
-                                            <div className={`
-                                                font-bold text-sm
-                                                ${userRanking === 1 ? 'text-yellow-500' :
-                                                    userRanking === 2 ? 'text-gray-400' :
-                                                        userRanking === 3 ? 'text-amber-600' :
-                                                            'text-blue-400'}
-                                            `}>
-                                                {userRanking === 1 ? '👑 TOP #1' :
-                                                    userRanking === 2 ? '🥈 TOP #2' :
-                                                        userRanking === 3 ? '🥉 TOP #3' :
-                                                            `🏆 TOP #${userRanking}`}
-                                            </div>
-                                            <div className="text-white text-xs">
-                                                {userGyms.find(g => g.is_home_base)?.gym_name || 'Tu Gym'}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : null}
-
-                            {/* HISTORIAL DE ALPHA */}
-                            {alphaHistory.length > 0 && (
-                                <div className="mt-4 w-full max-w-xs mx-auto animate-in fade-in duration-700 delay-150">
-                                    <h3 className="text-white font-bold mb-2 flex items-center gap-2 justify-center">
-                                        <Crown size={16} className="text-yellow-500" />
-                                        Historial de Alpha
-                                    </h3>
-                                    <div className="space-y-2">
-                                        {alphaHistory.map((record: any) => (
-                                            <div
-                                                key={record.id}
-                                                className="bg-neutral-800 rounded-lg p-3 border border-neutral-700 text-center"
-                                            >
-                                                <div className="text-white font-medium text-sm">
-                                                    {record.gym.name}
-                                                </div>
-                                                <div className="text-neutral-400 text-xs mt-1">
-                                                    Alpha {record.times_alpha}x • {record.total_weeks} semanas
-                                                </div>
-                                                <div className="text-neutral-500 text-xs mt-1">
-                                                    Última vez: {new Date(record.last_alpha_at).toLocaleDateString()}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Edit Button - PREMIUM GLASS PENCIL */}
-                        <div className="absolute top-4 right-4 sm:static sm:order-last">
+                <div className="flex-1 text-center sm:text-left space-y-3 z-10 pt-2 w-full">
+                    <div className="space-y-1">
+                        {/* Name: Golden Shock */}
+                        <h1 className={`text-3xl sm:text-4xl font-black ${currentTier.color} tracking-tighter uppercase italic drop-shadow-[0_0_20px_rgba(255,255,255,0.15)] leading-none flex items-center justify-center sm:justify-start gap-3`}>
+                            <span>{profile?.username || user.user_metadata.full_name}</span>
+                            
                             <button
                                 onClick={() => {
                                     setShowEditProfile(true);
                                     hideBottomNav();
                                 }}
-                                className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all backdrop-blur-md shadow-sm group"
+                                className="inline-flex w-7 h-7 rounded-full bg-white/5 border border-white/10 hover:border-white/30 items-center justify-center text-neutral-400 hover:text-white transition-all transform hover:scale-105 active:scale-95"
                                 title="Editar Perfil"
                             >
-                                <Edit2 size={18} className="group-hover:scale-110 transition-transform" />
+                                <Edit2 size={12} />
                             </button>
+                        </h1>
+
+                        {/* Bio Description if exists */}
+                        <p className="text-neutral-400 text-xs max-w-md mx-auto sm:mx-0 leading-relaxed italic">
+                            &ldquo;{profile?.description || 'Entrenando duro en GymPartner.'}&rdquo;
+                        </p>
+                    </div>
+
+                    {/* Rank: Dark Glass Pill */}
+                    <div className="flex flex-col sm:flex-row items-center gap-3 justify-center sm:justify-start">
+                        {/* STREAK FLAME */}
+                        <StreakFlame userId={user.id} />
+
+                        {userGyms.find(g => g.is_home_base) ? (
+                            <div className="flex items-center gap-1.5 bg-yellow-500/10 border border-yellow-500/20 px-3 py-1 rounded-full text-yellow-500 animate-pulse text-xs font-bold uppercase tracking-wider">
+                                <Star size={12} fill="currentColor" />
+                                <span className="truncate max-w-[150px]">{userGyms.find(g => g.is_home_base)?.gym_name}</span>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-1.5 bg-neutral-800 border border-neutral-700 px-3 py-1 rounded-full text-neutral-400 text-xs font-bold uppercase tracking-wider">
+                                <Swords size={12} />
+                                <span>Agente Libre</span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* SOCIAL STATS ROW (Unified Premium Layout) */}
+                    <div className="grid grid-cols-2 divide-x divide-white/5 bg-black/45 backdrop-blur-md rounded-2xl py-3 border border-white/5 shadow-2xl w-full max-w-[280px] mx-auto sm:mx-0">
+                        <div className="flex flex-col items-center justify-center group cursor-pointer hover:bg-white/5 transition-colors py-1 rounded-l-2xl" onClick={() => setShowSocialProfile(true)}>
+                            <span className="font-black text-xl text-white leading-none mb-1 group-hover:scale-110 transition-transform">{socialStats.followersCount}</span>
+                            <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest">Seguidores</span>
+                        </div>
+                        <div className="flex flex-col items-center justify-center group cursor-pointer hover:bg-white/5 transition-colors py-1 rounded-r-2xl" onClick={() => setShowSocialProfile(true)}>
+                            <span className="font-black text-xl text-white leading-none mb-1 group-hover:scale-110 transition-transform">{socialStats.followingCount}</span>
+                            <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest">Seguidos</span>
                         </div>
                     </div>
 
-                    {/* Stats & Territories */}
-                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 mt-2">
+                    {/* RANKING STATUS - TOP 10 */}
+                    {loading ? (
+                        <div className="bg-neutral-800/40 border border-neutral-700/50 rounded-xl p-3 w-full max-w-[280px] mx-auto sm:mx-0 animate-pulse">
+                            <div className="h-4 bg-neutral-700 rounded w-24"></div>
+                        </div>
+                    ) : userRanking !== null ? (
+                        <div className={`
+                            bg-gradient-to-r rounded-xl p-3 border w-full max-w-[280px] mx-auto sm:mx-0 shadow-lg animate-in fade-in duration-500
+                            ${userRanking === 1 ? 'from-yellow-500/10 to-orange-500/10 border-yellow-500/30' :
+                                userRanking === 2 ? 'from-gray-400/10 to-gray-500/10 border-gray-400/30' :
+                                    userRanking === 3 ? 'from-amber-700/10 to-amber-800/10 border-amber-600/30' :
+                                        'from-blue-500/10 to-blue-600/10 border-blue-500/30'}
+                        `}>
+                            <div className="flex items-center gap-2.5">
+                                <Crown size={20} className={`
+                                    fill-current shrink-0
+                                    ${userRanking === 1 ? 'text-yellow-500 animate-pulse' :
+                                        userRanking === 2 ? 'text-gray-400' :
+                                            userRanking === 3 ? 'text-amber-600' :
+                                                'text-blue-500'}
+                                `} />
+                                <div className="text-left min-w-0">
+                                    <div className={`
+                                        font-black text-xs tracking-wider uppercase
+                                        ${userRanking === 1 ? 'text-yellow-500' :
+                                            userRanking === 2 ? 'text-gray-400' :
+                                                userRanking === 3 ? 'text-amber-600' :
+                                                    'text-blue-400'}
+                                    `}>
+                                        {userRanking === 1 ? '👑 TOP #1 DEL GYM' :
+                                            userRanking === 2 ? '🥈 TOP #2 DEL GYM' :
+                                                userRanking === 3 ? '🥉 TOP #3 DEL GYM' :
+                                                    `🏆 TOP #${userRanking} DEL GYM`}
+                                    </div>
+                                    <div className="text-neutral-400 text-[10px] truncate uppercase font-bold tracking-wide mt-0.5">
+                                        {userGyms.find(g => g.is_home_base)?.gym_name || 'Tu Sede'}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ) : null}
 
+                    {/* HISTORIAL DE ALPHA */}
+                    {alphaHistory.length > 0 && (
+                        <div className="w-full max-w-[280px] mx-auto sm:mx-0 animate-in fade-in duration-700 delay-150 space-y-2 mt-2">
+                            <div className="h-[1px] bg-white/5 w-full"></div>
+                            <h3 className="text-neutral-300 font-black text-[10px] uppercase tracking-widest flex items-center gap-1.5 justify-center sm:justify-start">
+                                <Crown size={12} className="text-yellow-500 animate-pulse" />
+                                Historial de Alpha
+                            </h3>
+                            <div className="space-y-1.5">
+                                {alphaHistory.map((record: any) => (
+                                    <div
+                                        key={record.id}
+                                        className="bg-black/30 backdrop-blur-sm rounded-lg p-2 border border-white/5 text-center sm:text-left flex items-center justify-between"
+                                    >
+                                        <div className="min-w-0">
+                                            <div className="text-white font-bold text-xs truncate max-w-[150px]">
+                                                {record.gym.name}
+                                            </div>
+                                            <div className="text-neutral-500 text-[9px] mt-0.5">
+                                                Alpha {record.times_alpha}x • {record.total_weeks} sem
+                                            </div>
+                                        </div>
+                                        <div className="text-[10px] text-yellow-500/80 font-black italic bg-yellow-500/10 px-1.5 py-0.5 rounded">
+                                            ACTIVE
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
-                        {/* Gym Tags - DYNAMIC COLORS BASED ON STATUS */}
+                    {/* Gym Tags - DYNAMIC COLORS BASED ON STATUS */}
+                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 mt-4 pt-2 border-t border-white/5">
                         {userGyms.map(gym => {
                             let textColor = "text-neutral-300 hover:text-white";
                             let iconColor = "text-neutral-500";
@@ -665,14 +677,12 @@ export const UserProfile = () => {
                             let shadow = "hover:shadow-sm";
 
                             if (gym.is_favorite) {
-                                // Favorite (red)
                                 borderColor = "border-red-500/50 hover:border-red-500";
                                 textColor = "text-red-400 hover:text-red-300";
                                 iconColor = "text-red-500";
                                 bgColor = "bg-red-500/10 hover:bg-red-500/20";
                                 shadow = "hover:shadow-[0_0_15px_rgba(239,68,68,0.2)]";
                             } else if (gym.is_home_base) {
-                                // Predeterminado (yellow)
                                 borderColor = "border-yellow-500/50 hover:border-yellow-500";
                                 textColor = "text-yellow-400 hover:text-yellow-300";
                                 iconColor = "text-yellow-500";
