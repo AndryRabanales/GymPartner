@@ -302,36 +302,35 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const signOut = async () => {
         console.log("🚪 [AuthContext] signOut execution started...");
+        
+        // 1. Immediately clean up local state and storage FIRST to guarantee instant logout!
+        setUser(null);
+        setSession(null);
+        
         try {
-            if (session?.user?.id && !session.user.id.startsWith('dev-') && supabase) {
-                await supabase.auth.signOut();
-            }
-        } catch (err) {
-            console.error("⚠️ [AuthContext] Supabase signOut threw error:", err);
-        } finally {
-            // ALWAYS clean state no matter what
-            setUser(null);
-            setSession(null);
-            
-            // Clean local storage supabase keys
-            try {
-                const keysToRemove: string[] = [];
-                for (let i = 0; i < localStorage.length; i++) {
-                    const key = localStorage.key(i);
-                    if (key && (key.startsWith('sb-') || key.includes('supabase') || key.includes('auth'))) {
-                        keysToRemove.push(key);
-                    }
+            const keysToRemove: string[] = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && (key.startsWith('sb-') || key.includes('supabase') || key.includes('auth'))) {
+                    keysToRemove.push(key);
                 }
-                keysToRemove.forEach(key => localStorage.removeItem(key));
-                sessionStorage.clear();
-            } catch (storageErr) {
-                console.error("⚠️ [AuthContext] Error cleaning storage:", storageErr);
             }
-
-            console.log("⚙️ [AuthContext] Local auth cleared. Redirecting to landing page.");
-            // Hard redirect to root to clear all state/cache clean and pristine
-            window.location.href = '/';
+            keysToRemove.forEach(key => localStorage.removeItem(key));
+            sessionStorage.clear();
+        } catch (storageErr) {
+            console.error("⚠️ [AuthContext] Error cleaning storage:", storageErr);
         }
+
+        // 2. Trigger Supabase network signOut asynchronously in the background so it never hangs the UI!
+        if (session?.user?.id && !session.user.id.startsWith('dev-') && supabase) {
+            supabase.auth.signOut().catch(err => {
+                console.error("⚠️ [AuthContext] Background Supabase signOut failed:", err);
+            });
+        }
+
+        console.log("⚙️ [AuthContext] Local auth cleared. Redirecting to landing page.");
+        // Hard redirect to root to clear all state/cache clean and pristine
+        window.location.href = '/';
     };
 
     return (
