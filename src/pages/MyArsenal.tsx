@@ -177,9 +177,67 @@ export const MyArsenal = () => {
     const [multiSelectMode, setMultiSelectMode] = useState(false);
     const [selectedRoutineIds, setSelectedRoutineIds] = useState<Set<string>>(new Set());
 
+    // Global Metrics Toolbar State
+    const [globalMetrics, setGlobalMetrics] = useState<Record<string, boolean>>({
+        weight: true, reps: true, time: true, distance: true, rpe: false
+    });
+    const [metricOverrides, setMetricOverrides] = useState<Set<string>>(new Set());
 
+    // Helper: determine if an item is a cardio exercise based on its category/muscle group
+    const isCardioItem = (itemId: string): boolean => {
+        // Check virtual seeds first
+        if (itemId.startsWith('virtual-')) {
+            const seedName = itemId.replace('virtual-', '');
+            const seed = COMMON_EQUIPMENT_SEEDS.find(s => s.name === seedName);
+            return seed?.category === 'CARDIO';
+        }
+        // Check real inventory + global
+        const item = inventory.find(i => i.id === itemId) ||
+            globalInventory.find(i => i.id === itemId);
+        if (!item) return false;
+        const group = getMuscleGroup(item, userSettings);
+        return group === 'CARDIO' || item.category === 'CARDIO';
+    };
 
-    // Custom Exercise State
+    // Handler: Toggle a global metric and propagate to all non-overridden exercises
+    const handleToggleGlobalMetric = (metricId: string) => {
+        const metricDef = {
+            weight: 'strength', reps: 'strength',
+            time: 'cardio', distance: 'cardio',
+            rpe: 'all'
+        } as Record<string, string>;
+
+        const targetCategory = metricDef[metricId] || 'all';
+
+        setGlobalMetrics(prev => {
+            const newState = { ...prev, [metricId]: !prev[metricId] };
+            const newValue = newState[metricId];
+
+            // Apply to all selected items that match the category and aren't overridden
+            setRoutineConfigs(prevConfigs => {
+                const next = new Map(prevConfigs);
+                selectedItems.forEach(itemId => {
+                    if (metricOverrides.has(itemId)) return; // Skip manually overridden
+
+                    const isCardio = isCardioItem(itemId);
+                    const shouldApply =
+                        targetCategory === 'all' ||
+                        (targetCategory === 'cardio' && isCardio) ||
+                        (targetCategory === 'strength' && !isCardio);
+
+                    if (shouldApply) {
+                        const existing = next.get(itemId) || {};
+                        const metricToTrackKey = `track_${metricId}`;
+                        next.set(itemId, { ...existing, [metricToTrackKey]: newValue });
+                    }
+                });
+                return next;
+            });
+
+            return newState;
+        });
+    };
+
     // Custom Exercise State (Simplified for EquipmentForm)
     const [userSettings, setUserSettings] = useState<CustomSettings>({ categories: [], metrics: [] });
     const [editingItem, setEditingItem] = useState<Equipment | null>(null);
@@ -469,6 +527,8 @@ export const MyArsenal = () => {
         setRoutineName('');
         setSelectedItems(new Set());
         setRoutineConfigs(new Map());
+        setMetricOverrides(new Set());
+        setGlobalMetrics({ weight: true, reps: true, time: true, distance: true, rpe: false });
         setViewMode('MACHINES');
         setSearchTerm('');
     };
@@ -1193,6 +1253,9 @@ export const MyArsenal = () => {
                         onOpenCatalog={handleOpenCatalog}
                         onEditItem={handleEditEquipment}
                         routineConfigs={routineConfigs}
+                        globalMetrics={globalMetrics}
+                        onToggleGlobalMetric={handleToggleGlobalMetric}
+                        metricOverrides={metricOverrides}
                         sectionOrder={[
                             'PECHO', 'HOMBRO', 'TRÍCEPS',
                             'ESPALDA', 'BÍCEPS', 'ANTEBRAZO',

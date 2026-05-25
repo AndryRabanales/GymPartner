@@ -1,7 +1,31 @@
-import { Plus } from 'lucide-react';
+import { useState } from 'react';
+import { Plus, Dumbbell, Hash, Clock, MapPin, Flame } from 'lucide-react';
 import type { Equipment, CustomSettings } from '../../services/GymEquipmentService';
 import { getMuscleGroup, normalizeText } from '../../utils/inventoryUtils';
 import { ArsenalCard } from './ArsenalCard';
+
+// Metric definition for the toolbar
+interface MetricDef {
+    id: string;
+    label: string;
+    icon: React.ReactNode;
+    /** Which exercise categories this metric applies to by default */
+    defaultFor: 'strength' | 'cardio' | 'all';
+    color: string;
+    activeColor: string;
+}
+
+const METRIC_DEFS: MetricDef[] = [
+    { id: 'weight',   label: 'PESO',    icon: <Dumbbell size={13} strokeWidth={2.5} />, defaultFor: 'strength', color: 'from-amber-500 to-yellow-600', activeColor: 'bg-amber-500' },
+    { id: 'reps',     label: 'REPS',    icon: <Hash size={13} strokeWidth={2.5} />,     defaultFor: 'strength', color: 'from-emerald-500 to-green-600', activeColor: 'bg-emerald-500' },
+    { id: 'time',     label: 'TIEMPO',  icon: <Clock size={13} strokeWidth={2.5} />,    defaultFor: 'cardio',   color: 'from-blue-500 to-cyan-600', activeColor: 'bg-blue-500' },
+    { id: 'distance', label: 'DIST',    icon: <MapPin size={13} strokeWidth={2.5} />,   defaultFor: 'cardio',   color: 'from-purple-500 to-violet-600', activeColor: 'bg-purple-500' },
+    { id: 'rpe',      label: 'RPE',     icon: <Flame size={13} strokeWidth={2.5} />,    defaultFor: 'all',      color: 'from-red-500 to-orange-600', activeColor: 'bg-red-500' },
+];
+
+const CARDIO_GROUPS = new Set([
+    'CARDIO',
+]);
 
 interface ArsenalGridProps {
     inventory: Equipment[];
@@ -14,6 +38,12 @@ interface ArsenalGridProps {
     routineConfigs?: Map<string, any>;
     gridClassName?: string;
     sectionOrder?: string[];
+    /** Global metric toggles state (managed by parent) */
+    globalMetrics?: Record<string, boolean>;
+    /** Callback when a global metric toggle is clicked */
+    onToggleGlobalMetric?: (metricId: string) => void;
+    /** Set of item IDs that have been manually overridden by the user */
+    metricOverrides?: Set<string>;
 }
 
 export const ArsenalGrid = ({
@@ -26,7 +56,10 @@ export const ArsenalGrid = ({
     onEditItem,
     routineConfigs = new Map(),
     gridClassName = "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2",
-    sectionOrder
+    sectionOrder,
+    globalMetrics,
+    onToggleGlobalMetric,
+    metricOverrides
 }: ArsenalGridProps) => {
 
     const DEFAULT_ORDER = [
@@ -51,16 +84,88 @@ export const ArsenalGrid = ({
         groupedInventory[group].push(item);
     });
 
+    // Toolbar animation state
+    const [hoveredMetric, setHoveredMetric] = useState<string | null>(null);
+
+    const showToolbar = globalMetrics && onToggleGlobalMetric && selectedItems.size > 0;
+
     return (
         <div className="space-y-6" id="tut-arsenal-grid">
-            {/* Visual Stats Bar */}
-            <div className="flex items-center gap-2 mb-4 px-1">
-                <div className="px-3 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-[10px] font-bold text-neutral-400 whitespace-nowrap">
-                    {inventory.length} Total
+            {/* Visual Stats Bar + Global Metrics Toolbar */}
+            <div className="flex flex-col gap-2.5 mb-4 px-1">
+                {/* Row 1: Counts */}
+                <div className="flex items-center gap-2">
+                    <div className="px-3 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-[10px] font-bold text-neutral-400 whitespace-nowrap">
+                        {inventory.length} Total
+                    </div>
+                    <div className="px-3 py-1 rounded-full bg-gym-primary/10 border border-gym-primary/20 text-[10px] font-bold text-gym-primary whitespace-nowrap">
+                        {selectedItems.size} Selected
+                    </div>
                 </div>
-                <div className="px-3 py-1 rounded-full bg-gym-primary/10 border border-gym-primary/20 text-[10px] font-bold text-gym-primary whitespace-nowrap">
-                    {selectedItems.size} Selected
-                </div>
+
+                {/* Row 2: Global Metrics Toolbar — elegant pill bar */}
+                {showToolbar && (
+                    <div 
+                        className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1"
+                        style={{ animation: 'slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards' }}
+                    >
+                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-neutral-600 shrink-0 mr-1 select-none">
+                            Métricas
+                        </span>
+                        
+                        {METRIC_DEFS.map((metric) => {
+                            const isActive = globalMetrics![metric.id] ?? false;
+                            const isHovered = hoveredMetric === metric.id;
+                            
+                            return (
+                                <button
+                                    key={metric.id}
+                                    type="button"
+                                    onClick={() => onToggleGlobalMetric!(metric.id)}
+                                    onMouseEnter={() => setHoveredMetric(metric.id)}
+                                    onMouseLeave={() => setHoveredMetric(null)}
+                                    className={`
+                                        shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg
+                                        text-[9px] font-black uppercase tracking-wider
+                                        transition-all duration-300 ease-out cursor-pointer
+                                        border select-none relative overflow-hidden
+                                        ${isActive
+                                            ? `text-white border-white/20 shadow-lg ${metric.activeColor}`
+                                            : 'bg-neutral-900/80 text-neutral-500 border-neutral-800 hover:bg-neutral-800 hover:text-neutral-300 hover:border-neutral-700'
+                                        }
+                                        ${isHovered ? 'scale-105' : 'scale-100'}
+                                        active:scale-95
+                                    `}
+                                    title={`Activar/Desactivar ${metric.label} en ${metric.defaultFor === 'strength' ? 'ejercicios de fuerza' : metric.defaultFor === 'cardio' ? 'ejercicios de cardio' : 'todos los ejercicios'}`}
+                                >
+                                    {/* Subtle glow effect when active */}
+                                    {isActive && (
+                                        <div className="absolute inset-0 opacity-30 rounded-lg" 
+                                             style={{ 
+                                                 background: `radial-gradient(circle at center, white 0%, transparent 70%)`,
+                                                 animation: 'pulse 2s ease-in-out infinite' 
+                                             }} 
+                                        />
+                                    )}
+                                    
+                                    <span className="relative z-10 flex items-center gap-1">
+                                        {metric.icon}
+                                        <span>{metric.label}</span>
+                                    </span>
+
+                                    {/* Category indicator dot */}
+                                    <span className={`
+                                        relative z-10 w-1 h-1 rounded-full shrink-0
+                                        ${metric.defaultFor === 'strength' ? 'bg-amber-400' : 
+                                          metric.defaultFor === 'cardio' ? 'bg-blue-400' : 
+                                          'bg-neutral-400'}
+                                        ${isActive ? 'opacity-70' : 'opacity-30'}
+                                    `} />
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
 
             {/* Render Groups */}
@@ -109,6 +214,18 @@ export const ArsenalGrid = ({
                     </div>
                 );
             })}
+
+            {/* Inline keyframes */}
+            <style>{`
+                @keyframes slideUp {
+                    from { opacity: 0; transform: translateY(8px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                @keyframes pulse {
+                    0%, 100% { opacity: 0.2; }
+                    50% { opacity: 0.4; }
+                }
+            `}</style>
         </div>
     );
 };
