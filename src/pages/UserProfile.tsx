@@ -156,20 +156,31 @@ export const UserProfile = () => {
     };
 
     const loadUserData = async () => {
+        console.log("📥 [loadUserData] Started loading profile for user ID:", user?.id);
         try {
             setLoading(true);
+            console.log("📥 [loadUserData] Fetching profiles table row via Supabase...");
             let { data, error } = await supabase
                 .from('profiles')
                 .select('*')
                 .eq('id', user!.id)
                 .maybeSingle();
 
-            if (error) throw error;
+            if (error) {
+                console.error("❌ [loadUserData Error] Supabase profiles fetch failed:", error);
+                throw error;
+            }
+
+            console.log("📥 [loadUserData] Profiles fetch complete. Found row:", !!data);
 
             let profileData = data;
             if (!profileData) {
-                console.log("⚠️ Perfil no encontrado en base de datos. Auto-creando perfil...");
-                const defaultUsername = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'gymrat';
+                console.log("⚠️ [loadUserData] Profile not found in database. Auto-creating profile...");
+                const fullName = user?.user_metadata?.full_name || user?.user_metadata?.name || 'gymrat';
+                const defaultUsername = fullName
+                    .toLowerCase()
+                    .replace(/[^a-z0-9_]/g, '_')
+                    .substring(0, 30);
                 const defaultAvatar = user?.user_metadata?.avatar_url || '';
                 
                 const newProfile = {
@@ -182,6 +193,7 @@ export const UserProfile = () => {
                     checkins_count: 0
                 };
 
+                console.log("📥 [loadUserData] Auto-inserting profiles row with:", newProfile);
                 const { data: insertedData, error: insertError } = await supabase
                     .from('profiles')
                     .insert(newProfile)
@@ -189,20 +201,22 @@ export const UserProfile = () => {
                     .single();
 
                 if (insertError) {
-                    console.error("❌ Error al auto-crear el perfil en cliente:", insertError);
+                    console.error("❌ [loadUserData Error] Client auto-profile insert failed:", insertError);
                 } else {
-                    console.log("✅ Perfil auto-creado con éxito desde el cliente!");
+                    console.log("✅ [loadUserData] Client auto-profile successfully created!");
                     profileData = insertedData;
                 }
             }
 
             if (profileData) {
+                console.log("📥 [loadUserData] Setting local profile state:", profileData);
                 setProfile(profileData);
             } else {
+                console.warn("⚠️ [loadUserData] No profileData could be loaded or created. Setting fallback mock profile.");
                 // Fallback mock to prevent crashing
                 setProfile({
                     id: user!.id,
-                    username: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'gymrat',
+                    username: (user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'gymrat').toLowerCase().replace(/[^a-z0-9_]/g, '_'),
                     avatar_url: user?.user_metadata?.avatar_url || '',
                     description: '¡Hola! Soy un nuevo atleta en GymPartner.',
                     g_points: 0,
@@ -214,7 +228,7 @@ export const UserProfile = () => {
             // REFERRAL CHECK: If user has a pending referral code and hasn't been referred yet
             const pendingRef = sessionStorage.getItem('gym_referral_id');
             if (pendingRef && data && !data.referred_by && pendingRef !== user!.id) {
-                console.log("🔗 Processing Referral:", pendingRef);
+                console.log("🔗 [loadUserData Referral] Processing pending referral code:", pendingRef);
                 const { error: refError } = await supabase
                     .from('profiles')
                     .update({ referred_by: pendingRef })
@@ -222,15 +236,18 @@ export const UserProfile = () => {
 
                 if (!refError) {
                     sessionStorage.removeItem('gym_referral_id');
+                    console.log("✅ [loadUserData Referral] Referral successfully recorded!");
                     alert("🎖️ ¡Has sido registrado con éxito! Quien te refirió recibirá su recompensa pronto.");
                 } else {
-                    console.error("Referral Error:", refError);
+                    console.error("❌ [loadUserData Referral Error] Referral check failed:", refError);
                 }
             }
 
             const loadGyms = async () => {
                 if (!user) return;
+                console.log("📥 [loadUserData] Querying user gyms (Passport)...");
                 const gyms = await userService.getUserGyms(user.id);
+                console.log("📥 [loadUserData] User gyms query complete. Count:", gyms.length);
 
                 // Sort: Home Base First
                 const sortedGyms = gyms.sort((a, b) => {
@@ -242,10 +259,12 @@ export const UserProfile = () => {
             };
             await loadGyms();
 
+            console.log("📥 [loadUserData] loadUserData completed successfully!");
         } catch (error) {
-            console.error('Error loading user data:', error);
+            console.error('❌ [loadUserData Error] Unexpected error:', error);
             // DO NOT reset profile to null here. Keep potentially stale data or just show toast.
         } finally {
+            console.log("📥 [loadUserData] loadUserData finally block. Setting loading state to false.");
             setLoading(false);
         }
     };
