@@ -66,11 +66,42 @@ export const Radar = () => {
         setLoading(true);
         try {
             console.log("🛰️ [RADAR] Escaneando guerreros...");
-            // 1. Fetch profiles - PRIORITIZE NEWEST & BOOSTED VIA RPC
-            const { data: profiles, error: pError } = await supabase
+            // 1. Fetch profiles - PRIORITIZE NEWEST & BOOSTED VIA RPC (with 1.5s resilient timeout fallback!)
+            console.log("⚙️ [RADAR] Triggering prioritized scanner...");
+            const fetchProfilesPromise = supabase
                 .rpc('get_radar_profiles_prioritized', { current_user_id: authUser?.id });
 
+            const fallbackQueryPromise = new Promise<{ data: any[] | null; error: any; isFallback: boolean }>((resolve) => {
+                setTimeout(async () => {
+                    console.warn("⚠️ [RADAR] RPC get_radar_profiles_prioritized took too long (>1.5s). Falling back to direct select...");
+                    try {
+                        const { data, error } = await supabase
+                            .from('profiles')
+                            .select('*')
+                            .neq('id', authUser.id)
+                            .not('username', 'is', null)
+                            .order('created_at', { ascending: false })
+                            .limit(50);
+                        resolve({ data, error, isFallback: true });
+                    } catch (err) {
+                        resolve({ data: null, error: err, isFallback: true });
+                    }
+                }, 1500);
+            });
+
+            const result = await Promise.race([
+                fetchProfilesPromise.then(res => ({ data: res.data, error: res.error, isFallback: false })),
+                fallbackQueryPromise
+            ]);
+
+            const profiles = result.data;
+            const pError = result.error;
+
             if (pError) throw pError;
+
+            if (result.isFallback) {
+                console.log("ℹ️ [RADAR] Successfully loaded profiles using the resilient direct select fallback!");
+            }
 
             if (profiles) {
                 // 2. Fetch ALL Gym Passports for these users in one batch
