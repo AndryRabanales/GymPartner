@@ -1,9 +1,9 @@
 import { useAuth } from '../context/AuthContext';
-import { LogIn, Copy, ExternalLink, Chrome, Loader2, CheckCircle } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { Copy, CheckCircle, ExternalLink } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
 
 // ── Detect Meta / Instagram in-app browser ──────────────────────────────────
-function detectMetaIAB(): { isIAB: boolean; isAndroid: boolean; isIOS: boolean } {
+function detectMetaIAB() {
     const ua = navigator.userAgent || navigator.vendor || (window as any).opera || '';
     const isIAB =
         ua.includes('Instagram') ||
@@ -12,159 +12,150 @@ function detectMetaIAB(): { isIAB: boolean; isAndroid: boolean; isIOS: boolean }
         ua.includes('FBIOS') ||
         ua.includes('FB_IAB') ||
         ua.includes('Messenger');
-    const isAndroid = /android/i.test(ua);
-    const isIOS = /iphone|ipad|ipod/i.test(ua);
-    return { isIAB, isAndroid, isIOS };
+    return isIAB;
 }
 
-// ── Try to escape Instagram IAB to the real browser ─────────────────────────
-function tryOpenInRealBrowser(): boolean {
-    const currentUrl = window.location.href;
-    const { isAndroid } = detectMetaIAB();
-
-    if (isAndroid) {
-        // Android: intent:// forces Chrome to open the URL
-        const intentUrl = `intent://${currentUrl.replace(/^https?:\/\//, '')}#Intent;scheme=https;package=com.android.chrome;end`;
-        window.location.href = intentUrl;
-        return true;
-    }
-
-    // iOS / other: try window.open with _system (works in some cases)
-    // and also try the x-safari scheme as a last resort
-    try {
-        const opened = window.open(currentUrl, '_blank');
-        if (opened) return true;
-    } catch (_) { /* ignore */ }
-
-    // iOS fallback: x-safari-https (works on some iOS versions)
-    try {
-        window.location.href = currentUrl.replace('https://', 'x-safari-https://');
-        return true;
-    } catch (_) { /* ignore */ }
-
-    return false;
-}
-
-// ── Premium "Open in Browser" overlay for Instagram IAB ─────────────────────
-const InstagramBrowserRedirect = () => {
+// ── Premium Instagram escape screen ─────────────────────────────────────────
+const InstagramEscapeScreen = () => {
     const [copied, setCopied] = useState(false);
-    const [attempted, setAttempted] = useState(false);
+    const [pulse, setPulse] = useState(true);
     const currentUrl = window.location.href;
-    const { isAndroid, isIOS } = detectMetaIAB();
 
-    // Auto-attempt to redirect on mount
+    // Keep pulsing the dot indicator forever to draw attention
     useEffect(() => {
-        const timer = setTimeout(() => {
-            const ok = tryOpenInRealBrowser();
-            setAttempted(true);
-            if (!ok) {
-                // Copy URL to clipboard as silent fallback
-                try { navigator.clipboard.writeText(currentUrl); } catch (_) { /* ignore */ }
-            }
-        }, 800);
-        return () => clearTimeout(timer);
+        const interval = setInterval(() => setPulse(p => !p), 900);
+        return () => clearInterval(interval);
     }, []);
 
     const handleCopy = async () => {
         try {
             await navigator.clipboard.writeText(currentUrl);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 3000);
         } catch (_) {
-            // Fallback: show URL in prompt
-            prompt('Copia este enlace:', currentUrl);
+            // Fallback for older iOS
+            const el = document.createElement('textarea');
+            el.value = currentUrl;
+            el.style.position = 'fixed';
+            el.style.opacity = '0';
+            document.body.appendChild(el);
+            el.focus();
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
         }
-    };
-
-    const handleOpenBrowser = () => {
-        tryOpenInRealBrowser();
+        setCopied(true);
+        setTimeout(() => setCopied(false), 4000);
     };
 
     return (
-        <div className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center p-6 text-center">
-            {/* Animated background glow */}
-            <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-gym-primary/10 rounded-full blur-[100px] pointer-events-none" />
+        <div className="fixed inset-0 bg-black flex flex-col" style={{ zIndex: 9999 }}>
 
-            <div className="relative z-10 flex flex-col items-center max-w-sm w-full">
+            {/* Simulated browser top bar — mirrors Instagram IAB chrome */}
+            <div className="relative flex items-center justify-between px-4 pt-12 pb-3 bg-neutral-950 border-b border-neutral-800">
+                <div className="w-8" /> {/* Spacer for X button */}
+                <span className="text-neutral-400 text-xs font-medium truncate max-w-[60%]">
+                    gympartner-production.up.railway.app
+                </span>
 
-                {/* Icon */}
-                <div className="relative mb-8">
-                    <div className="absolute inset-0 bg-gym-primary/20 blur-2xl rounded-full animate-pulse" />
-                    <div className="relative w-24 h-24 bg-neutral-900 border border-neutral-700 rounded-[2rem] flex items-center justify-center shadow-2xl">
-                        <ExternalLink className="text-gym-primary" size={36} />
-                    </div>
+                {/* The ⋯ button — highlighted with pulsing ring */}
+                <div className="relative flex items-center justify-center w-8 h-8">
+                    {/* Pulsing glow ring */}
+                    <div
+                        className="absolute inset-0 rounded-full border-2 border-gym-primary"
+                        style={{
+                            transform: pulse ? 'scale(1.5)' : 'scale(1.1)',
+                            opacity: pulse ? 0 : 0.9,
+                            transition: 'all 0.9s ease-in-out',
+                        }}
+                    />
+                    <div
+                        className="absolute inset-0 rounded-full bg-gym-primary/30"
+                        style={{
+                            transform: pulse ? 'scale(1.3)' : 'scale(1)',
+                            opacity: pulse ? 0 : 0.5,
+                            transition: 'all 0.9s ease-in-out',
+                        }}
+                    />
+                    <span className="text-white text-lg font-black relative z-10">•••</span>
+                </div>
+            </div>
+
+            {/* Animated arrow pointing UP to the ⋯ button */}
+            <div className="flex justify-end pr-5 pt-2">
+                <div
+                    className="text-gym-primary"
+                    style={{
+                        transform: pulse ? 'translateY(-4px)' : 'translateY(4px)',
+                        transition: 'transform 0.9s ease-in-out',
+                    }}
+                >
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 19V5" />
+                        <polyline points="5 12 12 5 19 12" />
+                    </svg>
+                </div>
+            </div>
+
+            {/* Main content */}
+            <div className="flex-1 flex flex-col items-center justify-center px-6 pb-16">
+
+                {/* App icon */}
+                <div className="w-16 h-16 bg-neutral-900 border border-neutral-800 rounded-2xl flex items-center justify-center mb-6 shadow-xl">
+                    <span className="text-2xl">🔥</span>
                 </div>
 
-                {/* Headline */}
-                <h1 className="text-2xl font-black text-white uppercase tracking-wider mb-2 italic">
-                    Abre en tu navegador
+                <h1 className="text-2xl font-black text-white uppercase tracking-wider mb-2 text-center italic">
+                    Un paso más
                 </h1>
-                <p className="text-neutral-400 text-sm leading-relaxed mb-8 max-w-xs">
-                    Estás usando el navegador de Instagram. Para iniciar sesión correctamente, necesitas abrirlo en{' '}
-                    <span className="text-white font-semibold">{isIOS ? 'Safari' : 'Chrome'}</span>.
+                <p className="text-neutral-400 text-sm text-center leading-relaxed mb-10 max-w-xs">
+                    Estás en el navegador de Instagram. Para continuar, toca{' '}
+                    <span className="text-white font-bold">⋯</span> arriba a la derecha y selecciona:
                 </p>
 
-                {/* Step indicator */}
-                <div className="w-full bg-neutral-900 border border-neutral-800 rounded-2xl p-5 mb-6 text-left space-y-4">
-                    <div className="flex items-start gap-3">
-                        <div className="w-7 h-7 rounded-full bg-gym-primary/20 border border-gym-primary/40 flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <span className="text-gym-primary text-xs font-black">1</span>
+                {/* The option to tap — styled like Instagram's native menu item */}
+                <div className="w-full max-w-xs bg-neutral-900 border border-neutral-700 rounded-2xl overflow-hidden mb-8 shadow-2xl">
+                    <div className="flex items-center gap-4 px-5 py-4">
+                        <div className="w-9 h-9 rounded-xl bg-neutral-800 flex items-center justify-center flex-shrink-0">
+                            <ExternalLink size={18} className="text-gym-primary" />
                         </div>
-                        <div>
-                            <p className="text-white text-sm font-bold">Abre en {isIOS ? 'Safari' : 'Chrome'}</p>
-                            <p className="text-neutral-500 text-xs mt-0.5">
-                                {isAndroid
-                                    ? 'Toca el botón de abajo o el ícono de los tres puntos (⋮) → "Abrir en Chrome"'
-                                    : 'Toca el ícono de compartir (□↑) → "Abrir en Safari"'}
-                            </p>
+                        <div className="text-left">
+                            <p className="text-white font-bold text-sm leading-tight">Abrir en navegador externo</p>
+                            <p className="text-neutral-500 text-xs mt-0.5">Safari / Chrome</p>
+                        </div>
+                        {/* Animated selection dot */}
+                        <div className="ml-auto">
+                            <div
+                                className="w-2 h-2 rounded-full bg-gym-primary"
+                                style={{
+                                    boxShadow: pulse ? '0 0 8px 3px #E5FF00' : '0 0 2px 0px #E5FF00',
+                                    transition: 'box-shadow 0.9s ease-in-out',
+                                }}
+                            />
                         </div>
                     </div>
-                    <div className="flex items-start gap-3">
-                        <div className="w-7 h-7 rounded-full bg-gym-primary/20 border border-gym-primary/40 flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <span className="text-gym-primary text-xs font-black">2</span>
+                    {/* Divider */}
+                    <div className="h-px bg-neutral-800 mx-5" />
+                    <div className="flex items-center gap-4 px-5 py-3 opacity-30">
+                        <div className="w-9 h-9 rounded-xl bg-neutral-800 flex items-center justify-center flex-shrink-0">
+                            <Copy size={16} className="text-neutral-400" />
                         </div>
-                        <div>
-                            <p className="text-white text-sm font-bold">Inicia sesión con Meta</p>
-                            <p className="text-neutral-500 text-xs mt-0.5">
-                                Con tu sesión de Facebook ya activa, será solo un toque.
-                            </p>
-                        </div>
+                        <p className="text-neutral-400 text-sm">Copiar enlace</p>
                     </div>
                 </div>
 
-                {/* Primary CTA — try to open browser */}
-                <button
-                    onClick={handleOpenBrowser}
-                    className="w-full bg-gym-primary text-black font-black py-4 rounded-2xl flex items-center justify-center gap-3 text-sm uppercase tracking-wider mb-3 shadow-lg shadow-gym-primary/20 active:scale-95 transition-all"
-                >
-                    <Chrome size={18} />
-                    Abrir en {isIOS ? 'Safari' : 'Chrome'}
-                </button>
-
-                {/* Secondary CTA — copy URL */}
+                {/* Fallback: copy URL */}
+                <p className="text-neutral-600 text-xs mb-3 text-center">
+                    ¿No ves esa opción? Copia el enlace y pégalo en Safari o Chrome.
+                </p>
                 <button
                     onClick={handleCopy}
-                    className="w-full bg-neutral-800 text-white font-bold py-3.5 rounded-2xl flex items-center justify-center gap-3 text-sm border border-neutral-700 active:scale-95 transition-all"
+                    className="flex items-center gap-2 bg-neutral-800 border border-neutral-700 text-sm font-bold py-3 px-6 rounded-xl transition-all active:scale-95"
+                    style={{ color: copied ? '#4ade80' : '#e5e5e5' }}
                 >
                     {copied
-                        ? <><CheckCircle size={16} className="text-green-400" /> <span className="text-green-400">¡Enlace copiado!</span></>
-                        : <><Copy size={16} /> Copiar enlace manualmente</>
+                        ? <><CheckCircle size={15} style={{ color: '#4ade80' }} /> ¡Enlace copiado al portapapeles!</>
+                        : <><Copy size={15} /> Copiar enlace</>
                     }
                 </button>
-
-                {/* URL display */}
-                <p className="mt-4 text-neutral-600 text-[10px] break-all leading-relaxed px-2">
-                    {currentUrl}
-                </p>
-
-                {/* Status message */}
-                {attempted && (
-                    <p className="mt-3 text-neutral-500 text-xs animate-in fade-in">
-                        {isAndroid
-                            ? 'Si Chrome no se abrió, copia el enlace y pégalo en Chrome.'
-                            : 'Si Safari no se abrió, copia el enlace y pégalo en Safari.'}
-                    </p>
-                )}
             </div>
         </div>
     );
@@ -175,10 +166,9 @@ export const LoginPage = () => {
     const { signInWithGoogle, signInWithMeta, signInAsDev } = useAuth();
     const [error, setError] = useState<string | null>(null);
 
-    // Detect Meta IAB on render — show redirect screen immediately
-    const { isIAB } = detectMetaIAB();
-    if (isIAB) {
-        return <InstagramBrowserRedirect />;
+    // Show escape screen immediately if inside Instagram/Meta IAB
+    if (detectMetaIAB()) {
+        return <InstagramEscapeScreen />;
     }
 
     const handleGoogleLogin = async () => {
