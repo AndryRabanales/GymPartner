@@ -742,6 +742,43 @@ class WorkoutService {
 
 
     /**
+     * Get ALL sets for a specific exercise from the LAST time the user did it.
+     * Used for the "Ghost" System (Predictive Autofill).
+     */
+    async getGhostSets(exerciseId: string, userId: string): Promise<any[]> {
+        try {
+            // 1. Find the last session_id where this user did this exercise
+            const { data: lastLog, error: lastLogError } = await supabase
+                .from('workout_logs')
+                .select('session_id')
+                .eq('exercise_id', exerciseId)
+                // Notice: to filter by user we need to join workout_sessions, but it's easier to just query logs
+                // if we ensure we match the user. We can use the join:
+                .eq('workout_sessions.user_id', userId)
+                .select('session_id, workout_sessions!inner(user_id)')
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single();
+
+            if (lastLogError || !lastLog) return [];
+
+            // 2. Fetch all sets for that session and exercise
+            const { data: ghostSets, error: setsError } = await supabase
+                .from('workout_logs')
+                .select('*')
+                .eq('session_id', lastLog.session_id)
+                .eq('exercise_id', exerciseId)
+                .order('created_at', { ascending: true }); // Keep them in order
+
+            if (setsError) return [];
+            return ghostSets || [];
+        } catch (err) {
+            console.error('Exception fetching ghost sets:', err);
+            return [];
+        }
+    }
+
+    /**
      * Get the most recent log for a specific exercise and user.
      * Used for "Smart Chips" to suggest weights/reps.
      */

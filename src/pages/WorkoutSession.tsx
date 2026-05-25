@@ -339,21 +339,42 @@ export const WorkoutSession = () => {
             if (item) itemsToAdd.push(item);
         });
 
-        // Map new ones to WorkoutExercise
-        const newExercises = itemsToAdd.map(equipment => {
+        // Map new ones to WorkoutExercise and fetch ghosts
+        const newExercisesPromises = itemsToAdd.map(async equipment => {
             const defaultMetrics = { weight: true, reps: true, time: false, distance: false, rpe: false };
+            
+            // 👻 GHOST SYSTEM: Fetch last session's sets!
+            let ghostSets: WorkoutSet[] = [];
+            if (user && equipment.id) {
+                const logs = await workoutService.getGhostSets(equipment.id, user.id);
+                if (logs && logs.length > 0) {
+                    ghostSets = logs.map(log => ({
+                        id: Math.random().toString(),
+                        weight: log.weight_kg || 0,
+                        reps: log.reps || 0,
+                        time: log.time || 0,
+                        distance: log.distance || 0,
+                        rpe: log.rpe || 0,
+                        custom: log.metrics_data || {},
+                        completed: false, // The ghost is NOT completed yet
+                    }));
+                }
+            }
+
             return {
                 id: Math.random().toString(), // UI Key
                 equipmentId: equipment.id,
                 equipmentName: equipment.name,
                 metrics: (equipment.metrics || defaultMetrics) as any,
-                sets: [
+                sets: ghostSets.length > 0 ? ghostSets : [
                     { id: Math.random().toString(), weight: 0, reps: 0, completed: false }
                 ],
                 category: equipment.target_muscle_group || equipment.category || 'Custom',
                 weightUnit: defaultWeightUnit
             } as WorkoutExercise;
         });
+
+        const newExercises = await Promise.all(newExercisesPromises);
 
         // Append new exercises without removing any existing ones
         const nextActiveExercises = [...activeExercises, ...newExercises];
@@ -916,9 +937,30 @@ export const WorkoutSession = () => {
         }
 
         if (exercisesToAdd.length > 0) {
-            setActiveExercises(exercisesToAdd);
-            setOriginalExerciseIds(exercisesToAdd.map(ex => ex.equipmentId)); // Store original IDs for "Smart Skip"
-            setOriginalMetricsSnapshot(JSON.stringify(exercisesToAdd.map(ex => ex.metrics))); // Snapshot metrics
+            // 👻 GHOST SYSTEM: Fetch last session's sets for all added routine exercises!
+            const hydratedExercises = await Promise.all(exercisesToAdd.map(async (ex) => {
+                if (user && ex.equipmentId) {
+                    const logs = await workoutService.getGhostSets(ex.equipmentId, user.id);
+                    if (logs && logs.length > 0) {
+                        const ghostSets = logs.map(log => ({
+                            id: Math.random().toString(),
+                            weight: log.weight_kg || 0,
+                            reps: log.reps || 0,
+                            time: log.time || 0,
+                            distance: log.distance || 0,
+                            rpe: log.rpe || 0,
+                            custom: log.metrics_data || {},
+                            completed: false
+                        }));
+                        ex.sets = ghostSets;
+                    }
+                }
+                return ex;
+            }));
+
+            setActiveExercises(hydratedExercises);
+            setOriginalExerciseIds(hydratedExercises.map(ex => ex.equipmentId)); // Store original IDs for "Smart Skip"
+            setOriginalMetricsSnapshot(JSON.stringify(hydratedExercises.map(ex => ex.metrics))); // Snapshot metrics
             setIsRoutineModified(false); // Clean loaded routine from template
 
             // Show warning if some exercises are missing, but allow continuing
