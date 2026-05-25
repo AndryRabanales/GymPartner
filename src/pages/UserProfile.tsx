@@ -494,14 +494,15 @@ export const UserProfile = () => {
         <div className="w-[98%] max-w-7xl mx-auto px-1 py-3 sm:p-6 space-y-3 sm:space-y-4 pb-24">
             {/* ... content ... */}
             {/* Header Profile Card - Premium Hextech Cybernetic Design */}
-            <div
-                className="bg-neutral-900/60 backdrop-blur-xl border border-white/10 hover:border-gym-primary/30 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 relative overflow-hidden transition-all shadow-[0_20px_50px_rgba(0,0,0,0.6)] group min-h-[240px] sm:min-h-0"
-                style={profile?.custom_settings?.banner_url ? {
-                    backgroundImage: `url(${profile.custom_settings.banner_url})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center'
-                } : {}}
-            >
+            <div className="bg-gradient-to-r from-yellow-500/25 via-amber-500/15 to-neutral-800/40 p-[1.5px] rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] w-full">
+                <div
+                    className="bg-neutral-900/90 backdrop-blur-xl rounded-[15px] p-4 sm:p-5 flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 relative overflow-hidden transition-all group min-h-[240px] sm:min-h-0 w-full"
+                    style={profile?.custom_settings?.banner_url ? {
+                        backgroundImage: `url(${profile.custom_settings.banner_url})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center'
+                    } : {}}
+                >
                 {/* Banner Overlay for Readability */}
                 <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/75 to-neutral-950/20 z-0"></div>
 
@@ -731,6 +732,7 @@ export const UserProfile = () => {
                     </div>
                 </div>
             </div>
+        </div>
 
             {/* Primary Action & Quick Access */}
             <div className="flex flex-col gap-2 sm:gap-4">
@@ -794,7 +796,7 @@ export const UserProfile = () => {
                                     <button
                                         key={routine.id}
                                         onClick={() => navigate(`/workout?routineId=${routine.id}`)}
-                                        className="group relative overflow-hidden bg-gradient-to-r from-yellow-500/80 to-neutral-700/80 rounded-[12px] p-[1.5px] shadow-[0_4px_12px_rgba(0,0,0,0.3)] hover:shadow-[0_4px_20px_rgba(0,0,0,0.5)] hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-300 active:scale-95 w-full text-left"
+                                        className="group relative overflow-hidden bg-gradient-to-r from-yellow-400 via-amber-500 to-neutral-600 rounded-[12px] p-[2px] shadow-[0_4px_12px_rgba(0,0,0,0.4)] hover:shadow-[0_4px_20px_rgba(234,179,8,0.3)] hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-300 active:scale-95 w-full text-left"
                                     >
                                         {/* Inner Glass Container - Dark neutral layout with soft gold accents */}
                                         <div className="relative bg-gradient-to-r from-yellow-500/25 via-amber-500/15 to-neutral-950/80 backdrop-blur-md w-full h-full rounded-[10px] px-2.5 py-2 flex items-center justify-between border border-white/5 transition-all z-10 gap-1.5">
