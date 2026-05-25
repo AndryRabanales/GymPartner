@@ -233,7 +233,7 @@ export const InboxPage = () => {
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-4 relative z-10">
+            <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pt-4 pb-32 relative z-10">
                 {loading ? (
                     <div className="h-64 flex flex-col items-center justify-center text-neutral-500 gap-3">
                         <div className="w-8 h-8 border-2 border-gym-primary border-t-transparent rounded-full animate-spin"></div>
