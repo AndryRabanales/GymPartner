@@ -34,36 +34,47 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const isProcessingReferral = React.useRef(false);
 
     useEffect(() => {
+        console.log("🔑 [AuthContext] useEffect initialized. Checking Supabase configuration...");
         if (!isSupabaseConfigured() || !supabase) {
-            console.warn("Supabase not configured. Auth is disabled.");
+            console.warn("⚠️ [AuthContext] Supabase not configured. Auth is disabled.");
             setLoading(false);
             return;
         }
 
+        console.log("✅ [AuthContext] Supabase is configured correctly. Triggering initAuth...");
+
         // Check active session
         const initAuth = async () => {
+            console.log("⚙️ [AuthContext] initAuth execution started...");
             try {
                 // Detect potential auth callback to avoid premature empty state
                 const isAuthCallback = window.location.hash.includes('access_token') || window.location.search.includes('code=');
-                if (isAuthCallback) console.log("⏳ Auth Callback Detected - Initializing Session...");
+                if (isAuthCallback) console.log("⏳ [AuthContext Callback] Auth Callback Detected - Initializing Session...");
 
                 const { data: { session }, error } = await supabase.auth.getSession();
 
-                if (error) console.error("Session Init Error:", error);
+                if (error) console.error("❌ [AuthContext Error] Session Init Error:", error);
                 if (session) {
-                    console.log("✅ Session Restored:", session.user.email);
+                    console.log("✅ [AuthContext Session] Restored for user:", session.user.email);
                     setSession(session);
                     setUser(session.user);
-                } else if (isAuthCallback) {
-                    console.warn("⚠️ Params present but no session returned from getSession. Waiting for onAuthStateChange...");
-                    // We don't set loading false yet, we let the listener handle it or a timeout
-                    // detailed safety: set timeout to force loading false if it hangs
-                    setTimeout(() => setLoading(false), 5000);
-                    return;
+                } else {
+                    console.log("ℹ️ [AuthContext Session] No active session found via getSession.");
+                    if (isAuthCallback) {
+                        console.warn("⚠️ [AuthContext Callback] Params present but no session returned from getSession. Waiting for onAuthStateChange...");
+                        // We don't set loading false yet, we let the listener handle it or a timeout
+                        // detailed safety: set timeout to force loading false if it hangs
+                        setTimeout(() => {
+                            console.log("⏰ [AuthContext Timeout] Forcing loading to false due to auth callback delay.");
+                            setLoading(false);
+                        }, 5000);
+                        return;
+                    }
                 }
             } catch (err) {
-                console.error("Unhandled error during initAuth:", err);
+                console.error("❌ [AuthContext Error] Unhandled error during initAuth:", err);
             } finally {
+                console.log("⚙️ [AuthContext] initAuth finished. Setting loading state to false.");
                 setLoading(false);
             }
         };
@@ -74,12 +85,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const params = new URLSearchParams(window.location.search);
         const refId = params.get('ref');
         if (refId) {
-            console.log("🔗 Referral Detected:", refId);
+            console.log("🔗 [AuthContext Referral] Referral Detected in URL:", refId);
             sessionStorage.setItem('gym_referral_id', refId);
         }
 
+        console.log("📡 [AuthContext Listener] Registering onAuthStateChange listener...");
         // Listen for changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+            console.log("📡 [AuthContext Listener] Auth State Changed! Event:", _event, "Session exists:", !!session);
             try {
                 setSession(session);
                 const currentUser = session?.user ?? null;
@@ -89,31 +102,55 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 if (currentUser && !isProcessingReferral.current) {
                     // Ensure profile is initialized instantly on first access
                     try {
-                        const { data: existingProfile } = await supabase
+                        console.log("🔍 [PROFILE CHECK] Querying profile for user ID:", currentUser.id);
+                        const { data: existingProfile, error: profileCheckError } = await supabase
                             .from('profiles')
                             .select('id')
                             .eq('id', currentUser.id)
                             .maybeSingle();
 
+                        if (profileCheckError) {
+                            console.error("❌ [PROFILE CHECK] Database check failed:", profileCheckError);
+                        }
+
                         if (!existingProfile) {
                             console.log("🆕 [PROFILE INITIALIZATION] No profile row found. Initializing profile dynamically...");
                             const fullName = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || 'Guerrero';
-                            const username = currentUser.user_metadata?.username || currentUser.user_metadata?.user_name || `guerrero_${Math.random().toString(36).substring(2, 7)}`;
+                            // Normalize username to remove any spaces or special characters
+                            const baseUsername = currentUser.user_metadata?.username || currentUser.user_metadata?.user_name || fullName;
+                            const formattedUsername = baseUsername
+                                .toLowerCase()
+                                .replace(/[^a-z0-9_]/g, '_')
+                                .substring(0, 30);
+                            
                             const avatarUrl = currentUser.user_metadata?.avatar_url || null;
 
-                            await supabase
+                            console.log("🆕 [PROFILE INITIALIZATION] Creating profile row with:", {
+                                id: currentUser.id,
+                                username: formattedUsername,
+                                avatar_url: avatarUrl
+                            });
+
+                            const { error: insertError } = await supabase
                                 .from('profiles')
                                 .insert({
                                     id: currentUser.id,
-                                    username: username.toLowerCase().replace(/\s+/g, '_'),
-                                    display_name: fullName,
+                                    username: formattedUsername,
                                     avatar_url: avatarUrl,
                                     checkins_count: 0,
                                     g_points: 1000
                                 });
+
+                            if (insertError) {
+                                console.error("❌ [PROFILE INITIALIZATION] Database insert failed:", insertError);
+                            } else {
+                                console.log("✅ [PROFILE INITIALIZATION] Profile row successfully created!");
+                            }
+                        } else {
+                            console.log("✅ [PROFILE CHECK] Profile row already exists for user ID:", currentUser.id);
                         }
                     } catch (profileErr) {
-                        console.error("Error checking/creating profile on login:", profileErr);
+                        console.error("❌ [PROFILE ERROR] Unexpected error in check/create routine:", profileErr);
                     }
 
                     const storedRefId = sessionStorage.getItem('gym_referral_id');

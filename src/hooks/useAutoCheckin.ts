@@ -8,6 +8,7 @@ export const useAutoCheckin = () => {
     const { user } = useAuth();
     const { location } = useGeolocation();
     const lastScanTime = useRef<number>(0);
+    const hasCheckedIn = useRef<boolean>(false);
 
     useEffect(() => {
         const performAutoCheckin = async () => {
