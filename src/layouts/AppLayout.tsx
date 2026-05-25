@@ -256,7 +256,7 @@ export const AppLayout = () => {
 
             <main 
                 key={location.pathname} 
-                className={`flex-1 overflow-y-auto custom-scrollbar relative flex flex-col animate-in fade-in duration-500 ${shouldHideHeader ? 'pt-0 pb-16' : 'pt-20 pb-24'}`}
+                className={`flex-1 ${isChatPage ? 'overflow-hidden' : 'overflow-y-auto'} custom-scrollbar relative flex flex-col animate-in fade-in duration-500 ${shouldHideHeader ? 'pt-0 pb-16' : 'pt-20 pb-24'}`}
             >
                 <Outlet />
             </main>
