@@ -494,9 +494,9 @@ export const UserProfile = () => {
         <div className="w-[98%] max-w-7xl mx-auto px-1 py-3 sm:p-6 space-y-3 sm:space-y-4 pb-24">
             {/* ... content ... */}
             {/* Header Profile Card - Premium Hextech Cybernetic Design */}
-            <div className="bg-gradient-to-r from-yellow-500 via-amber-500 to-neutral-700 p-[3.5px] rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] w-full">
+            <div className="bg-gradient-to-r from-yellow-500 via-amber-500 to-neutral-700 p-[2px] rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] w-full">
                 <div
-                    className="bg-neutral-900/95 backdrop-blur-xl rounded-[20px] p-4 sm:p-5 flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 relative overflow-hidden transition-all group min-h-[240px] sm:min-h-0 w-full"
+                    className="bg-neutral-900/95 backdrop-blur-xl rounded-[14px] p-4 sm:p-5 flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 relative overflow-hidden transition-all group min-h-[240px] sm:min-h-0 w-full"
                     style={profile?.custom_settings?.banner_url ? {
                         backgroundImage: `url(${profile.custom_settings.banner_url})`,
                         backgroundSize: 'cover',
@@ -799,7 +799,7 @@ export const UserProfile = () => {
                                         className="group relative overflow-hidden bg-gradient-to-r from-yellow-400 via-amber-500 to-neutral-600 rounded-[20px] p-[2px] shadow-[0_4px_12px_rgba(0,0,0,0.4)] hover:shadow-[0_4px_20px_rgba(234,179,8,0.3)] hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-300 active:scale-95 w-full text-left"
                                     >
                                         {/* Inner Glass Container - Dark neutral layout with soft gold accents */}
-                                        <div className="relative bg-gradient-to-r from-yellow-500/25 via-amber-500/15 to-neutral-950/80 backdrop-blur-md w-full h-full rounded-[17px] px-2.5 py-2 flex items-center justify-between border border-white/5 transition-all z-10 gap-1.5">
+                                        <div className="relative bg-gradient-to-r from-yellow-950/45 via-neutral-900/90 to-neutral-950/95 backdrop-blur-md w-full h-full rounded-[17px] px-2.5 py-2 flex items-center justify-between border border-white/5 transition-all z-10 gap-1.5">
                                             <div className="flex items-center gap-2 min-w-0">
                                                 <div className="w-6 h-6 rounded-full bg-neutral-800 text-yellow-400 flex items-center justify-center shadow-lg animate-bounce shrink-0 border border-neutral-700/50">
                                                     <Swords className="w-3.5 h-3.5" strokeWidth={2.5} />
