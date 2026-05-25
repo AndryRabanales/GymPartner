@@ -458,7 +458,7 @@ export const UserProfile = () => {
             {/* ... content ... */}
             {/* Header Profile Card - Premium Hextech Cybernetic Design */}
             <div
-                className="bg-neutral-900/60 backdrop-blur-xl border border-white/10 hover:border-gym-primary/30 rounded-2xl p-3 sm:p-5 flex flex-col sm:flex-row items-center sm:items-start gap-3 sm:gap-6 relative overflow-hidden transition-all shadow-[0_20px_50px_rgba(0,0,0,0.6)] group"
+                className="bg-neutral-900/60 backdrop-blur-xl border border-white/10 hover:border-gym-primary/30 rounded-2xl p-3 sm:p-5 flex flex-row items-start gap-3 sm:gap-6 relative overflow-hidden transition-all shadow-[0_20px_50px_rgba(0,0,0,0.6)] group"
                 style={profile?.custom_settings?.banner_url ? {
                     backgroundImage: `url(${profile.custom_settings.banner_url})`,
                     backgroundSize: 'cover',
@@ -468,9 +468,9 @@ export const UserProfile = () => {
                 {/* Banner Overlay for Readability */}
                 <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/75 to-neutral-950/20 z-0"></div>
 
-                {/* Avatar Section: Clean & Premium (No Tiers/Percentages) */}
+                {/* Avatar Section: Clean & Premium (Responsive Sizes) */}
                 <div className="relative shrink-0 z-10 transition-all flex flex-col items-center">
-                    <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-2 border-gym-primary/30 bg-neutral-800 shadow-[0_0_20px_rgba(250,204,21,0.15)] group-hover:shadow-[0_0_30px_rgba(250,204,21,0.3)] transition-all">
+                    <div className="relative w-16 h-16 sm:w-28 sm:h-28 rounded-full overflow-hidden border-2 border-gym-primary/30 bg-neutral-800 shadow-[0_0_20px_rgba(250,204,21,0.15)] group-hover:shadow-[0_0_30px_rgba(250,204,21,0.3)] transition-all">
                         <img
                             src={cloudinaryService.getOptimizedImageUrl(userAvatar, { width: 300, height: 300 })}
                             alt="Profile"
@@ -480,50 +480,50 @@ export const UserProfile = () => {
                 </div>
 
                 {/* User Info Section */}
-                <div className="flex-1 text-center sm:text-left space-y-3 z-10 pt-2 w-full">
-                    <div className="space-y-1">
+                <div className="flex-1 text-left space-y-2 z-10 pt-1 w-full min-w-0">
+                    <div className="space-y-0.5">
                         {/* Name: Clean White/Yellow */}
-                        <h1 className="text-3xl sm:text-4xl font-black text-white hover:text-gym-primary transition-colors tracking-tighter uppercase italic drop-shadow-[0_0_20px_rgba(255,255,255,0.15)] leading-none flex items-center justify-center sm:justify-start gap-3">
-                            <span>{profile?.username || user.user_metadata.full_name}</span>
+                        <h1 className="text-xl sm:text-4xl font-black text-white hover:text-gym-primary transition-colors tracking-tighter uppercase italic drop-shadow-[0_0_20px_rgba(255,255,255,0.15)] leading-none flex items-center justify-start gap-2">
+                            <span className="truncate">{profile?.username || user.user_metadata.full_name}</span>
                             
                             <button
                                 onClick={() => {
                                     setShowEditProfile(true);
                                     hideBottomNav();
                                 }}
-                                className="inline-flex w-7 h-7 rounded-full bg-white/5 border border-white/10 hover:border-white/30 items-center justify-center text-neutral-400 hover:text-white transition-all transform hover:scale-105 active:scale-95"
+                                className="inline-flex w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white/5 border border-white/10 hover:border-white/30 items-center justify-center text-neutral-400 hover:text-white transition-all transform hover:scale-105 active:scale-95 shrink-0"
                                 title="Editar Perfil"
                             >
-                                <Edit2 size={12} />
+                                <Edit2 size={10} className="sm:w-3 sm:h-3" />
                             </button>
                         </h1>
 
                         {/* Bio Description if exists */}
-                        <p className="text-neutral-400 text-xs max-w-md mx-auto sm:mx-0 leading-relaxed italic">
+                        <p className="text-neutral-400 text-[10px] sm:text-xs max-w-md mx-0 leading-relaxed italic truncate">
                             &ldquo;{profile?.description || 'Entrenando duro en GymPartner.'}&rdquo;
                         </p>
                     </div>
 
                     {/* Rank: Dark Glass Pill */}
-                    <div className="flex flex-col sm:flex-row items-center gap-3 justify-center sm:justify-start">
+                    <div className="flex flex-row items-center gap-2 justify-start flex-wrap">
                         {/* STREAK FLAME */}
                         <StreakFlame userId={user.id} />
 
                         {userGyms.find(g => g.is_home_base) ? (
-                            <div className="flex items-center gap-1.5 bg-yellow-500/10 border border-yellow-500/20 px-3 py-1 rounded-full text-yellow-500 animate-pulse text-xs font-bold uppercase tracking-wider">
-                                <Star size={12} fill="currentColor" />
-                                <span className="truncate max-w-[150px]">{userGyms.find(g => g.is_home_base)?.gym_name}</span>
+                            <div className="flex items-center gap-1 bg-yellow-500/10 border border-yellow-500/20 px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-yellow-500 animate-pulse text-[9px] sm:text-xs font-bold uppercase tracking-wider">
+                                <Star size={10} fill="currentColor" className="sm:w-3 sm:h-3" />
+                                <span className="truncate max-w-[100px] sm:max-w-[150px]">{userGyms.find(g => g.is_home_base)?.gym_name}</span>
                             </div>
                         ) : (
-                            <div className="flex items-center gap-1.5 bg-neutral-800 border border-neutral-700 px-3 py-1 rounded-full text-neutral-400 text-xs font-bold uppercase tracking-wider">
-                                <Swords size={12} />
+                            <div className="flex items-center gap-1 bg-neutral-800 border border-neutral-700 px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-neutral-400 text-[9px] sm:text-xs font-bold uppercase tracking-wider">
+                                <Swords size={10} className="sm:w-3 sm:h-3" />
                                 <span>Agente Libre</span>
                             </div>
                         )}
                     </div>
 
                     {/* SOCIAL STATS ROW (Unified Premium Layout) */}
-                    <div className="grid grid-cols-2 divide-x divide-white/5 bg-black/45 backdrop-blur-md rounded-2xl py-3 border border-white/5 shadow-2xl w-full max-w-[280px] mx-auto sm:mx-0">
+                    <div className="hidden sm:grid grid-cols-2 divide-x divide-white/5 bg-black/45 backdrop-blur-md rounded-2xl py-3 border border-white/5 shadow-2xl w-full max-w-[280px] mx-0">
                         <div className="flex flex-col items-center justify-center group cursor-pointer hover:bg-white/5 transition-colors py-1 rounded-l-2xl" onClick={() => setShowSocialProfile(true)}>
                             <span className="font-black text-xl text-white leading-none mb-1 group-hover:scale-110 transition-transform">{socialStats.followersCount}</span>
                             <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest">Seguidores</span>
@@ -534,22 +534,29 @@ export const UserProfile = () => {
                         </div>
                     </div>
 
+                    {/* Mobile Social Stats Inline */}
+                    <div className="flex sm:hidden items-center gap-2 text-[11px] font-bold text-neutral-400 mt-0.5 cursor-pointer" onClick={() => setShowSocialProfile(true)}>
+                        <span><strong className="text-white">{socialStats.followersCount}</strong> Seguidores</span>
+                        <span className="text-white/20">•</span>
+                        <span><strong className="text-white">{socialStats.followingCount}</strong> Seguidos</span>
+                    </div>
+
                     {/* RANKING STATUS - TOP 10 */}
                     {loading ? (
-                        <div className="bg-neutral-800/40 border border-neutral-700/50 rounded-xl p-3 w-full max-w-[280px] mx-auto sm:mx-0 animate-pulse">
-                            <div className="h-4 bg-neutral-700 rounded w-24"></div>
+                        <div className="bg-neutral-800/40 border border-neutral-700/50 rounded-xl p-2 w-full max-w-[280px] mx-0 animate-pulse">
+                            <div className="h-3 bg-neutral-700 rounded w-20"></div>
                         </div>
                     ) : userRanking !== null ? (
                         <div className={`
-                            bg-gradient-to-r rounded-xl p-3 border w-full max-w-[280px] mx-auto sm:mx-0 shadow-lg animate-in fade-in duration-500
+                            bg-gradient-to-r rounded-xl p-1.5 sm:p-3 border w-full max-w-[280px] mx-0 shadow-lg animate-in fade-in duration-500
                             ${userRanking === 1 ? 'from-yellow-500/10 to-orange-500/10 border-yellow-500/30' :
                                 userRanking === 2 ? 'from-gray-400/10 to-gray-500/10 border-gray-400/30' :
                                     userRanking === 3 ? 'from-amber-700/10 to-amber-800/10 border-amber-600/30' :
                                         'from-blue-500/10 to-blue-600/10 border-blue-500/30'}
                         `}>
-                            <div className="flex items-center gap-2.5">
-                                <Crown size={20} className={`
-                                    fill-current shrink-0
+                            <div className="flex items-center gap-2">
+                                <Crown size={16} className={`
+                                    fill-current shrink-0 sm:w-5 sm:h-5
                                     ${userRanking === 1 ? 'text-yellow-500 animate-pulse' :
                                         userRanking === 2 ? 'text-gray-400' :
                                             userRanking === 3 ? 'text-amber-600' :
@@ -557,7 +564,7 @@ export const UserProfile = () => {
                                 `} />
                                 <div className="text-left min-w-0">
                                     <div className={`
-                                        font-black text-xs tracking-wider uppercase
+                                        font-black text-[10px] sm:text-xs tracking-wider uppercase leading-none
                                         ${userRanking === 1 ? 'text-yellow-500' :
                                             userRanking === 2 ? 'text-gray-400' :
                                                 userRanking === 3 ? 'text-amber-600' :
@@ -568,9 +575,6 @@ export const UserProfile = () => {
                                                 userRanking === 3 ? '🥉 TOP #3 DEL GYM' :
                                                     `🏆 TOP #${userRanking} DEL GYM`}
                                     </div>
-                                    <div className="text-neutral-400 text-[10px] truncate uppercase font-bold tracking-wide mt-0.5">
-                                        {userGyms.find(g => g.is_home_base)?.gym_name || 'Tu Sede'}
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -578,9 +582,9 @@ export const UserProfile = () => {
 
                     {/* HISTORIAL DE ALPHA */}
                     {alphaHistory.length > 0 && (
-                        <div className="w-full max-w-[280px] mx-auto sm:mx-0 animate-in fade-in duration-700 delay-150 space-y-2 mt-2">
+                        <div className="hidden sm:block w-full max-w-[280px] mx-0 animate-in fade-in duration-700 delay-150 space-y-2 mt-2">
                             <div className="h-[1px] bg-white/5 w-full"></div>
-                            <h3 className="text-neutral-300 font-black text-[10px] uppercase tracking-widest flex items-center gap-1.5 justify-center sm:justify-start">
+                            <h3 className="text-neutral-300 font-black text-[10px] uppercase tracking-widest flex items-center gap-1.5 justify-start">
                                 <Crown size={12} className="text-yellow-500 animate-pulse" />
                                 Historial de Alpha
                             </h3>
@@ -588,7 +592,7 @@ export const UserProfile = () => {
                                 {alphaHistory.map((record: any) => (
                                     <div
                                         key={record.id}
-                                        className="bg-black/30 backdrop-blur-sm rounded-lg p-2 border border-white/5 text-center sm:text-left flex items-center justify-between"
+                                        className="bg-black/30 backdrop-blur-sm rounded-lg p-2 border border-white/5 text-left flex items-center justify-between"
                                     >
                                         <div className="min-w-0">
                                             <div className="text-white font-bold text-xs truncate max-w-[150px]">
@@ -608,8 +612,8 @@ export const UserProfile = () => {
                     )}
 
                     {/* Gym Tags & Share - CARD FOOTER */}
-                    <div className="flex flex-wrap items-center justify-between gap-3 mt-4 pt-2 border-t border-white/5 w-full">
-                        <div className="flex flex-wrap items-center gap-1.5 justify-center sm:justify-start">
+                    <div className="flex items-center justify-between gap-3 mt-3 pt-2 border-t border-white/5 w-full">
+                        <div className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap scroll-smooth max-w-[calc(100vw-145px)] sm:max-w-none pb-0.5" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                             {userGyms.map(gym => {
                                 let textColor = "text-neutral-300 hover:text-white";
                                 let iconColor = "text-neutral-500";
@@ -635,10 +639,10 @@ export const UserProfile = () => {
                                     <Link
                                         key={gym.gym_id}
                                         to={`/territory/${gym.gym_id}`}
-                                        className={`px-2 py-1 rounded-full flex items-center gap-1.5 text-[10px] sm:text-xs transition-all no-underline border ${borderColor} ${textColor} ${bgColor} ${shadow}`}
+                                        className="px-2 py-1 rounded-full flex items-center gap-1 text-[10px] sm:text-xs transition-all no-underline border inline-flex shrink-0 border-neutral-700/50 text-neutral-300 bg-neutral-800 hover:bg-neutral-700 hover:text-white hover:border-neutral-500 hover:shadow-sm"
                                     >
-                                        <MapPin size={12} className={`sm:w-4 sm:h-4 ${iconColor}`} />
-                                        <span className="truncate max-w-[90px] sm:max-w-[120px]">{gym.gym_name}</span>
+                                        <MapPin size={10} className={`sm:w-3 sm:h-3 ${iconColor}`} />
+                                        <span className="truncate max-w-[80px] sm:max-w-[120px]">{gym.gym_name}</span>
                                     </Link>
                                 );
                             })}
@@ -648,10 +652,10 @@ export const UserProfile = () => {
                                 e.stopPropagation();
                                 handleShareProfile();
                             }}
-                            className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 flex items-center gap-1.5 text-[10px] sm:text-xs text-neutral-400 hover:text-gym-primary hover:bg-white/10 hover:border-gym-primary/30 transition-all backdrop-blur-md shrink-0"
+                            className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-white/5 border border-white/10 flex items-center gap-1 text-[9px] sm:text-xs text-neutral-400 hover:text-gym-primary hover:bg-white/10 hover:border-gym-primary/30 transition-all backdrop-blur-md shrink-0"
                             title="Compartir Perfil"
                         >
-                            <Share2 size={12} />
+                            <Share2 size={10} className="sm:w-3 sm:h-3" />
                             <span>Compartir</span>
                         </button>
                     </div>
