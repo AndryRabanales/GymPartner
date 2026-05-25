@@ -159,7 +159,6 @@ export const UserProfile = () => {
     const loadUserData = async () => {
         console.log("📥 [loadUserData] Started loading profile for user ID:", user?.id);
         
-        // 1. PRE-POPULATE INSTANTLY: Set loading to false and fill with safe defaults to UNBLOCK THE RENDER TREE!
         const fullName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'Atleta';
         const defaultUsername = fullName
             .toLowerCase()
@@ -167,112 +166,93 @@ export const UserProfile = () => {
             .substring(0, 30);
         const defaultAvatar = user?.user_metadata?.avatar_url || '';
 
-        const fallbackProfile = {
-            id: user!.id,
-            username: defaultUsername,
-            avatar_url: defaultAvatar,
-            description: '¡Hola! Soy un nuevo atleta en GymPartner.',
-            g_points: 1000,
-            total_referrals: 0,
-            checkins_count: 0
-        };
+        // Keep loading=true until real DB data arrives - prevents the flash of incomplete content
+        try {
+            console.log("📥 [loadUserData] Fetching profiles table row via Supabase...");
+            let { data, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', user!.id)
+                .maybeSingle();
 
-        setProfile(fallbackProfile);
-        setLoading(false);
-        console.log("🔓 [loadUserData] UI unblocked instantly! Pre-populated with fallback profile.");
-
-        // 2. BACKGROUND FETCH: Query the actual database values asynchronously in the background
-        (async () => {
-            try {
-                console.log("📥 [loadUserData Background] Fetching profiles table row via Supabase...");
-                let { data, error } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('id', user!.id)
-                    .maybeSingle();
-
-                if (error) {
-                    console.error("❌ [loadUserData Background Error] Supabase profiles fetch failed:", error);
-                    return;
-                }
-
-                console.log("📥 [loadUserData Background] Profiles fetch complete. Found row:", !!data);
-
-                let profileData = data;
-                if (!profileData) {
-                    console.log("⚠️ [loadUserData Background] Profile not found in database. Auto-creating profile in background...");
-                    const newProfile = {
-                        id: user!.id,
-                        username: defaultUsername,
-                        avatar_url: defaultAvatar,
-                        description: '¡Hola! Soy un nuevo atleta en GymPartner.',
-                        g_points: 1000,
-                        total_referrals: 0,
-                        checkins_count: 0
-                    };
-
-                    console.log("📥 [loadUserData Background] Auto-inserting profiles row with:", newProfile);
-                    const { data: insertedData, error: insertError } = await supabase
-                        .from('profiles')
-                        .insert(newProfile)
-                        .select()
-                        .single();
-
-                    if (insertError) {
-                        console.error("❌ [loadUserData Background Error] Client auto-profile insert failed:", insertError);
-                    } else {
-                        console.log("✅ [loadUserData Background] Client auto-profile successfully created!");
-                        profileData = insertedData;
-                    }
-                }
-
-                if (profileData) {
-                    console.log("📥 [loadUserData Background] Setting real profile state:", profileData);
-                    setProfile(profileData);
-
-                    // REFERRAL CHECK: If user has a pending referral code and hasn't been referred yet
-                    const pendingRef = sessionStorage.getItem('gym_referral_id');
-                    if (pendingRef && !profileData.referred_by && pendingRef !== user!.id) {
-                        console.log("🔗 [loadUserData Background Referral] Processing pending referral code:", pendingRef);
-                        const { error: refError } = await supabase
-                            .from('profiles')
-                            .update({ referred_by: pendingRef })
-                            .eq('id', user!.id);
-
-                        if (!refError) {
-                            sessionStorage.removeItem('gym_referral_id');
-                            console.log("✅ [loadUserData Background Referral] Referral successfully recorded!");
-                            alert("🎖️ ¡Has sido registrado con éxito! Quien te refirió recibirá su recompensa pronto.");
-                        } else {
-                            console.error("❌ [loadUserData Background Referral Error] Referral check failed:", refError);
-                        }
-                    }
-                }
-            } catch (bgErr) {
-                console.error("❌ [loadUserData Background Error] Unexpected background profile fetch error:", bgErr);
+            if (error) {
+                console.error("❌ [loadUserData Error] Supabase profiles fetch failed:", error);
+                setLoading(false);
+                return;
             }
-        })();
 
-        // 3. BACKGROUND GYMS FETCH: Load gyms asynchronously in the background
+            console.log("📥 [loadUserData] Profiles fetch complete. Found row:", !!data);
+
+            let profileData = data;
+            if (!profileData) {
+                console.log("⚠️ [loadUserData] Profile not found. Auto-creating...");
+                const newProfile = {
+                    id: user!.id,
+                    username: defaultUsername,
+                    avatar_url: defaultAvatar,
+                    description: '¡Hola! Soy un nuevo atleta en GymPartner.',
+                    g_points: 1000,
+                    total_referrals: 0,
+                    checkins_count: 0
+                };
+
+                const { data: insertedData, error: insertError } = await supabase
+                    .from('profiles')
+                    .insert(newProfile)
+                    .select()
+                    .single();
+
+                if (insertError) {
+                    console.error("❌ [loadUserData Error] Auto-profile insert failed:", insertError);
+                } else {
+                    console.log("✅ [loadUserData] Auto-profile created!");
+                    profileData = insertedData;
+                }
+            }
+
+
+            if (profileData) {
+                console.log("📥 [loadUserData] Setting real profile state.");
+                setProfile(profileData);
+
+                // REFERRAL CHECK
+                const pendingRef = sessionStorage.getItem('gym_referral_id');
+                if (pendingRef && !profileData.referred_by && pendingRef !== user!.id) {
+                    const { error: refError } = await supabase
+                        .from('profiles')
+                        .update({ referred_by: pendingRef })
+                        .eq('id', user!.id);
+                    if (!refError) {
+                        sessionStorage.removeItem('gym_referral_id');
+                        console.log("✅ [loadUserData] Referral recorded!");
+                        alert("🎖️ ¡Has sido registrado con éxito! Quien te refirió recibirá su recompensa pronto.");
+                    } else {
+                        console.error("❌ [loadUserData] Referral failed:", refError);
+                    }
+                }
+            }
+        } catch (err) {
+            console.error("❌ [loadUserData] Unexpected error:", err);
+        } finally {
+            setLoading(false);
+        }
+
+        // Load gyms in background (doesn't block profile render)
         (async () => {
             try {
                 if (!user) return;
-                console.log("📥 [loadUserData Background] Querying user gyms (Passport)...");
                 const gyms = await userService.getUserGyms(user.id);
-                console.log("📥 [loadUserData Background] User gyms query complete. Count:", gyms.length);
-
-                // Sort: Home Base First
                 const sortedGyms = gyms.sort((a, b) => {
                     if (a.is_home_base === b.is_home_base) return 0;
                     return a.is_home_base ? -1 : 1;
                 });
-
                 setUserGyms(sortedGyms);
             } catch (gymsErr) {
-                console.error("❌ [loadUserData Background Error] User gyms fetch failed:", gymsErr);
+                console.error("❌ [loadUserData] User gyms fetch failed:", gymsErr);
             }
         })();
     };
+
 
     const loadAlphaData = async () => {
         if (!user?.id || userGyms.length === 0) return;

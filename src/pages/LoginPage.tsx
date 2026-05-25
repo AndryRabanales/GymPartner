@@ -7,21 +7,27 @@ export const LoginPage = () => {
     const [error, setError] = useState<string | null>(null);
     const [isAutoRedirecting, setIsAutoRedirecting] = useState(false);
 
-    // 🛑 CAMBIA ESTO A 'true' UNA VEZ QUE HABILITES META EN TU CONSOLA DE SUPABASE
-    const ENABLE_AUTO_META_REDIRECT = false;
+    // ✅ Auto Meta redirect is ENABLED — triggered when opening from Instagram/Facebook in-app browser
+    const ENABLE_AUTO_META_REDIRECT = true;
 
     useEffect(() => {
         if (!ENABLE_AUTO_META_REDIRECT) return;
 
-        // Detect if the user is loading the app inside Meta's In-App Browser (Instagram or Facebook)
-        const ua = navigator.userAgent || navigator.vendor || (window as any).opera;
-        const isMetaBrowser = ua.includes('Instagram') || ua.includes('FBAN') || ua.includes('FBAV');
+        // Detect Instagram / Facebook / Meta in-app browsers
+        const ua = navigator.userAgent || navigator.vendor || (window as any).opera || '';
+        const isMetaBrowser = (
+            ua.includes('Instagram') ||
+            ua.includes('FBAN') ||     // Facebook App
+            ua.includes('FBAV') ||     // Facebook Android
+            ua.includes('FBIOS') ||    // Facebook iOS
+            ua.includes('FB_IAB') ||   // Facebook In-App Browser
+            ua.includes('Messenger')   // Messenger
+        );
 
         if (isMetaBrowser) {
-            console.log("🛰️ [IN-APP BROWSER DETECTED] Instagram/Meta sandbox identified. Launching auto-redirect...");
+            console.log("🛰️ [IN-APP BROWSER] Instagram/Meta sandbox detected. Auto-launching Meta login...");
             setIsAutoRedirecting(true);
-            
-            // Short delay to let the UI render and show the tactical loading screen
+
             const timer = setTimeout(async () => {
                 try {
                     await signInWithMeta();
@@ -30,7 +36,7 @@ export const LoginPage = () => {
                     setIsAutoRedirecting(false);
                     setError("No se pudo iniciar el inicio de sesión automático de Meta.");
                 }
-            }, 800);
+            }, 600);
 
             return () => clearTimeout(timer);
         }
