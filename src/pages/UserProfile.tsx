@@ -797,12 +797,12 @@ export const UserProfile = () => {
                                         className="group relative overflow-hidden bg-gradient-to-r from-yellow-500/80 to-neutral-700/80 rounded-[12px] p-[1.5px] shadow-[0_4px_12px_rgba(0,0,0,0.3)] hover:shadow-[0_4px_20px_rgba(0,0,0,0.5)] hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-300 active:scale-95 w-full text-left"
                                     >
                                         {/* Inner Glass Container - Dark neutral layout with soft gold accents */}
-                                        <div className="relative bg-gradient-to-r from-yellow-950/85 via-amber-950/80 to-neutral-900/90 backdrop-blur-md w-full h-full rounded-[10px] px-2.5 py-2 flex items-center justify-between border border-white/5 transition-all z-10 gap-1.5">
+                                        <div className="relative bg-gradient-to-r from-yellow-500/25 via-amber-500/15 to-neutral-950/80 backdrop-blur-md w-full h-full rounded-[10px] px-2.5 py-2 flex items-center justify-between border border-white/5 transition-all z-10 gap-1.5">
                                             <div className="flex items-center gap-2 min-w-0">
                                                 <div className="w-6 h-6 rounded-full bg-neutral-800 text-yellow-400 flex items-center justify-center shadow-lg animate-bounce shrink-0 border border-neutral-700/50">
                                                     <Swords className="w-3.5 h-3.5" strokeWidth={2.5} />
                                                 </div>
-                                                <span className="font-black text-neutral-200 text-[10px] sm:text-xs italic uppercase tracking-tighter truncate max-w-[85px] sm:max-w-[125px] leading-tight group-hover:text-yellow-400 transition-colors">
+                                                <span className="font-black text-white text-[10px] sm:text-xs italic uppercase tracking-tighter truncate max-w-[85px] sm:max-w-[125px] leading-tight group-hover:text-yellow-400 transition-colors">
                                                     {routine.name}
                                                 </span>
                                             </div>
