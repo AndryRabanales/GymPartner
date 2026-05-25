@@ -458,7 +458,7 @@ export const UserProfile = () => {
             {/* ... content ... */}
             {/* Header Profile Card - Premium Hextech Cybernetic Design */}
             <div
-                className={`bg-neutral-900/60 backdrop-blur-xl border ${currentTier.borderColor} rounded-2xl p-3 sm:p-5 flex flex-col sm:flex-row items-center sm:items-start gap-3 sm:gap-6 relative overflow-hidden transition-all shadow-[0_20px_50px_rgba(0,0,0,0.6)] group`}
+                className="bg-neutral-900/60 backdrop-blur-xl border border-white/10 hover:border-gym-primary/30 rounded-2xl p-3 sm:p-5 flex flex-col sm:flex-row items-center sm:items-start gap-3 sm:gap-6 relative overflow-hidden transition-all shadow-[0_20px_50px_rgba(0,0,0,0.6)] group"
                 style={profile?.custom_settings?.banner_url ? {
                     backgroundImage: `url(${profile.custom_settings.banner_url})`,
                     backgroundSize: 'cover',
@@ -468,72 +468,22 @@ export const UserProfile = () => {
                 {/* Banner Overlay for Readability */}
                 <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/75 to-neutral-950/20 z-0"></div>
 
-                {/* Right Side Controls (Tier) */}
-                <div className="absolute top-3 right-3 z-20">
-                    {/* Cybernetic Tier Capsule */}
-                    <div className="flex items-center gap-1 py-0.5 px-2 rounded-full bg-black/60 border border-white/10 backdrop-blur-md shadow-lg">
-                        <span className="text-[8px] font-black uppercase tracking-widest text-neutral-400">RANGO:</span>
-                        <span className={`text-[9px] font-black uppercase tracking-widest flex items-center gap-1 ${currentTier.color}`}>
-                            <span>{currentTier.icon}</span>
-                            <span className="italic">{currentTier.name}</span>
-                        </span>
-                    </div>
-                </div>
-
-                {/* Avatar Section: LoL Style Ring (CONTAINED AND CENTERED) */}
+                {/* Avatar Section: Clean & Premium (No Tiers/Percentages) */}
                 <div className="relative shrink-0 z-10 transition-all flex flex-col items-center">
-                    <div className="relative w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center">
-
-                        {/* 0. Tier Glow (Dynamic Color) */}
-                        <div className={`absolute inset-0 rounded-full blur-xl transform scale-100 pointer-events-none transition-colors duration-500 ${currentTier.color.replace('text-', 'bg-')}/15`}></div>
-
-                        {/* 1. Base Ring (Dark Metal) */}
-                        <svg className="absolute inset-0 w-full h-full -rotate-90 drop-shadow-lg overflow-visible" viewBox="0 0 160 160">
-                            <circle
-                                cx="80" cy="80" r="74"
-                                fill="transparent"
-                                stroke="#1F1F1F"
-                                strokeWidth="6"
-                            />
-                        </svg>
-
-                        {/* 2. Progress Ring (Dynamic Tier Color) */}
-                        <svg className={`absolute inset-0 w-full h-full -rotate-90 drop-shadow-[0_0_15px_currentColor] overflow-visible ${currentTier.color}`} viewBox="0 0 160 160">
-                            <circle
-                                cx="80" cy="80" r="74"
-                                fill="transparent"
-                                stroke="currentColor"
-                                strokeWidth="6"
-                                strokeDasharray="465"
-                                strokeDashoffset={465 - (Math.min(tierProgress, 100) / 100) * 465}
-                                strokeLinecap="round"
-                                className="transition-all duration-1000 ease-out"
-                            />
-                        </svg>
-
-                        {/* Avatar Image */}
-                        <div className={`w-[76px] h-[76px] sm:w-[88px] sm:h-[88px] rounded-full overflow-hidden border-2 z-10 bg-neutral-800 shadow-inner relative transition-colors duration-500 ${currentTier.borderColor}`}>
-                            <img
-                                src={cloudinaryService.getOptimizedImageUrl(userAvatar, { width: 300, height: 300 })}
-                                alt="Profile"
-                                className="w-full h-full object-cover scale-110 group-hover:scale-125 transition-transform duration-700"
-                            />
-                        </div>
-                    </div>
-
-                    {/* Progress Text below avatar */}
-                    <div className="mt-1 bg-black/40 border border-white/5 px-1.5 py-0.5 rounded backdrop-blur-sm">
-                        <span className="text-[8px] font-black text-neutral-400 uppercase tracking-widest">
-                            {Math.round(tierProgress)}%
-                        </span>
+                    <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-2 border-gym-primary/30 bg-neutral-800 shadow-[0_0_20px_rgba(250,204,21,0.15)] group-hover:shadow-[0_0_30px_rgba(250,204,21,0.3)] transition-all">
+                        <img
+                            src={cloudinaryService.getOptimizedImageUrl(userAvatar, { width: 300, height: 300 })}
+                            alt="Profile"
+                            className="w-full h-full object-cover scale-110 group-hover:scale-125 transition-transform duration-700"
+                        />
                     </div>
                 </div>
 
                 {/* User Info Section */}
                 <div className="flex-1 text-center sm:text-left space-y-3 z-10 pt-2 w-full">
                     <div className="space-y-1">
-                        {/* Name: Golden Shock */}
-                        <h1 className={`text-3xl sm:text-4xl font-black ${currentTier.color} tracking-tighter uppercase italic drop-shadow-[0_0_20px_rgba(255,255,255,0.15)] leading-none flex items-center justify-center sm:justify-start gap-3`}>
+                        {/* Name: Clean White/Yellow */}
+                        <h1 className="text-3xl sm:text-4xl font-black text-white hover:text-gym-primary transition-colors tracking-tighter uppercase italic drop-shadow-[0_0_20px_rgba(255,255,255,0.15)] leading-none flex items-center justify-center sm:justify-start gap-3">
                             <span>{profile?.username || user.user_metadata.full_name}</span>
                             
                             <button
