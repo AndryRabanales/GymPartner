@@ -496,18 +496,31 @@ export const UserProfile = () => {
             <div className="w-[96%] mx-auto">
                 <div className="bg-gradient-to-r from-yellow-500 via-amber-500 to-neutral-700 p-[1.5px] rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] w-full">
                     <div
-                        className="bg-neutral-900/95 backdrop-blur-xl rounded-[14px] p-3 sm:p-4 relative overflow-hidden transition-all group w-full"
+                        className="bg-neutral-900/95 backdrop-blur-xl rounded-[14px] p-3 sm:p-4 relative overflow-hidden transition-all group w-full h-[360px] min-h-[360px] flex flex-col justify-between"
                         style={profile?.custom_settings?.banner_url ? {
                             backgroundImage: `url(${profile.custom_settings.banner_url})`,
                             backgroundSize: 'cover',
-                            backgroundPosition: 'center'
-                        } : {}}
+                            backgroundPosition: 'center',
+                            height: '360px'
+                        } : { height: '360px' }}
                     >
                         {/* Banner Overlay for Readability */}
                         <div className="absolute inset-0 bg-gradient-to-t from-neutral-950/90 via-neutral-950/60 to-neutral-950/20 z-0"></div>
 
-                        {/* Flex Container for Header Elements: Avatar + Info */}
-                        <div className="relative z-10 flex flex-row items-start gap-3 sm:gap-4 w-full">
+                        {/* Absolute Edit Pencil Button on the Top Right Corner */}
+                        <button
+                            onClick={() => {
+                                setShowEditProfile(true);
+                                hideBottomNav();
+                            }}
+                            className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-black/60 border border-white/10 hover:border-white/30 hover:bg-black/80 flex items-center justify-center text-neutral-400 hover:text-white transition-all transform hover:scale-105 active:scale-95 shadow-md shrink-0 cursor-pointer"
+                            title="Editar Perfil"
+                        >
+                            <Edit2 size={12} />
+                        </button>
+
+                        {/* Top Section: Avatar + Info (pr-10 to avoid overlap with absolute pencil) */}
+                        <div className="relative z-10 flex flex-row items-start gap-3 sm:gap-4 w-full pr-10">
                             {/* Avatar Section: Clean & Premium (Moved higher/aligned beautifully) */}
                             <div className="relative shrink-0 flex flex-col items-center -mt-2 sm:-mt-4">
                                 <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 border-gym-primary/40 bg-neutral-800 shadow-[0_0_15px_rgba(250,204,21,0.2)] group-hover:shadow-[0_0_25px_rgba(250,204,21,0.4)] transition-all">
@@ -520,41 +533,31 @@ export const UserProfile = () => {
                             </div>
 
                             {/* User Info & Stats Block: All compacted nicely here */}
-                            <div className="flex-1 min-w-0 space-y-1.5 pt-0.5">
-                                {/* Top Row: Name, Edit Button, and Streak */}
+                            <div className="flex-1 min-w-0 space-y-2 pt-0.5">
+                                {/* Top Row: Full Name & Streak */}
                                 <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                                    <h1 className="text-xl sm:text-2xl font-black text-white hover:text-gym-primary transition-colors tracking-tighter uppercase italic leading-none flex items-center gap-1.5">
-                                        <span className="truncate max-w-[140px] sm:max-w-[200px]">{profile?.username || user.user_metadata.full_name}</span>
-                                        <button
-                                            onClick={() => {
-                                                setShowEditProfile(true);
-                                                hideBottomNav();
-                                            }}
-                                            className="inline-flex w-5 h-5 rounded-full bg-white/5 border border-white/10 hover:border-white/30 items-center justify-center text-neutral-400 hover:text-white transition-all transform hover:scale-105 active:scale-95 shrink-0"
-                                            title="Editar Perfil"
-                                        >
-                                            <Edit2 size={8} />
-                                        </button>
+                                    <h1 className="text-xl sm:text-2xl font-black text-white hover:text-gym-primary transition-colors tracking-tighter uppercase italic leading-none">
+                                        {profile?.username || user.user_metadata.full_name}
                                     </h1>
 
                                     {/* STREAK FLAME */}
                                     <div className="shrink-0 scale-90 sm:scale-100 origin-left">
                                         <StreakFlame userId={user.id} />
                                     </div>
-
-                                    {/* FOLLOW STATS (Extremely compact inline pills) */}
-                                    <div 
-                                        className="flex items-center gap-1.5 text-[10px] sm:text-xs font-bold text-neutral-300 bg-black/40 backdrop-blur-md px-2 py-0.5 rounded-full border border-white/5 cursor-pointer hover:bg-white/5 transition-colors shrink-0"
-                                        onClick={() => setShowSocialProfile(true)}
-                                    >
-                                        <span><strong className="text-gym-primary">{socialStats.followersCount}</strong> Seg</span>
-                                        <span className="text-neutral-600">•</span>
-                                        <span><strong className="text-white">{socialStats.followingCount}</strong> Siguen</span>
-                                    </div>
                                 </div>
 
-                                {/* Second Row: Gym Tags (Compact, in the header) */}
-                                <div className="flex flex-wrap items-center gap-1 w-full">
+                                {/* FOLLOW STATS (Full words, beautifully compact!) */}
+                                <div 
+                                    className="flex items-center gap-2 text-[10px] sm:text-xs font-bold text-neutral-300 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-white/5 cursor-pointer hover:bg-white/5 transition-colors shrink-0 w-fit"
+                                    onClick={() => setShowSocialProfile(true)}
+                                >
+                                    <span><strong className="text-gym-primary">{socialStats.followersCount}</strong> Seguidores</span>
+                                    <span className="text-neutral-600">•</span>
+                                    <span><strong className="text-white">{socialStats.followingCount}</strong> Siguiendo</span>
+                                </div>
+
+                                {/* Gym Tags */}
+                                <div className="flex flex-wrap items-center gap-1.5 w-full">
                                     {(() => {
                                         // Sort gyms: Home Base first, then Favorites, then others
                                         const sortedGyms = [...userGyms].sort((a, b) => {
@@ -621,11 +624,8 @@ export const UserProfile = () => {
                             </div>
                         </div>
 
-                        {/* Middle Space: Kept completely empty and clean to appreciate the background photo/banner! */}
-                        <div className="h-10 sm:h-14"></div>
-
                         {/* Bottom Row / Card Footer: Bio & Share button aligned neatly at the bottom */}
-                        <div className="relative z-10 flex flex-row items-center justify-between gap-3 mt-1 pt-1.5 border-t border-white/5 w-full">
+                        <div className="relative z-10 flex flex-row items-center justify-between gap-3 mt-auto pt-1.5 border-t border-white/5 w-full">
                             <p className="text-neutral-400 text-[10px] sm:text-[11px] leading-snug italic truncate max-w-[70%]">
                                 &ldquo;{profile?.description || 'Entrenando duro en GymPartner.'}&rdquo;
                             </p>
@@ -635,7 +635,7 @@ export const UserProfile = () => {
                                     e.stopPropagation();
                                     handleShareProfile();
                                 }}
-                                className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 flex items-center gap-1 text-[9px] sm:text-[10px] text-neutral-400 hover:text-gym-primary hover:bg-white/10 hover:border-gym-primary/30 transition-all backdrop-blur-md shrink-0"
+                                className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 flex items-center gap-1 text-[9px] sm:text-[10px] text-neutral-400 hover:text-gym-primary hover:bg-white/10 hover:border-gym-primary/30 transition-all backdrop-blur-md shrink-0 cursor-pointer"
                                 title="Compartir Perfil"
                             >
                                 <Share2 size={9} />
