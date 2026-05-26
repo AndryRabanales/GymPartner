@@ -527,18 +527,7 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
                             }
                         `}</style>
 
-                        {/* Skip Tutorial Button */}
-                        {isPlayingTutorial && (
-                            <button
-                                onClick={() => {
-                                    setIsPlayingTutorial(false);
-                                    localStorage.setItem('radar_swipe_tutorial_seen_v4', 'true');
-                                }}
-                                className="absolute top-4 right-4 z-50 bg-black/60 backdrop-blur-md border border-white/10 hover:border-gym-primary/50 text-white hover:text-gym-primary px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-2xl flex items-center gap-1.5 cursor-pointer"
-                            >
-                                Saltar Guía ⚡
-                            </button>
-                        )}
+
 
                         {/* Autoplay Tutorial stamps */}
                         {isPlayingTutorial && (
