@@ -161,121 +161,133 @@ export const EquipmentForm = ({
 
 
     return (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-            <div className="bg-neutral-900 border border-white/10 w-full max-w-xl rounded-[1.5rem] p-5 shadow-2xl relative max-h-[95vh] overflow-y-auto animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-[100] flex items-center justify-center p-3">
+            <div className="bg-neutral-900/95 border border-white/10 w-full max-w-md rounded-[1.25rem] p-4 shadow-2xl relative max-h-[98vh] overflow-y-auto animate-in zoom-in-95 duration-200 no-scrollbar">
 
-                {/* Header & Close */}
-                <div className="flex justify-between items-center mb-4">
-                    <div>
-                        <h2 className="text-xl font-black italic text-white uppercase tracking-tight">
-                            {mode === 'CUSTOM' ? (editingItem ? 'Editar Ejercicio' : 'Crear Ejercicio') : `Catálogo ${activeSection || ''}`}
-                        </h2>
-                        <p className="text-[10px] text-neutral-400 tracking-wide mt-0.5">
-                            {mode === 'CUSTOM' ? 'Diseña tu propia máquina o ejercicio.' : 'Añade artillería pesada a tu colección.'}
-                        </p>
-                    </div>
-                    <button onClick={onClose} className="p-1.5 hover:bg-white/10 rounded-full transition-colors shrink-0">
-                        <Plus size={20} className="rotate-45 text-neutral-400 hover:text-white" />
+                {/* Header Row (Merged & Compact) */}
+                <div className="flex justify-between items-center pb-2 mb-3 border-b border-white/5">
+                    <h2 className="text-base font-black italic text-white uppercase tracking-tight flex items-center gap-1.5 select-none">
+                        <span className="text-gym-primary animate-pulse">⚡</span> 
+                        {editingItem ? 'Editar Ejercicio' : 'Crear Ejercicio'}
+                    </h2>
+                    <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-full transition-all shrink-0">
+                        <Plus size={18} className="rotate-45 text-neutral-400 hover:text-white" />
                     </button>
                 </div>
 
                 {mode === 'CATALOG' ? (
                     <div className="space-y-3">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 gap-1.5">
                             {catalogItems.length > 0 ? catalogItems.map(seed => (
                                 <button
                                     key={seed.name}
                                     onClick={() => onQuickAdd && onQuickAdd(seed)}
-                                    className="text-left bg-black border border-white/10 hover:border-gym-primary p-3 rounded-lg flex items-center justify-between group transition-all"
+                                    className="text-left bg-black border border-white/5 hover:border-gym-primary/50 p-2.5 rounded-lg flex items-center justify-between group transition-all"
                                 >
-                                    <div className="flex items-center gap-3">
-                                        <span className="text-xl bg-white/5 p-1.5 rounded-lg">
+                                    <div className="flex items-center gap-2.5">
+                                        <span className="text-lg bg-white/5 p-1 rounded-md shrink-0">
                                             {/* @ts-ignore */}
                                             {EQUIPMENT_CATEGORIES[seed.category]?.icon}
                                         </span>
                                         <span className="font-bold text-xs text-neutral-300 group-hover:text-white transition-colors">{seed.name}</span>
                                     </div>
                                     <div className="text-gym-primary opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all shrink-0">
-                                        <Plus size={16} strokeWidth={3} />
+                                        <Plus size={14} strokeWidth={3} />
                                     </div>
                                 </button>
                             )) : (
-                                <div className="col-span-full py-6 text-center text-xs text-neutral-500 border border-dashed border-white/10 rounded-xl">
+                                <div className="py-6 text-center text-[10px] text-neutral-500 border border-dashed border-white/10 rounded-lg">
                                     <p>No hay más sugerencias comunes.</p>
                                 </div>
                             )}
                         </div>
 
-                        <div className="border-t border-white/10 pt-3 text-center">
-                            <button onClick={() => setMode('CUSTOM')} className="inline-flex items-center gap-1.5 text-gym-primary text-xs font-bold hover:text-white transition-colors px-4 py-2 rounded-full hover:bg-white/5">
-                                <Plus size={14} />
+                        <div className="border-t border-white/5 pt-2.5 text-center">
+                            <button onClick={() => setMode('CUSTOM')} className="inline-flex items-center gap-1.5 text-gym-primary text-xs font-bold hover:text-white transition-colors px-3 py-1.5 rounded-full hover:bg-white/5">
+                                <Plus size={12} />
                                 CREAR EJERCICIO PERSONALIZADO
                             </button>
                         </div>
                     </div>
                 ) : (
-                    // CUSTOM FORM (COMPACTED)
-                    <div className="space-y-4">
-                        {/* Name Input */}
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-wider">Nombre del Ejercicio</label>
+                    // CUSTOM FORM (ULTRA-COMPACTED & ELEGANT)
+                    <div className="space-y-3">
+                        {/* Name Input - Sleek Floating Style */}
+                        <div className="relative">
                             <input
                                 type="text"
                                 autoFocus
-                                placeholder="Ej: Press Militar en Máquina Vikinga"
-                                className="w-full bg-black border border-white/10 rounded-xl p-3 text-white placeholder-neutral-600 focus:border-gym-primary focus:outline-none text-base font-bold transition-all"
+                                placeholder="Nombre del Ejercicio..."
+                                className="w-full bg-neutral-950 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-neutral-600 focus:border-gym-primary/60 focus:ring-1 focus:ring-gym-primary/20 focus:outline-none text-sm font-bold transition-all shadow-inner"
                                 value={customName}
                                 onChange={(e) => setCustomName(e.target.value)}
                             />
+                            <span className="absolute right-3 top-2 text-[8px] font-black text-neutral-500 uppercase tracking-widest pointer-events-none select-none">
+                                NOMBRE
+                            </span>
                         </div>
 
-                        {/* Category Selection */}
+                        {/* Category Selector Grid */}
                         <div className="space-y-1">
-                            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-wider">Categoría</label>
-                            <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
-                                {Object.entries(EQUIPMENT_CATEGORIES).map(([key, info]: [string, any]) => (
-                                    <button
-                                        key={key}
-                                        onClick={() => setCustomCategory(key)}
-                                        className={`p-1 rounded-xl border flex flex-col items-center justify-center text-center transition-all h-14 select-none ${customCategory === key ? 'bg-gym-primary/20 border-gym-primary text-white font-extrabold' : 'bg-black border-white/10 text-neutral-400 hover:border-white/30'}`}
-                                    >
-                                        <span className="text-lg leading-none mb-1">{info.icon}</span>
-                                        <span className="text-[8px] font-bold uppercase tracking-tight line-clamp-1 w-full px-1">{info.label}</span>
-                                    </button>
-                                ))}
-                                {(userSettings?.categories || []).map((cat) => (
-                                    <button
-                                        key={cat.id}
-                                        onClick={() => setCustomCategory(cat.id)}
-                                        className={`p-1 rounded-xl border flex flex-col items-center justify-center text-center transition-all h-14 select-none ${customCategory === cat.id ? 'bg-gym-primary/20 border-gym-primary text-white font-extrabold' : 'bg-black border-white/10 text-neutral-400 hover:border-white/30'}`}
-                                    >
-                                        <span className="text-lg leading-none mb-1">{cat.icon}</span>
-                                        <span className="text-[8px] font-bold uppercase tracking-tight line-clamp-1 w-full px-1">{cat.label}</span>
-                                    </button>
-                                ))}
+                            <span className="text-[9px] font-black text-neutral-500 uppercase tracking-wider select-none">Categoría</span>
+                            <div className="grid grid-cols-4 sm:grid-cols-5 gap-1">
+                                {Object.entries(EQUIPMENT_CATEGORIES).map(([key, info]: [string, any]) => {
+                                    const isSelected = customCategory === key;
+                                    return (
+                                        <button
+                                            key={key}
+                                            onClick={() => setCustomCategory(key)}
+                                            className={`p-1 rounded-lg border flex flex-col items-center justify-center text-center transition-all duration-250 h-11 select-none ${
+                                                isSelected 
+                                                    ? 'bg-gym-primary/15 border-gym-primary text-gym-primary font-black shadow-[0_0_10px_rgba(250,204,21,0.25)] scale-105 z-10' 
+                                                    : 'bg-black/35 border-white/5 text-neutral-400 hover:border-white/20 hover:text-neutral-200'
+                                            }`}
+                                        >
+                                            <span className="text-base leading-none mb-0.5 shrink-0">{info.icon}</span>
+                                            <span className="text-[7.5px] font-bold uppercase tracking-tight line-clamp-1 w-full px-0.5 leading-none">{info.label}</span>
+                                        </button>
+                                    );
+                                })}
+                                {(userSettings?.categories || []).map((cat) => {
+                                    const isSelected = customCategory === cat.id;
+                                    return (
+                                        <button
+                                            key={cat.id}
+                                            onClick={() => setCustomCategory(cat.id)}
+                                            className={`p-1 rounded-lg border flex flex-col items-center justify-center text-center transition-all duration-250 h-11 select-none ${
+                                                isSelected 
+                                                    ? 'bg-gym-primary/15 border-gym-primary text-gym-primary font-black shadow-[0_0_10px_rgba(250,204,21,0.25)] scale-105 z-10' 
+                                                    : 'bg-black/35 border-white/5 text-neutral-400 hover:border-white/20 hover:text-neutral-200'
+                                            }`}
+                                        >
+                                            <span className="text-base leading-none mb-0.5 shrink-0">{cat.icon}</span>
+                                            <span className="text-[7.5px] font-bold uppercase tracking-tight line-clamp-1 w-full px-0.5 leading-none">{cat.label}</span>
+                                        </button>
+                                    );
+                                })}
 
                                 {/* New Category Trigger */}
                                 {!isCreatingCategory && (
-                                    <button onClick={() => setIsCreatingCategory(true)} className="p-1 rounded-xl border border-dashed border-white/20 flex flex-col items-center justify-center text-center text-neutral-500 hover:text-white hover:bg-white/5 transition-all h-14 select-none">
-                                        <Plus size={14} className="mb-0.5" />
-                                        <span className="text-[8px] font-black uppercase tracking-wider">Nueva</span>
+                                    <button onClick={() => setIsCreatingCategory(true)} className="p-1 rounded-lg border border-dashed border-white/20 flex flex-col items-center justify-center text-center text-neutral-500 hover:text-white hover:bg-white/5 transition-all h-11 select-none">
+                                        <Plus size={12} className="mb-0.5" />
+                                        <span className="text-[7.5px] font-black uppercase tracking-wider leading-none">Nueva</span>
                                     </button>
                                 )}
                             </div>
 
                             {/* Inline Category Creator */}
                             {isCreatingCategory && (
-                                <div className="bg-neutral-900 rounded-xl p-3 border border-white/10 flex flex-col gap-2 mt-1.5 animate-in slide-in-from-top-2 duration-150">
+                                <div className="bg-neutral-900 border border-white/10 rounded-xl p-2.5 flex flex-col gap-2 mt-1.5 animate-in slide-in-from-top-2 duration-150">
                                     <div className="flex items-center justify-between">
-                                        <span className="text-[10px] font-bold text-white uppercase">Nueva Categoría</span>
-                                        <button onClick={() => setIsCreatingCategory(false)} className="text-neutral-400 hover:text-white"><X size={14} /></button>
+                                        <span className="text-[9px] font-black text-white uppercase tracking-wider">Nueva Categoría</span>
+                                        <button onClick={() => setIsCreatingCategory(false)} className="text-neutral-500 hover:text-white"><X size={12} /></button>
                                     </div>
-                                    <input type="text" placeholder="Nombre (ej: Yoga)" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} className="bg-black border border-white/10 rounded-lg p-2 text-xs text-white font-bold w-full" autoFocus />
+                                    <input type="text" placeholder="Nombre (ej: Yoga)" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} className="bg-black border border-white/10 rounded-lg p-2 text-xs text-white font-bold w-full focus:outline-none focus:border-gym-primary" autoFocus />
                                     <div className="flex gap-2">
-                                        <input type="text" value={newCategoryIcon} onChange={e => setNewCategoryIcon(e.target.value)} className="w-12 bg-black border border-white/10 rounded-lg p-1.5 text-lg text-center" />
-                                        <div className="flex-1 flex gap-1.5 overflow-x-auto items-center no-scrollbar">
+                                        <input type="text" value={newCategoryIcon} onChange={e => setNewCategoryIcon(e.target.value)} className="w-10 bg-black border border-white/10 rounded-lg p-1.5 text-base text-center" />
+                                        <div className="flex-1 flex gap-1 overflow-x-auto items-center no-scrollbar">
                                             {['🧘', '🤸', '🧗', '🥊', '🏊', '🚴', '🏃', '🥋', '🎸', '💃'].map(emoji => (
-                                                <button key={emoji} onClick={() => setNewCategoryIcon(emoji)} className="text-base p-1 hover:bg-white/10 rounded">{emoji}</button>
+                                                <button key={emoji} onClick={() => setNewCategoryIcon(emoji)} className="text-base p-1 hover:bg-white/10 rounded shrink-0">{emoji}</button>
                                             ))}
                                         </div>
                                     </div>
@@ -289,50 +301,62 @@ export const EquipmentForm = ({
                                             setCustomCategory(newCat.id);
                                             setIsCreatingCategory(false);
                                         }}
-                                        className="w-full py-2 bg-gym-primary text-black font-black text-xs rounded-lg uppercase tracking-wider hover:brightness-110"
+                                        className="w-full py-1.5 bg-gym-primary text-black font-black text-[10px] rounded-lg uppercase tracking-wider hover:brightness-110"
                                     >CREAR</button>
                                 </div>
                             )}
                         </div>
 
-                        {/* Metrics Section (SUPER COMPACT GRID) */}
-                        <div className="space-y-1.5">
-                            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-wider">Métricas Activas</label>
-                            <div className="bg-black/30 rounded-xl p-3 border border-white/5 shadow-inner">
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                    {[
-                                        { id: 'weight', label: 'Peso', icon: '⚖️' },
-                                        { id: 'reps', label: 'Reps', icon: '🔄' },
-                                        { id: 'time', label: 'Tiempo', icon: '⏱️' },
-                                        { id: 'distance', label: 'Distancia', icon: '📏' },
-                                        { id: 'rpe', label: 'RPE', icon: '🔥' },
-                                        ...userSettings.metrics
-                                    ].map(m => {
-                                        const isChecked = !!customMetrics[m.id as keyof typeof customMetrics];
-                                        return (
-                                            <div key={m.id} className={`flex items-center justify-between p-2 px-2.5 rounded-lg border transition-all ${isChecked ? 'bg-gym-primary/10 border-gym-primary/30' : 'bg-neutral-900/50 border-white/5 hover:border-white/10'}`}>
-                                                <div className="flex items-center gap-1.5 select-none">
-                                                    <span className="text-base shrink-0">{m.icon}</span>
-                                                    <span className={`text-[10px] font-bold uppercase tracking-tight ${isChecked ? 'text-white font-extrabold' : 'text-neutral-400'}`}>{m.label}</span>
-                                                </div>
-                                                <button
-                                                    onClick={() => setCustomMetrics(prev => ({ ...prev, [m.id]: !prev[m.id as keyof typeof prev] }))}
-                                                    className={`w-9 h-5 rounded-full relative transition-colors shrink-0 ${isChecked ? 'bg-gym-primary' : 'bg-neutral-800'}`}
-                                                >
-                                                    <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all shadow-md ${isChecked ? 'translate-x-4.5' : 'translate-x-0'}`} style={{ left: '2px' }} />
-                                                </button>
+                        {/* Metrics Section (Premium Chips) */}
+                        <div className="space-y-1">
+                            <span className="text-[9px] font-black text-neutral-500 uppercase tracking-wider select-none">Métricas Activas</span>
+                            <div className="grid grid-cols-2 gap-1.5">
+                                {[
+                                    { id: 'weight', label: 'Peso', icon: '⚖️' },
+                                    { id: 'reps', label: 'Reps', icon: '🔄' },
+                                    { id: 'time', label: 'Tiempo', icon: '⏱️' },
+                                    { id: 'distance', label: 'Distancia', icon: '📏' },
+                                    { id: 'rpe', label: 'RPE', icon: '🔥' },
+                                    ...userSettings.metrics
+                                ].map(m => {
+                                    const isChecked = !!customMetrics[m.id as keyof typeof customMetrics];
+                                    return (
+                                        <div 
+                                            key={m.id} 
+                                            onClick={() => setCustomMetrics(prev => ({ ...prev, [m.id]: !prev[m.id as keyof typeof prev] }))}
+                                            className={`flex items-center justify-between p-1.5 px-2 rounded-lg border cursor-pointer select-none transition-all duration-300 ${
+                                                isChecked 
+                                                    ? 'bg-gym-primary/10 border-gym-primary/40 shadow-[0_0_10px_rgba(250,204,21,0.15)] text-gym-primary font-bold' 
+                                                    : 'bg-neutral-900/50 border-white/5 text-neutral-400 hover:border-white/10 hover:bg-neutral-900/80 hover:text-neutral-300'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-1.5 min-w-0">
+                                                <span className="text-sm shrink-0">{m.icon}</span>
+                                                <span className={`text-[9px] font-extrabold uppercase tracking-wider truncate ${isChecked ? 'text-white' : 'text-neutral-400'}`}>{m.label}</span>
                                             </div>
-                                        );
-                                    })}
-                                </div>
+                                            <div
+                                                className={`w-7 h-4 rounded-full relative transition-all duration-300 shrink-0 ${
+                                                    isChecked ? 'bg-gym-primary' : 'bg-neutral-800'
+                                                }`}
+                                            >
+                                                <div 
+                                                    className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all duration-300 shadow-md ${
+                                                        isChecked ? 'translate-x-3.5' : 'translate-x-0'
+                                                    }`} 
+                                                    style={{ left: '2px' }} 
+                                                />
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
 
                         {/* Actions */}
-                        <div className="flex gap-2 pt-3 border-t border-white/10">
-                            <button onClick={() => { if (mode === 'CUSTOM' && !editingItem) setMode('CATALOG'); else onClose(); }} className="flex-1 py-2.5 rounded-xl font-bold text-xs bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white transition-colors uppercase tracking-wider">VOLVER</button>
-                            <button onClick={handleSave} disabled={submitting || !customName.trim()} className="flex-1 py-2.5 rounded-xl font-black text-xs bg-gym-primary text-black hover:brightness-110 transition-all disabled:opacity-50 uppercase tracking-wider">
-                                {submitting ? <Loader className="animate-spin mx-auto" size={16} /> : (editingItem ? 'GUARDAR CAMBIOS' : 'CREAR EJERCICIO')}
+                        <div className="flex gap-2 pt-2.5 border-t border-white/5">
+                            <button onClick={() => { if (mode === 'CUSTOM' && !editingItem) setMode('CATALOG'); else onClose(); }} className="flex-1 py-2 rounded-lg font-black text-[10px] bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white transition-colors uppercase tracking-wider">VOLVER</button>
+                            <button onClick={handleSave} disabled={submitting || !customName.trim()} className="flex-1 py-2 rounded-lg font-black text-[10px] bg-gym-primary text-black hover:brightness-110 transition-all disabled:opacity-50 uppercase tracking-wider">
+                                {submitting ? <Loader className="animate-spin mx-auto" size={14} /> : (editingItem ? 'GUARDAR' : 'CREAR')}
                             </button>
                         </div>
                     </div>
