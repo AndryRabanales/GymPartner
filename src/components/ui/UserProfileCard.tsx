@@ -180,8 +180,8 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
         }
     };
 
-    return (
-        <div className={`flex-1 flex flex-col relative bg-black/40 backdrop-blur-3xl w-full h-full rounded-[3rem] border ${isRadar ? 'border-2 border-orange-600/50 shadow-[0_0_40px_rgba(234,88,12,0.15)]' : 'border border-white/10'} shadow-[0_30px_60px_rgba(0,0,0,0.8)] overflow-hidden select-none`}>
+    const cardBody = (
+        <>
             {/* Close Button (if provided) */}
             {onClose && (
                 <button 
@@ -438,7 +438,27 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
                 )}
             </div>
 
-            {/* Actions (if provided) */}
+        </>
+    );
+
+    if (isRadar) {
+        return (
+            <div className="flex-1 flex flex-col relative w-full h-full p-[2px] rounded-[3rem] bg-gradient-to-br from-orange-600 via-orange-500 to-orange-200 shadow-[0_0_50px_rgba(234,88,12,0.25)] overflow-hidden select-none">
+                <div className="flex-1 flex flex-col relative bg-black/95 backdrop-blur-3xl w-full h-full rounded-[2.85rem] overflow-hidden">
+                    {cardBody}
+                    {actions && (
+                        <div className="shrink-0 p-4 pt-0">
+                            {actions}
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex-1 flex flex-col relative bg-black/40 backdrop-blur-3xl w-full h-full rounded-[3rem] border border-white/10 shadow-[0_30px_60px_rgba(0,0,0,0.8)] overflow-hidden select-none">
+            {cardBody}
             {actions && (
                 <div className="shrink-0 p-4 pt-0">
                     {actions}
