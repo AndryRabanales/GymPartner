@@ -151,14 +151,14 @@ export const AppLayout = () => {
                                         <div className="relative">
                                             <div className="absolute inset-0 bg-white/5 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                                             <img
-                                                src="/logo-gp.png"
-                                                alt="GymPartner"
+                                                src="/ginx.png"
+                                                alt="GINX"
                                                 className="h-6 w-auto sm:h-8 relative z-10 transition-all duration-500 group-hover:scale-110 drop-shadow-[0_0_20px_rgba(255,255,255,0.2)] animate-in zoom-in-50 duration-700"
                                             />
                                         </div>
                                         <div className="flex flex-col">
                                             <span className="font-black text-sm sm:text-base tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-neutral-500 italic leading-none group-hover:from-gym-primary group-hover:to-yellow-600 transition-all duration-500 uppercase" style={{ fontFamily: 'Impact, sans-serif' }} translate="no">
-                                                GYMPARTNER
+                                                GINX
                                             </span>
                                         </div>
                                     </div>
