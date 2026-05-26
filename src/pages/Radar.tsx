@@ -50,11 +50,10 @@ export const Radar = () => {
     const currentUser = nearbyUsers[currentIndex];
 
     useEffect(() => {
-        if (scanComplete && nearbyUsers.length > 0 && !localStorage.getItem('radar_swipe_tutorial_seen_v4')) {
+        if (scanComplete && nearbyUsers.length > 0) {
             setIsPlayingTutorial(true);
             const timer = setTimeout(() => {
                 setIsPlayingTutorial(false);
-                localStorage.setItem('radar_swipe_tutorial_seen_v4', 'true');
             }, 8000);
             return () => clearTimeout(timer);
         }
