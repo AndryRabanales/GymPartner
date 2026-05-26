@@ -162,120 +162,120 @@ export const EquipmentForm = ({
 
     return (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-            <div className="bg-neutral-900 border border-white/10 w-full max-w-2xl rounded-[2rem] p-8 shadow-2xl relative max-h-[85vh] overflow-y-auto animate-in zoom-in-95 duration-200">
+            <div className="bg-neutral-900 border border-white/10 w-full max-w-xl rounded-[1.5rem] p-5 shadow-2xl relative max-h-[95vh] overflow-y-auto animate-in zoom-in-95 duration-200">
 
                 {/* Header & Close */}
-                <div className="flex justify-between items-start mb-6">
+                <div className="flex justify-between items-center mb-4">
                     <div>
-                        <h2 className="text-3xl font-black italic text-white uppercase mb-1">
+                        <h2 className="text-xl font-black italic text-white uppercase tracking-tight">
                             {mode === 'CUSTOM' ? (editingItem ? 'Editar Ejercicio' : 'Crear Ejercicio') : `Catálogo ${activeSection || ''}`}
                         </h2>
-                        <p className="text-neutral-400">
+                        <p className="text-[10px] text-neutral-400 tracking-wide mt-0.5">
                             {mode === 'CUSTOM' ? 'Diseña tu propia máquina o ejercicio.' : 'Añade artillería pesada a tu colección.'}
                         </p>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors">
-                        <Plus size={24} className="rotate-45" />
+                    <button onClick={onClose} className="p-1.5 hover:bg-white/10 rounded-full transition-colors shrink-0">
+                        <Plus size={20} className="rotate-45 text-neutral-400 hover:text-white" />
                     </button>
                 </div>
 
                 {mode === 'CATALOG' ? (
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             {catalogItems.length > 0 ? catalogItems.map(seed => (
                                 <button
                                     key={seed.name}
                                     onClick={() => onQuickAdd && onQuickAdd(seed)}
-                                    className="text-left bg-black border border-white/10 hover:border-gym-primary p-4 rounded-xl flex items-center justify-between group transition-all"
+                                    className="text-left bg-black border border-white/10 hover:border-gym-primary p-3 rounded-lg flex items-center justify-between group transition-all"
                                 >
-                                    <div className="flex items-center gap-4">
-                                        <span className="text-2xl bg-white/5 p-2 rounded-lg">
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-xl bg-white/5 p-1.5 rounded-lg">
                                             {/* @ts-ignore */}
                                             {EQUIPMENT_CATEGORIES[seed.category]?.icon}
                                         </span>
-                                        <span className="font-bold text-neutral-300 group-hover:text-white transition-colors">{seed.name}</span>
+                                        <span className="font-bold text-xs text-neutral-300 group-hover:text-white transition-colors">{seed.name}</span>
                                     </div>
-                                    <div className="text-gym-primary opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all">
-                                        <Plus size={20} strokeWidth={3} />
+                                    <div className="text-gym-primary opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all shrink-0">
+                                        <Plus size={16} strokeWidth={3} />
                                     </div>
                                 </button>
                             )) : (
-                                <div className="col-span-full py-8 text-center text-neutral-500 border border-dashed border-white/10 rounded-2xl">
+                                <div className="col-span-full py-6 text-center text-xs text-neutral-500 border border-dashed border-white/10 rounded-xl">
                                     <p>No hay más sugerencias comunes.</p>
                                 </div>
                             )}
                         </div>
 
-                        <div className="border-t border-white/10 pt-4 mt-4 text-center">
-                            <button onClick={() => setMode('CUSTOM')} className="inline-flex items-center gap-2 text-gym-primary font-bold hover:text-white transition-colors px-6 py-3 rounded-full hover:bg-white/5">
-                                <Plus size={18} />
+                        <div className="border-t border-white/10 pt-3 text-center">
+                            <button onClick={() => setMode('CUSTOM')} className="inline-flex items-center gap-1.5 text-gym-primary text-xs font-bold hover:text-white transition-colors px-4 py-2 rounded-full hover:bg-white/5">
+                                <Plus size={14} />
                                 CREAR EJERCICIO PERSONALIZADO
                             </button>
                         </div>
                     </div>
                 ) : (
-                    // CUSTOM FORM
-                    <div className="space-y-6">
+                    // CUSTOM FORM (COMPACTED)
+                    <div className="space-y-4">
                         {/* Name Input */}
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Nombre del Ejercicio</label>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-wider">Nombre del Ejercicio</label>
                             <input
                                 type="text"
                                 autoFocus
                                 placeholder="Ej: Press Militar en Máquina Vikinga"
-                                className="w-full bg-black border border-white/10 rounded-xl p-4 text-white placeholder-neutral-600 focus:border-gym-primary focus:outline-none text-lg font-bold"
+                                className="w-full bg-black border border-white/10 rounded-xl p-3 text-white placeholder-neutral-600 focus:border-gym-primary focus:outline-none text-base font-bold transition-all"
                                 value={customName}
                                 onChange={(e) => setCustomName(e.target.value)}
                             />
                         </div>
 
                         {/* Category Selection */}
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Categoría</label>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-wider">Categoría</label>
+                            <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
                                 {Object.entries(EQUIPMENT_CATEGORIES).map(([key, info]: [string, any]) => (
                                     <button
                                         key={key}
                                         onClick={() => setCustomCategory(key)}
-                                        className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${customCategory === key ? 'bg-gym-primary/20 border-gym-primary text-white' : 'bg-black border-white/10 text-neutral-400 hover:border-white/30'}`}
+                                        className={`p-1 rounded-xl border flex flex-col items-center justify-center text-center transition-all h-14 select-none ${customCategory === key ? 'bg-gym-primary/20 border-gym-primary text-white font-extrabold' : 'bg-black border-white/10 text-neutral-400 hover:border-white/30'}`}
                                     >
-                                        <span className="text-2xl">{info.icon}</span>
-                                        <span className="text-xs font-bold uppercase">{info.label}</span>
+                                        <span className="text-lg leading-none mb-1">{info.icon}</span>
+                                        <span className="text-[8px] font-bold uppercase tracking-tight line-clamp-1 w-full px-1">{info.label}</span>
                                     </button>
                                 ))}
                                 {(userSettings?.categories || []).map((cat) => (
                                     <button
                                         key={cat.id}
                                         onClick={() => setCustomCategory(cat.id)}
-                                        className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${customCategory === cat.id ? 'bg-gym-primary/20 border-gym-primary text-white' : 'bg-black border-white/10 text-neutral-400 hover:border-white/30'}`}
+                                        className={`p-1 rounded-xl border flex flex-col items-center justify-center text-center transition-all h-14 select-none ${customCategory === cat.id ? 'bg-gym-primary/20 border-gym-primary text-white font-extrabold' : 'bg-black border-white/10 text-neutral-400 hover:border-white/30'}`}
                                     >
-                                        <span className="text-2xl">{cat.icon}</span>
-                                        <span className="text-xs font-bold uppercase">{cat.label}</span>
+                                        <span className="text-lg leading-none mb-1">{cat.icon}</span>
+                                        <span className="text-[8px] font-bold uppercase tracking-tight line-clamp-1 w-full px-1">{cat.label}</span>
                                     </button>
                                 ))}
 
                                 {/* New Category Trigger */}
                                 {!isCreatingCategory && (
-                                    <button onClick={() => setIsCreatingCategory(true)} className="p-3 rounded-xl border border-dashed border-white/20 flex flex-col items-center gap-2 text-neutral-500 hover:text-white hover:bg-white/5 transition-all group min-h-[88px] justify-center">
-                                        <Plus size={16} />
-                                        <span className="text-[10px] font-bold uppercase">Nueva</span>
+                                    <button onClick={() => setIsCreatingCategory(true)} className="p-1 rounded-xl border border-dashed border-white/20 flex flex-col items-center justify-center text-center text-neutral-500 hover:text-white hover:bg-white/5 transition-all h-14 select-none">
+                                        <Plus size={14} className="mb-0.5" />
+                                        <span className="text-[8px] font-black uppercase tracking-wider">Nueva</span>
                                     </button>
                                 )}
                             </div>
 
                             {/* Inline Category Creator */}
                             {isCreatingCategory && (
-                                <div className="bg-neutral-900 rounded-xl p-4 border border-white/10 flex flex-col gap-4 mt-2">
+                                <div className="bg-neutral-900 rounded-xl p-3 border border-white/10 flex flex-col gap-2 mt-1.5 animate-in slide-in-from-top-2 duration-150">
                                     <div className="flex items-center justify-between">
-                                        <span className="text-sm font-bold text-white uppercase">Nueva Categoría</span>
-                                        <button onClick={() => setIsCreatingCategory(false)}><X size={18} /></button>
+                                        <span className="text-[10px] font-bold text-white uppercase">Nueva Categoría</span>
+                                        <button onClick={() => setIsCreatingCategory(false)} className="text-neutral-400 hover:text-white"><X size={14} /></button>
                                     </div>
-                                    <input type="text" placeholder="Nombre (ej: Yoga)" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} className="bg-black border border-white/10 rounded-lg p-3 text-white font-bold w-full" autoFocus />
+                                    <input type="text" placeholder="Nombre (ej: Yoga)" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} className="bg-black border border-white/10 rounded-lg p-2 text-xs text-white font-bold w-full" autoFocus />
                                     <div className="flex gap-2">
-                                        <input type="text" value={newCategoryIcon} onChange={e => setNewCategoryIcon(e.target.value)} className="w-16 bg-black border border-white/10 rounded-lg p-3 text-2xl text-center" />
-                                        <div className="flex-1 flex gap-2 overflow-x-auto items-center">
+                                        <input type="text" value={newCategoryIcon} onChange={e => setNewCategoryIcon(e.target.value)} className="w-12 bg-black border border-white/10 rounded-lg p-1.5 text-lg text-center" />
+                                        <div className="flex-1 flex gap-1.5 overflow-x-auto items-center no-scrollbar">
                                             {['🧘', '🤸', '🧗', '🥊', '🏊', '🚴', '🏃', '🥋', '🎸', '💃'].map(emoji => (
-                                                <button key={emoji} onClick={() => setNewCategoryIcon(emoji)} className="text-xl p-2 hover:bg-white/10 rounded">{emoji}</button>
+                                                <button key={emoji} onClick={() => setNewCategoryIcon(emoji)} className="text-base p-1 hover:bg-white/10 rounded">{emoji}</button>
                                             ))}
                                         </div>
                                     </div>
@@ -289,46 +289,50 @@ export const EquipmentForm = ({
                                             setCustomCategory(newCat.id);
                                             setIsCreatingCategory(false);
                                         }}
-                                        className="w-full py-3 bg-gym-primary text-black font-bold rounded-lg"
+                                        className="w-full py-2 bg-gym-primary text-black font-black text-xs rounded-lg uppercase tracking-wider hover:brightness-110"
                                     >CREAR</button>
                                 </div>
                             )}
                         </div>
 
-                        {/* Metrics */}
-                        <div className="space-y-3">
-                            <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Métricas Activas</label>
-                            <div className="bg-black/40 rounded-2xl p-5 border border-white/5 shadow-inner">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
+                        {/* Metrics Section (SUPER COMPACT GRID) */}
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-wider">Métricas Activas</label>
+                            <div className="bg-black/30 rounded-xl p-3 border border-white/5 shadow-inner">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                     {[
-                                        { id: 'weight', label: 'Peso (Lbs/Kgs)', icon: '⚖️' },
-                                        { id: 'reps', label: 'Repeticiones', icon: '🔄' },
+                                        { id: 'weight', label: 'Peso', icon: '⚖️' },
+                                        { id: 'reps', label: 'Reps', icon: '🔄' },
                                         { id: 'time', label: 'Tiempo', icon: '⏱️' },
                                         { id: 'distance', label: 'Distancia', icon: '📏' },
                                         { id: 'rpe', label: 'RPE', icon: '🔥' },
                                         ...userSettings.metrics
-                                    ].map(m => (
-                                        <div key={m.id} className={`flex items-center justify-between p-3 rounded-xl border transition-all ${customMetrics[m.id as keyof typeof customMetrics] ? 'bg-gym-primary/10 border-gym-primary/30' : 'bg-neutral-900/50 border-white/5 hover:border-white/10'}`}>
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-xl bg-black/50 p-1.5 rounded-lg">{m.icon}</span>
-                                                <span className={`text-sm font-bold ${customMetrics[m.id as keyof typeof customMetrics] ? 'text-white' : 'text-neutral-400'}`}>{m.label}</span>
+                                    ].map(m => {
+                                        const isChecked = !!customMetrics[m.id as keyof typeof customMetrics];
+                                        return (
+                                            <div key={m.id} className={`flex items-center justify-between p-2 px-2.5 rounded-lg border transition-all ${isChecked ? 'bg-gym-primary/10 border-gym-primary/30' : 'bg-neutral-900/50 border-white/5 hover:border-white/10'}`}>
+                                                <div className="flex items-center gap-1.5 select-none">
+                                                    <span className="text-base shrink-0">{m.icon}</span>
+                                                    <span className={`text-[10px] font-bold uppercase tracking-tight ${isChecked ? 'text-white font-extrabold' : 'text-neutral-400'}`}>{m.label}</span>
+                                                </div>
+                                                <button
+                                                    onClick={() => setCustomMetrics(prev => ({ ...prev, [m.id]: !prev[m.id as keyof typeof prev] }))}
+                                                    className={`w-9 h-5 rounded-full relative transition-colors shrink-0 ${isChecked ? 'bg-gym-primary' : 'bg-neutral-800'}`}
+                                                >
+                                                    <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all shadow-md ${isChecked ? 'translate-x-4.5' : 'translate-x-0'}`} style={{ left: '2px' }} />
+                                                </button>
                                             </div>
-                                            <button
-                                                onClick={() => setCustomMetrics(prev => ({ ...prev, [m.id]: !prev[m.id as keyof typeof prev] }))}
-                                                className={`w-12 h-7 rounded-full relative transition-colors ${customMetrics[m.id as keyof typeof customMetrics] ? 'bg-gym-primary' : 'bg-neutral-800'}`}
-                                            >
-                                                <div className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all shadow-md ${customMetrics[m.id as keyof typeof customMetrics] ? 'left-6' : 'left-1'}`} />
-                                            </button>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
                         </div>
 
-                        <div className="flex gap-3 pt-4 border-t border-white/10">
-                            <button onClick={() => { if (mode === 'CUSTOM' && !editingItem) setMode('CATALOG'); else onClose(); }} className="flex-1 py-4 rounded-xl font-bold bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white transition-colors">VOLVER</button>
-                            <button onClick={handleSave} disabled={submitting || !customName.trim()} className="flex-1 py-4 rounded-xl font-bold bg-gym-primary text-black hover:brightness-110 transition-all disabled:opacity-50">
-                                {submitting ? <Loader className="animate-spin mx-auto" /> : (editingItem ? 'GUARDAR CAMBIOS' : 'CREAR EJERCICIO')}
+                        {/* Actions */}
+                        <div className="flex gap-2 pt-3 border-t border-white/10">
+                            <button onClick={() => { if (mode === 'CUSTOM' && !editingItem) setMode('CATALOG'); else onClose(); }} className="flex-1 py-2.5 rounded-xl font-bold text-xs bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white transition-colors uppercase tracking-wider">VOLVER</button>
+                            <button onClick={handleSave} disabled={submitting || !customName.trim()} className="flex-1 py-2.5 rounded-xl font-black text-xs bg-gym-primary text-black hover:brightness-110 transition-all disabled:opacity-50 uppercase tracking-wider">
+                                {submitting ? <Loader className="animate-spin mx-auto" size={16} /> : (editingItem ? 'GUARDAR CAMBIOS' : 'CREAR EJERCICIO')}
                             </button>
                         </div>
                     </div>
