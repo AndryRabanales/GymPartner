@@ -533,11 +533,11 @@ export const UserProfile = () => {
                             </div>
 
                             {/* User Info & Stats Block: All compacted nicely here */}
-                            <div className="flex-1 min-w-0 space-y-2 pt-0.5">
+                            <div className="flex-1 min-w-0 space-y-1 pt-0.5">
                                 {/* Top Row: Full Name & Streak */}
                                 <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                                    <h1 className="text-xl sm:text-2xl font-black text-white hover:text-gym-primary transition-colors tracking-tighter uppercase italic leading-none">
-                                        {profile?.username || user.user_metadata.full_name}
+                                    <h1 className="text-xl sm:text-2xl font-black text-white hover:text-gym-primary transition-colors tracking-tighter uppercase italic leading-none flex items-center gap-1 min-w-0">
+                                        <span className="truncate max-w-[100px] xs:max-w-[130px] sm:max-w-none">{profile?.username || user.user_metadata.full_name}</span>
                                     </h1>
 
                                     {/* STREAK FLAME */}
@@ -559,7 +559,7 @@ export const UserProfile = () => {
                         </div>
 
                         {/* Gym Tags: Spans full 100% width of the card beneath the avatar-name row! */}
-                        <div className="relative z-10 flex flex-wrap items-center gap-1.5 w-full mt-3 border-t border-white/5 pt-2.5 justify-start">
+                        <div className="relative z-10 flex flex-wrap items-center gap-1.5 w-full mt-1.5 border-t border-white/5 pt-1.5 justify-start">
                             {(() => {
                                 // Sort gyms: Home Base first, then Favorites, then others
                                 const sortedGyms = [...userGyms].sort((a, b) => {
