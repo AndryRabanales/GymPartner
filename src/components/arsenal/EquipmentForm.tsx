@@ -210,48 +210,48 @@ export const EquipmentForm = ({
                         </div>
                     </div>
                 ) : (
-                    // CUSTOM FORM (ULTRA-COMPACTED & ELEGANT)
-                    <div className="space-y-3">
-                        {/* Name Input - Sleek Floating Style */}
-                        <div className="relative">
+                    // CUSTOM FORM (ULTRA-COMPACTED, ROUND & DYNAMIC)
+                    <div className="space-y-3.5">
+                        {/* Name Input - Sleek Floating Style & Fully Rounded */}
+                        <div className="relative group">
                             <input
                                 type="text"
                                 autoFocus
                                 placeholder="Nombre del Ejercicio..."
-                                className="w-full bg-neutral-950 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-neutral-600 focus:border-gym-primary/60 focus:ring-1 focus:ring-gym-primary/20 focus:outline-none text-sm font-bold transition-all shadow-inner"
+                                className="w-full bg-neutral-950 border border-white/10 rounded-full pl-5 pr-16 py-2 text-white placeholder-neutral-600 focus:border-gym-primary/60 focus:ring-2 focus:ring-gym-primary/10 focus:outline-none text-sm font-bold transition-all duration-300 shadow-inner group-hover:border-white/20"
                                 value={customName}
                                 onChange={(e) => setCustomName(e.target.value)}
                             />
-                            <span className="absolute right-3 top-2 text-[8px] font-black text-neutral-500 uppercase tracking-widest pointer-events-none select-none">
+                            <span className="absolute right-4 top-2 text-[8px] font-black text-neutral-500 uppercase tracking-widest pointer-events-none select-none transition-colors duration-300 group-focus-within:text-gym-primary">
                                 NOMBRE
                             </span>
                         </div>
 
-                        {/* Category Selector Grid (Image-Ready) */}
+                        {/* Category Selector Grid (Elegant Pill Capsules) */}
                         <div className="space-y-1">
-                            <span className="text-[9px] font-black text-neutral-500 uppercase tracking-wider select-none">Categoría</span>
-                            <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5">
+                            <span className="text-[9px] font-black text-neutral-500 uppercase tracking-wider pl-1 select-none">Categoría</span>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                                 {Object.entries(EQUIPMENT_CATEGORIES).map(([key, info]: [string, any]) => {
                                     const isSelected = customCategory === key;
                                     return (
                                         <button
                                             key={key}
                                             onClick={() => setCustomCategory(key)}
-                                            className={`relative p-1 rounded-xl border flex flex-col items-center justify-between text-center transition-all duration-300 h-16 w-full group select-none overflow-hidden ${
+                                            className={`relative p-1 pr-3 rounded-full border flex flex-row items-center gap-2 text-left transition-all ease-[cubic-bezier(0.34,1.56,0.64,1)] duration-300 h-9 w-full group select-none ${
                                                 isSelected 
-                                                    ? 'bg-neutral-900 border-gym-primary shadow-[0_0_15px_rgba(250,204,21,0.15)] text-gym-primary scale-105 z-10' 
-                                                    : 'bg-black/35 border-white/5 text-neutral-400 hover:border-white/20 hover:bg-neutral-900/60 hover:text-white'
+                                                    ? 'bg-gym-primary text-black border-gym-primary shadow-[0_4px_12px_rgba(250,204,21,0.3)] scale-[1.03] z-10 font-black' 
+                                                    : 'bg-black/45 border-white/5 text-neutral-400 hover:border-white/20 hover:bg-neutral-900/60 hover:text-white hover:scale-[1.02]'
                                             }`}
                                         >
-                                            {/* Image/Emoji Frame */}
-                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 shrink-0 ${
-                                                isSelected ? 'bg-gym-primary/10 scale-110 text-gym-primary' : 'bg-white/5 group-hover:bg-white/10 text-neutral-300'
+                                            {/* Circular Image/Emoji Frame */}
+                                            <div className={`w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300 shrink-0 ${
+                                                isSelected ? 'bg-black/90 text-gym-primary scale-105' : 'bg-white/5 group-hover:bg-white/10 text-neutral-300'
                                             }`}>
-                                                <span className="text-lg leading-none">{info.icon}</span>
+                                                <span className="text-base leading-none">{info.icon}</span>
                                             </div>
                                             {/* Label */}
-                                            <span className={`text-[7.5px] font-black uppercase tracking-wider line-clamp-1 w-full px-0.5 pb-0.5 leading-none transition-colors duration-300 shrink-0 ${
-                                                isSelected ? 'text-gym-primary font-black' : 'text-neutral-500 group-hover:text-neutral-300'
+                                            <span className={`text-[8.5px] font-black uppercase tracking-wider line-clamp-1 truncate transition-colors duration-300 ${
+                                                isSelected ? 'text-black font-extrabold' : 'text-neutral-400 group-hover:text-neutral-200'
                                             }`}>
                                                 {info.label}
                                             </span>
@@ -264,21 +264,21 @@ export const EquipmentForm = ({
                                         <button
                                             key={cat.id}
                                             onClick={() => setCustomCategory(cat.id)}
-                                            className={`relative p-1 rounded-xl border flex flex-col items-center justify-between text-center transition-all duration-300 h-16 w-full group select-none overflow-hidden ${
+                                            className={`relative p-1 pr-3 rounded-full border flex flex-row items-center gap-2 text-left transition-all ease-[cubic-bezier(0.34,1.56,0.64,1)] duration-300 h-9 w-full group select-none ${
                                                 isSelected 
-                                                    ? 'bg-neutral-900 border-gym-primary shadow-[0_0_15px_rgba(250,204,21,0.15)] text-gym-primary scale-105 z-10' 
-                                                    : 'bg-black/35 border-white/5 text-neutral-400 hover:border-white/20 hover:bg-neutral-900/60 hover:text-white'
+                                                    ? 'bg-gym-primary text-black border-gym-primary shadow-[0_4px_12px_rgba(250,204,21,0.3)] scale-[1.03] z-10 font-black' 
+                                                    : 'bg-black/35 border-white/5 text-neutral-400 hover:border-white/20 hover:bg-neutral-900/60 hover:text-white hover:scale-[1.02]'
                                             }`}
                                         >
-                                            {/* Image/Emoji Frame */}
-                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 shrink-0 ${
-                                                isSelected ? 'bg-gym-primary/10 scale-110 text-gym-primary' : 'bg-white/5 group-hover:bg-white/10 text-neutral-300'
+                                            {/* Circular Image/Emoji Frame */}
+                                            <div className={`w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300 shrink-0 ${
+                                                isSelected ? 'bg-black/90 text-gym-primary scale-105' : 'bg-white/5 group-hover:bg-white/10 text-neutral-300'
                                             }`}>
-                                                <span className="text-lg leading-none">{cat.icon}</span>
+                                                <span className="text-base leading-none">{cat.icon}</span>
                                             </div>
                                             {/* Label */}
-                                            <span className={`text-[7.5px] font-black uppercase tracking-wider line-clamp-1 w-full px-0.5 pb-0.5 leading-none transition-colors duration-300 shrink-0 ${
-                                                isSelected ? 'text-gym-primary font-black' : 'text-neutral-500 group-hover:text-neutral-300'
+                                            <span className={`text-[8.5px] font-black uppercase tracking-wider line-clamp-1 truncate transition-colors duration-300 ${
+                                                isSelected ? 'text-black font-extrabold' : 'text-neutral-400 group-hover:text-neutral-200'
                                             }`}>
                                                 {cat.label}
                                             </span>
@@ -286,35 +286,35 @@ export const EquipmentForm = ({
                                     );
                                 })}
 
-                                {/* New Category Trigger */}
+                                {/* New Category Trigger - Fully Rounded Pill */}
                                 {!isCreatingCategory && (
                                     <button 
                                         onClick={() => setIsCreatingCategory(true)} 
-                                        className="relative p-1 rounded-xl border border-dashed border-white/20 flex flex-col items-center justify-between text-center text-neutral-500 hover:text-white hover:bg-white/5 hover:border-white/40 transition-all duration-300 h-16 w-full group select-none overflow-hidden"
+                                        className="relative p-1 pr-3 rounded-full border border-dashed border-white/25 flex flex-row items-center gap-2 text-left text-neutral-500 hover:text-white hover:bg-white/5 hover:border-white/40 transition-all ease-[cubic-bezier(0.34,1.56,0.64,1)] duration-300 h-9 w-full group select-none"
                                     >
-                                        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/5 group-hover:bg-white/10 transition-all duration-300 shrink-0">
-                                            <Plus size={12} className="group-hover:scale-110 transition-transform" />
+                                        <div className="w-7 h-7 rounded-full flex items-center justify-center bg-white/5 group-hover:bg-white/10 transition-all duration-300 shrink-0">
+                                            <Plus size={12} className="group-hover:scale-110 group-hover:rotate-90 transition-all duration-300" />
                                         </div>
-                                        <span className="text-[7.5px] font-black uppercase tracking-wider leading-none pb-0.5">
+                                        <span className="text-[8.5px] font-black uppercase tracking-wider leading-none text-neutral-500 group-hover:text-neutral-300">
                                             Nueva
                                         </span>
                                     </button>
                                 )}
                             </div>
 
-                            {/* Inline Category Creator */}
+                            {/* Inline Category Creator - Smooth Rounded Card */}
                             {isCreatingCategory && (
-                                <div className="bg-neutral-900 border border-white/10 rounded-xl p-2.5 flex flex-col gap-2 mt-1.5 animate-in slide-in-from-top-2 duration-150">
+                                <div className="bg-neutral-900 border border-white/10 rounded-2xl p-3 flex flex-col gap-2 mt-2 animate-in zoom-in-95 duration-200 ease-out">
                                     <div className="flex items-center justify-between">
-                                        <span className="text-[9px] font-black text-white uppercase tracking-wider">Nueva Categoría</span>
-                                        <button onClick={() => setIsCreatingCategory(false)} className="text-neutral-500 hover:text-white"><X size={12} /></button>
+                                        <span className="text-[9px] font-black text-white uppercase tracking-wider pl-1">Nueva Categoría</span>
+                                        <button onClick={() => setIsCreatingCategory(false)} className="text-neutral-500 hover:text-white p-1 hover:bg-white/5 rounded-full"><X size={12} /></button>
                                     </div>
-                                    <input type="text" placeholder="Nombre (ej: Yoga)" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} className="bg-black border border-white/10 rounded-lg p-2 text-xs text-white font-bold w-full focus:outline-none focus:border-gym-primary" autoFocus />
+                                    <input type="text" placeholder="Nombre (ej: Yoga)" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} className="bg-black border border-white/15 rounded-full px-3.5 py-2 text-xs text-white font-bold w-full focus:outline-none focus:border-gym-primary" autoFocus />
                                     <div className="flex gap-2">
-                                        <input type="text" value={newCategoryIcon} onChange={e => setNewCategoryIcon(e.target.value)} className="w-10 bg-black border border-white/10 rounded-lg p-1.5 text-base text-center" />
-                                        <div className="flex-1 flex gap-1 overflow-x-auto items-center no-scrollbar">
+                                        <input type="text" value={newCategoryIcon} onChange={e => setNewCategoryIcon(e.target.value)} className="w-11 bg-black border border-white/15 rounded-full p-2 text-base text-center" />
+                                        <div className="flex-1 flex gap-1.5 overflow-x-auto items-center no-scrollbar">
                                             {['🧘', '🤸', '🧗', '🥊', '🏊', '🚴', '🏃', '🥋', '🎸', '💃'].map(emoji => (
-                                                <button key={emoji} onClick={() => setNewCategoryIcon(emoji)} className="text-base p-1 hover:bg-white/10 rounded shrink-0">{emoji}</button>
+                                                <button key={emoji} onClick={() => setNewCategoryIcon(emoji)} className="text-lg p-1.5 hover:bg-white/10 rounded-full shrink-0 transition-transform active:scale-95">{emoji}</button>
                                             ))}
                                         </div>
                                     </div>
@@ -328,15 +328,15 @@ export const EquipmentForm = ({
                                             setCustomCategory(newCat.id);
                                             setIsCreatingCategory(false);
                                         }}
-                                        className="w-full py-1.5 bg-gym-primary text-black font-black text-[10px] rounded-lg uppercase tracking-wider hover:brightness-110"
+                                        className="w-full py-1.5 bg-gym-primary text-black font-black text-[10px] rounded-full uppercase tracking-wider hover:brightness-110 shadow-lg shadow-gym-primary/10 active:scale-95 transition-all"
                                     >CREAR</button>
                                 </div>
                             )}
                         </div>
 
-                        {/* Metrics Section (Premium Chips) */}
+                        {/* Metrics Section (Premium Fully Rounded Chips) */}
                         <div className="space-y-1">
-                            <span className="text-[9px] font-black text-neutral-500 uppercase tracking-wider select-none">Métricas Activas</span>
+                            <span className="text-[9px] font-black text-neutral-500 uppercase tracking-wider pl-1 select-none">Métricas Activas</span>
                             <div className="grid grid-cols-2 gap-1.5">
                                 {[
                                     { id: 'weight', label: 'Peso', icon: '⚖️' },
@@ -351,18 +351,18 @@ export const EquipmentForm = ({
                                         <div 
                                             key={m.id} 
                                             onClick={() => setCustomMetrics(prev => ({ ...prev, [m.id]: !prev[m.id as keyof typeof prev] }))}
-                                            className={`flex items-center justify-between p-1.5 px-2 rounded-lg border cursor-pointer select-none transition-all duration-300 ${
+                                            className={`flex items-center justify-between p-1.5 pl-3 pr-2.5 rounded-full border cursor-pointer select-none transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:scale-[1.02] ${
                                                 isChecked 
-                                                    ? 'bg-gym-primary/10 border-gym-primary/40 shadow-[0_0_10px_rgba(250,204,21,0.15)] text-gym-primary font-bold' 
+                                                    ? 'bg-gym-primary/10 border-gym-primary/45 shadow-[0_4px_12px_rgba(250,204,21,0.1)] text-gym-primary font-bold' 
                                                     : 'bg-neutral-900/50 border-white/5 text-neutral-400 hover:border-white/10 hover:bg-neutral-900/80 hover:text-neutral-300'
                                             }`}
                                         >
                                             <div className="flex items-center gap-1.5 min-w-0">
                                                 <span className="text-sm shrink-0">{m.icon}</span>
-                                                <span className={`text-[9px] font-extrabold uppercase tracking-wider truncate ${isChecked ? 'text-white' : 'text-neutral-400'}`}>{m.label}</span>
+                                                <span className={`text-[9px] font-black uppercase tracking-widest truncate ${isChecked ? 'text-white' : 'text-neutral-500'}`}>{m.label}</span>
                                             </div>
                                             <div
-                                                className={`w-7 h-4 rounded-full relative transition-all duration-300 shrink-0 ${
+                                                className={`w-7 h-4 rounded-full relative transition-colors duration-300 shrink-0 ${
                                                     isChecked ? 'bg-gym-primary' : 'bg-neutral-800'
                                                 }`}
                                             >
@@ -379,10 +379,10 @@ export const EquipmentForm = ({
                             </div>
                         </div>
 
-                        {/* Actions */}
-                        <div className="flex gap-2 pt-2.5 border-t border-white/5">
-                            <button onClick={() => { if (mode === 'CUSTOM' && !editingItem) setMode('CATALOG'); else onClose(); }} className="flex-1 py-2 rounded-lg font-black text-[10px] bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white transition-colors uppercase tracking-wider">VOLVER</button>
-                            <button onClick={handleSave} disabled={submitting || !customName.trim()} className="flex-1 py-2 rounded-lg font-black text-[10px] bg-gym-primary text-black hover:brightness-110 transition-all disabled:opacity-50 uppercase tracking-wider">
+                        {/* Actions - Fully Rounded & Dynamic */}
+                        <div className="flex gap-2.5 pt-2.5 border-t border-white/5">
+                            <button onClick={() => { if (mode === 'CUSTOM' && !editingItem) setMode('CATALOG'); else onClose(); }} className="flex-1 py-2 rounded-full font-black text-[10px] bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white transition-all active:scale-95 uppercase tracking-wider">VOLVER</button>
+                            <button onClick={handleSave} disabled={submitting || !customName.trim()} className="flex-1 py-2 rounded-full font-black text-[10px] bg-gym-primary text-black hover:brightness-110 shadow-lg shadow-gym-primary/10 active:scale-95 transition-all disabled:opacity-50 uppercase tracking-wider">
                                 {submitting ? <Loader className="animate-spin mx-auto" size={14} /> : (editingItem ? 'GUARDAR' : 'CREAR')}
                             </button>
                         </div>
