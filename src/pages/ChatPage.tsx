@@ -270,7 +270,7 @@ export const ChatPage = () => {
                                     className="w-full px-4 py-3 text-left text-xs font-bold text-neutral-300 hover:bg-white/5 hover:text-white flex items-center gap-2.5 transition-colors border-t border-white/5"
                                 >
                                     <UserX size={14} className="text-gym-primary" />
-                                    Eliminar Chat / Match
+                                    Cancelar Chat / Match
                                 </button>
                                 <button
                                     onClick={() => {
@@ -360,13 +360,13 @@ export const ChatPage = () => {
 
                             <h3 className="text-base font-black uppercase italic tracking-widest text-white">
                                 {confirmAction === 'clear' && '¿Borrar Mensajes?'}
-                                {confirmAction === 'delete' && '¿Eliminar Conexión?'}
+                                {confirmAction === 'delete' && '¿Cancelar Chat / Match?'}
                                 {confirmAction === 'block' && '¿Bloquear Guerrero?'}
                             </h3>
 
                             <p className="text-xs text-neutral-400 font-medium leading-relaxed">
                                 {confirmAction === 'clear' && 'Se eliminará todo el historial de conversación en este chat localmente, pero mantendrás tu match activo.'}
-                                {confirmAction === 'delete' && 'Esta acción cancelará tu match, eliminará permanentemente esta sala de chat y todo su historial.'}
+                                {confirmAction === 'delete' && 'Esta acción cancelará tu chat/match, eliminará permanentemente esta sala de chat y todo su historial.'}
                                 {confirmAction === 'block' && `Bloquearás permanentemente a @${otherUser?.username || 'este usuario'}. Se cancelará el match y no podrán interactuar de nuevo.`}
                             </p>
 

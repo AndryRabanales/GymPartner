@@ -140,7 +140,8 @@ export const chatService = {
             await supabase.from('notifications')
                 .delete()
                 .eq('type', 'invitation')
-                .or(`and(user_id.eq.${user.id},data->>sender_id.eq.${blockedUserId}),and(user_id.eq.${blockedUserId},data->>sender_id.eq.${user.id})`);
+                .eq('user_id', user.id)
+                .filter('data->>sender_id', 'eq', blockedUserId);
 
             // D. Try to insert into user_blocks table (will fail gracefully if table not created yet)
             await supabase
