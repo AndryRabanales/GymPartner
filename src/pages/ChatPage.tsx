@@ -213,7 +213,7 @@ export const ChatPage = () => {
             <div className="absolute inset-0 opacity-[0.015] bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none z-0"></div>
 
             {/* HEADER */}
-            <div className="p-4 flex items-center gap-3 bg-neutral-950/80 backdrop-blur-xl border-b border-white/5 shrink-0 relative z-10">
+            <div className="p-4 flex items-center gap-3 bg-neutral-950/80 backdrop-blur-xl border-b border-white/5 shrink-0 relative z-40">
                 <button
                     onClick={() => navigate(-1)}
                     className="p-2 -ml-2 text-neutral-400 hover:text-white transition-colors rounded-full hover:bg-white/5 active:scale-90"
@@ -291,7 +291,7 @@ export const ChatPage = () => {
             </div>
 
             {/* MESSAGES AREA */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-transparent z-10 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-transparent z-0 custom-scrollbar">
                 {messages.length === 0 && (
                     <div className="text-center max-w-sm mx-auto mt-16 p-6 bg-neutral-900/40 backdrop-blur-md border border-white/5 rounded-3xl animate-in fade-in zoom-in-95 duration-500">
                         <ShieldAlert size={36} className="mx-auto text-gym-primary opacity-60 mb-3 animate-bounce" />
