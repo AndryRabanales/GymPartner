@@ -46,12 +46,17 @@ export const Radar = () => {
     const [isBoosting, setIsBoosting] = useState(false);
     const [isInviting, setIsInviting] = useState(false);
     const [userProfile, setUserProfile] = useState<any>(null);
-    const [tutorialStep, setTutorialStep] = useState<number | null>(null);
+    const [isPlayingTutorial, setIsPlayingTutorial] = useState(false);
     const currentUser = nearbyUsers[currentIndex];
 
     useEffect(() => {
-        if (scanComplete && nearbyUsers.length > 0 && !localStorage.getItem('radar_swipe_tutorial_seen_v3')) {
-            setTutorialStep(1);
+        if (scanComplete && nearbyUsers.length > 0 && !localStorage.getItem('radar_swipe_tutorial_seen_v4')) {
+            setIsPlayingTutorial(true);
+            const timer = setTimeout(() => {
+                setIsPlayingTutorial(false);
+                localStorage.setItem('radar_swipe_tutorial_seen_v4', 'true');
+            }, 8000);
+            return () => clearTimeout(timer);
         }
     }, [scanComplete, nearbyUsers.length]);
 
@@ -467,129 +472,116 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
                             perspective: '1000px',
                             transform: direction 
                                 ? `translateX(${direction === 'left' ? '-100%' : '100%'}) rotate(${direction === 'left' ? '-15deg' : '15deg'})` 
-                                : tutorialStep === 1 
-                                    ? 'translateX(-50px) rotate(-5deg)' 
-                                    : tutorialStep === 2 
-                                        ? 'translateX(50px) rotate(5deg)' 
-                                        : 'none',
-                            transition: tutorialStep ? 'transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)' : undefined
+                                : 'none',
+                            animation: isPlayingTutorial ? 'tinderTutorialSwipe 8s ease-in-out infinite' : undefined
                         }}
                     >
                         <style>{`
-                            @keyframes swipeLeft {
-                                0% { transform: translateX(30px); opacity: 0; }
-                                50% { opacity: 1; }
-                                100% { transform: translateX(-30px); opacity: 0; }
+                            @keyframes tinderTutorialSwipe {
+                                0% { transform: translate3d(0, 0, 0) rotate(0deg); }
+                                /* Swipe Left Demo (NOPE) */
+                                10% { transform: translate3d(-75px, 8px, 0) rotate(-8deg); }
+                                30% { transform: translate3d(-75px, 8px, 0) rotate(-8deg); }
+                                40% { transform: translate3d(0, 0, 0) rotate(0deg); }
+                                /* Center Hold */
+                                55% { transform: translate3d(0, 0, 0) rotate(0deg); }
+                                /* Swipe Right Demo (LIKE) */
+                                65% { transform: translate3d(75px, 8px, 0) rotate(8deg); }
+                                85% { transform: translate3d(75px, 8px, 0) rotate(8deg); }
+                                95% { transform: translate3d(0, 0, 0) rotate(0deg); }
+                                100% { transform: translate3d(0, 0, 0) rotate(0deg); }
                             }
-                            @keyframes swipeRight {
-                                0% { transform: translateX(-30px); opacity: 0; }
-                                50% { opacity: 1; }
-                                100% { transform: translateX(30px); opacity: 0; }
+                            @keyframes nopeStampFade {
+                                0% { opacity: 0; transform: scale(1.3) rotate(-15deg); }
+                                10% { opacity: 1; transform: scale(1) rotate(-15deg); }
+                                30% { opacity: 1; transform: scale(1) rotate(-15deg); }
+                                38% { opacity: 0; transform: scale(0.8) rotate(-15deg); }
+                                100% { opacity: 0; }
+                            }
+                            @keyframes likeStampFade {
+                                0% { opacity: 0; transform: scale(1.3) rotate(15deg); }
+                                60% { opacity: 0; transform: scale(1.3) rotate(15deg); }
+                                65% { opacity: 1; transform: scale(1) rotate(15deg); }
+                                85% { opacity: 1; transform: scale(1) rotate(15deg); }
+                                93% { opacity: 0; transform: scale(0.8) rotate(15deg); }
+                                100% { opacity: 0; }
+                            }
+                            @keyframes nopeTooltipFade {
+                                0% { opacity: 0; transform: translate3d(0, 15px, 0); }
+                                10% { opacity: 1; transform: translate3d(0, 0, 0); }
+                                30% { opacity: 1; transform: translate3d(0, 0, 0); }
+                                38% { opacity: 0; transform: translate3d(0, -10px, 0); }
+                                100% { opacity: 0; }
+                            }
+                            @keyframes likeTooltipFade {
+                                0% { opacity: 0; transform: translate3d(0, 15px, 0); }
+                                60% { opacity: 0; transform: translate3d(0, 15px, 0); }
+                                65% { opacity: 1; transform: translate3d(0, 0, 0); }
+                                85% { opacity: 1; transform: translate3d(0, 0, 0); }
+                                93% { opacity: 0; transform: translate3d(0, -10px, 0); }
+                                100% { opacity: 0; }
                             }
                         `}</style>
 
-                        {/* Swipe Onboarding Tutorial Overlay */}
-                        {tutorialStep !== null && (
-                            <div className="absolute inset-0 bg-black/90 backdrop-blur-md rounded-[2.5rem] z-40 flex flex-col justify-between p-6 animate-in fade-in duration-300">
-                                {/* Top Step Badges */}
-                                <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-black text-gym-primary uppercase tracking-[0.2em]">Guía del Radar</span>
-                                    <div className="flex gap-1.5">
-                                        {[1, 2, 3].map((s) => (
-                                            <div 
-                                                key={s} 
-                                                className={`w-5 h-1 rounded-full transition-all duration-300 ${
-                                                    s === tutorialStep ? 'bg-gym-primary w-8' : 'bg-neutral-800'
-                                                }`}
-                                            />
-                                        ))}
+                        {/* Skip Tutorial Button */}
+                        {isPlayingTutorial && (
+                            <button
+                                onClick={() => {
+                                    setIsPlayingTutorial(false);
+                                    localStorage.setItem('radar_swipe_tutorial_seen_v4', 'true');
+                                }}
+                                className="absolute top-4 right-4 z-50 bg-black/60 backdrop-blur-md border border-white/10 hover:border-gym-primary/50 text-white hover:text-gym-primary px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-2xl flex items-center gap-1.5 cursor-pointer"
+                            >
+                                Saltar Guía ⚡
+                            </button>
+                        )}
+
+                        {/* Autoplay Tutorial stamps */}
+                        {isPlayingTutorial && (
+                            <>
+                                {/* NOPE Stamp */}
+                                <div className="absolute top-24 left-8 z-50 pointer-events-none opacity-0 select-none animate-[nopeStampFade_8s_ease-in-out_infinite]">
+                                    <div className="border-4 border-red-500 text-red-500 font-black text-4xl px-5 py-1.5 rounded-2xl uppercase tracking-widest bg-black/70 backdrop-blur-sm shadow-2xl">
+                                        NOPE
                                     </div>
                                 </div>
 
-                                {/* Step Content */}
-                                {tutorialStep === 1 && (
-                                    <div className="flex-1 flex flex-col items-center justify-center text-center px-4 animate-in zoom-in duration-300">
-                                        <div className="w-20 h-20 rounded-[1.8rem] bg-red-500/10 border-2 border-red-500/30 flex items-center justify-center text-red-500 mb-6 shadow-lg shadow-red-500/5 animate-[pulse_1.5s_infinite]">
-                                            <X size={36} strokeWidth={3} />
-                                        </div>
-                                        <h3 className="text-xl font-black text-white italic uppercase tracking-tighter mb-2">¿Pasar de Largo?</h3>
-                                        <p className="text-neutral-400 text-xs font-bold leading-relaxed max-w-[240px]">
-                                            Desliza la tarjeta hacia la <span className="text-red-500 font-black">IZQUIERDA</span> para descartar a este usuario y ver al siguiente perfil.
-                                        </p>
-                                        
-                                        {/* Swipe Left Animation Assist */}
-                                        <div className="mt-8 flex items-center gap-3 text-neutral-600">
-                                            <span className="text-[9px] font-black tracking-widest uppercase">Deslizar</span>
-                                            <div className="w-16 h-0.5 bg-neutral-800 relative rounded-full overflow-hidden">
-                                                <div className="absolute top-0 right-0 bottom-0 bg-red-500 w-1/2 h-full animate-[swipeLeft_1.5s_infinite]"></div>
-                                            </div>
-                                        </div>
+                                {/* MATCH Stamp */}
+                                <div className="absolute top-24 right-8 z-50 pointer-events-none opacity-0 select-none animate-[likeStampFade_8s_ease-in-out_infinite]">
+                                    <div className="border-4 border-gym-primary text-gym-primary font-black text-4xl px-5 py-1.5 rounded-2xl uppercase tracking-widest bg-black/70 backdrop-blur-sm shadow-2xl">
+                                        LIKE
                                     </div>
-                                )}
+                                </div>
+                            </>
+                        )}
 
-                                {tutorialStep === 2 && (
-                                    <div className="flex-1 flex flex-col items-center justify-center text-center px-4 animate-in zoom-in duration-300">
-                                        <div className="w-20 h-20 rounded-[1.8rem] bg-gym-primary/10 border-2 border-gym-primary/30 flex items-center justify-center text-gym-primary mb-6 shadow-lg shadow-gym-primary/5 animate-[pulse_1.5s_infinite]">
-                                            <Swords size={36} strokeWidth={2.5} />
-                                        </div>
-                                        <h3 className="text-xl font-black text-white italic uppercase tracking-tighter mb-2">¡Compañero de Gym!</h3>
-                                        <p className="text-neutral-400 text-xs font-bold leading-relaxed max-w-[240px]">
-                                            Desliza la tarjeta hacia la <span className="text-gym-primary font-black">DERECHA</span> para seguir al usuario y enviarle una solicitud de <span className="text-white font-black">MATCH</span>.
-                                        </p>
-
-                                        {/* Swipe Right Animation Assist */}
-                                        <div className="mt-8 flex items-center gap-3 text-neutral-600">
-                                            <span className="text-[9px] font-black tracking-widest uppercase">Deslizar</span>
-                                            <div className="w-16 h-0.5 bg-neutral-800 relative rounded-full overflow-hidden">
-                                                <div className="absolute top-0 left-0 bottom-0 bg-gym-primary w-1/2 h-full animate-[swipeRight_1.5s_infinite]"></div>
-                                            </div>
-                                        </div>
+                        {/* Autoplay Tutorial Floating explanations */}
+                        {isPlayingTutorial && (
+                            <div className="absolute bottom-28 left-4 right-4 z-50 pointer-events-none select-none flex flex-col items-center">
+                                {/* Left Explanation Card */}
+                                <div className="absolute w-full max-w-[280px] bg-black/95 backdrop-blur-2xl border border-red-500/30 rounded-2xl p-4 shadow-[0_15px_35px_rgba(239,68,68,0.2)] flex items-center gap-3 animate-[nopeTooltipFade_8s_ease-in-out_infinite]">
+                                    <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-500 shrink-0">
+                                        <X size={20} strokeWidth={3} />
                                     </div>
-                                )}
-
-                                {tutorialStep === 3 && (
-                                    <div className="flex-1 flex flex-col items-center justify-center text-center px-4 animate-in zoom-in duration-300">
-                                        <div className="flex gap-4 mb-6">
-                                            <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-500">
-                                                <UserPlus size={20} />
-                                            </div>
-                                            <div className="w-16 h-16 rounded-[1.2rem] bg-white flex items-center justify-center text-black shadow-lg shadow-white/10 scale-110">
-                                                <Swords size={24} />
-                                            </div>
-                                            <div className="w-12 h-12 rounded-xl bg-yellow-500/10 border border-yellow-500/30 flex items-center justify-center text-yellow-500">
-                                                <Zap size={20} />
-                                            </div>
-                                        </div>
-                                        <h3 className="text-xl font-black text-white italic uppercase tracking-tighter mb-2">¡Todo Listo!</h3>
-                                        <p className="text-neutral-400 text-xs font-bold leading-relaxed max-w-[250px]">
-                                            También puedes pulsar los botones: <span className="text-blue-400">Seguir</span>, <span className="text-white">Invitar a Entrenar</span> o activar <span className="text-yellow-400">Boost</span> de visibilidad.
+                                    <div className="flex-1 text-left">
+                                        <h4 className="text-[10px] font-black text-red-400 uppercase tracking-widest">Desliza a la Izquierda</h4>
+                                        <p className="text-[10px] text-neutral-300 font-bold leading-snug">
+                                            Para <span className="text-white font-black">DESCARTAR</span> al guerrero y ver al siguiente perfil.
                                         </p>
                                     </div>
-                                )}
+                                </div>
 
-                                {/* Bottom Button Actions */}
-                                <div className="flex gap-3">
-                                    {tutorialStep > 1 && (
-                                        <button 
-                                            onClick={() => setTutorialStep(prev => prev ? prev - 1 : null)}
-                                            className="flex-1 bg-neutral-900 text-neutral-400 hover:text-white border border-white/5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95"
-                                        >
-                                            Atrás
-                                        </button>
-                                    )}
-                                    <button 
-                                        onClick={() => {
-                                            if (tutorialStep < 3) {
-                                                setTutorialStep(prev => prev ? prev + 1 : null);
-                                            } else {
-                                                localStorage.setItem('radar_swipe_tutorial_seen_v3', 'true');
-                                                setTutorialStep(null);
-                                            }
-                                        }}
-                                        className="flex-[2] bg-gradient-to-r from-gym-primary to-yellow-400 text-black py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-gym-primary/20 hover:scale-[1.02]"
-                                    >
-                                        {tutorialStep === 3 ? '¡Entendido!' : 'Siguiente'}
-                                    </button>
+                                {/* Right Explanation Card */}
+                                <div className="absolute w-full max-w-[280px] bg-black/95 backdrop-blur-2xl border border-gym-primary/30 rounded-2xl p-4 shadow-[0_15px_35px_rgba(229,255,0,0.2)] flex items-center gap-3 animate-[likeTooltipFade_8s_ease-in-out_infinite]">
+                                    <div className="w-10 h-10 rounded-xl bg-gym-primary/10 border border-gym-primary/30 flex items-center justify-center text-gym-primary shrink-0">
+                                        <Swords size={20} />
+                                    </div>
+                                    <div className="flex-1 text-left">
+                                        <h4 className="text-[10px] font-black text-gym-primary uppercase tracking-widest">Desliza a la Derecha</h4>
+                                        <p className="text-[10px] text-neutral-300 font-bold leading-snug">
+                                            Para <span className="text-white font-black">SEGUIR</span> e invitar a un <span className="text-gym-primary font-black">MATCH</span> instantáneo.
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         )}
