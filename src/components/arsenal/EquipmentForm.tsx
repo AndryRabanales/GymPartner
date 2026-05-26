@@ -297,71 +297,31 @@ export const EquipmentForm = ({
 
                         {/* Metrics */}
                         <div className="space-y-3">
-                            <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Métricas</label>
-                            <div className="bg-black/50 rounded-xl p-4 border border-white/5 space-y-3 max-h-[300px] overflow-y-auto">
-                                {[
-                                    { id: 'weight', label: 'Peso (Lbs/Kgs)', icon: '⚖️' },
-                                    { id: 'reps', label: 'Repeticiones', icon: '🔄' },
-                                    { id: 'time', label: 'Tiempo', icon: '⏱️' },
-                                    { id: 'distance', label: 'Distancia', icon: '📏' },
-                                    { id: 'rpe', label: 'RPE', icon: '🔥' },
-                                    ...userSettings.metrics
-                                ].map(m => (
-                                    <div key={m.id} className="flex items-center justify-between group">
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-lg">{m.icon}</span>
-                                            <span className="text-sm font-medium text-neutral-300">{m.label}</span>
+                            <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Métricas Activas</label>
+                            <div className="bg-black/40 rounded-2xl p-5 border border-white/5 shadow-inner">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
+                                    {[
+                                        { id: 'weight', label: 'Peso (Lbs/Kgs)', icon: '⚖️' },
+                                        { id: 'reps', label: 'Repeticiones', icon: '🔄' },
+                                        { id: 'time', label: 'Tiempo', icon: '⏱️' },
+                                        { id: 'distance', label: 'Distancia', icon: '📏' },
+                                        { id: 'rpe', label: 'RPE', icon: '🔥' },
+                                        ...userSettings.metrics
+                                    ].map(m => (
+                                        <div key={m.id} className={`flex items-center justify-between p-3 rounded-xl border transition-all ${customMetrics[m.id as keyof typeof customMetrics] ? 'bg-gym-primary/10 border-gym-primary/30' : 'bg-neutral-900/50 border-white/5 hover:border-white/10'}`}>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-xl bg-black/50 p-1.5 rounded-lg">{m.icon}</span>
+                                                <span className={`text-sm font-bold ${customMetrics[m.id as keyof typeof customMetrics] ? 'text-white' : 'text-neutral-400'}`}>{m.label}</span>
+                                            </div>
+                                            <button
+                                                onClick={() => setCustomMetrics(prev => ({ ...prev, [m.id]: !prev[m.id as keyof typeof prev] }))}
+                                                className={`w-12 h-7 rounded-full relative transition-colors ${customMetrics[m.id as keyof typeof customMetrics] ? 'bg-gym-primary' : 'bg-neutral-800'}`}
+                                            >
+                                                <div className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all shadow-md ${customMetrics[m.id as keyof typeof customMetrics] ? 'left-6' : 'left-1'}`} />
+                                            </button>
                                         </div>
-                                        <button
-                                            onClick={() => setCustomMetrics(prev => ({ ...prev, [m.id]: !prev[m.id as keyof typeof prev] }))}
-                                            className={`w-12 h-7 rounded-full relative ${customMetrics[m.id as keyof typeof customMetrics] ? 'bg-gym-primary' : 'bg-neutral-800'}`}
-                                        >
-                                            <div className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all ${customMetrics[m.id as keyof typeof customMetrics] ? 'left-6' : 'left-1'}`} />
-                                        </button>
-                                    </div>
-                                ))}
-
-                                {!isCreatingMetric ? (
-                                    <button onClick={() => setIsCreatingMetric(true)} className="w-full py-2 border border-dashed border-white/20 rounded-lg text-neutral-500 hover:text-white uppercase text-xs font-bold flex items-center justify-center gap-2">
-                                        <Plus size={14} /> Crear Métrica
-                                    </button>
-                                ) : (
-                                    <div className="bg-neutral-900 rounded-lg p-3 border border-white/10 space-y-3">
-                                        <div className="flex justify-between"><span className="text-xs font-bold text-white">NUEVA MÉTRICA</span><button onClick={() => setIsCreatingMetric(false)}><X size={14} /></button></div>
-                                        <input type="text" placeholder="Nombre" value={newMetricName} onChange={e => setNewMetricName(e.target.value)} className="w-full bg-black border border-white/10 rounded p-2 text-sm text-white" />
-                                        <div className="flex gap-2">
-                                            <input type="text" value={newMetricIcon} onChange={e => setNewMetricIcon(e.target.value)} className="w-10 bg-black border border-white/10 rounded p-2 text-center" />
-                                            <div className="flex-1 flex gap-1 overflow-x-auto items-center">{['🔥', '💓', '🌡️', '⚡'].map(e => <button key={e} onClick={() => setNewMetricIcon(e)} className="p-1 hover:bg-white/10 rounded">{e}</button>)}</div>
-                                        </div>
-                                        <button
-                                            onClick={async () => {
-                                                if (!newMetricName.trim()) return;
-                                                try {
-                                                    const newMet: CustomMetric = { id: newMetricName.toLowerCase().replace(/\s+/g, '_'), label: newMetricName, icon: newMetricIcon, default_active: true };
-
-                                                    // Check for duplicates
-                                                    if (userSettings.metrics.some(m => m.id === newMet.id)) {
-                                                        alert("Esta métrica ya existe.");
-                                                        return;
-                                                    }
-
-                                                    const newS = { ...userSettings, metrics: [...userSettings.metrics, newMet] };
-
-                                                    await equipmentService.updateUserSettings(user.id, newS);
-                                                    onUpdateSettings(newS); // Update parent state
-
-                                                    // Select it immediately for the current custom exercise
-                                                    setCustomMetrics(prev => ({ ...prev, [newMet.id]: true }));
-                                                    setIsCreatingMetric(false);
-                                                } catch (err) {
-                                                    console.error("Error creating metric:", err);
-                                                    alert("Error al guardar la métrica. Intenta de nuevo.");
-                                                }
-                                            }}
-                                            className="w-full py-2 bg-gym-primary text-black font-bold rounded text-xs"
-                                        >GUARDAR</button>
-                                    </div>
-                                )}
+                                    ))}
+                                </div>
                             </div>
                         </div>
 

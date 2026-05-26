@@ -364,6 +364,34 @@ export const MyArsenal = () => {
         if (isEdit) {
             setInventory(prev => prev.map(i => i.id === newItem.id ? newItem : i));
             setGlobalInventory(prev => prev.map(i => i.id === newItem.id ? newItem : i));
+            
+            // Mark this item as manually overridden so global toggles ignore it
+            setMetricOverrides(prev => {
+                const next = new Set(prev);
+                next.add(newItem.id);
+                return next;
+            });
+
+            // Update routine config to match the manual edit
+            setRoutineConfigs(prevConfigs => {
+                const next = new Map(prevConfigs);
+                const existing = next.get(newItem.id) || {};
+                
+                const activeCustomMetric = Object.keys(newItem.metrics || {}).find(
+                    k => !['weight', 'reps', 'time', 'distance', 'rpe'].includes(k) && newItem.metrics![k]
+                );
+
+                next.set(newItem.id, {
+                    ...existing,
+                    track_weight: !!newItem.metrics?.weight,
+                    track_reps: !!newItem.metrics?.reps,
+                    track_time: !!newItem.metrics?.time,
+                    track_distance: !!newItem.metrics?.distance,
+                    track_rpe: !!newItem.metrics?.rpe,
+                    custom_metric: activeCustomMetric || null
+                });
+                return next;
+            });
         } else {
             setInventory(prev => [...prev, newItem]);
             setGlobalInventory(prev => {
