@@ -534,12 +534,12 @@ export const UserProfile = () => {
 
                             {/* User Info & Stats Block: All compacted nicely here */}
                             <div className="flex-1 min-w-0 space-y-1.5 pt-0.5">
-                                {/* Top Row: Full Name (Character-limited to 14, larger font size, no dots!) */}
+                                {/* Top Row: Full Name (Character-limited to 20, larger font size, no dots!) */}
                                 <div className="flex items-center w-full min-w-0">
                                     <h1 className="text-base xs:text-lg sm:text-xl md:text-2xl font-black text-white hover:text-gym-primary transition-colors tracking-tighter uppercase italic leading-none whitespace-nowrap overflow-visible pr-2">
                                         {(() => {
                                             const rawName = profile?.username || user.user_metadata.full_name || '';
-                                            return rawName.length > 14 ? rawName.slice(0, 14) : rawName;
+                                            return rawName.length > 20 ? rawName.slice(0, 20) : rawName;
                                         })()}
                                     </h1>
                                 </div>
@@ -556,8 +556,8 @@ export const UserProfile = () => {
                                     </div>
 
                                     {/* STREAK FLAME (Placed next to Follow Stats, guaranteed same line!) */}
-                                    <div className="shrink-0 scale-85 xs:scale-95 sm:scale-100 origin-left">
-                                        <StreakFlame userId={user.id} />
+                                    <div className="shrink-0 scale-95 sm:scale-100 origin-left">
+                                        <StreakFlame userId={user.id} size="sm" />
                                     </div>
                                 </div>
                             </div>

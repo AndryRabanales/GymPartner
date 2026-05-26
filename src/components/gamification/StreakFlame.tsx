@@ -40,7 +40,8 @@ export const StreakFlame = ({ userId, showLabel = true, size = 'md' }: StreakFla
 
     return (
         <div className={`
-            flex items-center gap-1.5 px-2.5 py-1 rounded-full border backdrop-blur-md shadow-lg transition-all
+            flex items-center rounded-full border backdrop-blur-md shadow-lg transition-all
+            ${size === 'sm' ? 'gap-1 px-2 py-0.5' : 'gap-1.5 px-2.5 py-1'}
             ${isAtRisk
                 ? 'bg-red-500/10 border-red-500/50 text-red-500 animate-pulse'
                 : isFrozen

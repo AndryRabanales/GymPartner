@@ -260,12 +260,17 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                     {/* Username Input */}
                     <div className="space-y-3">
                         <label className="text-xs font-bold text-neutral-400 uppercase tracking-widest ml-1">
-                            Nombre de Usuario
+                            Nombre de Usuario (Máx. 20 caracteres)
                         </label>
                         <input
                             type="text"
                             value={username}
-                            onChange={(e) => setUsername(e.target.value)}
+                            onChange={(e) => {
+                                if (e.target.value.length <= 20) {
+                                    setUsername(e.target.value);
+                                }
+                            }}
+                            maxLength={20}
                             className="w-full bg-neutral-950/50 border-2 border-neutral-800 rounded-xl px-5 py-4 text-white font-bold tracking-tight focus:outline-none focus:border-gym-primary/70 focus:bg-neutral-950 transition-all placeholder:text-neutral-700 hover:border-neutral-700"
                             placeholder="Tu nombre público..."
                         />
