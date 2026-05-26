@@ -54,7 +54,7 @@ export const Radar = () => {
             setIsPlayingTutorial(true);
             const timer = setTimeout(() => {
                 setIsPlayingTutorial(false);
-            }, 8000);
+            }, 4000);
             return () => clearTimeout(timer);
         }
     }, [scanComplete, nearbyUsers.length]);
@@ -477,7 +477,7 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
                             transform: direction 
                                 ? `translateX(${direction === 'left' ? '-100%' : '100%'}) rotate(${direction === 'left' ? '-15deg' : '15deg'})` 
                                 : 'none',
-                            animation: isPlayingTutorial ? 'tinderTutorialSwipe 8s ease-in-out infinite' : undefined
+                            animation: isPlayingTutorial ? 'tinderTutorialSwipe 4s ease-in-out infinite' : undefined
                         }}
                     >
                         <style>{`
@@ -544,14 +544,14 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
                         {isPlayingTutorial && (
                             <>
                                 {/* NOPE Stamp */}
-                                <div className="absolute top-24 left-8 z-50 pointer-events-none opacity-0 select-none animate-[nopeStampFade_8s_ease-in-out_infinite]">
+                                <div className="absolute top-[110px] left-[22%] z-50 pointer-events-none opacity-0 select-none animate-[nopeStampFade_4s_ease-in-out_infinite]">
                                     <div className="border-4 border-red-500 text-red-500 font-black text-4xl px-5 py-1.5 rounded-2xl uppercase tracking-widest bg-black/70 backdrop-blur-sm shadow-2xl">
                                         NOPE
                                     </div>
                                 </div>
 
                                 {/* MATCH Stamp */}
-                                <div className="absolute top-24 right-8 z-50 pointer-events-none opacity-0 select-none animate-[likeStampFade_8s_ease-in-out_infinite]">
+                                <div className="absolute top-[110px] right-[22%] z-50 pointer-events-none opacity-0 select-none animate-[likeStampFade_4s_ease-in-out_infinite]">
                                     <div className="border-4 border-gym-primary text-gym-primary font-black text-4xl px-5 py-1.5 rounded-2xl uppercase tracking-widest bg-black/70 backdrop-blur-sm shadow-2xl">
                                         LIKE
                                     </div>
@@ -563,7 +563,7 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
                         {isPlayingTutorial && (
                             <div className="absolute bottom-[190px] left-4 right-4 z-50 pointer-events-none select-none flex flex-col items-center">
                                 {/* Left Explanation Card */}
-                                <div className="absolute w-full max-w-[280px] bg-black/95 backdrop-blur-2xl border border-red-500/30 rounded-2xl p-4 shadow-[0_15px_35px_rgba(239,68,68,0.2)] flex items-center gap-3 animate-[nopeTooltipFade_8s_ease-in-out_infinite]">
+                                <div className="absolute w-full max-w-[280px] bg-black/95 backdrop-blur-2xl border border-red-500/30 rounded-2xl p-4 shadow-[0_15px_35px_rgba(239,68,68,0.2)] flex items-center gap-3 animate-[nopeTooltipFade_4s_ease-in-out_infinite]">
                                     <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-500 shrink-0">
                                         <X size={20} strokeWidth={3} />
                                     </div>
@@ -576,7 +576,7 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
                                 </div>
 
                                 {/* Right Explanation Card */}
-                                <div className="absolute w-full max-w-[280px] bg-black/95 backdrop-blur-2xl border border-gym-primary/30 rounded-2xl p-4 shadow-[0_15px_35px_rgba(229,255,0,0.2)] flex items-center gap-3 animate-[likeTooltipFade_8s_ease-in-out_infinite]">
+                                <div className="absolute w-full max-w-[280px] bg-black/95 backdrop-blur-2xl border border-gym-primary/30 rounded-2xl p-4 shadow-[0_15px_35px_rgba(229,255,0,0.2)] flex items-center gap-3 animate-[likeTooltipFade_4s_ease-in-out_infinite]">
                                     <div className="w-10 h-10 rounded-xl bg-gym-primary/10 border border-gym-primary/30 flex items-center justify-center text-gym-primary shrink-0">
                                         <Swords size={20} />
                                     </div>
