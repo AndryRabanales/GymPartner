@@ -227,24 +227,34 @@ export const EquipmentForm = ({
                             </span>
                         </div>
 
-                        {/* Category Selector Grid */}
+                        {/* Category Selector Grid (Image-Ready) */}
                         <div className="space-y-1">
                             <span className="text-[9px] font-black text-neutral-500 uppercase tracking-wider select-none">Categoría</span>
-                            <div className="grid grid-cols-4 sm:grid-cols-5 gap-1">
+                            <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5">
                                 {Object.entries(EQUIPMENT_CATEGORIES).map(([key, info]: [string, any]) => {
                                     const isSelected = customCategory === key;
                                     return (
                                         <button
                                             key={key}
                                             onClick={() => setCustomCategory(key)}
-                                            className={`p-1 rounded-lg border flex flex-col items-center justify-center text-center transition-all duration-250 h-11 select-none ${
+                                            className={`relative p-1 rounded-xl border flex flex-col items-center justify-between text-center transition-all duration-300 h-16 w-full group select-none overflow-hidden ${
                                                 isSelected 
-                                                    ? 'bg-gym-primary/15 border-gym-primary text-gym-primary font-black shadow-[0_0_10px_rgba(250,204,21,0.25)] scale-105 z-10' 
-                                                    : 'bg-black/35 border-white/5 text-neutral-400 hover:border-white/20 hover:text-neutral-200'
+                                                    ? 'bg-neutral-900 border-gym-primary shadow-[0_0_15px_rgba(250,204,21,0.15)] text-gym-primary scale-105 z-10' 
+                                                    : 'bg-black/35 border-white/5 text-neutral-400 hover:border-white/20 hover:bg-neutral-900/60 hover:text-white'
                                             }`}
                                         >
-                                            <span className="text-base leading-none mb-0.5 shrink-0">{info.icon}</span>
-                                            <span className="text-[7.5px] font-bold uppercase tracking-tight line-clamp-1 w-full px-0.5 leading-none">{info.label}</span>
+                                            {/* Image/Emoji Frame */}
+                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 shrink-0 ${
+                                                isSelected ? 'bg-gym-primary/10 scale-110 text-gym-primary' : 'bg-white/5 group-hover:bg-white/10 text-neutral-300'
+                                            }`}>
+                                                <span className="text-lg leading-none">{info.icon}</span>
+                                            </div>
+                                            {/* Label */}
+                                            <span className={`text-[7.5px] font-black uppercase tracking-wider line-clamp-1 w-full px-0.5 pb-0.5 leading-none transition-colors duration-300 shrink-0 ${
+                                                isSelected ? 'text-gym-primary font-black' : 'text-neutral-500 group-hover:text-neutral-300'
+                                            }`}>
+                                                {info.label}
+                                            </span>
                                         </button>
                                     );
                                 })}
@@ -254,23 +264,40 @@ export const EquipmentForm = ({
                                         <button
                                             key={cat.id}
                                             onClick={() => setCustomCategory(cat.id)}
-                                            className={`p-1 rounded-lg border flex flex-col items-center justify-center text-center transition-all duration-250 h-11 select-none ${
+                                            className={`relative p-1 rounded-xl border flex flex-col items-center justify-between text-center transition-all duration-300 h-16 w-full group select-none overflow-hidden ${
                                                 isSelected 
-                                                    ? 'bg-gym-primary/15 border-gym-primary text-gym-primary font-black shadow-[0_0_10px_rgba(250,204,21,0.25)] scale-105 z-10' 
-                                                    : 'bg-black/35 border-white/5 text-neutral-400 hover:border-white/20 hover:text-neutral-200'
+                                                    ? 'bg-neutral-900 border-gym-primary shadow-[0_0_15px_rgba(250,204,21,0.15)] text-gym-primary scale-105 z-10' 
+                                                    : 'bg-black/35 border-white/5 text-neutral-400 hover:border-white/20 hover:bg-neutral-900/60 hover:text-white'
                                             }`}
                                         >
-                                            <span className="text-base leading-none mb-0.5 shrink-0">{cat.icon}</span>
-                                            <span className="text-[7.5px] font-bold uppercase tracking-tight line-clamp-1 w-full px-0.5 leading-none">{cat.label}</span>
+                                            {/* Image/Emoji Frame */}
+                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 shrink-0 ${
+                                                isSelected ? 'bg-gym-primary/10 scale-110 text-gym-primary' : 'bg-white/5 group-hover:bg-white/10 text-neutral-300'
+                                            }`}>
+                                                <span className="text-lg leading-none">{cat.icon}</span>
+                                            </div>
+                                            {/* Label */}
+                                            <span className={`text-[7.5px] font-black uppercase tracking-wider line-clamp-1 w-full px-0.5 pb-0.5 leading-none transition-colors duration-300 shrink-0 ${
+                                                isSelected ? 'text-gym-primary font-black' : 'text-neutral-500 group-hover:text-neutral-300'
+                                            }`}>
+                                                {cat.label}
+                                            </span>
                                         </button>
                                     );
                                 })}
 
                                 {/* New Category Trigger */}
                                 {!isCreatingCategory && (
-                                    <button onClick={() => setIsCreatingCategory(true)} className="p-1 rounded-lg border border-dashed border-white/20 flex flex-col items-center justify-center text-center text-neutral-500 hover:text-white hover:bg-white/5 transition-all h-11 select-none">
-                                        <Plus size={12} className="mb-0.5" />
-                                        <span className="text-[7.5px] font-black uppercase tracking-wider leading-none">Nueva</span>
+                                    <button 
+                                        onClick={() => setIsCreatingCategory(true)} 
+                                        className="relative p-1 rounded-xl border border-dashed border-white/20 flex flex-col items-center justify-between text-center text-neutral-500 hover:text-white hover:bg-white/5 hover:border-white/40 transition-all duration-300 h-16 w-full group select-none overflow-hidden"
+                                    >
+                                        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/5 group-hover:bg-white/10 transition-all duration-300 shrink-0">
+                                            <Plus size={12} className="group-hover:scale-110 transition-transform" />
+                                        </div>
+                                        <span className="text-[7.5px] font-black uppercase tracking-wider leading-none pb-0.5">
+                                            Nueva
+                                        </span>
                                     </button>
                                 )}
                             </div>
