@@ -268,7 +268,7 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
 
                 {/* Gym Passport (Visited Gyms) */}
                 {user.gym_passport && user.gym_passport.filter(g => !g.name.includes('Arsenal Personal')).length > 0 && (
-                    <div className="grid grid-cols-2 gap-1.5 w-full mt-1">
+                    <div className="flex flex-wrap gap-1 justify-center mt-1 px-0.5">
                         {user.gym_passport.filter(g => !g.name.includes('Arsenal Personal')).slice(0, 8).map((gym, idx) => {
                             const isFav = gym.is_favorite;
                             const isHome = gym.is_home_base;
@@ -280,16 +280,16 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
                             return (
                                 <div
                                     key={`${gym.id}-${idx}`}
-                                    className={`flex items-center justify-center gap-1 px-2.5 py-1 rounded-xl ${bgColor} border ${borderColor} ${textColor} ${shadow} text-[9px] font-black uppercase tracking-wider w-full`}
+                                    className={`flex items-center gap-1 px-2 py-0.5 rounded-lg ${bgColor} border ${borderColor} ${textColor} ${shadow} text-[9px] font-black uppercase tracking-wider shrink-0`}
                                 >
-                                    <MapPin size={9} className={`${iconColor} shrink-0`} />
-                                    {isFav && <Heart size={9} className="text-red-500 shrink-0" />}
-                                    <span className="truncate max-w-[100px]">{gym.name}</span>
+                                    <MapPin size={8} className={`${iconColor} shrink-0`} />
+                                    {isFav && <Heart size={8} className="text-red-500 shrink-0" />}
+                                    <span className="truncate max-w-[90px]">{gym.name}</span>
                                 </div>
                             );
                         })}
                         {user.gym_passport.filter(g => !g.name.includes('Arsenal Personal')).length > 8 && (
-                            <div className="col-span-2 flex items-center justify-center gap-0.5 px-2.5 py-1 rounded-xl bg-neutral-900/60 border border-white/5 text-[9px] font-black italic uppercase tracking-tighter text-neutral-400 w-full">
+                            <div className="flex items-center gap-0.5 px-2 py-0.5 rounded-lg bg-neutral-900/60 border border-white/5 text-[9px] font-black italic uppercase tracking-tighter text-neutral-400 shrink-0">
                                 +{user.gym_passport.filter(g => !g.name.includes('Arsenal Personal')).length - 8} MÁS
                             </div>
                         )}
