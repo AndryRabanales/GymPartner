@@ -146,12 +146,12 @@ export const AppLayout = () => {
                     <nav className="bg-black/40 backdrop-blur-3xl border border-white/10 rounded-[2rem] py-1.5 px-2 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
                         <div className="px-2 sm:px-4">
                             <div className="flex items-center justify-between h-10 sm:h-12">
-                                <Link to="/" className="flex items-center justify-center no-underline group relative -my-4 sm:-my-6 h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-neutral-950/95 backdrop-blur-3xl border border-white/10 shadow-[0_15px_35px_rgba(0,0,0,0.6)] hover:border-white/20 transition-all duration-300 shrink-0">
+                                <Link to="/" className="flex items-center justify-center no-underline group relative -my-5 sm:-my-7 -ml-[16px] sm:-ml-[24px] h-[76px] w-[76px] sm:h-[96px] sm:w-[96px] rounded-full bg-neutral-950/95 backdrop-blur-3xl border border-white/10 shadow-[0_15px_35px_rgba(0,0,0,0.6)] hover:border-white/20 transition-all duration-300 shrink-0">
                                     <div className="absolute inset-0 bg-white/5 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                                     <img
                                         src="/ginx.png"
                                         alt="GINX"
-                                        className="h-[52px] w-auto sm:h-[66px] relative z-10 transition-all duration-500 group-hover:scale-110 drop-shadow-[0_0_20px_rgba(255,255,255,0.25)] animate-in zoom-in-50 duration-700"
+                                        className="h-[58px] w-auto sm:h-[76px] relative z-10 transition-all duration-500 group-hover:scale-110 drop-shadow-[0_0_20px_rgba(255,255,255,0.25)] animate-in zoom-in-50 duration-700"
                                     />
                                 </Link>
 
