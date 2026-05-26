@@ -433,7 +433,12 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
                         <h2 className="text-2xl font-black text-white italic mb-3 uppercase tracking-tighter">Radar Despejado</h2>
                         <p className="text-neutral-500 max-w-xs text-sm font-medium leading-relaxed">No hay más guerreros en tu zona por ahora. ¡Vuelve más tarde para nuevos desafíos!</p>
                         <button 
-                            onClick={() => { setCurrentIndex(0); setScanComplete(false); loadNearbyUsers(); }}
+                            onClick={() => { 
+                                setCurrentIndex(0); 
+                                setScanComplete(false); 
+                                localStorage.removeItem('radar_swipe_tutorial_seen_v4');
+                                loadNearbyUsers(); 
+                            }}
                             className="mt-10 bg-white text-black px-10 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-gym-primary transition-all active:scale-95 shadow-2xl"
                         >
                             Reiniciar Radar
@@ -480,14 +485,14 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
                             @keyframes tinderTutorialSwipe {
                                 0% { transform: translate3d(0, 0, 0) rotate(0deg); }
                                 /* Swipe Left Demo (NOPE) */
-                                10% { transform: translate3d(-75px, 8px, 0) rotate(-8deg); }
-                                30% { transform: translate3d(-75px, 8px, 0) rotate(-8deg); }
+                                10% { transform: translate3d(-100px, 10px, 0) rotate(-10deg); }
+                                30% { transform: translate3d(-100px, 10px, 0) rotate(-10deg); }
                                 40% { transform: translate3d(0, 0, 0) rotate(0deg); }
                                 /* Center Hold */
                                 55% { transform: translate3d(0, 0, 0) rotate(0deg); }
                                 /* Swipe Right Demo (LIKE) */
-                                65% { transform: translate3d(75px, 8px, 0) rotate(8deg); }
-                                85% { transform: translate3d(75px, 8px, 0) rotate(8deg); }
+                                65% { transform: translate3d(100px, 10px, 0) rotate(10deg); }
+                                85% { transform: translate3d(100px, 10px, 0) rotate(10deg); }
                                 95% { transform: translate3d(0, 0, 0) rotate(0deg); }
                                 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
                             }
@@ -557,7 +562,7 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
 
                         {/* Autoplay Tutorial Floating explanations */}
                         {isPlayingTutorial && (
-                            <div className="absolute bottom-28 left-4 right-4 z-50 pointer-events-none select-none flex flex-col items-center">
+                            <div className="absolute bottom-[190px] left-4 right-4 z-50 pointer-events-none select-none flex flex-col items-center">
                                 {/* Left Explanation Card */}
                                 <div className="absolute w-full max-w-[280px] bg-black/95 backdrop-blur-2xl border border-red-500/30 rounded-2xl p-4 shadow-[0_15px_35px_rgba(239,68,68,0.2)] flex items-center gap-3 animate-[nopeTooltipFade_8s_ease-in-out_infinite]">
                                     <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-500 shrink-0">
