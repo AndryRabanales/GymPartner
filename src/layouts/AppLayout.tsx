@@ -146,13 +146,15 @@ export const AppLayout = () => {
                     <nav className="bg-black/40 backdrop-blur-3xl border border-white/10 rounded-[2rem] py-1.5 px-2 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
                         <div className="px-2 sm:px-4">
                             <div className="flex items-center justify-between h-10 sm:h-12">
-                                <Link to="/" className="flex items-center justify-center no-underline group relative -my-5 sm:-my-7 -ml-[16px] sm:-ml-[24px] h-[76px] w-[76px] sm:h-[96px] sm:w-[96px] rounded-full bg-neutral-950/95 backdrop-blur-3xl border border-white/10 shadow-[0_15px_35px_rgba(0,0,0,0.6)] hover:border-white/20 transition-all duration-300 shrink-0">
-                                    <div className="absolute inset-0 bg-white/5 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                                    <img
-                                        src="/ginx.png"
-                                        alt="GINX"
-                                        className="h-[58px] w-auto sm:h-[76px] relative z-10 transition-all duration-500 group-hover:scale-110 drop-shadow-[0_0_20px_rgba(255,255,255,0.25)] animate-in zoom-in-50 duration-700"
-                                    />
+                                <Link to="/" className="flex items-center no-underline group relative">
+                                    <div className="relative flex items-center">
+                                        <div className="absolute inset-0 bg-white/5 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                                        <img
+                                            src="/ginxnew.png"
+                                            alt="GINX"
+                                            className="h-8 w-auto sm:h-10 relative z-10 transition-all duration-500 group-hover:scale-105 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)] animate-in zoom-in-50 duration-700"
+                                        />
+                                    </div>
                                 </Link>
 
                                 <nav className="hidden md:flex items-center bg-white/5 rounded-full p-0.5 border border-white/5 backdrop-blur-md">
