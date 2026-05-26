@@ -26,8 +26,11 @@ interface WorkoutNotificationCardProps {
 }
 
 const WorkoutNotificationCard = ({ n, setSelectedPlayer, navigate }: WorkoutNotificationCardProps) => {
-    const staticIsLive = n.data?.status === 'started';
+    // 1. AUTO-EXPIRE starting status: sessions older than 2.5 hours cannot physically still be live
+    const isOld = (new Date().getTime() - new Date(n.created_at).getTime()) > 2.5 * 60 * 60 * 1000;
+    const staticIsLive = n.data?.status === 'started' && !isOld;
     const [isCurrentlyLive, setIsCurrentlyLive] = useState(staticIsLive);
+    const [isResolving, setIsResolving] = useState(staticIsLive); // Prevent flash by showing a skeleton during verification
     const gymLabel = n.data?.gym_name || 'un Gimnasio';
     const muscles = n.data?.muscles || [];
     const IGNORED_TAGS = ['free_weight', 'strength_machine', 'cable', 'pulley', 'polea', 'strength', 'accessory', 'custom', 'other', 'unknown'];
@@ -41,7 +44,10 @@ const WorkoutNotificationCard = ({ n, setSelectedPlayer, navigate }: WorkoutNoti
 
     // If it is a live workout, subscribe to live session updates in real-time
     useEffect(() => {
-        if (!staticIsLive || !n.data?.sender_id) return;
+        if (!staticIsLive || !n.data?.sender_id) {
+            setIsResolving(false);
+            return;
+        }
 
         const fetchAndSubscribe = async () => {
             try {
@@ -69,6 +75,9 @@ const WorkoutNotificationCard = ({ n, setSelectedPlayer, navigate }: WorkoutNoti
                     setLiveSession(null);
                     setLiveExercises([]);
                 }
+
+                // Initial load check is complete, safe to render
+                setIsResolving(false);
 
                 // Sub
                 const channel = supabase
@@ -105,11 +114,27 @@ const WorkoutNotificationCard = ({ n, setSelectedPlayer, navigate }: WorkoutNoti
                 };
             } catch (err) {
                 console.error("Error setting up live card sub:", err);
+                setIsResolving(false);
             }
         };
 
         fetchAndSubscribe();
     }, [staticIsLive, n.data?.sender_id, n.data?.session_id]);
+
+    if (isResolving) {
+        return (
+            <div className="bg-black/20 border border-white/5 rounded-[2rem] p-5 my-3 animate-pulse text-left h-[160px] flex items-center">
+                <div className="flex items-start gap-4 w-full">
+                    <div className="w-14 h-14 rounded-full bg-neutral-900 border border-white/10 shrink-0"></div>
+                    <div className="flex-1 space-y-3">
+                        <div className="h-3 bg-neutral-900 rounded-full w-20"></div>
+                        <div className="h-4 bg-neutral-900 rounded-full w-3/4"></div>
+                        <div className="h-8 bg-neutral-900 rounded-xl w-full"></div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <>
