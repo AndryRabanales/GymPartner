@@ -534,26 +534,29 @@ export const UserProfile = () => {
 
                             {/* User Info & Stats Block: All compacted nicely here */}
                             <div className="flex-1 min-w-0 space-y-1.5 pt-0.5">
-                                {/* Top Row: Full Name (Compact & visible, NO dots!) */}
+                                {/* Top Row: Full Name (Character-limited to 14, larger font size, no dots!) */}
                                 <div className="flex items-center w-full min-w-0">
-                                    <h1 className="text-[12px] xs:text-[14px] sm:text-lg md:text-xl font-black text-white hover:text-gym-primary transition-colors tracking-tighter uppercase italic leading-none whitespace-nowrap overflow-visible pr-2">
-                                        {profile?.username || user.user_metadata.full_name}
+                                    <h1 className="text-base xs:text-lg sm:text-xl md:text-2xl font-black text-white hover:text-gym-primary transition-colors tracking-tighter uppercase italic leading-none whitespace-nowrap overflow-visible pr-2">
+                                        {(() => {
+                                            const rawName = profile?.username || user.user_metadata.full_name || '';
+                                            return rawName.length > 14 ? rawName.slice(0, 14) : rawName;
+                                        })()}
                                     </h1>
                                 </div>
 
                                 {/* Second Row: Follow Stats & Streak flame side-by-side (Enforced NO WRAP!) */}
-                                <div className="flex flex-row items-center gap-1 sm:gap-1.5 w-full flex-nowrap overflow-visible">
+                                <div className="flex flex-row items-center gap-1.5 sm:gap-2 w-full flex-nowrap overflow-visible">
                                     <div 
-                                        className="flex items-center gap-1 text-[8px] xs:text-[9.5px] sm:text-xs font-bold text-neutral-300 bg-black/40 backdrop-blur-md px-2 sm:px-2.5 py-1 rounded-full border border-white/5 cursor-pointer hover:bg-white/5 transition-colors shrink-0"
+                                        className="flex items-center gap-1.5 text-[9px] xs:text-[10px] sm:text-xs font-bold text-neutral-300 bg-black/40 backdrop-blur-md px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full border border-white/5 cursor-pointer hover:bg-white/5 transition-colors shrink-0"
                                         onClick={() => setShowSocialProfile(true)}
                                     >
-                                        <span><strong className="text-gym-primary">{socialStats.followersCount}</strong> Seg.</span>
+                                        <span><strong className="text-gym-primary">{socialStats.followersCount}</strong> Seguidores</span>
                                         <span className="text-neutral-600">•</span>
-                                        <span><strong className="text-white">{socialStats.followingCount}</strong> Sig.</span>
+                                        <span><strong className="text-white">{socialStats.followingCount}</strong> Siguiendo</span>
                                     </div>
 
                                     {/* STREAK FLAME (Placed next to Follow Stats, guaranteed same line!) */}
-                                    <div className="shrink-0 scale-80 xs:scale-90 sm:scale-100 origin-left">
+                                    <div className="shrink-0 scale-85 xs:scale-95 sm:scale-100 origin-left">
                                         <StreakFlame userId={user.id} />
                                     </div>
                                 </div>
