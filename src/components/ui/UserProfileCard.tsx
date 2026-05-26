@@ -280,16 +280,16 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
                             return (
                                 <div
                                     key={`${gym.id}-${idx}`}
-                                    className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full ${bgColor} border ${borderColor} ${textColor} ${shadow} text-[10px] font-black uppercase tracking-wider shrink-0`}
+                                    className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full ${bgColor} border ${borderColor} ${textColor} ${shadow} text-[9px] font-black uppercase tracking-wider shrink-0`}
                                 >
-                                    <MapPin size={9} className={`${iconColor} shrink-0`} />
-                                    {isFav && <Heart size={9} className="text-red-500 shrink-0" />}
-                                    <span className="truncate max-w-[130px]">{gym.name}</span>
+                                    <MapPin size={8} className={`${iconColor} shrink-0`} />
+                                    {isFav && <Heart size={8} className="text-red-500 shrink-0" />}
+                                    <span className="truncate max-w-[75px]">{gym.name}</span>
                                 </div>
                             );
                         })}
                         {user.gym_passport.filter(g => !g.name.includes('Arsenal Personal')).length > 8 && (
-                            <div className="flex items-center gap-0.5 px-2.5 py-0.5 rounded-full bg-neutral-900/60 border border-white/5 text-[9px] font-black italic uppercase tracking-tighter text-neutral-400 shrink-0">
+                            <div className="flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-neutral-900/60 border border-white/5 text-[9px] font-black italic uppercase tracking-tighter text-neutral-400 shrink-0">
                                 +{user.gym_passport.filter(g => !g.name.includes('Arsenal Personal')).length - 8} MÁS
                             </div>
                         )}
