@@ -46,7 +46,14 @@ export const Radar = () => {
     const [isBoosting, setIsBoosting] = useState(false);
     const [isInviting, setIsInviting] = useState(false);
     const [userProfile, setUserProfile] = useState<any>(null);
+    const [tutorialStep, setTutorialStep] = useState<number | null>(null);
     const currentUser = nearbyUsers[currentIndex];
+
+    useEffect(() => {
+        if (scanComplete && nearbyUsers.length > 0 && !localStorage.getItem('radar_swipe_tutorial_seen_v3')) {
+            setTutorialStep(1);
+        }
+    }, [scanComplete, nearbyUsers.length]);
 
     useEffect(() => {
         if (currentUser) {
@@ -458,24 +465,141 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
                             }`}
                         style={{
                             perspective: '1000px',
-                            transform: direction ? `translateX(${direction === 'left' ? '-100%' : '100%'}) rotate(${direction === 'left' ? '-15deg' : '15deg'})` : 'none'
+                            transform: direction 
+                                ? `translateX(${direction === 'left' ? '-100%' : '100%'}) rotate(${direction === 'left' ? '-15deg' : '15deg'})` 
+                                : tutorialStep === 1 
+                                    ? 'translateX(-50px) rotate(-5deg)' 
+                                    : tutorialStep === 2 
+                                        ? 'translateX(50px) rotate(5deg)' 
+                                        : 'none',
+                            transition: tutorialStep ? 'transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)' : undefined
                         }}
                     >
+                        <style>{`
+                            @keyframes swipeLeft {
+                                0% { transform: translateX(30px); opacity: 0; }
+                                50% { opacity: 1; }
+                                100% { transform: translateX(-30px); opacity: 0; }
+                            }
+                            @keyframes swipeRight {
+                                0% { transform: translateX(-30px); opacity: 0; }
+                                50% { opacity: 1; }
+                                100% { transform: translateX(30px); opacity: 0; }
+                            }
+                        `}</style>
+
+                        {/* Swipe Onboarding Tutorial Overlay */}
+                        {tutorialStep !== null && (
+                            <div className="absolute inset-0 bg-black/90 backdrop-blur-md rounded-[2.5rem] z-40 flex flex-col justify-between p-6 animate-in fade-in duration-300">
+                                {/* Top Step Badges */}
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[10px] font-black text-gym-primary uppercase tracking-[0.2em]">Guía del Radar</span>
+                                    <div className="flex gap-1.5">
+                                        {[1, 2, 3].map((s) => (
+                                            <div 
+                                                key={s} 
+                                                className={`w-5 h-1 rounded-full transition-all duration-300 ${
+                                                    s === tutorialStep ? 'bg-gym-primary w-8' : 'bg-neutral-800'
+                                                }`}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Step Content */}
+                                {tutorialStep === 1 && (
+                                    <div className="flex-1 flex flex-col items-center justify-center text-center px-4 animate-in zoom-in duration-300">
+                                        <div className="w-20 h-20 rounded-[1.8rem] bg-red-500/10 border-2 border-red-500/30 flex items-center justify-center text-red-500 mb-6 shadow-lg shadow-red-500/5 animate-[pulse_1.5s_infinite]">
+                                            <X size={36} strokeWidth={3} />
+                                        </div>
+                                        <h3 className="text-xl font-black text-white italic uppercase tracking-tighter mb-2">¿Pasar de Largo?</h3>
+                                        <p className="text-neutral-400 text-xs font-bold leading-relaxed max-w-[240px]">
+                                            Desliza la tarjeta hacia la <span className="text-red-500 font-black">IZQUIERDA</span> para descartar a este usuario y ver al siguiente perfil.
+                                        </p>
+                                        
+                                        {/* Swipe Left Animation Assist */}
+                                        <div className="mt-8 flex items-center gap-3 text-neutral-600">
+                                            <span className="text-[9px] font-black tracking-widest uppercase">Deslizar</span>
+                                            <div className="w-16 h-0.5 bg-neutral-800 relative rounded-full overflow-hidden">
+                                                <div className="absolute top-0 right-0 bottom-0 bg-red-500 w-1/2 h-full animate-[swipeLeft_1.5s_infinite]"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {tutorialStep === 2 && (
+                                    <div className="flex-1 flex flex-col items-center justify-center text-center px-4 animate-in zoom-in duration-300">
+                                        <div className="w-20 h-20 rounded-[1.8rem] bg-gym-primary/10 border-2 border-gym-primary/30 flex items-center justify-center text-gym-primary mb-6 shadow-lg shadow-gym-primary/5 animate-[pulse_1.5s_infinite]">
+                                            <Swords size={36} strokeWidth={2.5} />
+                                        </div>
+                                        <h3 className="text-xl font-black text-white italic uppercase tracking-tighter mb-2">¡Compañero de Gym!</h3>
+                                        <p className="text-neutral-400 text-xs font-bold leading-relaxed max-w-[240px]">
+                                            Desliza la tarjeta hacia la <span className="text-gym-primary font-black">DERECHA</span> para seguir al usuario y enviarle una solicitud de <span className="text-white font-black">MATCH</span>.
+                                        </p>
+
+                                        {/* Swipe Right Animation Assist */}
+                                        <div className="mt-8 flex items-center gap-3 text-neutral-600">
+                                            <span className="text-[9px] font-black tracking-widest uppercase">Deslizar</span>
+                                            <div className="w-16 h-0.5 bg-neutral-800 relative rounded-full overflow-hidden">
+                                                <div className="absolute top-0 left-0 bottom-0 bg-gym-primary w-1/2 h-full animate-[swipeRight_1.5s_infinite]"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {tutorialStep === 3 && (
+                                    <div className="flex-1 flex flex-col items-center justify-center text-center px-4 animate-in zoom-in duration-300">
+                                        <div className="flex gap-4 mb-6">
+                                            <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-500">
+                                                <UserPlus size={20} />
+                                            </div>
+                                            <div className="w-16 h-16 rounded-[1.2rem] bg-white flex items-center justify-center text-black shadow-lg shadow-white/10 scale-110">
+                                                <Swords size={24} />
+                                            </div>
+                                            <div className="w-12 h-12 rounded-xl bg-yellow-500/10 border border-yellow-500/30 flex items-center justify-center text-yellow-500">
+                                                <Zap size={20} />
+                                            </div>
+                                        </div>
+                                        <h3 className="text-xl font-black text-white italic uppercase tracking-tighter mb-2">¡Todo Listo!</h3>
+                                        <p className="text-neutral-400 text-xs font-bold leading-relaxed max-w-[250px]">
+                                            También puedes pulsar los botones: <span className="text-blue-400">Seguir</span>, <span className="text-white">Invitar a Entrenar</span> o activar <span className="text-yellow-400">Boost</span> de visibilidad.
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* Bottom Button Actions */}
+                                <div className="flex gap-3">
+                                    {tutorialStep > 1 && (
+                                        <button 
+                                            onClick={() => setTutorialStep(prev => prev ? prev - 1 : null)}
+                                            className="flex-1 bg-neutral-900 text-neutral-400 hover:text-white border border-white/5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95"
+                                        >
+                                            Atrás
+                                        </button>
+                                    )}
+                                    <button 
+                                        onClick={() => {
+                                            if (tutorialStep < 3) {
+                                                setTutorialStep(prev => prev ? prev + 1 : null);
+                                            } else {
+                                                localStorage.setItem('radar_swipe_tutorial_seen_v3', 'true');
+                                                setTutorialStep(null);
+                                            }
+                                        }}
+                                        className="flex-[2] bg-gradient-to-r from-gym-primary to-yellow-400 text-black py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-gym-primary/20 hover:scale-[1.02]"
+                                    >
+                                        {tutorialStep === 3 ? '¡Entendido!' : 'Siguiente'}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                         <UserProfileCard 
                             user={currentUser}
                             hidePermissions={true}
                             actions={
-                                <div className="flex items-center justify-between gap-2 px-2 mt-auto pb-4">
-                                    {/* 1. CANCELAR (SALTA A LA IZQUIERDA) */}
-                                    <button 
-                                        onClick={handleSkip}
-                                        className="w-14 h-14 rounded-2xl bg-neutral-900 border border-white/5 flex items-center justify-center text-red-500/50 hover:text-red-500 hover:bg-red-500/10 transition-all active:scale-90 shadow-xl"
-                                        title="Cancelar"
-                                    >
-                                        <X size={24} />
-                                    </button>
-
-                                    {/* 2. SEGUIR GUERRERO */}
+                                <div className="flex items-center justify-center gap-6 px-2 mt-auto pb-4">
+                                    {/* 1. SEGUIR GUERRERO */}
                                     <button 
                                         onClick={handleFollow}
                                         className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all active:scale-90 shadow-xl ${
@@ -488,7 +612,7 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
                                         <UserPlus size={24} fill={currentUser.is_following ? "currentColor" : "none"} />
                                     </button>
 
-                                    {/* 3. ACCIÓN CENTRAL: DESAFIAR/INVITAR (EL MÁS GRANDE) */}
+                                    {/* 2. ACCIÓN CENTRAL: DESAFIAR/INVITAR (EL MÁS GRANDE) */}
                                     <button 
                                         onClick={handleInvite}
                                         className="w-20 h-20 rounded-[2rem] bg-white flex items-center justify-center text-black hover:bg-gym-primary hover:scale-110 transition-all active:scale-95 shadow-[0_0_30px_rgba(255,255,255,0.2)] group"
@@ -497,7 +621,7 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
                                         <Swords size={32} className="group-hover:scale-110 transition-transform" fill="currentColor" />
                                     </button>
 
-                                    {/* 4. BOOST PERSONAL (ZAP) */}
+                                    {/* 3. BOOST PERSONAL (ZAP) */}
                                     <button 
                                         onClick={() => setIsBoostModalOpen(true)}
                                         className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all active:scale-90 shadow-xl ${
@@ -508,15 +632,6 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
                                         title="Boost Perfil"
                                     >
                                         <Zap size={24} fill={userProfile?.boost_until && new Date(userProfile.boost_until) > new Date() ? "currentColor" : "none"} />
-                                    </button>
-
-                                    {/* 5. SIGUIENTE (FLECHA AL FINAL) */}
-                                    <button 
-                                        onClick={handleSkip}
-                                        className="w-14 h-14 rounded-2xl bg-neutral-900 border border-white/5 flex items-center justify-center text-neutral-500 hover:text-white hover:bg-neutral-800 transition-all active:scale-90 shadow-xl"
-                                        title="Siguiente"
-                                    >
-                                        <ArrowRight size={24} />
                                     </button>
                                 </div>
                             }
