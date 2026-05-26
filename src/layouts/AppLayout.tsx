@@ -189,52 +189,58 @@ export const AppLayout = () => {
 										>
 											<MapPin size={16} />
 										</Link>
-									)}
-									{user && <GPointsDisplay />}
-                                    
-                                    <div className="flex items-center gap-2">
-                                        {user && <NotificationBell />}
-                                        {user ? (
-                                            <div className="relative z-50">
-                                                <button
-                                                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                                                    className="flex items-center gap-1 bg-neutral-900/50 hover:bg-neutral-800 pl-0.5 pr-2 py-0.5 rounded-xl border border-white/5 hover:border-gym-primary/30 transition-all shadow-lg group/avatar"
-                                                >
-                                                    <div className="relative w-6 h-6 sm:w-7 sm:h-7">
-                                                        <div className="absolute inset-0 bg-gym-primary blur-md rounded-full opacity-0 group-hover/avatar:opacity-40 transition-opacity"></div>
-                                                        <img
-                                                            src={user.user_metadata.avatar_url}
-                                                            alt="Avatar"
-                                                            className="relative w-full h-full rounded-full object-cover border border-white/10"
-                                                        />
-                                                    </div>
-                                                    <span className="hidden sm:block text-[9px] font-black text-neutral-400 group-hover/avatar:text-white transition-colors uppercase tracking-widest">
-                                                        {user.user_metadata.full_name?.split(' ')[0]}
-                                                    </span>
-                                                </button>
+                                    )}
 
-                                                {isUserMenuOpen && (
-                                                    <>
-                                                        <div className="fixed inset-0 z-[90]" onClick={() => setIsUserMenuOpen(false)}></div>
-                                                        <div className="absolute right-0 mt-4 w-60 bg-neutral-950/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl py-2 animate-in fade-in slide-in-from-top-2 duration-200 z-[100]">
-                                                            <div className="px-4 py-3 border-b border-white/5 mb-2 bg-white/2">
-                                                                 <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mb-1">Cuenta</p>
-                                                                 <p className="text-sm font-bold text-white truncate">{user.user_metadata.full_name}</p>
-                                                            </div>
-                                                            <div className="border-t border-white/5 mt-2 pt-2 mx-2">
-                                                                <button
-                                                                    onClick={() => {
-                                                                        signOut();
-                                                                        setIsUserMenuOpen(false);
-                                                                    }}
-                                                                    className="w-full text-left px-4 py-3 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors font-bold flex items-center gap-3 rounded-xl"
-                                                                >
-                                                                    <LogOut size={16} /> Cerrar Sesión
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    </>
-                                                )}
+                                    <div className="flex items-center gap-2">
+                                         {user && <NotificationBell />}
+                                         {user ? (
+                                             <div className="relative z-50">
+                                                 <button
+                                                     onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                                                     className="flex items-center gap-1 bg-neutral-900/50 hover:bg-neutral-800 pl-0.5 pr-2 py-0.5 rounded-xl border border-white/5 hover:border-gym-primary/30 transition-all shadow-lg group/avatar"
+                                                 >
+                                                     <div className="relative w-6 h-6 sm:w-7 sm:h-7">
+                                                         <div className="absolute inset-0 bg-gym-primary blur-md rounded-full opacity-0 group-hover/avatar:opacity-40 transition-opacity"></div>
+                                                         <img
+                                                             src={user.user_metadata.avatar_url}
+                                                             alt="Avatar"
+                                                             className="relative w-full h-full rounded-full object-cover border border-white/10"
+                                                         />
+                                                     </div>
+                                                     <span className="hidden sm:block text-[9px] font-black text-neutral-400 group-hover/avatar:text-white transition-colors uppercase tracking-widest">
+                                                         {user.user_metadata.full_name?.split(' ')[0]}
+                                                     </span>
+                                                 </button>
+ 
+                                                 {isUserMenuOpen && (
+                                                     <>
+                                                         <div className="fixed inset-0 z-[90]" onClick={() => setIsUserMenuOpen(false)}></div>
+                                                         <div className="absolute right-0 mt-4 w-60 bg-neutral-950/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl py-2 animate-in fade-in slide-in-from-top-2 duration-200 z-[100]">
+                                                             <div className="px-4 py-3 border-b border-white/5 mb-2 bg-white/2">
+                                                                  <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mb-1">Cuenta</p>
+                                                                  <p className="text-sm font-bold text-white truncate">{user.user_metadata.full_name}</p>
+                                                             </div>
+                                                             <div className="border-t border-white/5 mt-2 pt-3 mx-2 flex flex-col gap-2.5">
+                                                                 {/* Coin Icon & Amount Row */}
+                                                                 <div className="px-4 py-2 flex items-center justify-between rounded-xl bg-white/5 border border-white/5">
+                                                                     <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest">Mis Monedas</span>
+                                                                     <GPointsDisplay />
+                                                                 </div>
+ 
+                                                                 {/* Cerrar Sesión Button */}
+                                                                 <button
+                                                                     onClick={() => {
+                                                                         signOut();
+                                                                         setIsUserMenuOpen(false);
+                                                                     }}
+                                                                     className="w-full text-left px-4 py-3 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors font-bold flex items-center gap-3 rounded-xl"
+                                                                 >
+                                                                     <LogOut size={16} /> Cerrar Sesión
+                                                                 </button>
+                                                             </div>
+                                                         </div>
+                                                     </>
+                                                 )}
                                             </div>
                                         ) : (
                                             <Link
