@@ -34,6 +34,7 @@ interface UserProfileCardProps {
     onClose?: () => void;
     actions?: React.ReactNode;
     hidePermissions?: boolean;
+    isRadar?: boolean;
 }
 
 const FALLBACK_BANNERS = [
@@ -42,7 +43,7 @@ const FALLBACK_BANNERS = [
     'https://images.unsplash.com/photo-1571902258032-783ec5ad6dfc?auto=format&fit=crop&q=80'
 ];
 
-export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose, actions, hidePermissions = false }) => {
+export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose, actions, hidePermissions = false, isRadar = false }) => {
     console.log("📸 [CARD] Recibiendo datos de perfil:", user.username, "| Pasaporte:", user.gym_passport?.length);
     
     const { user: authUser } = useAuth();
@@ -180,7 +181,7 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
     };
 
     return (
-        <div className="flex-1 flex flex-col relative bg-black/40 backdrop-blur-3xl w-full h-full rounded-[3rem] border border-white/10 shadow-[0_30px_60px_rgba(0,0,0,0.8)] overflow-hidden select-none">
+        <div className={`flex-1 flex flex-col relative bg-black/40 backdrop-blur-3xl w-full h-full rounded-[3rem] border ${isRadar ? 'border-2 border-orange-600/50 shadow-[0_0_40px_rgba(234,88,12,0.15)]' : 'border border-white/10'} shadow-[0_30px_60px_rgba(0,0,0,0.8)] overflow-hidden select-none`}>
             {/* Close Button (if provided) */}
             {onClose && (
                 <button 

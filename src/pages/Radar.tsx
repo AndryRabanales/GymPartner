@@ -566,6 +566,7 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
                         <UserProfileCard 
                             user={currentUser}
                             hidePermissions={true}
+                            isRadar={true}
                             actions={
                                 <div className="flex items-center justify-center gap-6 px-2 mt-auto pb-4">
                                     {/* 1. SEGUIR GUERRERO */}
