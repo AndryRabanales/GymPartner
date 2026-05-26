@@ -54,7 +54,7 @@ export const Radar = () => {
             setIsPlayingTutorial(true);
             const timer = setTimeout(() => {
                 setIsPlayingTutorial(false);
-            }, 4000);
+            }, 3000);
             return () => clearTimeout(timer);
         }
     }, [scanComplete, nearbyUsers.length]);
@@ -477,7 +477,7 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
                             transform: direction 
                                 ? `translateX(${direction === 'left' ? '-100%' : '100%'}) rotate(${direction === 'left' ? '-15deg' : '15deg'})` 
                                 : 'none',
-                            animation: isPlayingTutorial ? 'tinderTutorialSwipe 4s ease-in-out infinite' : undefined
+                            animation: isPlayingTutorial ? 'tinderTutorialSwipe 3s ease-in-out infinite' : undefined
                         }}
                     >
                         <style>{`
@@ -544,14 +544,14 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
                         {isPlayingTutorial && (
                             <>
                                 {/* NOPE Stamp */}
-                                <div className="absolute top-[110px] left-[22%] z-50 pointer-events-none opacity-0 select-none animate-[nopeStampFade_4s_ease-in-out_infinite]">
+                                <div className="absolute top-[125px] left-[30%] -translate-x-1/2 z-50 pointer-events-none opacity-0 select-none animate-[nopeStampFade_3s_ease-in-out_infinite]">
                                     <div className="border-4 border-red-500 text-red-500 font-black text-4xl px-5 py-1.5 rounded-2xl uppercase tracking-widest bg-black/70 backdrop-blur-sm shadow-2xl">
                                         NOPE
                                     </div>
                                 </div>
 
                                 {/* MATCH Stamp */}
-                                <div className="absolute top-[110px] right-[22%] z-50 pointer-events-none opacity-0 select-none animate-[likeStampFade_4s_ease-in-out_infinite]">
+                                <div className="absolute top-[125px] right-[30%] translate-x-1/2 z-50 pointer-events-none opacity-0 select-none animate-[likeStampFade_3s_ease-in-out_infinite]">
                                     <div className="border-4 border-gym-primary text-gym-primary font-black text-4xl px-5 py-1.5 rounded-2xl uppercase tracking-widest bg-black/70 backdrop-blur-sm shadow-2xl">
                                         LIKE
                                     </div>
@@ -563,29 +563,13 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
                         {isPlayingTutorial && (
                             <div className="absolute bottom-[190px] left-4 right-4 z-50 pointer-events-none select-none flex flex-col items-center">
                                 {/* Left Explanation Card */}
-                                <div className="absolute w-full max-w-[280px] bg-black/95 backdrop-blur-2xl border border-red-500/30 rounded-2xl p-4 shadow-[0_15px_35px_rgba(239,68,68,0.2)] flex items-center gap-3 animate-[nopeTooltipFade_4s_ease-in-out_infinite]">
-                                    <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-500 shrink-0">
-                                        <X size={20} strokeWidth={3} />
-                                    </div>
-                                    <div className="flex-1 text-left">
-                                        <h4 className="text-[10px] font-black text-red-400 uppercase tracking-widest">Desliza a la Izquierda</h4>
-                                        <p className="text-[10px] text-neutral-300 font-bold leading-snug">
-                                            Para <span className="text-white font-black">DESCARTAR</span> al guerrero y ver al siguiente perfil.
-                                        </p>
-                                    </div>
+                                <div className="absolute w-full max-w-[250px] bg-black/90 backdrop-blur-md border border-red-500/40 rounded-xl px-4 py-3 shadow-[0_8px_25px_rgba(239,68,68,0.25)] flex items-center justify-center gap-2 animate-[nopeTooltipFade_3s_ease-in-out_infinite]">
+                                    <span className="text-red-400 text-[11px] font-black uppercase tracking-wider text-center">👈 Desliza para DESCARTAR</span>
                                 </div>
 
                                 {/* Right Explanation Card */}
-                                <div className="absolute w-full max-w-[280px] bg-black/95 backdrop-blur-2xl border border-gym-primary/30 rounded-2xl p-4 shadow-[0_15px_35px_rgba(229,255,0,0.2)] flex items-center gap-3 animate-[likeTooltipFade_4s_ease-in-out_infinite]">
-                                    <div className="w-10 h-10 rounded-xl bg-gym-primary/10 border border-gym-primary/30 flex items-center justify-center text-gym-primary shrink-0">
-                                        <Swords size={20} />
-                                    </div>
-                                    <div className="flex-1 text-left">
-                                        <h4 className="text-[10px] font-black text-gym-primary uppercase tracking-widest">Desliza a la Derecha</h4>
-                                        <p className="text-[10px] text-neutral-300 font-bold leading-snug">
-                                            Para <span className="text-white font-black">SEGUIR</span> e invitar a un <span className="text-gym-primary font-black">MATCH</span> instantáneo.
-                                        </p>
-                                    </div>
+                                <div className="absolute w-full max-w-[250px] bg-black/90 backdrop-blur-md border border-gym-primary/40 rounded-xl px-4 py-3 shadow-[0_8px_25px_rgba(229,255,0,0.25)] flex items-center justify-center gap-2 animate-[likeTooltipFade_3s_ease-in-out_infinite]">
+                                    <span className="text-gym-primary text-[11px] font-black uppercase tracking-wider text-center">👉 Desliza para dar MATCH</span>
                                 </div>
                             </div>
                         )}
