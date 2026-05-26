@@ -20,7 +20,7 @@ const METRIC_DEFS: MetricDef[] = [
     { id: 'reps',     label: 'REPS',    icon: <Hash size={13} strokeWidth={2.5} />,     defaultFor: 'strength', color: 'from-emerald-500 to-green-600', activeColor: 'bg-emerald-500' },
     { id: 'time',     label: 'TIEMPO',  icon: <Clock size={13} strokeWidth={2.5} />,    defaultFor: 'cardio',   color: 'from-blue-500 to-cyan-600', activeColor: 'bg-blue-500' },
     { id: 'distance', label: 'DIST',    icon: <MapPin size={13} strokeWidth={2.5} />,   defaultFor: 'cardio',   color: 'from-purple-500 to-violet-600', activeColor: 'bg-purple-500' },
-    { id: 'rpe',      label: 'RPE',     icon: <Flame size={13} strokeWidth={2.5} />,    defaultFor: 'all',      color: 'from-red-500 to-orange-600', activeColor: 'bg-red-500' },
+    { id: 'rpe',      label: 'RPE',     icon: <Flame size={13} strokeWidth={2.5} />,    defaultFor: 'strength',      color: 'from-red-500 to-orange-600', activeColor: 'bg-red-500' },
 ];
 
 const CARDIO_GROUPS = new Set([
@@ -173,7 +173,7 @@ export const ArsenalGrid = ({
                                         track_reps: !isCardio ? globalMetrics.reps : false,
                                         track_time: isCardio ? globalMetrics.time : false,
                                         track_distance: isCardio ? globalMetrics.distance : false,
-                                        track_rpe: globalMetrics.rpe,
+                                        track_rpe: !isCardio ? globalMetrics.rpe : false,
                                         custom_metric: activeCustomMetric || null
                                     };
                                 }

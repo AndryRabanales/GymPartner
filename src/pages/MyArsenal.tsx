@@ -204,7 +204,7 @@ export const MyArsenal = () => {
         const metricDef = {
             weight: 'strength', reps: 'strength',
             time: 'cardio', distance: 'cardio',
-            rpe: 'all'
+            rpe: 'strength'
         } as Record<string, string>;
 
         const targetCategory = metricDef[metricId] || 'all';
@@ -422,7 +422,7 @@ export const MyArsenal = () => {
                     track_reps: !isCardio ? globalMetrics.reps : false,
                     track_time: isCardio ? globalMetrics.time : false,
                     track_distance: isCardio ? globalMetrics.distance : false,
-                    track_rpe: globalMetrics.rpe,
+                    track_rpe: !isCardio ? globalMetrics.rpe : false,
                     custom_metric: activeCustomMetric || null
                 });
                 return nextConfigs;
