@@ -9,7 +9,9 @@ import {
     Zap, 
     Loader2, 
     MapPin, 
-    Shield 
+    Shield,
+    ChevronsLeft,
+    ChevronsRight 
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { notificationService } from '../services/NotificationService';
@@ -522,8 +524,15 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
                                 60% { opacity: 0; transform: translate3d(0, 15px, 0); }
                                 65% { opacity: 1; transform: translate3d(0, 0, 0); }
                                 85% { opacity: 1; transform: translate3d(0, 0, 0); }
-                                93% { opacity: 0; transform: translate3d(0, -10px, 0); }
                                 100% { opacity: 0; }
+                            }
+                            @keyframes pulseLeft {
+                                0%, 100% { transform: translateX(0); opacity: 1; }
+                                50% { transform: translateX(-5px); opacity: 0.3; }
+                            }
+                            @keyframes pulseRight {
+                                0%, 100% { transform: translateX(0); opacity: 1; }
+                                50% { transform: translateX(5px); opacity: 0.3; }
                             }
                         `}</style>
 
@@ -552,13 +561,15 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
                         {isPlayingTutorial && (
                             <div className="absolute bottom-[190px] left-4 right-4 z-50 pointer-events-none select-none flex flex-col items-center">
                                 {/* Left Explanation Card */}
-                                <div className="absolute w-full max-w-[250px] bg-black/90 backdrop-blur-md border border-red-500/40 rounded-xl px-4 py-3 shadow-[0_8px_25px_rgba(239,68,68,0.25)] flex items-center justify-center gap-2 animate-[nopeTooltipFade_3s_ease-in-out_infinite]">
-                                    <span className="text-red-400 text-[11px] font-black uppercase tracking-wider text-center">👈 Desliza para DESCARTAR</span>
+                                <div className="absolute w-full max-w-[250px] bg-black/95 backdrop-blur-md border border-red-500/40 rounded-2xl px-4 py-3 shadow-[0_15px_35px_rgba(239,68,68,0.3)] flex items-center justify-center gap-2 animate-[nopeTooltipFade_3s_ease-in-out_infinite]">
+                                    <ChevronsLeft className="text-red-500 animate-[pulseLeft_1.5s_infinite] shrink-0" size={16} />
+                                    <span className="text-red-400 text-[10px] font-black uppercase tracking-[0.1em] text-center">Desliza para DESCARTAR</span>
                                 </div>
 
                                 {/* Right Explanation Card */}
-                                <div className="absolute w-full max-w-[250px] bg-black/90 backdrop-blur-md border border-gym-primary/40 rounded-xl px-4 py-3 shadow-[0_8px_25px_rgba(229,255,0,0.25)] flex items-center justify-center gap-2 animate-[likeTooltipFade_3s_ease-in-out_infinite]">
-                                    <span className="text-gym-primary text-[11px] font-black uppercase tracking-wider text-center">👉 Desliza para dar MATCH</span>
+                                <div className="absolute w-full max-w-[250px] bg-black/95 backdrop-blur-md border border-gym-primary/40 rounded-2xl px-4 py-3 shadow-[0_15px_35px_rgba(229,255,0,0.3)] flex items-center justify-center gap-2 animate-[likeTooltipFade_3s_ease-in-out_infinite]">
+                                    <span className="text-gym-primary text-[10px] font-black uppercase tracking-[0.1em] text-center">Desliza para dar MATCH</span>
+                                    <ChevronsRight className="text-gym-primary animate-[pulseRight_1.5s_infinite] shrink-0" size={16} />
                                 </div>
                             </div>
                         )}
