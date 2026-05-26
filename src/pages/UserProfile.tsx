@@ -496,244 +496,217 @@ export const UserProfile = () => {
             <div className="w-[96%] mx-auto">
                 <div className="bg-gradient-to-r from-yellow-500 via-amber-500 to-neutral-700 p-[1.5px] rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] w-full">
                     <div
-                        className="bg-neutral-900/95 backdrop-blur-xl rounded-[14px] p-4 sm:p-5 flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 relative overflow-hidden transition-all group min-h-[240px] sm:min-h-0 w-full"
+                        className="bg-neutral-900/95 backdrop-blur-xl rounded-[14px] p-3 sm:p-4 relative overflow-hidden transition-all group w-full"
                         style={profile?.custom_settings?.banner_url ? {
                             backgroundImage: `url(${profile.custom_settings.banner_url})`,
                             backgroundSize: 'cover',
                             backgroundPosition: 'center'
                         } : {}}
                     >
-                {/* Banner Overlay for Readability */}
-                <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/75 to-neutral-950/20 z-0"></div>
+                        {/* Banner Overlay for Readability */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-neutral-950/90 via-neutral-950/60 to-neutral-950/20 z-0"></div>
 
-                {/* Avatar Section: Clean & Premium (Responsive Sizes) */}
-                <div className="relative shrink-0 z-10 transition-all flex flex-col items-center">
-                    <div className="relative w-20 h-20 sm:w-28 sm:h-28 rounded-full overflow-hidden border-2 border-gym-primary/30 bg-neutral-800 shadow-[0_0_20px_rgba(250,204,21,0.15)] group-hover:shadow-[0_0_30px_rgba(250,204,21,0.3)] transition-all">
-                        <img
-                            src={cloudinaryService.getOptimizedImageUrl(userAvatar, { width: 300, height: 300 })}
-                            alt="Profile"
-                            className="w-full h-full object-cover scale-110 group-hover:scale-125 transition-transform duration-700"
-                        />
-                    </div>
-                </div>
-
-                {/* User Info Section */}
-                <div className="flex-1 text-center sm:text-left space-y-2.5 z-10 pt-1 w-full min-w-0">
-                    <div className="space-y-1">
-                        {/* Name: Clean White/Yellow */}
-                        <h1 className="text-2xl sm:text-4xl font-black text-white hover:text-gym-primary transition-colors tracking-tighter uppercase italic drop-shadow-[0_0_20px_rgba(255,255,255,0.15)] leading-none flex items-center justify-center sm:justify-start gap-2">
-                            <span className="truncate">{profile?.username || user.user_metadata.full_name}</span>
-                            
-                            <button
-                                onClick={() => {
-                                    setShowEditProfile(true);
-                                    hideBottomNav();
-                                }}
-                                className="inline-flex w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white/5 border border-white/10 hover:border-white/30 items-center justify-center text-neutral-400 hover:text-white transition-all transform hover:scale-105 active:scale-95 shrink-0"
-                                title="Editar Perfil"
-                            >
-                                <Edit2 size={10} className="sm:w-3 sm:h-3" />
-                            </button>
-                        </h1>
-
-                        {/* Bio Description if exists */}
-                        <p className="text-neutral-400 text-[11px] sm:text-xs max-w-md mx-auto sm:mx-0 leading-relaxed italic">
-                            &ldquo;{profile?.description || 'Entrenando duro en GymPartner.'}&rdquo;
-                        </p>
-                    </div>
-
-                    {/* Rank: Dark Glass Pill */}
-                    <div className="flex flex-row items-center gap-2 justify-center sm:justify-start flex-wrap">
-                        {/* STREAK FLAME */}
-                        <StreakFlame userId={user.id} />
-
-                        {userGyms.find(g => g.is_home_base) ? (
-                            <div className="flex items-center gap-1 bg-yellow-500/10 border border-yellow-500/20 px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-yellow-500 animate-pulse text-[9px] sm:text-xs font-bold uppercase tracking-wider">
-                                <Star size={10} fill="currentColor" className="sm:w-3 sm:h-3" />
-                                <span className="truncate max-w-[100px] sm:max-w-[150px]">{userGyms.find(g => g.is_home_base)?.gym_name}</span>
+                        {/* Flex Container for Header Elements: Avatar + Info */}
+                        <div className="relative z-10 flex flex-row items-start gap-3 sm:gap-4 w-full">
+                            {/* Avatar Section: Clean & Premium (Moved higher/aligned beautifully) */}
+                            <div className="relative shrink-0 flex flex-col items-center -mt-2 sm:-mt-4">
+                                <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 border-gym-primary/40 bg-neutral-800 shadow-[0_0_15px_rgba(250,204,21,0.2)] group-hover:shadow-[0_0_25px_rgba(250,204,21,0.4)] transition-all">
+                                    <img
+                                        src={cloudinaryService.getOptimizedImageUrl(userAvatar, { width: 200, height: 200 })}
+                                        alt="Profile"
+                                        className="w-full h-full object-cover scale-110 group-hover:scale-125 transition-transform duration-700"
+                                    />
+                                </div>
                             </div>
-                        ) : (
-                            <div className="flex items-center gap-1 bg-neutral-800 border border-neutral-700 px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-neutral-400 text-[9px] sm:text-xs font-bold uppercase tracking-wider">
-                                <Swords size={10} className="sm:w-3 sm:h-3" />
-                                <span>Agente Libre</span>
-                            </div>
-                        )}
-                    </div>
 
-                    {/* SOCIAL STATS ROW (Unified Premium Layout) */}
-                    <div className="hidden sm:grid grid-cols-2 divide-x divide-white/5 bg-black/45 backdrop-blur-md rounded-2xl py-3 border border-white/5 shadow-2xl w-full max-w-[280px] mx-auto sm:mx-0">
-                        <div className="flex flex-col items-center justify-center group cursor-pointer hover:bg-white/5 transition-colors py-1 rounded-l-2xl" onClick={() => setShowSocialProfile(true)}>
-                            <span className="font-black text-xl text-white leading-none mb-1 group-hover:scale-110 transition-transform">{socialStats.followersCount}</span>
-                            <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest">Seguidores</span>
-                        </div>
-                        <div className="flex flex-col items-center justify-center group cursor-pointer hover:bg-white/5 transition-colors py-1 rounded-r-2xl" onClick={() => setShowSocialProfile(true)}>
-                            <span className="font-black text-xl text-white leading-none mb-1 group-hover:scale-110 transition-transform">{socialStats.followingCount}</span>
-                            <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-widest">Seguidos</span>
-                        </div>
-                    </div>
+                            {/* User Info & Stats Block: All compacted nicely here */}
+                            <div className="flex-1 min-w-0 space-y-1.5 pt-0.5">
+                                {/* Top Row: Name, Edit Button, and Streak */}
+                                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                                    <h1 className="text-xl sm:text-2xl font-black text-white hover:text-gym-primary transition-colors tracking-tighter uppercase italic leading-none flex items-center gap-1.5">
+                                        <span className="truncate max-w-[140px] sm:max-w-[200px]">{profile?.username || user.user_metadata.full_name}</span>
+                                        <button
+                                            onClick={() => {
+                                                setShowEditProfile(true);
+                                                hideBottomNav();
+                                            }}
+                                            className="inline-flex w-5 h-5 rounded-full bg-white/5 border border-white/10 hover:border-white/30 items-center justify-center text-neutral-400 hover:text-white transition-all transform hover:scale-105 active:scale-95 shrink-0"
+                                            title="Editar Perfil"
+                                        >
+                                            <Edit2 size={8} />
+                                        </button>
+                                    </h1>
 
-                    {/* Mobile Social Stats Inline */}
-                    <div className="flex sm:hidden items-center justify-center gap-2 text-[11px] font-bold text-neutral-400 mt-0.5 cursor-pointer" onClick={() => setShowSocialProfile(true)}>
-                        <span><strong className="text-white">{socialStats.followersCount}</strong> Seguidores</span>
-                        <span className="text-white/20">•</span>
-                        <span><strong className="text-white">{socialStats.followingCount}</strong> Seguidos</span>
-                    </div>
-
-                    {/* RANKING STATUS - TOP 10 */}
-                    {loading ? (
-                        <div className="bg-neutral-800/40 border border-neutral-700/50 rounded-xl p-2 w-full max-w-[280px] mx-auto sm:mx-0 animate-pulse">
-                            <div className="h-3 bg-neutral-700 rounded w-20"></div>
-                        </div>
-                    ) : userRanking !== null ? (
-                        <div className={`
-                            bg-gradient-to-r rounded-xl p-1.5 sm:p-3 border w-full max-w-[280px] mx-auto sm:mx-0 shadow-lg animate-in fade-in duration-500
-                            ${userRanking === 1 ? 'from-yellow-500/10 to-orange-500/10 border-yellow-500/30' :
-                                userRanking === 2 ? 'from-gray-400/10 to-gray-500/10 border-gray-400/30' :
-                                    userRanking === 3 ? 'from-amber-700/10 to-amber-800/10 border-amber-600/30' :
-                                        'from-blue-500/10 to-blue-600/10 border-blue-500/30'}
-                        `}>
-                            <div className="flex items-center gap-2 justify-center sm:justify-start">
-                                <Crown size={16} className={`
-                                    fill-current shrink-0 sm:w-5 sm:h-5
-                                    ${userRanking === 1 ? 'text-yellow-500 animate-pulse' :
-                                        userRanking === 2 ? 'text-gray-400' :
-                                            userRanking === 3 ? 'text-amber-600' :
-                                                'text-blue-500'}
-                                `} />
-                                <div className="text-left min-w-0">
-                                    <div className={`
-                                        font-black text-[10px] sm:text-xs tracking-wider uppercase leading-none
-                                        ${userRanking === 1 ? 'text-yellow-500' :
-                                            userRanking === 2 ? 'text-gray-400' :
-                                                userRanking === 3 ? 'text-amber-600' :
-                                                    'text-blue-400'}
-                                    `}>
-                                        {userRanking === 1 ? '👑 TOP #1 DEL GYM' :
-                                            userRanking === 2 ? '🥈 TOP #2 DEL GYM' :
-                                                userRanking === 3 ? '🥉 TOP #3 DEL GYM' :
-                                                    `🏆 TOP #${userRanking} DEL GYM`}
+                                    {/* STREAK FLAME */}
+                                    <div className="shrink-0 scale-90 sm:scale-100 origin-left">
+                                        <StreakFlame userId={user.id} />
                                     </div>
+
+                                    {/* FOLLOW STATS (Extremely compact inline pills) */}
+                                    <div 
+                                        className="flex items-center gap-1.5 text-[10px] sm:text-xs font-bold text-neutral-300 bg-black/40 backdrop-blur-md px-2 py-0.5 rounded-full border border-white/5 cursor-pointer hover:bg-white/5 transition-colors shrink-0"
+                                        onClick={() => setShowSocialProfile(true)}
+                                    >
+                                        <span><strong className="text-gym-primary">{socialStats.followersCount}</strong> Seg</span>
+                                        <span className="text-neutral-600">•</span>
+                                        <span><strong className="text-white">{socialStats.followingCount}</strong> Siguen</span>
+                                    </div>
+                                </div>
+
+                                {/* Second Row: Gym Tags (Compact, in the header) */}
+                                <div className="flex flex-wrap items-center gap-1 w-full">
+                                    {(() => {
+                                        // Sort gyms: Home Base first, then Favorites, then others
+                                        const sortedGyms = [...userGyms].sort((a, b) => {
+                                            if (a.is_home_base && !b.is_home_base) return -1;
+                                            if (!a.is_home_base && b.is_home_base) return 1;
+                                            if (a.is_favorite && !b.is_favorite) return -1;
+                                            if (!a.is_favorite && b.is_favorite) return 1;
+                                            return 0;
+                                        });
+
+                                        const limit = 4; // Compact limit to fit header perfectly
+                                        const displayGyms = sortedGyms.slice(0, limit);
+                                        const hasMore = sortedGyms.length > limit;
+                                        const remainingCount = sortedGyms.length - limit;
+
+                                        return (
+                                            <>
+                                                {displayGyms.map(gym => {
+                                                    let textColor = "text-neutral-300 hover:text-white";
+                                                    let iconColor = "text-neutral-500";
+                                                    let bgColor = "bg-neutral-800/60 hover:bg-neutral-700/80";
+                                                    let borderColor = "border-neutral-800/40 hover:border-neutral-500";
+
+                                                    if (gym.is_favorite) {
+                                                        borderColor = "border-red-500/40 hover:border-red-500";
+                                                        textColor = "text-red-400 hover:text-red-300";
+                                                        iconColor = "text-red-500";
+                                                        bgColor = "bg-red-500/10 hover:bg-red-500/20";
+                                                    } else if (gym.is_home_base) {
+                                                        borderColor = "border-yellow-500/40 hover:border-yellow-500";
+                                                        textColor = "text-yellow-400 hover:text-yellow-300";
+                                                        iconColor = "text-yellow-500";
+                                                        bgColor = "bg-yellow-500/10 hover:bg-yellow-500/20";
+                                                    }
+
+                                                    return (
+                                                        <Link
+                                                            key={gym.gym_id}
+                                                            to={`/territory/${gym.gym_id}`}
+                                                            className={`px-1.5 py-0.5 rounded-full flex items-center gap-1 text-[9px] sm:text-[10px] transition-all no-underline border inline-flex shrink-0 ${borderColor} ${textColor} ${bgColor}`}
+                                                        >
+                                                            <MapPin size={8} className={`${iconColor}`} />
+                                                            <span className="truncate max-w-[65px] sm:max-w-[100px]">{gym.gym_name}</span>
+                                                        </Link>
+                                                    );
+                                                })}
+                                                
+                                                {hasMore && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setShowAllTagsModal(true);
+                                                        }}
+                                                        className="px-1.5 py-0.5 rounded-full flex items-center gap-1 text-[9px] sm:text-[10px] transition-all border border-gym-primary/30 text-gym-primary bg-gym-primary/10 hover:bg-gym-primary hover:text-black font-bold shrink-0 cursor-pointer"
+                                                        title={`Ver ${remainingCount} gimnasios más`}
+                                                    >
+                                                        <span>+{remainingCount}</span>
+                                                    </button>
+                                                )}
+                                            </>
+                                        );
+                                    })()}
                                 </div>
                             </div>
                         </div>
-                    ) : null}
 
-                    {/* HISTORIAL DE ALPHA */}
-                    {alphaHistory.length > 0 && (
-                        <div className="hidden sm:block w-full max-w-[280px] mx-auto sm:mx-0 animate-in fade-in duration-700 delay-150 space-y-2 mt-2">
-                            <div className="h-[1px] bg-white/5 w-full"></div>
-                            <h3 className="text-neutral-300 font-black text-[10px] uppercase tracking-widest flex items-center gap-1.5 justify-start">
-                                <Crown size={12} className="text-yellow-500 animate-pulse" />
-                                Historial de Alpha
-                            </h3>
-                            <div className="space-y-1.5">
-                                {alphaHistory.map((record: any) => (
-                                    <div
-                                        key={record.id}
-                                        className="bg-black/30 backdrop-blur-sm rounded-lg p-2 border border-white/5 text-left flex items-center justify-between"
-                                    >
-                                        <div className="min-w-0">
-                                            <div className="text-white font-bold text-xs truncate max-w-[150px]">
-                                                {record.gym.name}
-                                            </div>
-                                            <div className="text-neutral-500 text-[9px] mt-0.5">
-                                                Alpha {record.times_alpha}x • {record.total_weeks} sem
-                                            </div>
-                                        </div>
-                                        <div className="text-[10px] text-yellow-500/80 font-black italic bg-yellow-500/10 px-1.5 py-0.5 rounded">
-                                            ACTIVE
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                        {/* Middle Space: Kept completely empty and clean to appreciate the background photo/banner! */}
+                        <div className="h-10 sm:h-14"></div>
+
+                        {/* Bottom Row / Card Footer: Bio & Share button aligned neatly at the bottom */}
+                        <div className="relative z-10 flex flex-row items-center justify-between gap-3 mt-1 pt-1.5 border-t border-white/5 w-full">
+                            <p className="text-neutral-400 text-[10px] sm:text-[11px] leading-snug italic truncate max-w-[70%]">
+                                &ldquo;{profile?.description || 'Entrenando duro en GymPartner.'}&rdquo;
+                            </p>
+                            
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleShareProfile();
+                                }}
+                                className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 flex items-center gap-1 text-[9px] sm:text-[10px] text-neutral-400 hover:text-gym-primary hover:bg-white/10 hover:border-gym-primary/30 transition-all backdrop-blur-md shrink-0"
+                                title="Compartir Perfil"
+                            >
+                                <Share2 size={9} />
+                                <span>Compartir</span>
+                            </button>
                         </div>
-                    )}
-
-                    {/* Gym Tags & Share - CARD FOOTER */}
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-3 pt-2 border-t border-white/5 w-full">
-                        <div className="flex flex-wrap items-center gap-1 justify-center sm:justify-start w-[95%] sm:w-auto mx-auto sm:mx-0">
-                            {(() => {
-                                // Sort gyms: Home Base first, then Favorites, then others
-                                const sortedGyms = [...userGyms].sort((a, b) => {
-                                    if (a.is_home_base && !b.is_home_base) return -1;
-                                    if (!a.is_home_base && b.is_home_base) return 1;
-                                    if (a.is_favorite && !b.is_favorite) return -1;
-                                    if (!a.is_favorite && b.is_favorite) return 1;
-                                    return 0;
-                                });
-
-                                const limit = 6;
-                                const displayGyms = sortedGyms.slice(0, limit);
-                                const hasMore = sortedGyms.length > limit;
-                                const remainingCount = sortedGyms.length - limit;
-
-                                return (
-                                    <>
-                                        {displayGyms.map(gym => {
-                                            let textColor = "text-neutral-300 hover:text-white";
-                                            let iconColor = "text-neutral-500";
-                                            let bgColor = "bg-neutral-800/80 hover:bg-neutral-700/90";
-                                            let borderColor = "border-neutral-800/50 hover:border-neutral-500";
-                                            let shadow = "hover:shadow-sm";
-
-                                            if (gym.is_favorite) {
-                                                borderColor = "border-red-500/50 hover:border-red-500";
-                                                textColor = "text-red-400 hover:text-red-300";
-                                                iconColor = "text-red-500";
-                                                bgColor = "bg-red-500/10 hover:bg-red-500/20";
-                                                shadow = "hover:shadow-[0_0_15px_rgba(239,68,68,0.2)]";
-                                            } else if (gym.is_home_base) {
-                                                borderColor = "border-yellow-500/50 hover:border-yellow-500";
-                                                textColor = "text-yellow-400 hover:text-yellow-300";
-                                                iconColor = "text-yellow-500";
-                                                bgColor = "bg-yellow-500/10 hover:bg-yellow-500/20";
-                                                shadow = "hover:shadow-[0_0_15px_rgba(234,179,8,0.2)]";
-                                            }
-
-                                            return (
-                                                <Link
-                                                    key={gym.gym_id}
-                                                    to={`/territory/${gym.gym_id}`}
-                                                    className={`px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-full flex items-center gap-1 text-[9px] sm:text-[10px] transition-all no-underline border inline-flex shrink-0 ${borderColor} ${textColor} ${bgColor} ${shadow}`}
-                                                >
-                                                    <MapPin size={8} className={`sm:w-3 sm:h-3 ${iconColor}`} />
-                                                    <span className="truncate max-w-[75px] sm:max-w-[120px]">{gym.gym_name}</span>
-                                                </Link>
-                                            );
-                                        })}
-                                        
-                                        {hasMore && (
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setShowAllTagsModal(true);
-                                                }}
-                                                className="px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-full flex items-center gap-1 text-[9px] sm:text-[10px] transition-all border border-gym-primary/30 text-gym-primary bg-gym-primary/10 hover:bg-gym-primary hover:text-black font-black uppercase tracking-wider shrink-0 cursor-pointer"
-                                                title={`Ver ${remainingCount} gimnasios más`}
-                                            >
-                                                <span>+{remainingCount}</span>
-                                            </button>
-                                        )}
-                                    </>
-                                );
-                            })()}
-                        </div>
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleShareProfile();
-                            }}
-                            className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-white/5 border border-white/10 flex items-center gap-1 text-[9px] sm:text-xs text-neutral-400 hover:text-gym-primary hover:bg-white/10 hover:border-gym-primary/30 transition-all backdrop-blur-md shrink-0 self-center sm:self-auto"
-                            title="Compartir Perfil"
-                        >
-                            <Share2 size={10} className="sm:w-3 sm:h-3" />
-                            <span>Compartir</span>
-                        </button>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+
+        {/* Main content below profile card (Occupies 94% Width) */}
+        <div className="w-[94%] mx-auto space-y-3 sm:space-y-4">
+            {/* Ranking & Alpha Quick Info Row */}
+            {(userRanking !== null || alphaHistory.length > 0) && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full animate-in fade-in duration-500">
+                    {/* RANKING STATUS - TOP 10 */}
+                    {userRanking !== null && (
+                        <div className={`
+                            bg-gradient-to-r rounded-2xl p-3 border shadow-md flex items-center gap-3
+                            ${userRanking === 1 ? 'from-yellow-500/10 to-orange-500/10 border-yellow-500/20' :
+                                userRanking === 2 ? 'from-gray-400/10 to-gray-500/10 border-gray-400/20' :
+                                    userRanking === 3 ? 'from-amber-700/10 to-amber-800/10 border-amber-600/20' :
+                                        'from-blue-500/10 to-blue-600/10 border-blue-500/20'}
+                        `}>
+                            <Crown size={20} className={`
+                                fill-current shrink-0
+                                ${userRanking === 1 ? 'text-yellow-500 animate-pulse' :
+                                    userRanking === 2 ? 'text-gray-400' :
+                                        userRanking === 3 ? 'text-amber-600' :
+                                            'text-blue-500'}
+                            `} />
+                            <div className="text-left min-w-0">
+                                <div className={`
+                                    font-black text-xs sm:text-sm tracking-wider uppercase leading-none
+                                    ${userRanking === 1 ? 'text-yellow-500' :
+                                        userRanking === 2 ? 'text-gray-400' :
+                                            userRanking === 3 ? 'text-amber-600' :
+                                                'text-blue-400'}
+                                `}>
+                                    {userRanking === 1 ? '👑 TOP #1 DEL GYM' :
+                                        userRanking === 2 ? '🥈 TOP #2 DEL GYM' :
+                                            userRanking === 3 ? '🥉 TOP #3 DEL GYM' :
+                                                `🏆 TOP #${userRanking} DEL GYM`}
+                                </div>
+                                <p className="text-[9px] text-neutral-500 font-bold uppercase mt-1">Líder activo en el ranking local</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* HISTORIAL DE ALPHA */}
+                    {alphaHistory.length > 0 && (
+                        <div className="bg-neutral-900/50 backdrop-blur-md rounded-2xl p-3 border border-white/5 shadow-md flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="w-8 h-8 rounded-xl bg-yellow-500/10 flex items-center justify-center shrink-0 border border-yellow-500/20">
+                                    <Crown size={14} className="text-yellow-500 animate-pulse" />
+                                </div>
+                                <div className="text-left min-w-0">
+                                    <p className="text-[10px] font-black text-white uppercase tracking-wider leading-none">Historial de Alpha</p>
+                                    <p className="text-[9px] text-neutral-400 font-bold uppercase mt-1 truncate max-w-[180px]">
+                                        {alphaHistory[0].gym.name} ({alphaHistory[0].times_alpha}x)
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="text-[9px] text-yellow-500 font-black italic bg-yellow-500/10 px-2 py-1 rounded-lg border border-yellow-500/20 shrink-0">
+                                ACTIVE ALPHA
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Main content below profile card (Occupies 94% Width) */}
             <div className="w-[94%] mx-auto space-y-3 sm:space-y-4">

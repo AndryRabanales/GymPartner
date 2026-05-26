@@ -599,7 +599,7 @@ export const PlayerProfileModal = ({ player, onClose, onFollowToggle }: PlayerPr
                             </h2>
                             <p className="text-xs text-neutral-400 font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-2">
                                 <span className="w-1 h-1 rounded-full bg-yellow-500"></span>
-                                Agente de Alto Rendimiento
+                                Atleta de Alto Rendimiento
                                 <span className="w-1 h-1 rounded-full bg-yellow-500"></span>
                             </p>
                             {player.gym_name && (

@@ -260,7 +260,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                     {/* Username Input */}
                     <div className="space-y-3">
                         <label className="text-xs font-bold text-neutral-400 uppercase tracking-widest ml-1">
-                            Nombre de Agente
+                            Nombre de Usuario
                         </label>
                         <input
                             type="text"

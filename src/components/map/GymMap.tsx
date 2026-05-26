@@ -302,7 +302,7 @@ export const GymMap = () => {
             setSelectedGym(prev => prev ? { ...prev, is_home_base: true } : null);
 
             // Notify other members of this gym
-            const userName = user.user_metadata?.full_name || user.user_metadata?.username || 'Un Agente';
+            const userName = user.user_metadata?.full_name || user.user_metadata?.username || 'Un Guerrero';
             await notificationService.notifyGymMembers(selectedGym.id, user.id, userName, selectedGym.name);
         } else {
             alert('Error al establecer sede: ' + result.error);
@@ -546,7 +546,7 @@ export const GymMap = () => {
                 <PlayerProfileModal
                     player={{
                         id: user.id,
-                        username: user.user_metadata.full_name || 'Agente',
+                        username: user.user_metadata.full_name || 'Guerrero',
                         avatar_url: user.user_metadata.avatar_url || 'https://i.pravatar.cc/150',
                         xp: 0, // Will be fetched by modal
                         rank: 0, // Will be fetched by modal
