@@ -152,7 +152,7 @@ export const AppLayout = () => {
                                         <img
                                             src="/ginxnew.png"
                                             alt="GINX"
-                                            className="h-8 w-auto sm:h-10 relative z-10 transition-all duration-500 group-hover:scale-105 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)] animate-in zoom-in-50 duration-700"
+                                            className="h-[36px] w-auto sm:h-[44px] relative z-10 transition-all duration-500 group-hover:scale-105 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)] animate-in zoom-in-50 duration-700"
                                         />
                                     </div>
                                 </Link>
