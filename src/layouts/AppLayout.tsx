@@ -146,21 +146,14 @@ export const AppLayout = () => {
                     <nav className="bg-black/40 backdrop-blur-3xl border border-white/10 rounded-[2rem] py-1.5 px-2 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
                         <div className="px-2 sm:px-4">
                             <div className="flex items-center justify-between h-10 sm:h-12">
-                                <Link to="/" className="flex items-center gap-1 no-underline group">
-                                    <div className="relative group flex items-center gap-1">
-                                        <div className="relative flex items-center">
-                                            <div className="absolute inset-0 bg-white/5 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                                            <img
-                                                src="/ginx.png"
-                                                alt="GINX"
-                                                className="h-11 w-auto sm:h-13 relative z-10 transition-all duration-500 group-hover:scale-110 drop-shadow-[0_0_20px_rgba(255,255,255,0.2)] animate-in zoom-in-50 duration-700"
-                                            />
-                                        </div>
-                                        <div className="flex items-center">
-                                            <span className="font-black text-xl sm:text-2xl tracking-[0.2em] bg-clip-text text-transparent bg-gradient-to-b from-white to-neutral-500 italic leading-none pr-3 pt-0.5 group-hover:from-gym-primary group-hover:to-yellow-600 transition-all duration-500 uppercase" style={{ fontFamily: 'Impact, sans-serif' }} translate="no">
-                                                GINX
-                                            </span>
-                                        </div>
+                                <Link to="/" className="flex items-center no-underline group relative">
+                                    <div className="relative flex items-center h-full">
+                                        <div className="absolute inset-0 bg-white/5 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                                        <img
+                                            src="/ginx.png"
+                                            alt="GINX"
+                                            className="h-[72px] w-auto sm:h-[92px] relative z-10 transition-all duration-500 group-hover:scale-110 drop-shadow-[0_0_25px_rgba(255,255,255,0.25)] animate-in zoom-in-50 duration-700"
+                                        />
                                     </div>
                                 </Link>
 
