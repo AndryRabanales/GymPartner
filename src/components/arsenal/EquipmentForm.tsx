@@ -218,7 +218,7 @@ export const EquipmentForm = ({
                                 type="text"
                                 autoFocus
                                 placeholder="Nombre del Ejercicio..."
-                                className="w-full bg-neutral-950 border border-white/10 rounded-full pl-5 pr-16 py-2 text-white placeholder-neutral-600 focus:border-gym-primary/60 focus:ring-2 focus:ring-gym-primary/10 focus:outline-none text-sm font-bold transition-all duration-300 shadow-inner group-hover:border-white/20"
+                                className="w-full bg-neutral-950 border border-white/10 rounded-full pl-5 pr-16 py-2 text-white placeholder-neutral-600 focus:border-gym-primary/60 focus:ring-2 focus:ring-gym-primary/10 focus:outline-none text-[16px] font-bold transition-all duration-300 shadow-inner group-hover:border-white/20"
                                 value={customName}
                                 onChange={(e) => setCustomName(e.target.value)}
                             />
@@ -309,7 +309,7 @@ export const EquipmentForm = ({
                                         <span className="text-[9px] font-black text-white uppercase tracking-wider pl-1">Nueva Categoría</span>
                                         <button onClick={() => setIsCreatingCategory(false)} className="text-neutral-500 hover:text-white p-1 hover:bg-white/5 rounded-full"><X size={12} /></button>
                                     </div>
-                                    <input type="text" placeholder="Nombre (ej: Yoga)" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} className="bg-black border border-white/15 rounded-full px-3.5 py-2 text-xs text-white font-bold w-full focus:outline-none focus:border-gym-primary" autoFocus />
+                                    <input type="text" placeholder="Nombre (ej: Yoga)" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} className="bg-black border border-white/15 rounded-full px-3.5 py-2 text-[16px] text-white font-bold w-full focus:outline-none focus:border-gym-primary" autoFocus />
                                     <div className="flex gap-2">
                                         <input type="text" value={newCategoryIcon} onChange={e => setNewCategoryIcon(e.target.value)} className="w-11 bg-black border border-white/15 rounded-full p-2 text-base text-center" />
                                         <div className="flex-1 flex gap-1.5 overflow-x-auto items-center no-scrollbar">

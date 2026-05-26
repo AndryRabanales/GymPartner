@@ -379,7 +379,7 @@ export const RoutineBuilder = () => {
                                             newL[idx].target_sets = parseInt(e.target.value);
                                             setSelectedExercises(newL);
                                         }}
-                                        className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-center font-bold"
+                                        className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-[16px] text-center font-bold"
                                     />
                                 </div>
                                 <div>
@@ -392,7 +392,7 @@ export const RoutineBuilder = () => {
                                             newL[idx].target_reps_text = e.target.value;
                                             setSelectedExercises(newL);
                                         }}
-                                        className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-center font-bold"
+                                        className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-[16px] text-center font-bold"
                                     />
                                 </div>
                             </div>
@@ -475,7 +475,7 @@ export const RoutineBuilder = () => {
                                 placeholder="Buscar ejercicio o músculo..."
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
-                                className="w-full bg-neutral-900 border border-neutral-850 rounded-xl py-3.5 pl-10 pr-4 text-white focus:outline-none focus:border-gym-primary transition-all font-bold text-sm"
+                                className="w-full bg-neutral-900 border border-neutral-850 rounded-xl py-3.5 pl-10 pr-4 text-white focus:outline-none focus:border-gym-primary transition-all font-bold text-[16px]"
                                 autoFocus
                             />
                         </div>

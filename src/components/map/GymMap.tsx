@@ -490,7 +490,7 @@ export const GymMap = () => {
                                 onFocus={() => {
                                     if (suggestions.length > 0) setShowSuggestions(true);
                                 }}
-                                className="w-full bg-neutral-950/80 backdrop-blur-xl border border-white/10 rounded-full pl-10 pr-4 py-2 text-white placeholder-neutral-400 focus:outline-none focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400/30 transition-all text-xs relative z-10 shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
+                                className="w-full bg-neutral-950/80 backdrop-blur-xl border border-white/10 rounded-full pl-10 pr-4 py-2 text-white placeholder-neutral-400 focus:outline-none focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400/30 transition-all text-[16px] relative z-10 shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
                             />
 
                             {/* Autocomplete Suggestions Dropdown */}

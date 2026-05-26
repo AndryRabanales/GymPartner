@@ -334,7 +334,7 @@ export const ChatPage = () => {
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     placeholder="Escribe un mensaje táctico..."
-                    className="flex-1 bg-neutral-900/60 border border-white/5 rounded-full px-5 py-3 text-xs text-white focus:outline-none focus:border-gym-primary/50 focus:ring-1 focus:ring-gym-primary/30 focus:shadow-[0_0_15px_rgba(255,215,0,0.08)] transition-all placeholder-neutral-500 font-medium"
+                    className="flex-1 bg-neutral-900/60 border border-white/5 rounded-full px-5 py-3 text-[16px] text-white focus:outline-none focus:border-gym-primary/50 focus:ring-1 focus:ring-gym-primary/30 focus:shadow-[0_0_15px_rgba(255,215,0,0.08)] transition-all placeholder-neutral-500 font-medium"
                 />
                 <button
                     type="submit"

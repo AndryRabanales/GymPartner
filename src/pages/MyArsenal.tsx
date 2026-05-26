@@ -1169,7 +1169,7 @@ export const MyArsenal = () => {
                             value={routineName}
                             onChange={(e) => setRoutineName(e.target.value)}
                             required
-                            className={`w-full bg-neutral-900 border-2 rounded-xl px-4 py-2.5 text-sm md:text-base text-white placeholder-neutral-500 focus:outline-none focus:bg-neutral-950 focus:border-gym-primary transition-all font-bold tracking-tight ${!routineName.trim() ? 'border-red-500/30' : 'border-neutral-850'}`}
+                            className={`w-full bg-neutral-900 border-2 rounded-xl px-4 py-2.5 text-[16px] text-white placeholder-neutral-500 focus:outline-none focus:bg-neutral-950 focus:border-gym-primary transition-all font-bold tracking-tight ${!routineName.trim() ? 'border-red-500/30' : 'border-neutral-850'}`}
                         />
                     </div>
 
@@ -1183,7 +1183,7 @@ export const MyArsenal = () => {
                             placeholder="Buscar ejercicio o máquina..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full bg-neutral-900 border-2 border-neutral-850 rounded-xl pl-10 pr-4 py-2.5 text-xs md:text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-gym-primary focus:bg-neutral-950 transition-all font-bold"
+                            className="w-full bg-neutral-900 border-2 border-neutral-850 rounded-xl pl-10 pr-4 py-2.5 text-[16px] text-white placeholder-neutral-500 focus:outline-none focus:border-gym-primary focus:bg-neutral-950 transition-all font-bold"
                         />
                     </div>
 

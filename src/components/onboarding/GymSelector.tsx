@@ -92,7 +92,7 @@ export const GymSelector = ({ onSelect }: GymSelectorProps) => {
                 </div>
                 <input
                     type="text"
-                    className="w-full bg-neutral-900 border border-neutral-800 text-white rounded-xl py-4 pl-12 pr-4 focus:ring-2 focus:ring-gym-primary/50 focus:border-transparent outline-none transition-all placeholder:text-neutral-600 font-medium"
+                    className="w-full bg-neutral-900 border border-neutral-800 text-white rounded-xl py-4 pl-12 pr-4 focus:ring-2 focus:ring-gym-primary/50 focus:border-transparent outline-none transition-all placeholder:text-neutral-600 font-medium text-[16px]"
                     placeholder="Busca tu gimnasio (Real Google Search)..."
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
