@@ -130,9 +130,10 @@ export const AppLayout = () => {
     
     const shouldHideHeader = isRadarPage || isRankingPage || isChatPage || isReelsPage || isArsenalPage || isWorkoutPage;
 
-    // Hide BottomNav during workout sessions, gym territory pages, arsenal, stats, and history
+    // Hide BottomNav during workout sessions, gym territory pages, arsenal, stats, history, and single chat pages
     const isContentPage = location.pathname === '/arsenal' || location.pathname === '/stats' || location.pathname === '/history' || location.pathname.startsWith('/history/');
-    const shouldShowBottomNav = user && !isWorkoutPage && !isContentPage && isBottomNavVisible;
+    const isSingleChatPage = location.pathname.startsWith('/chat/');
+    const shouldShowBottomNav = user && !isWorkoutPage && !isContentPage && !isSingleChatPage && isBottomNavVisible;
 
     return (
         <div className="h-[100dvh] text-white flex flex-col overflow-hidden relative">
