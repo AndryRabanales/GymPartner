@@ -81,16 +81,58 @@ export const chatService = {
      * Delete a chat completely (deletes chat and all messages due to cascade delete)
      */
     async deleteChat(chatId: string): Promise<boolean> {
-        const { error } = await supabase
-            .from('chats')
-            .delete()
-            .eq('id', chatId);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return false;
 
-        if (error) {
-            console.error('Error deleting chat:', error);
+        try {
+            // Get the chat details to find the other user's ID
+            const { data: chatData } = await supabase
+                .from('chats')
+                .select('user_a, user_b')
+                .eq('id', chatId)
+                .maybeSingle();
+
+            if (chatData) {
+                const otherUserId = chatData.user_a === user.id ? chatData.user_b : chatData.user_a;
+
+                // A. Unfollow both ways (sever match connection)
+                await supabase.from('follows').delete().eq('follower_id', user.id).eq('following_id', otherUserId);
+                await supabase.from('follows').delete().eq('follower_id', otherUserId).eq('following_id', user.id);
+
+                // B. Delete match invitations from both sides' notifications to reset match state
+                await supabase.from('notifications')
+                    .delete()
+                    .eq('type', 'invitation')
+                    .eq('user_id', user.id)
+                    .filter('data->>sender_id', 'eq', otherUserId);
+
+                // Try to delete invitation notifications on the other user's side if allowed, otherwise it fails silently
+                try {
+                    await supabase.from('notifications')
+                        .delete()
+                        .eq('type', 'invitation')
+                        .eq('user_id', otherUserId)
+                        .filter('data->>sender_id', 'eq', user.id);
+                } catch (e) {
+                    console.warn("Could not delete other user's notifications due to RLS policies. Handled gracefully.", e);
+                }
+            }
+
+            // C. Delete the chat itself
+            const { error } = await supabase
+                .from('chats')
+                .delete()
+                .eq('id', chatId);
+
+            if (error) {
+                console.error('Error deleting chat:', error);
+                return false;
+            }
+            return true;
+        } catch (error) {
+            console.error('Error in deleteChat:', error);
             return false;
         }
-        return true;
     },
 
     /**
