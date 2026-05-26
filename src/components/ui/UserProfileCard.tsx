@@ -205,9 +205,9 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
                 </div>
 
                 {/* Avatar */}
-                <div className="relative z-30 -mt-12 group">
+                <div className="relative z-30 -mt-14 group">
                     <div className="absolute -inset-1 bg-gym-primary rounded-full blur-xl opacity-40"></div>
-                    <div className="relative w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-neutral-800 to-neutral-600 shadow-2xl">
+                    <div className="relative w-28 h-28 rounded-full p-1 bg-gradient-to-tr from-neutral-800 to-neutral-600 shadow-2xl">
                         <div className="w-full h-full rounded-full bg-neutral-900 flex items-center justify-center overflow-hidden border border-white/10 relative">
                             {user.avatar_url ? (
                                 <FadeInImage
@@ -230,71 +230,71 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
                 </div>
 
                 {/* Name & Gym */}
-                <div className="text-center mt-3 pb-4 border-b border-white/5 w-full">
-                    <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase leading-tight drop-shadow-lg px-4">
+                <div className="text-center mt-1 pb-2 border-b border-white/5 w-full">
+                    <h2 className="text-xl font-black text-white italic tracking-tighter uppercase leading-tight drop-shadow-lg px-4">
                         {(user.username || 'Guerrero').replace('_', ' ')}
                     </h2>
                     {user.gym_name ? (
-                        <p className="text-[10px] font-bold text-neutral-500 mt-1 flex items-center justify-center gap-1.5 uppercase tracking-widest">
-                            <MapPin size={10} className="text-gym-primary" /> {user.gym_name}
+                        <p className="text-[9px] font-bold text-neutral-500 mt-0.5 flex items-center justify-center gap-1 uppercase tracking-widest">
+                            <MapPin size={9} className="text-gym-primary" /> {user.gym_name}
                         </p>
                     ) : (
-                        <p className="text-[10px] font-bold text-neutral-500 mt-1 flex items-center justify-center gap-1.5 uppercase tracking-widest animate-pulse">
-                            <Activity size={10} className="text-gym-primary" /> EXPLORADOR LIBRE
+                        <p className="text-[9px] font-bold text-neutral-500 mt-0.5 flex items-center justify-center gap-1 uppercase tracking-widest animate-pulse">
+                            <Activity size={9} className="text-gym-primary" /> EXPLORADOR LIBRE
                         </p>
                     )}
                 </div>
             </div>
 
             {/* --- SCROLLABLE INFORMATION AREA --- */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pt-4 pb-8 space-y-6">
+            <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pt-4 pb-8 space-y-3.5">
                 
                 {/* Stats Grid */}
-                <div className="grid grid-cols-3 gap-1 w-full">
-                    <div className="bg-white/5 backdrop-blur-md rounded-2xl p-2 border border-white/5 text-center">
-                        <p className="text-sm font-black text-gym-primary leading-none italic">{user.training_days_count}</p>
+                <div className="grid grid-cols-3 gap-1.5 w-full">
+                    <div className="bg-white/5 backdrop-blur-md rounded-xl py-1.5 px-2 border border-white/5 text-center">
+                        <p className="text-xs font-black text-gym-primary leading-none italic">{user.training_days_count}</p>
                         <p className="text-[7px] text-neutral-500 font-bold uppercase tracking-widest mt-0.5">Entrenos</p>
                     </div>
-                    <div className="bg-white/5 backdrop-blur-md rounded-2xl p-2 border border-white/5 text-center">
-                        <p className="text-sm font-black text-white leading-none italic">{user.followers_count}</p>
+                    <div className="bg-white/5 backdrop-blur-md rounded-xl py-1.5 px-2 border border-white/5 text-center">
+                        <p className="text-xs font-black text-white leading-none italic">{user.followers_count}</p>
                         <p className="text-[7px] text-neutral-500 font-bold uppercase tracking-widest mt-0.5">Seguidores</p>
                     </div>
-                    <div className="bg-white/5 backdrop-blur-md rounded-2xl p-2 border border-white/5 text-center">
-                        <p className="text-sm font-black text-white leading-none italic">{user.following_count}</p>
+                    <div className="bg-white/5 backdrop-blur-md rounded-xl py-1.5 px-2 border border-white/5 text-center">
+                        <p className="text-xs font-black text-white leading-none italic">{user.following_count}</p>
                         <p className="text-[7px] text-neutral-500 font-bold uppercase tracking-widest mt-0.5">Seguidos</p>
                     </div>
                 </div>
 
 
                 {/* Gym Passport (Visited Gyms) */}
-                        {user.gym_passport && user.gym_passport.filter(g => !g.name.includes('Arsenal Personal')).length > 0 && (
-                            <div className="flex flex-wrap gap-0.5 justify-center mt-1 px-0.5">
-                                {user.gym_passport.filter(g => !g.name.includes('Arsenal Personal')).slice(0, 8).map((gym, idx) => {
-                                    const isFav = gym.is_favorite;
-                                    const isHome = gym.is_home_base;
-                                    const borderColor = isFav ? 'border-red-500/50 hover:border-red-500' : isHome ? 'border-yellow-500/50 hover:border-yellow-500' : 'border-white/5 hover:border-white/10';
-                                    const textColor = isFav ? 'text-red-400 hover:text-red-300' : isHome ? 'text-yellow-400 hover:text-yellow-300' : 'text-neutral-300 hover:text-white';
-                                    const bgColor = isFav ? 'bg-red-500/10 hover:bg-red-500/20' : isHome ? 'bg-yellow-500/10 hover:bg-yellow-500/20' : 'bg-neutral-900/60 hover:bg-neutral-900/70';
-                                    const iconColor = isFav ? 'text-red-500' : isHome ? 'text-yellow-500' : 'text-neutral-500';
-                                    const shadow = 'hover:shadow-[0_0_15px_rgba(0,0,0,0.2)]';
-                                    return (
-                                        <div
-                                            key={`${gym.id}-${idx}`}
-                                            className={`flex items-center gap-0.5 px-2 py-1 rounded-full ${bgColor} border ${borderColor} ${textColor} ${shadow} text-xs`}
-                                        >
-                                            <MapPin size={9} className={iconColor} />
-                                            {isFav && <Heart size={9} className="text-red-500 ml-0.5" />}
-                                            <span>{gym.name}</span>
-                                        </div>
-                                    );
-                                })}
-                                {user.gym_passport.filter(g => !g.name.includes('Arsenal Personal')).length > 8 && (
-                                    <div className="flex items-center gap-0.5 px-2 py-1 rounded-full bg-neutral-900/60 border border-white/5 text-[8px] font-black italic uppercase tracking-tighter text-neutral-400">
-                                        +{user.gym_passport.filter(g => !g.name.includes('Arsenal Personal')).length - 8} MÁS
-                                    </div>
-                                )}
+                {user.gym_passport && user.gym_passport.filter(g => !g.name.includes('Arsenal Personal')).length > 0 && (
+                    <div className="grid grid-cols-2 gap-1.5 w-full mt-1">
+                        {user.gym_passport.filter(g => !g.name.includes('Arsenal Personal')).slice(0, 8).map((gym, idx) => {
+                            const isFav = gym.is_favorite;
+                            const isHome = gym.is_home_base;
+                            const borderColor = isFav ? 'border-red-500/50 hover:border-red-500' : isHome ? 'border-yellow-500/50 hover:border-yellow-500' : 'border-white/5 hover:border-white/10';
+                            const textColor = isFav ? 'text-red-400 hover:text-red-300' : isHome ? 'text-yellow-400 hover:text-yellow-300' : 'text-neutral-300 hover:text-white';
+                            const bgColor = isFav ? 'bg-red-500/10 hover:bg-red-500/20' : isHome ? 'bg-yellow-500/10 hover:bg-yellow-500/20' : 'bg-neutral-900/60 hover:bg-neutral-900/70';
+                            const iconColor = isFav ? 'text-red-500' : isHome ? 'text-yellow-500' : 'text-neutral-500';
+                            const shadow = 'hover:shadow-[0_0_15px_rgba(0,0,0,0.2)]';
+                            return (
+                                <div
+                                    key={`${gym.id}-${idx}`}
+                                    className={`flex items-center justify-center gap-1 px-2.5 py-1 rounded-xl ${bgColor} border ${borderColor} ${textColor} ${shadow} text-[9px] font-black uppercase tracking-wider w-full`}
+                                >
+                                    <MapPin size={9} className={`${iconColor} shrink-0`} />
+                                    {isFav && <Heart size={9} className="text-red-500 shrink-0" />}
+                                    <span className="truncate max-w-[100px]">{gym.name}</span>
+                                </div>
+                            );
+                        })}
+                        {user.gym_passport.filter(g => !g.name.includes('Arsenal Personal')).length > 8 && (
+                            <div className="col-span-2 flex items-center justify-center gap-0.5 px-2.5 py-1 rounded-xl bg-neutral-900/60 border border-white/5 text-[9px] font-black italic uppercase tracking-tighter text-neutral-400 w-full">
+                                +{user.gym_passport.filter(g => !g.name.includes('Arsenal Personal')).length - 8} MÁS
                             </div>
                         )}
+                    </div>
+                )}
 
                 {/* Base Card */}
                 {user.gym_name ? (
