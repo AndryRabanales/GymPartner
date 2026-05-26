@@ -645,7 +645,6 @@ export const UserProfile = () => {
                     </div>
                 </div>
             </div>
-        </div>
 
         {/* Main content below profile card (Occupies 94% Width) */}
         <div className="w-[94%] mx-auto space-y-3 sm:space-y-4">
@@ -708,8 +707,6 @@ export const UserProfile = () => {
                 </div>
             )}
 
-            {/* Main content below profile card (Occupies 94% Width) */}
-            <div className="w-[94%] mx-auto space-y-3 sm:space-y-4">
                 {/* Primary Action & Quick Access */}
                 <div className="flex flex-col gap-2 sm:gap-4">
 
