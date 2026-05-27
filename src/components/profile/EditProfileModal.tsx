@@ -175,46 +175,44 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
 
     return (
         <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4 backdrop-blur-md animate-in fade-in duration-300">
-            <div className="bg-gradient-to-b from-neutral-900 to-neutral-950 border border-neutral-800/50 w-full max-w-lg rounded-3xl p-8 relative shadow-2xl shadow-black/50 overflow-y-auto max-h-[90vh] custom-scrollbar">
+            <div className="bg-gradient-to-b from-neutral-900 to-neutral-950 border border-neutral-800/50 w-full max-w-md rounded-[2.5rem] relative shadow-2xl shadow-black/50 flex flex-col max-h-[85vh] overflow-hidden">
 
-                {/* Close Button */}
-                <button
-                    onClick={onClose}
-                    className="absolute top-6 right-6 text-neutral-400 hover:text-white hover:bg-white/10 transition-all z-10 p-2 rounded-full backdrop-blur-sm"
-                >
-                    <X size={20} />
-                </button>
-
-                <div className="mb-8">
-                    <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-neutral-400 italic uppercase tracking-tighter">
+                {/* Static Header */}
+                <div className="px-6 pt-6 pb-3.5 border-b border-white/5 relative shrink-0">
+                    <h2 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-neutral-400 italic uppercase tracking-tighter">
                         Editar Perfil
                     </h2>
-                    <p className="text-xs text-neutral-500 mt-1">Personaliza tu identidad en GymPartner</p>
+                    <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest mt-0.5">Personaliza tu identidad en GINX</p>
+                    
+                    {/* Close Button */}
+                    <button
+                        onClick={onClose}
+                        className="absolute top-5 right-5 text-neutral-400 hover:text-white hover:bg-white/5 transition-all p-2 rounded-full"
+                    >
+                        <X size={18} />
+                    </button>
                 </div>
 
-                <div className="space-y-8">
-                    {/* Banner Upload Section */}
-                    <div className="space-y-3">
-                        <label className="text-xs font-bold text-neutral-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                            <Camera size={12} className="text-gym-primary" />
-                            Foto de Portada
-                        </label>
+                {/* Scrollable Form Content */}
+                <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5 custom-scrollbar">
+                    
+                    {/* Unified Cover & Avatar Header */}
+                    <div className="relative mb-6 shrink-0">
+                        {/* Banner Upload Section */}
                         <div
                             onClick={() => bannerInputRef.current?.click()}
-                            className="w-full h-40 rounded-2xl border-2 border-dashed border-neutral-700 hover:border-gym-primary/50 transition-all cursor-pointer relative overflow-hidden group bg-neutral-950"
+                            className="w-full h-28 rounded-2xl border border-neutral-800 hover:border-gym-primary/50 transition-all cursor-pointer relative overflow-hidden group bg-neutral-950"
                         >
                             {bannerPreview ? (
                                 <img src={bannerPreview} alt="Banner" className="w-full h-full object-cover opacity-60 group-hover:opacity-80 group-hover:scale-105 transition-all duration-300" />
                             ) : (
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                    <span className="text-neutral-700 text-sm font-bold uppercase tracking-widest">Sin Portada</span>
+                                <div className="absolute inset-0 flex items-center justify-center bg-neutral-900/60">
+                                    <span className="text-neutral-600 text-[10px] font-black uppercase tracking-widest">Sin Portada</span>
                                 </div>
                             )}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                <div className="bg-gym-primary/20 p-3 rounded-full backdrop-blur-sm border border-gym-primary/30">
-                                    <Camera className="text-gym-primary" size={24} />
-                                </div>
-                                <span className="text-xs text-white font-bold uppercase mt-3 tracking-widest">Cambiar Fondo</span>
+                            <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <Camera className="text-gym-primary mb-1" size={18} />
+                                <span className="text-[9px] text-white font-bold uppercase tracking-widest">Cambiar Portada</span>
                             </div>
                         </div>
                         <input
@@ -224,42 +222,45 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                             accept="image/*"
                             className="hidden"
                         />
-                    </div>
 
-                    {/* Avatar Upload Section */}
-                    <div className="flex flex-col items-center gap-4 -mt-2">
-                        <div
-                            className="relative group cursor-pointer"
-                            onClick={() => fileInputRef.current?.click()}
-                        >
-                            <div className="absolute -inset-1 bg-gradient-to-r from-gym-primary to-yellow-400 rounded-full blur opacity-0 group-hover:opacity-30 transition-opacity duration-300"></div>
-                            <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-neutral-800 group-hover:border-gym-primary/50 transition-all duration-300">
-                                <img
-                                    src={previewUrl || 'https://i.pravatar.cc/300'}
-                                    alt="Preview"
-                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                                />
-                                {/* Overlay */}
-                                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                    <Camera className="text-white" size={28} />
-                                    <span className="text-white text-xs font-bold uppercase tracking-wider">
-                                        Cambiar
-                                    </span>
+                        {/* Avatar Upload Section - Overlaps Cover bottom edge */}
+                        <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 z-20">
+                            <div
+                                className="relative group cursor-pointer"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    fileInputRef.current?.click();
+                                }}
+                            >
+                                <div className="absolute -inset-0.5 bg-gradient-to-r from-gym-primary to-yellow-400 rounded-full blur opacity-0 group-hover:opacity-30 transition-opacity duration-300"></div>
+                                <div className="relative w-20 h-20 rounded-full overflow-hidden border-4 border-neutral-900 group-hover:border-gym-primary/50 transition-all duration-300 shadow-xl bg-neutral-950">
+                                    <img
+                                        src={previewUrl || 'https://i.pravatar.cc/300'}
+                                        alt="Preview"
+                                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                                    />
+                                    {/* Overlay */}
+                                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                        <Camera className="text-white mb-0.5" size={16} />
+                                        <span className="text-white text-[8px] font-black uppercase tracking-wider">
+                                            Cambiar
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleFileChange}
+                                accept="image/*"
+                                className="hidden"
+                            />
                         </div>
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            onChange={handleFileChange}
-                            accept="image/*"
-                            className="hidden"
-                        />
                     </div>
 
                     {/* Username Input */}
-                    <div className="space-y-3">
-                        <label className="text-xs font-bold text-neutral-400 uppercase tracking-widest ml-1">
+                    <div className="space-y-1.5 mt-8">
+                        <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">
                             Nombre de Usuario (Máx. 20 caracteres)
                         </label>
                         <input
@@ -271,18 +272,18 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                                 }
                             }}
                             maxLength={20}
-                            className="w-full bg-neutral-950/50 border-2 border-neutral-800 rounded-xl px-5 py-4 text-white font-bold tracking-tight focus:outline-none focus:border-gym-primary/70 focus:bg-neutral-950 transition-all placeholder:text-neutral-700 hover:border-neutral-700"
+                            className="w-full bg-neutral-950/50 border-2 border-neutral-800 rounded-xl px-4 py-2.5 text-white font-bold tracking-tight focus:outline-none focus:border-gym-primary/70 focus:bg-neutral-950 transition-all placeholder:text-neutral-700 hover:border-neutral-700 text-sm"
                             placeholder="Tu nombre público..."
                         />
                     </div>
 
                     {/* Description Input */}
-                    <div className="space-y-3">
+                    <div className="space-y-1.5">
                         <div className="flex items-center justify-between">
-                            <label className="text-xs font-bold text-neutral-400 uppercase tracking-widest ml-1">
+                            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">
                                 Descripción (Aparecerá en el Radar)
                             </label>
-                            <span className={`text-xs font-bold transition-colors ${description.length > 150
+                            <span className={`text-[9px] font-black tracking-wider transition-colors ${description.length > 150
                                     ? 'text-red-500'
                                     : description.length > 130
                                         ? 'text-yellow-500'
@@ -298,83 +299,83 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                                     setDescription(e.target.value);
                                 }
                             }}
-                            rows={3}
-                            className="w-full bg-neutral-950/50 border-2 border-neutral-800 rounded-xl px-5 py-4 text-white font-medium tracking-tight focus:outline-none focus:border-gym-primary/70 focus:bg-neutral-950 transition-all placeholder:text-neutral-700 hover:border-neutral-700 resize-none"
-                            placeholder="Ej: Levantador de pesas | Entrenando para ultramaratón 🏃..."
+                            rows={2}
+                            className="w-full bg-neutral-950/50 border-2 border-neutral-800 rounded-xl px-4 py-2.5 text-white font-medium tracking-tight focus:outline-none focus:border-gym-primary/70 focus:bg-neutral-950 transition-all placeholder:text-neutral-700 hover:border-neutral-700 resize-none text-xs leading-relaxed"
+                            placeholder="Ej: Levantador de pesas | Entrenando para ultramaratón..."
                         />
-                        <p className="text-[10px] text-neutral-600 ml-1 leading-relaxed">
-                            💡 Otros usuarios verán esto en el Radar cuando busquen compañeros de gimnasio.
+                        <p className="text-[9px] text-neutral-600 ml-1 leading-relaxed">
+                            💡 Otros usuarios verán esto en el Radar al buscar compañeros.
                         </p>
                     </div>
 
                     {/* PRIVACIDAD DEL HISTORIAL */}
-                    <div className="space-y-4 pt-6 border-t border-neutral-800/50">
-                        <label className="text-sm font-black text-gym-primary uppercase tracking-wide flex items-center gap-2">
-                            <History size={16} className="animate-pulse text-yellow-500" /> Privacidad del Historial
+                    <div className="space-y-3 pt-4 border-t border-neutral-800/50">
+                        <label className="text-xs font-black text-gym-primary uppercase tracking-wide flex items-center gap-2">
+                            <History size={14} className="animate-pulse text-yellow-500" /> Privacidad del Historial
                         </label>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-3">
                             <button
                                 type="button"
                                 onClick={() => setIsHistoryPublic(true)}
-                                className={`flex flex-col items-center justify-center p-5 rounded-2xl border-2 transition-all gap-2 ${isHistoryPublic
-                                    ? 'bg-green-500/10 border-green-500 text-white shadow-[0_0_20px_rgba(34,197,94,0.15)] scale-[1.02]'
+                                className={`flex flex-col items-center justify-center p-3.5 rounded-2xl border-2 transition-all gap-1 ${isHistoryPublic
+                                    ? 'bg-green-500/10 border-green-500 text-white shadow-[0_0_15px_rgba(34,197,94,0.12)] scale-[1.01]'
                                     : 'bg-neutral-950/40 border-neutral-800 text-neutral-500 hover:border-neutral-700'
                                 }`}
                             >
-                                <Eye size={22} className={isHistoryPublic ? 'text-green-500' : 'text-neutral-500'} />
-                                <span className="font-black text-xs uppercase tracking-wider">Historial Público 🔓</span>
-                                <span className="text-[9px] font-bold text-center text-neutral-500 leading-normal max-w-[130px]">
-                                    Cualquiera que visite tu perfil podrá ver tus entrenamientos
+                                <Eye size={18} className={isHistoryPublic ? 'text-green-500' : 'text-neutral-500'} />
+                                <span className="font-black text-[10px] uppercase tracking-wider">Público 🔓</span>
+                                <span className="text-[8px] font-bold text-center text-neutral-500 leading-normal max-w-[120px] mt-0.5">
+                                    Cualquiera podrá ver tus entrenamientos
                                 </span>
                             </button>
 
                             <button
                                 type="button"
                                 onClick={() => setIsHistoryPublic(false)}
-                                className={`flex flex-col items-center justify-center p-5 rounded-2xl border-2 transition-all gap-2 ${!isHistoryPublic
-                                    ? 'bg-yellow-500/10 border-yellow-500 text-white shadow-[0_0_20px_rgba(234,179,8,0.15)] scale-[1.02]'
+                                className={`flex flex-col items-center justify-center p-3.5 rounded-2xl border-2 transition-all gap-1 ${!isHistoryPublic
+                                    ? 'bg-yellow-500/10 border-yellow-500 text-white shadow-[0_0_15px_rgba(234,179,8,0.12)] scale-[1.01]'
                                     : 'bg-neutral-950/40 border-neutral-800 text-neutral-500 hover:border-neutral-700'
                                 }`}
                             >
-                                <EyeOff size={22} className={!isHistoryPublic ? 'text-yellow-500' : 'text-neutral-500'} />
-                                <span className="font-black text-xs uppercase tracking-wider">Solo Compartidos 🔒</span>
-                                <span className="text-[9px] font-bold text-center text-neutral-500 leading-normal max-w-[130px]">
-                                    Solo aliados autorizados o con solicitud aceptada
+                                <EyeOff size={18} className={!isHistoryPublic ? 'text-yellow-500' : 'text-neutral-500'} />
+                                <span className="font-black text-[10px] uppercase tracking-wider">Compartido 🔒</span>
+                                <span className="text-[8px] font-bold text-center text-neutral-500 leading-normal max-w-[120px] mt-0.5">
+                                    Solo aliados autorizados o con invitación
                                 </span>
                             </button>
                         </div>
                         
                         {!isHistoryPublic && (
-                            <div className="mt-4 bg-neutral-900/50 rounded-2xl border border-neutral-800 p-4">
-                                <h4 className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                    <Users size={14} className="text-gym-primary" /> Aliados Autorizados
+                            <div className="mt-2 bg-neutral-900/50 rounded-2xl border border-neutral-800 p-3">
+                                <h4 className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                                    <Users size={12} className="text-gym-primary" /> Aliados Autorizados
                                 </h4>
                                 {loadingSharedProfiles ? (
-                                    <div className="flex justify-center py-4">
-                                        <Loader className="animate-spin text-gym-primary" size={20} />
+                                    <div className="flex justify-center py-3">
+                                        <Loader className="animate-spin text-gym-primary" size={16} />
                                     </div>
                                 ) : sharedHistoryProfiles.length === 0 ? (
-                                    <p className="text-[10px] text-neutral-500 text-center py-2">
+                                    <p className="text-[9px] text-neutral-500 text-center py-1">
                                         Nadie tiene acceso a tu historial por ahora.
                                     </p>
                                 ) : (
-                                    <div className="space-y-2 max-h-40 overflow-y-auto custom-scrollbar pr-2">
+                                    <div className="space-y-1.5 max-h-32 overflow-y-auto custom-scrollbar pr-1">
                                         {sharedHistoryProfiles.map(profile => (
-                                            <div key={profile.id} className="flex items-center justify-between bg-neutral-950/50 p-2.5 rounded-xl border border-neutral-800/50">
-                                                <div className="flex items-center gap-2.5 min-w-0">
+                                            <div key={profile.id} className="flex items-center justify-between bg-neutral-950/50 p-2 rounded-xl border border-neutral-800/50">
+                                                <div className="flex items-center gap-2 min-w-0">
                                                     <img 
                                                         src={profile.avatar_url || `https://ui-avatars.com/api/?name=${profile.username}&background=random`} 
                                                         alt={profile.username} 
-                                                        className="w-8 h-8 rounded-full border border-neutral-700 object-cover shrink-0"
+                                                        className="w-6 h-6 rounded-full border border-neutral-700 object-cover shrink-0"
                                                     />
-                                                    <span className="font-bold text-white text-xs truncate">{profile.username}</span>
+                                                    <span className="font-bold text-white text-[11px] truncate">@{profile.username}</span>
                                                 </div>
                                                 <button
                                                     onClick={() => handleRevokeAccess(profile.id)}
                                                     disabled={revokingProfileId === profile.id}
-                                                    className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border border-red-500/30 flex items-center gap-1"
+                                                    className="px-2 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-md text-[9px] font-black uppercase tracking-wider transition-all border border-red-500/20 flex items-center gap-1"
                                                 >
-                                                    {revokingProfileId === profile.id ? <Loader size={12} className="animate-spin" /> : 'Remover'}
+                                                    {revokingProfileId === profile.id ? <Loader size={10} className="animate-spin" /> : 'Remover'}
                                                 </button>
                                             </div>
                                         ))}
@@ -384,95 +385,51 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                         )}
                     </div>
 
-                    {/* BATTLE DECK SELECTOR (With Privacy Toggle) */}
-                    <div className="space-y-4 pt-6 border-t border-neutral-800/50">
+                    {/* BATTLE DECK SELECTOR */}
+                    <div className="space-y-3 pt-4 border-t border-neutral-800/50">
                         <div className="flex items-center justify-between">
-                            <label className="text-sm font-black text-gym-primary uppercase tracking-wide flex items-center gap-2">
-                                <Swords size={16} className="animate-pulse" /> Arsenal Público
+                            <label className="text-xs font-black text-gym-primary uppercase tracking-wide flex items-center gap-2">
+                                <Swords size={14} className="animate-pulse" /> Arsenal Público
                             </label>
-                            <Link to="/builder" onClick={onClose} className="text-xs font-bold text-neutral-500 hover:text-gym-primary uppercase flex items-center gap-1.5 transition-colors bg-neutral-900/50 px-3 py-1.5 rounded-full border border-neutral-800 hover:border-gym-primary/30">
-                                <Trophy size={12} /> Crear Nueva
+                            <Link to="/builder" onClick={onClose} className="text-[9px] font-black text-neutral-400 hover:text-gym-primary uppercase flex items-center gap-1 transition-colors bg-neutral-900/50 px-2.5 py-1 rounded-full border border-neutral-800 hover:border-gym-primary/20">
+                                <Trophy size={10} /> Crear Nueva
                             </Link>
                         </div>
 
-
                         {/* Scrollable Container with Fade Effects */}
                         <div className="relative">
-                            {/* Top Fade Gradient - Only show if there are enough items */}
-                            {routines.length > 3 && (
-                                <div className="absolute top-0 left-0 right-0 h-6 bg-gradient-to-b from-neutral-900 via-neutral-900/80 to-transparent z-10 pointer-events-none"></div>
-                            )}
-
                             {/* Scrollable List */}
-                            <div
-                                className="space-y-2 max-h-64 overflow-y-auto pr-2 scroll-smooth arsenal-scrollbar"
-                            >
-                                <style>{`
-                                    /* Custom Scrollbar */
-                                    .arsenal-scrollbar::-webkit-scrollbar {
-                                        width: 8px;
-                                    }
-                                    .arsenal-scrollbar::-webkit-scrollbar-track {
-                                        background: #171717;
-                                        border-radius: 12px;
-                                        margin: 4px 0;
-                                    }
-                                    .arsenal-scrollbar::-webkit-scrollbar-thumb {
-                                        background: linear-gradient(180deg, #facc15 0%, #ea580c 100%);
-                                        border-radius: 12px;
-                                        border: 2px solid #171717;
-                                        transition: all 0.2s ease;
-                                    }
-                                    .arsenal-scrollbar::-webkit-scrollbar-thumb:hover {
-                                        background: linear-gradient(180deg, #fbbf24 0%, #f97316 100%);
-                                        border: 2px solid #262626;
-                                    }
-                                    .arsenal-scrollbar::-webkit-scrollbar-thumb:active {
-                                        background: #facc15;
-                                    }
-                                    
-                                    /* Firefox */
-                                    .arsenal-scrollbar {
-                                        scrollbar-width: thin;
-                                        scrollbar-color: #facc15 #171717;
-                                    }
-                                `}</style>
-
+                            <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1.5 scroll-smooth arsenal-scrollbar">
                                 {routines.map((routine, index) => (
-                                    <div key={routine.id} className="flex gap-2 animate-in slide-in-from-left duration-300" style={{ animationDelay: `${index * 50}ms` }}>
-                                        {/* Selection Button (Featured) */}
+                                    <div key={routine.id} className="flex gap-1.5 animate-in slide-in-from-left duration-300" style={{ animationDelay: `${index * 30}ms` }}>
+                                        {/* Selection Button */}
                                         <button
                                             onClick={() => setSelectedRoutineId(routine.id === selectedRoutineId ? null : routine.id)}
-                                            className={`flex-1 text-left p-4 rounded-xl border-2 transition-all flex items-center justify-between group relative overflow-hidden ${selectedRoutineId === routine.id
-                                                ? 'bg-gym-primary/10 border-gym-primary text-white shadow-lg shadow-gym-primary/10'
-                                                : 'bg-neutral-950/50 border-neutral-800 text-neutral-400 hover:border-neutral-700 hover:bg-neutral-950'
+                                            className={`flex-1 text-left p-3 rounded-xl border transition-all flex items-center justify-between group relative overflow-hidden ${selectedRoutineId === routine.id
+                                                ? 'bg-gym-primary/5 border-gym-primary text-white shadow-md'
+                                                : 'bg-neutral-950/40 border-neutral-800 text-neutral-400 hover:border-neutral-700 hover:bg-neutral-950/60'
                                                 }`}
                                         >
-                                            <div className="flex flex-col gap-1.5 relative z-10 w-full pr-4">
-                                                <span className="font-black text-sm text-white truncate">{routine.name}</span>
-                                                <div className="flex items-center flex-wrap gap-2">
-                                                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-black tracking-wider uppercase ${
+                                            <div className="flex flex-col gap-1 relative z-10 w-full pr-3">
+                                                <span className="font-bold text-xs text-white truncate">{routine.name}</span>
+                                                <div className="flex items-center flex-wrap gap-1.5">
+                                                    <span className={`text-[8px] px-1 py-0.2 rounded font-black tracking-wider uppercase ${
                                                         selectedRoutineId === routine.id 
-                                                            ? 'bg-gym-primary/20 text-gym-primary' 
-                                                            : 'bg-neutral-800 text-neutral-400'
+                                                            ? 'bg-gym-primary/25 text-gym-primary' 
+                                                            : 'bg-neutral-800 text-neutral-500'
                                                     }`}>
                                                         {selectedRoutineId === routine.id ? '⭐ DESTACADA' : 'NORMAL'}
                                                     </span>
                                                     {routine.shares_count > 0 && (
-                                                        <span className="px-1.5 py-0.5 rounded bg-gym-primary/20 text-gym-primary text-[9px] font-black uppercase tracking-wide flex items-center gap-1 border border-gym-primary/30 shrink-0">
-                                                            <Users size={10} strokeWidth={3} />
-                                                            Compartida con {routine.shares_count} {routine.shares_count === 1 ? 'persona' : 'personas'}
+                                                        <span className="px-1 py-0.2 rounded bg-gym-primary/10 text-gym-primary text-[8px] font-black uppercase tracking-wide flex items-center gap-0.5 border border-gym-primary/20 shrink-0">
+                                                            <Users size={8} strokeWidth={3} />
+                                                            {routine.shares_count} {routine.shares_count === 1 ? 'persona' : 'personas'}
                                                         </span>
                                                     )}
                                                 </div>
                                             </div>
                                             {selectedRoutineId === routine.id && (
-                                                <div className="relative z-10 flex items-center gap-2">
-                                                    <div className="w-2 h-2 rounded-full bg-gym-primary animate-pulse"></div>
-                                                </div>
-                                            )}
-                                            {selectedRoutineId === routine.id && (
-                                                <div className="absolute inset-0 bg-gradient-to-r from-gym-primary/5 to-transparent"></div>
+                                                <div className="w-1.5 h-1.5 rounded-full bg-gym-primary animate-pulse shrink-0"></div>
                                             )}
                                         </button>
 
@@ -481,69 +438,53 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                                             onClick={async (e) => {
                                                 e.stopPropagation();
                                                 const newStatus = !routine.is_public;
-
-                                                // 🛡️ LIMIT CHECK: Max 5 Public Routines
                                                 if (newStatus) {
                                                     const publicCount = routines.filter(r => r.is_public).length;
                                                     if (publicCount >= 5) {
-                                                        alert("⚠️ Límite Alcanzado: Solo puedes tener 5 rutinas públicas visibles en el Ranking. Oculta otra para activar esta.");
+                                                        alert("⚠️ Límite Alcanzado: Solo puedes tener 5 rutinas públicas en el Ranking.");
                                                         return;
                                                     }
                                                 }
-
-                                                // Optimistic Update
                                                 setRoutines(prev => prev.map(r => r.id === routine.id ? { ...r, is_public: newStatus } : r));
-
                                                 await userService.updateRoutineVisibility(routine.id, newStatus);
                                             }}
-                                            className={`w-14 flex items-center justify-center rounded-xl border-2 transition-all hover:scale-105 active:scale-95 ${routine.is_public
-                                                ? 'bg-green-500/10 border-green-500 text-green-500 hover:bg-green-500/20'
-                                                : 'bg-red-500/10 border-red-500/50 text-red-500 hover:bg-red-500/20'
+                                            className={`w-11 flex items-center justify-center rounded-xl border transition-all ${routine.is_public
+                                                ? 'bg-green-500/10 border-green-500/80 text-green-500 hover:bg-green-500/20'
+                                                : 'bg-red-500/5 border-red-500/30 text-red-500 hover:bg-red-500/10'
                                                 }`}
-                                            title={routine.is_public ? "Pública (Visible en Ranking)" : "Privada (Solo tú)"}
+                                            title={routine.is_public ? "Pública" : "Privada"}
                                         >
-                                            {routine.is_public ? <Eye size={20} /> : <EyeOff size={20} />}
+                                            {routine.is_public ? <Eye size={16} /> : <EyeOff size={16} />}
                                         </button>
                                     </div>
                                 ))}
                                 {routines.length === 0 && (
-                                    <div className="text-center p-6 border-2 border-dashed border-neutral-800 rounded-xl bg-neutral-950/30">
-                                        <Swords size={32} className="mx-auto mb-2 text-neutral-700" />
-                                        <p className="text-sm text-neutral-600 font-bold">No tienes rutinas creadas.</p>
-                                        <p className="text-xs text-neutral-700 mt-1">Crea tu primera estrategia</p>
+                                    <div className="text-center p-4 border border-dashed border-neutral-800 rounded-xl bg-neutral-950/20">
+                                        <Swords size={24} className="mx-auto mb-1 text-neutral-700" />
+                                        <p className="text-xs text-neutral-600 font-bold">No tienes rutinas creadas.</p>
                                     </div>
                                 )}
                             </div>
-
-                            {/* Bottom Fade Gradient - Only show if there are enough items */}
-                            {routines.length > 3 && (
-                                <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-neutral-900 via-neutral-900/80 to-transparent pointer-events-none"></div>
-                            )}
-                        </div>
-                        <div className="bg-neutral-950/50 border border-neutral-800/50 rounded-xl p-3">
-                            <p className="text-[10px] text-neutral-500 leading-relaxed">
-                                <span className="text-green-500 font-black">💡 TIP:</span> Solo las rutinas "Públicas" se verán en tu perfil cuando otros te inspeccionen.
-                            </p>
                         </div>
                     </div>
+                </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex gap-4 pt-6">
-                        <button
-                            onClick={onClose}
-                            className="flex-1 py-4 rounded-xl font-bold text-neutral-400 hover:text-white hover:bg-neutral-800/50 transition-all border-2 border-neutral-800 hover:border-neutral-700"
-                        >
-                            Cancelar
-                        </button>
-                        <button
-                            onClick={handleSave}
-                            disabled={loading}
-                            className="flex-1 bg-gradient-to-r from-gym-primary to-yellow-400 hover:from-yellow-400 hover:to-gym-primary text-black font-black uppercase tracking-wider py-4 rounded-xl transition-all transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2 shadow-xl shadow-gym-primary/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                        >
-                            {loading ? <Loader className="animate-spin" size={20} /> : <Save size={20} />}
-                            <span>{loading ? 'Guardando...' : 'Guardar'}</span>
-                        </button>
-                    </div>
+                {/* Static Pinned Footer Bar */}
+                <div className="px-6 py-4 border-t border-white/5 bg-neutral-950/80 backdrop-blur-md flex gap-3 shrink-0 z-10">
+                    <button
+                        onClick={onClose}
+                        className="flex-1 py-3 rounded-xl font-bold text-xs uppercase tracking-wider text-neutral-400 hover:text-white hover:bg-neutral-850 transition-all border border-neutral-800 hover:border-neutral-700"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        onClick={handleSave}
+                        disabled={loading}
+                        className="flex-[1.2] bg-gradient-to-r from-gym-primary to-yellow-400 hover:from-yellow-400 hover:to-gym-primary text-black font-black uppercase tracking-wider py-3 rounded-xl transition-all transform hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 shadow-xl shadow-gym-primary/25 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 text-xs"
+                    >
+                        {loading ? <Loader className="animate-spin" size={16} /> : <Save size={16} />}
+                        <span>{loading ? 'Guardando...' : 'Guardar Cambios'}</span>
+                    </button>
                 </div>
             </div>
         </div>
