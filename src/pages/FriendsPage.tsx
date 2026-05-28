@@ -5,7 +5,6 @@ import { chatService, ChatPreview } from '../services/ChatService';
 import { FadeInImage } from '../components/ui/FadeInImage';
 import { BottomNav } from '../components/navigation/BottomNav';
 import { notificationService } from '../services/NotificationService';
-import { TopHeader } from '../components/TopHeader';
 
 export const FriendsPage = () => {
     const [friends, setFriends] = useState<ChatPreview[]>([]);
@@ -57,8 +56,6 @@ export const FriendsPage = () => {
 
     return (
         <div className="min-h-screen bg-black text-white pb-24">
-            <TopHeader />
-
             {/* HEADER */}
             <div className="pt-20 px-4 pb-6 relative z-10 flex flex-col items-center">
                 <div className="w-16 h-16 rounded-full bg-gym-primary/10 border border-gym-primary/30 flex items-center justify-center mb-4">
