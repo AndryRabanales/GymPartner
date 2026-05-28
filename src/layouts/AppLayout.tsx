@@ -1,7 +1,7 @@
 import { MapPin, LogIn, LogOut } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Link, Outlet, useLocation } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { UploadModal } from '../components/social/UploadModal';
 import { BottomNav } from '../components/navigation/BottomNav';
 import { useBottomNav } from '../context/BottomNavContext';
@@ -15,6 +15,7 @@ import { GlobalGPSGuard } from '../components/GlobalGPSGuard';
 import { supabase } from '../lib/supabase';
 import toast, { Toaster } from 'react-hot-toast';
 import { COMMON_EQUIPMENT_SEEDS } from '../services/GymEquipmentService';
+import { notificationService } from '../services/NotificationService';
 
 export const AppLayout = () => {
     useAutoCheckin();
@@ -23,6 +24,7 @@ export const AppLayout = () => {
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const location = useLocation();
+    const navigate = useNavigate();
 
     // Preload all exercise catalog images for instant rendering without delays
     useEffect(() => {
@@ -111,6 +113,85 @@ export const AppLayout = () => {
                             </div>
                         </div>
                     ), { duration: 6000 });
+                } else if (newNotification.type === 'coop_invite') {
+                    const modeLabel = newNotification.data?.mode === 'conjunto' ? 'CONJUNTO' : 'SEPARADO';
+                    toast.custom((t) => (
+                        <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-sm w-full bg-neutral-950/95 backdrop-blur-2xl border border-yellow-500/40 shadow-[0_20px_50px_rgba(250,204,21,0.2)] rounded-3xl pointer-events-auto flex flex-col p-4`}>
+                            <div className="flex items-center">
+                                <div className="shrink-0">
+                                    <div className="w-10 h-10 rounded-full bg-yellow-500/20 border border-yellow-500/30 flex items-center justify-center text-yellow-500 font-black text-[9px] tracking-widest">
+                                        RETO
+                                    </div>
+                                </div>
+                                <div className="ml-3 flex-1">
+                                    <p className="text-sm font-black text-white uppercase tracking-wider italic">
+                                        {newNotification.title || 'DESAFÍO DE ENTRENAMIENTO'}
+                                    </p>
+                                    <p className="mt-0.5 text-[11px] text-neutral-300 font-bold uppercase leading-normal">
+                                        Te invita a un entrenamiento <span className="text-yellow-500">{modeLabel}</span>.
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="mt-4 flex gap-2 w-full">
+                                <button
+                                    onClick={async () => {
+                                        toast.dismiss(t.id);
+                                        await notificationService.updateInvitationStatus(newNotification, 'rejected');
+                                    }}
+                                    className="flex-1 py-2 rounded-xl bg-neutral-900 border border-white/5 text-neutral-400 font-bold text-[10px] uppercase tracking-wider hover:bg-red-500/10 hover:text-red-500 transition-all active:scale-95"
+                                >
+                                    IGNORAR
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        toast.dismiss(t.id);
+                                        const senderId = newNotification.data?.sender_id;
+                                        if (!senderId) return;
+
+                                        await notificationService.updateInvitationStatus(newNotification, 'accepted');
+                                        
+                                        const mode = newNotification.data?.mode || 'separado';
+                                        
+                                        // Notify the inviter so their app automatically pulls them into the session
+                                        await supabase.from('notifications').insert({
+                                            user_id: senderId,
+                                            type: 'coop_accepted',
+                                            title: 'RETO ACEPTADO',
+                                            message: `¡${user.user_metadata.full_name || 'Alguien'} ha aceptado tu desafío! Entrando al gimnasio...`,
+                                            data: {
+                                                partner_id: user.id,
+                                                mode: mode,
+                                                chat_id: newNotification.data?.chat_id
+                                            }
+                                        });
+
+                                        navigate('/workout', { 
+                                            state: { 
+                                                isMultiplayer: true, 
+                                                multiplayerMode: mode, 
+                                                partnerId: senderId,
+                                                chatId: newNotification.data?.chat_id
+                                            } 
+                                        });
+                                    }}
+                                    className="flex-1 py-2 rounded-xl bg-gradient-to-br from-gym-primary to-yellow-500 text-neutral-950 font-black text-[10px] uppercase tracking-wider hover:shadow-[0_0_15px_rgba(255,215,0,0.35)] transition-all active:scale-95"
+                                >
+                                    ACEPTAR
+                                </button>
+                            </div>
+                        </div>
+                    ), { duration: 15000 }); // 15 seconds to accept before it hides globally
+                } else if (newNotification.type === 'coop_accepted') {
+                    // Instantly pull the inviter into the workout session
+                    toast.success(newNotification.message || "Reto aceptado. Entrando a la sesión...");
+                    navigate('/workout', { 
+                        state: { 
+                            isMultiplayer: true, 
+                            multiplayerMode: newNotification.data?.mode || 'separado', 
+                            partnerId: newNotification.data?.partner_id,
+                            chatId: newNotification.data?.chat_id
+                        } 
+                    });
                 }
             })
             .subscribe();

@@ -21,7 +21,7 @@ import { Loader2, ArrowLeft, Image as ImageIcon, MapPin, Search, Plus, Save, Act
 import { getCurrentPosition } from '../utils/geolocationUtils';
 import type { GymPlace, Database } from '../types/database';
 import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams, useLocation } from 'react-router-dom';
 
 interface WorkoutSet {
     id: string; // Temporary ID for UI
@@ -104,6 +104,14 @@ export const WorkoutSession = () => {
     const navigate = useNavigate();
     const { gymId: routeGymId } = useParams<{ gymId: string }>();
     const [searchParams] = useSearchParams();
+    const location = useLocation();
+    
+    // Multiplayer State
+    const navState = location.state as any || {};
+    const [isMultiplayer, setIsMultiplayer] = useState<boolean>(navState.isMultiplayer || false);
+    const [multiplayerMode, setMultiplayerMode] = useState<'conjunto' | 'separado' | null>(navState.multiplayerMode || null);
+    const [partnerId, setPartnerId] = useState<string | null>(navState.partnerId || null);
+    const [chatId, setChatId] = useState<string | null>(navState.chatId || null);
 
     // State
     const [loading, setLoading] = useState(true);
@@ -122,14 +130,75 @@ export const WorkoutSession = () => {
     const [originalExerciseIds, setOriginalExerciseIds] = useState<string[]>([]); // To detect changes
     const [originalMetricsSnapshot, setOriginalMetricsSnapshot] = useState<string | null>(null); // To detect changes in routine targets
     const [isRoutineModified, setIsRoutineModified] = useState(false); // Tracks if routine structure changed during session
-    // currentGym state removed
 
-    // Tutorial State
-    // unused tutorial state removed
+    // --- Multiplayer Sync Hooks ---
+    const [partnerExercises, setPartnerExercises] = useState<WorkoutExercise[]>([]);
+    const [viewingMode, setViewingMode] = useState<'mine' | 'partner'>('mine');
+    const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+    const lastIncomingState = useRef<string>('');
+    const [partnerName, setPartnerName] = useState<string>('Compañero');
 
     useEffect(() => {
-        // Tutorial step check removed since tutorialStep state is removed
-    }, []);
+        if (!isMultiplayer || !partnerId || !chatId || !user) return;
+
+        // Fetch partner name
+        const fetchPartner = async () => {
+            const { data } = await supabase.from('profiles').select('full_name').eq('id', partnerId).single();
+            if (data?.full_name) setPartnerName(data.full_name);
+        };
+        fetchPartner();
+
+        const chId = `coop-workout-${chatId}`;
+        const channel = supabase.channel(chId);
+        channelRef.current = channel;
+
+        channel
+            .on('broadcast', { event: 'sync_state' }, (payload) => {
+                const { exercises, sender } = payload.payload;
+                if (sender === user.id) return; // Ignore echoes
+
+                const incomingStr = JSON.stringify(exercises);
+                lastIncomingState.current = incomingStr;
+
+                if (multiplayerMode === 'conjunto') {
+                    setActiveExercises(exercises); // Merge automatically
+                } else if (multiplayerMode === 'separado') {
+                    setPartnerExercises(exercises); // Store for viewing
+                }
+            })
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    console.log('✅ Conectado al canal multijugador');
+                    // Send initial state immediately
+                    channel.send({
+                        type: 'broadcast',
+                        event: 'sync_state',
+                        payload: { exercises: activeExercises, sender: user.id }
+                    }).catch(e => console.error(e));
+                }
+            });
+
+        return () => {
+            supabase.removeChannel(channel);
+            channelRef.current = null;
+        };
+    }, [isMultiplayer, partnerId, chatId, user, multiplayerMode]);
+
+    // Send local updates
+    useEffect(() => {
+        if (!isMultiplayer || !channelRef.current || !user) return;
+        const currentStr = JSON.stringify(activeExercises);
+        
+        // Prevent echo loops
+        if (currentStr !== lastIncomingState.current) {
+            channelRef.current.send({
+                type: 'broadcast',
+                event: 'sync_state',
+                payload: { exercises: activeExercises, sender: user.id }
+            }).catch(e => console.error(e));
+        }
+    }, [activeExercises, isMultiplayer, user]);
+    // --- End Multiplayer Sync Hooks ---
 
     // NEW: Start Options Modal
     const [showStartOptionsModal, setShowStartOptionsModal] = useState(false);
@@ -1705,9 +1774,30 @@ export const WorkoutSession = () => {
             {/* Background Ambient Effects */}
             <div className="fixed top-0 left-0 w-full h-1/2 bg-gradient-to-b from-red-900/10 to-transparent pointer-events-none" />
 
-            {/* Header Removed as per user request */}
+            {/* Multiplayer Coop Header */}
+            {isMultiplayer && (
+                <div className="fixed top-0 left-0 w-full z-[80] bg-neutral-950/80 backdrop-blur-md border-b border-yellow-500/20 px-4 py-2 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center border border-yellow-500/40">
+                            <Swords size={16} className="text-yellow-500" />
+                        </div>
+                        <div>
+                            <h3 className="text-white font-black text-[10px] uppercase tracking-wider">MODO COOP</h3>
+                            <p className="text-neutral-400 text-[9px] font-bold uppercase">{multiplayerMode === 'conjunto' ? 'CONJUNTO' : 'SEPARADO'} CON {partnerName}</p>
+                        </div>
+                    </div>
+                    {multiplayerMode === 'separado' && (
+                        <button
+                            onClick={() => setViewingMode(v => v === 'mine' ? 'partner' : 'mine')}
+                            className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider border transition-colors ${viewingMode === 'partner' ? 'bg-yellow-500 text-black border-yellow-500 shadow-[0_0_10px_rgba(250,204,21,0.5)]' : 'bg-neutral-900 text-yellow-500 border-yellow-500/30 hover:bg-neutral-800'}`}
+                        >
+                            {viewingMode === 'mine' ? 'ESPIAR COMPAÑERO' : 'VOLVER A MI RUTINA'}
+                        </button>
+                    )}
+                </div>
+            )}
 
-            <div className="p-4 relative z-10">
+            <div className={`p-4 relative z-10 ${isMultiplayer ? 'pt-16' : ''}`}>
                 {/* Empty State / Routine Selection */}
                 {/* Empty State / Fallback if Modal is Closed */}
                 {activeExercises.length === 0 && !showAddModal && !loading && (
@@ -1729,7 +1819,9 @@ export const WorkoutSession = () => {
                 )}
 
                 {/* Active Exercises List - NOW CAROUSEL */}
-                {activeExercises.length > 0 && (
+                {(() => {
+                    const displayedExercises = viewingMode === 'partner' ? partnerExercises : activeExercises;
+                    return displayedExercises.length > 0 && (
                     <div className="h-[calc(100vh-140px)] flex flex-col"> {/* Fixed height for carousel */}
 
                         {/* BATTLE HEADER & TIMER */}
@@ -1749,7 +1841,7 @@ export const WorkoutSession = () => {
                                 {!showExitMenu && (
                                     <div className="flex items-center gap-2">
                                         <h2 className="text-lg font-black italic uppercase tracking-tighter text-white">
-                                            {currentExerciseIndex + 1} / {activeExercises.length}
+                                            {currentExerciseIndex + 1} / {displayedExercises.length}
                                         </h2>
                                     </div>
                                 )}
@@ -1784,7 +1876,9 @@ export const WorkoutSession = () => {
                             currentIndex={currentExerciseIndex}
                             onIndexChange={setCurrentExerciseIndex}
                         >
-                            {activeExercises.map((exercise, mapIndex) => (
+                            {displayedExercises.map((exercise, mapIndex) => {
+                                const isReadOnly = viewingMode === 'partner';
+                                return (
                                 <div key={exercise.id} className="h-full flex flex-col bg-neutral-900/40 border border-white/5 rounded-2xl overflow-hidden backdrop-blur-sm shadow-xl mx-1 relative">
                                     {/* Header */}
                                     <div className="p-4 flex justify-between items-start bg-white/5 border-b border-white/5 shrink-0">
@@ -1792,14 +1886,16 @@ export const WorkoutSession = () => {
                                             <h3 className="text-2xl font-black italic uppercase text-white leading-tight">
                                                 {exercise.equipmentName}
                                             </h3>
-                                            <div className="flex gap-2 mt-2">
-                                                <button
-                                                    onClick={() => removeExercise(exercise.id)}
-                                                    className="text-neutral-500 hover:text-red-500 transition-colors bg-neutral-800/50 p-2 rounded-lg"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </div>
+                                            {!isReadOnly && (
+                                                <div className="flex gap-2 mt-2">
+                                                    <button
+                                                        onClick={() => removeExercise(exercise.id)}
+                                                        className="text-neutral-500 hover:text-red-500 transition-colors bg-neutral-800/50 p-2 rounded-lg"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 
@@ -1819,6 +1915,7 @@ export const WorkoutSession = () => {
                                                                 }`}
                                                         >
                                                             {/* [MOVED] Delete Set Button - Top Left */}
+                                                            {!isReadOnly && (
                                                             <button
                                                                 onClick={() => removeSet(mapIndex, setIndex)}
                                                                 className="absolute -top-2 -left-2 bg-neutral-900 border border-neutral-800 text-neutral-500 hover:text-red-500 rounded-full p-1.5 shadow-lg z-10 scale-75 hover:scale-100 transition-all"
@@ -1826,6 +1923,7 @@ export const WorkoutSession = () => {
                                                             >
                                                                 <Trash2 size={14} />
                                                             </button>
+                                                            )}
                                                             {/* Set Number */}
                                                             <div className="w-8 flex justify-center shrink-0 self-center">
                                                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${isCompleted ? 'bg-green-500/20 text-green-500' : 'bg-neutral-800 text-neutral-400'
@@ -1848,7 +1946,7 @@ export const WorkoutSession = () => {
                                                                         <input
                                                                             type="number"
                                                                             inputMode="decimal"
-                                                                            disabled={set.locked}
+                                                                            disabled={set.locked || isReadOnly}
                                                                             value={set.weight === 0 ? '' : toDisplayWeight(set.weight, exercise.weightUnit || 'kg')}
                                                                             onChange={(e) => updateSet(mapIndex, setIndex, 'weight', toInternalWeight(e.target.value, exercise.weightUnit || 'kg'))}
                                                                             onBlur={(e) => handleInputBlur(mapIndex, setIndex, e)}
@@ -1864,7 +1962,7 @@ export const WorkoutSession = () => {
                                                                         <input
                                                                             type="number"
                                                                             inputMode="numeric"
-                                                                            disabled={set.locked}
+                                                                            disabled={set.locked || isReadOnly}
                                                                             value={set.reps === 0 ? '' : set.reps}
                                                                             onChange={(e) => updateSet(mapIndex, setIndex, 'reps', e.target.value)}
                                                                             onBlur={(e) => handleInputBlur(mapIndex, setIndex, e)}
@@ -1880,7 +1978,7 @@ export const WorkoutSession = () => {
                                                                         <input
                                                                             type="number"
                                                                             inputMode="numeric"
-                                                                            disabled={set.locked}
+                                                                            disabled={set.locked || isReadOnly}
                                                                             value={set.time || ''}
                                                                             onChange={(e) => updateSet(mapIndex, setIndex, 'time', e.target.value)}
                                                                             onBlur={(e) => handleInputBlur(mapIndex, setIndex, e)}
@@ -1896,7 +1994,7 @@ export const WorkoutSession = () => {
                                                                         <input
                                                                             type="number"
                                                                             inputMode="decimal"
-                                                                            disabled={set.locked}
+                                                                            disabled={set.locked || isReadOnly}
                                                                             value={set.distance === 0 ? '' : set.distance}
                                                                             onChange={(e) => updateSet(mapIndex, setIndex, 'distance', e.target.value)}
                                                                             onBlur={(e) => handleInputBlur(mapIndex, setIndex, e)}
@@ -1913,7 +2011,7 @@ export const WorkoutSession = () => {
                                                                             type="number"
                                                                             inputMode="numeric"
                                                                             max={10}
-                                                                            disabled={set.locked}
+                                                                            disabled={set.locked || isReadOnly}
                                                                             value={set.rpe || ''}
                                                                             onChange={(e) => updateSet(mapIndex, setIndex, 'rpe', e.target.value)}
                                                                             onBlur={(e) => handleInputBlur(mapIndex, setIndex, e)}
@@ -1933,7 +2031,7 @@ export const WorkoutSession = () => {
                                                                             <input
                                                                                 type="number"
                                                                                 inputMode="decimal"
-                                                                                disabled={set.locked}
+                                                                                disabled={set.locked || isReadOnly}
                                                                                 value={set.custom?.[key] || ''}
                                                                                 onChange={(e) => updateSet(mapIndex, setIndex, key, e.target.value, true)} // isCustom=true
                                                                                 onBlur={(e) => handleInputBlur(mapIndex, setIndex, e)}
@@ -1951,7 +2049,7 @@ export const WorkoutSession = () => {
                                                                     <div className="flex items-center gap-1">
                                                                         <button
                                                                             onClick={() => toggleComplete(mapIndex, setIndex)}
-                                                                            disabled={set.locked}
+                                                                            disabled={set.locked || isReadOnly}
                                                                             className={`p-2 rounded-full border-2 transition-all ${isCompleted
                                                                                 ? set.locked
                                                                                     ? 'bg-neutral-800 border-neutral-700 text-neutral-500 cursor-not-allowed opacity-80' // Locked State
@@ -1964,7 +2062,7 @@ export const WorkoutSession = () => {
                                                                         </button>
 
                                                                         {/* Lock Icon (Only if completed) - Moved to Right */}
-                                                                        {isCompleted && (
+                                                                        {(isCompleted && !isReadOnly) && (
                                                                             <button
                                                                                 onClick={() => toggleLock(mapIndex, setIndex)}
                                                                                 className={`p-1 rounded-full transition-colors ${set.locked ? 'text-red-500 bg-red-500/10' : 'text-neutral-500 hover:text-white'}`}
@@ -2008,7 +2106,7 @@ export const WorkoutSession = () => {
                                                                     </div>
 
                                                                     {/* Pause/Resume Button (Only if not completed/stopped by next set) */}
-                                                                    {set.restStatus !== 'completed' && (
+                                                                    {(set.restStatus !== 'completed' && !isReadOnly) && (
                                                                         <button
                                                                             onClick={() => toggleTimerPause(mapIndex, setIndex)}
                                                                             className={`p-1.5 rounded-full transition-colors ${set.restStatus === 'paused' ? 'bg-yellow-500/10 text-yellow-500' : 'text-neutral-500 hover:text-white'}`}
@@ -2025,17 +2123,17 @@ export const WorkoutSession = () => {
                                             })}
 
                                             {/* Add Set Button */}
-                                            <button
-                                                onClick={() => addSet(mapIndex)}
-                                                className="w-full py-4 mt-4 rounded-xl border-2 border-dashed border-neutral-800 text-neutral-500 hover:text-white hover:border-gym-primary/50 hover:bg-neutral-800/30 font-black text-sm uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95"
-                                            >
-                                                <Plus size={18} /> Añadir Serie
-                                            </button>
+                                            {!isReadOnly && (
+                                                <button
+                                                    onClick={() => addSet(mapIndex)}
+                                                    className="w-full py-4 mt-4 rounded-xl border-2 border-dashed border-neutral-800 text-neutral-500 hover:text-white hover:border-gym-primary/50 hover:bg-neutral-800/30 font-black text-sm uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95"
+                                                >
+                                                    <Plus size={18} /> Añadir Serie
+                                                </button>
+                                            )}
 
-                                            {/* Finish/Next Actions specific to this card if needed, or keeping the global button? 
-                                                The user can just swipe. But if it's the last card, maybe show Finish? 
-                                            */}
-                                            {mapIndex === activeExercises.length - 1 && (
+                                            {/* Finish/Next Actions */}
+                                            {(!isReadOnly && mapIndex === displayedExercises.length - 1) && (
                                                 <div className="pt-8 pb-4">
                                                     <button
                                                         onClick={handleFinishRequest}
@@ -2057,12 +2155,12 @@ export const WorkoutSession = () => {
                                         </div>
                                     </div>
                                 </div>
-                            ))
-                            }
+                                );
+                            })}
                         </WorkoutCarousel>
                     </div>
-                )
-                }
+                    );
+                })()}
 
                 {/* Legacy Finish Button (Now hidden inside the last card for cleaner UI, or we can keep it?) 
                     The previous code had it outside. I moved it inside the last card for "Focus Mode".
@@ -2075,9 +2173,9 @@ export const WorkoutSession = () => {
             </div >
 
 
-            {/* Fab Add Button (Only if exercises exist) */}
+            {/* Fab Add Button (Only if exercises exist and not spying) */}
             {
-                activeExercises.length > 0 && (
+                (activeExercises.length > 0 && viewingMode === 'mine') && (
                     <div className="fixed bottom-24 left-0 w-full px-4 flex justify-center z-50 pointer-events-none">
                         <button
                             onClick={() => setShowAddModal(true)}

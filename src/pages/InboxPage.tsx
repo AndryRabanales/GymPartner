@@ -165,6 +165,23 @@ export const InboxPage = () => {
                 }
 
                 const mode = notification.data?.mode || 'separado';
+                
+                // Notify the inviter so their app automatically pulls them into the session
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    await supabase.from('notifications').insert({
+                        user_id: senderId,
+                        type: 'coop_accepted',
+                        title: 'RETO ACEPTADO',
+                        message: `¡${user.user_metadata.full_name || 'Alguien'} ha aceptado tu desafío! Entrando al gimnasio...`,
+                        data: {
+                            partner_id: user.id,
+                            mode: mode,
+                            chat_id: notification.data?.chat_id
+                        }
+                    });
+                }
+
                 navigate('/workout', { 
                     state: { 
                         isMultiplayer: true, 
