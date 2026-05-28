@@ -63,7 +63,7 @@ interface WorkoutExercise {
 }
 
 // Helper Component for Rest Timer
-const RestTimerDisplay = ({ status, accumulated, lastStartTime }: { status: 'running' | 'paused' | 'completed', accumulated: number, lastStartTime?: number }) => {
+const RestTimerDisplay = ({ status, accumulated, lastStartTime, isGold }: { status: 'running' | 'paused' | 'completed', accumulated: number, lastStartTime?: number, isGold?: boolean }) => {
     const [elapsed, setElapsed] = useState(0);
 
     useEffect(() => {
@@ -93,7 +93,7 @@ const RestTimerDisplay = ({ status, accumulated, lastStartTime }: { status: 'run
     };
 
     return (
-        <span className={`text-sm font-black tabular-nums transition-colors ${status === 'running' ? 'text-gym-primary' : 'text-neutral-500'}`}>
+        <span className={`text-sm font-black tabular-nums transition-colors ${isGold ? 'text-gym-primary shadow-[0_0_10px_rgba(250,204,21,0.2)]' : 'text-neutral-500'}`}>
             {formatTime(elapsed)}
         </span>
     );
@@ -1267,11 +1267,15 @@ export const WorkoutSession = () => {
         if (setIndex > 0) {
             const prevSet = updatedExercises[exerciseIndex].sets[setIndex - 1];
             // If prev set was blocking (completed state), resume it
-            if (prevSet && prevSet.completed && prevSet.restStatus === 'completed') {
-                // Resume only if it was actually "running" before completion? 
-                // Simple logic: Go back to running
-                prevSet.restStatus = 'running';
-                prevSet.restLastStartTime = Date.now();
+            if (prevSet) {
+                if (prevSet.completed && prevSet.restStatus === 'completed') {
+                    prevSet.restStatus = 'running';
+                    prevSet.restLastStartTime = Date.now();
+                }
+                if (prevSet.p2_completed && prevSet.p2_restStatus === 'completed') {
+                    prevSet.p2_restStatus = 'running';
+                    prevSet.p2_restLastStartTime = Date.now();
+                }
             }
         }
 
@@ -1279,7 +1283,7 @@ export const WorkoutSession = () => {
         setActiveExercises(updatedExercises);
     };
 
-    // [NEW] Toggle Completion with Timestamp & Lock Logic (Deep Copy)
+        // [NEW] Toggle Completion with Timestamp & Lock Logic (Deep Copy)
     const toggleComplete = (exerciseIndex: number, setIndex: number, isP1: boolean = true) => {
         // Deep Copy
         const updated = activeExercises.map(ex => ({
@@ -1354,13 +1358,45 @@ export const WorkoutSession = () => {
             }
 
             if (set.p2_completed) {
+                // UNMARKING
                 set.p2_completed = false;
                 set.p2_completedAt = undefined;
                 set.p2_locked = false;
+
+                // Reset P2 Timer state
+                set.p2_restStatus = undefined;
+                set.p2_restAccumulated = 0;
+                set.p2_restLastStartTime = undefined;
             } else {
+                // MARKING COMPLETE
                 set.p2_completed = true;
                 set.p2_locked = true;
                 set.p2_completedAt = Date.now();
+
+                // Start Rest Timer for P2
+                set.p2_restStatus = 'running';
+                set.p2_restLastStartTime = Date.now();
+                set.p2_restAccumulated = 0;
+
+                // FREEZE PREVIOUS TIMER FOR P2
+                let prevSetFoundP2 = false;
+                for (let i = exerciseIndex; i >= 0; i--) {
+                    const startJ = i === exerciseIndex ? setIndex - 1 : updated[i].sets.length - 1;
+                    for (let j = startJ; j >= 0; j--) {
+                        const prevSet = updated[i].sets[j];
+                        if (prevSet.p2_completed && prevSet.p2_restStatus === 'running') {
+                            // Stop it (Complete it)
+                            const now = Date.now();
+                            prevSet.p2_restAccumulated = (prevSet.p2_restAccumulated || 0) + (now - (prevSet.p2_restLastStartTime || now));
+                            prevSet.p2_restStatus = 'completed';
+                            prevSet.p2_restLastStartTime = undefined;
+
+                            prevSetFoundP2 = true;
+                            break;
+                        }
+                    }
+                    if (prevSetFoundP2) break;
+                }
             }
         }
         setActiveExercises(updated);
@@ -1389,7 +1425,7 @@ export const WorkoutSession = () => {
     };
 
     // [NEW] Toggle Rest Timer Pause (Individual)
-    const toggleTimerPause = (exerciseIndex: number, setIndex: number) => {
+    const toggleTimerPause = (exerciseIndex: number, setIndex: number, isP1: boolean = true) => {
         const updated = activeExercises.map(ex => ({
             ...ex,
             sets: ex.sets.map(s => ({ ...s }))
@@ -1397,18 +1433,34 @@ export const WorkoutSession = () => {
 
         const set = updated[exerciseIndex].sets[setIndex];
 
-        if (!set.completed) return;
+        if (isP1) {
+            if (!set.completed) return;
 
-        if (set.restStatus === 'running') {
-            // PAUSE IT
-            const now = Date.now();
-            set.restAccumulated = (set.restAccumulated || 0) + (now - (set.restLastStartTime || now));
-            set.restStatus = 'paused';
-            set.restLastStartTime = undefined;
-        } else if (set.restStatus === 'paused') {
-            // RESUME IT
-            set.restStatus = 'running';
-            set.restLastStartTime = Date.now();
+            if (set.restStatus === 'running') {
+                // PAUSE IT
+                const now = Date.now();
+                set.restAccumulated = (set.restAccumulated || 0) + (now - (set.restLastStartTime || now));
+                set.restStatus = 'paused';
+                set.restLastStartTime = undefined;
+            } else if (set.restStatus === 'paused') {
+                // RESUME IT
+                set.restStatus = 'running';
+                set.restLastStartTime = Date.now();
+            }
+        } else {
+            if (!set.p2_completed) return;
+
+            if (set.p2_restStatus === 'running') {
+                // PAUSE IT
+                const now = Date.now();
+                set.p2_restAccumulated = (set.p2_restAccumulated || 0) + (now - (set.p2_restLastStartTime || now));
+                set.p2_restStatus = 'paused';
+                set.p2_restLastStartTime = undefined;
+            } else if (set.p2_restStatus === 'paused') {
+                // RESUME IT
+                set.p2_restStatus = 'running';
+                set.p2_restLastStartTime = Date.now();
+            }
         }
         setActiveExercises(updated);
     };
@@ -1424,11 +1476,19 @@ export const WorkoutSession = () => {
         const previousSet = updated[exerciseIndex].sets[updated[exerciseIndex].sets.length - 1];
 
         // [NEW] Stop the timer of the previous set when adding a new one
-        if (previousSet && previousSet.completed && previousSet.restStatus === 'running') {
-            const now = Date.now();
-            previousSet.restAccumulated = (previousSet.restAccumulated || 0) + (now - (previousSet.restLastStartTime || now));
-            previousSet.restStatus = 'completed';
-            previousSet.restLastStartTime = undefined;
+        if (previousSet) {
+            if (previousSet.completed && previousSet.restStatus === 'running') {
+                const now = Date.now();
+                previousSet.restAccumulated = (previousSet.restAccumulated || 0) + (now - (previousSet.restLastStartTime || now));
+                previousSet.restStatus = 'completed';
+                previousSet.restLastStartTime = undefined;
+            }
+            if (previousSet.p2_completed && previousSet.p2_restStatus === 'running') {
+                const now = Date.now();
+                previousSet.p2_restAccumulated = (previousSet.p2_restAccumulated || 0) + (now - (previousSet.p2_restLastStartTime || now));
+                previousSet.p2_restStatus = 'completed';
+                previousSet.p2_restLastStartTime = undefined;
+            }
         }
 
         // Initialize custom metrics based on what's active in the settings
@@ -1712,30 +1772,34 @@ export const WorkoutSession = () => {
                 // SAVE LOGIC:
                 // 1. If it has no DB ID (not saved yet)
                 // 2. AND (It is completed OR has some data)
-                if (!set.db_id && (set.completed || set.weight > 0 || set.reps > 0 || (set.time || 0) > 0 || (set.distance || 0) > 0)) {
+                const isCompletedToSave = isInviter ? set.completed : (set.p2_completed || false);
+                const weightToSave = Number(isInviter ? set.weight : (set.p2_weight || 0)) || 0;
+                const repsToSave = Number(isInviter ? set.reps : (set.p2_reps || 0)) || 0;
+                const timeToSave = Number(isInviter ? set.time : (set.p2_time || 0)) || 0;
+                const distanceToSave = Number(isInviter ? set.distance : (set.p2_distance || 0)) || 0;
+                const rpeToSave = Number(isInviter ? set.rpe : (set.p2_rpe || 0)) || undefined;
+
+                if (!set.db_id && (isCompletedToSave || weightToSave > 0 || repsToSave > 0 || timeToSave > 0 || distanceToSave > 0)) {
                     // We need the ID now
                     const targetId = await getExId();
 
                     if (targetId) {
                         console.log(`💾 Saving set ${j + 1} for ${exercise.equipmentName}...`);
-                        // Ensure we have valid numbers
-                        const weightToSave = Number(set.weight) || 0;
-                        const repsToSave = Number(set.reps) || 0;
-                        const timeToSave = Number(set.time) || 0;
-                        const distanceToSave = Number(set.distance) || 0;
+                        
+                        let finalRestDuration = (isInviter ? set.restAccumulated : set.p2_restAccumulated) || 0;
+                        const activeRestStatus = isInviter ? set.restStatus : set.p2_restStatus;
+                        const activeRestLastStartTime = isInviter ? set.restLastStartTime : set.p2_restLastStartTime;
 
-                        // Point 4: Add Timestamps to Metrics
-                        let finalRestDuration = set.restAccumulated || 0;
-                        if (set.restStatus === 'running' && set.restLastStartTime) {
-                            finalRestDuration += (Date.now() - set.restLastStartTime);
+                        if (activeRestStatus === 'running' && activeRestLastStartTime) {
+                            finalRestDuration += (Date.now() - activeRestLastStartTime);
                         }
 
                         const extendedMetrics = {
                             ...(set.custom || {}),
-                            ...(set.completed ? { _checklist_timestamp: set.completedAt || Date.now() } : {}),
+                            ...(isCompletedToSave ? { _checklist_timestamp: (isInviter ? set.completedAt : set.p2_completedAt) || Date.now() } : {}),
                             ...(exercise.weightUnit === 'lb' ? { _weight_unit: 'lb' } : {}),
                             _rest_duration_ms: finalRestDuration,
-                            _rest_status: set.restStatus === 'running' ? 'completed' : set.restStatus
+                            _rest_status: activeRestStatus === 'running' ? 'completed' : activeRestStatus
                         } as any;
 
                         savePromises.push(workoutService.logSet({
@@ -1747,7 +1811,7 @@ export const WorkoutSession = () => {
                             reps: repsToSave,
                             time: timeToSave,
                             distance: distanceToSave,
-                            rpe: Number(set.rpe) || undefined,
+                            rpe: rpeToSave,
                             metrics_data: extendedMetrics, // Save custom metrics + timestamps
                             category_snapshot: exercise.category || 'Custom', // SNAPSHOT: Current Category
                             is_pr: false
@@ -2285,31 +2349,72 @@ export const WorkoutSession = () => {
                                                         </div>
 
 {/* Rest Timer Display (Per Set) */}
-                                                        {
-                                                            isCompleted && (set.restStatus === 'running' || set.restStatus === 'paused' || set.restStatus === 'completed') && (
-                                                                <div className="w-full bg-neutral-900/50 border border-neutral-800 rounded-lg p-2 mt-1 flex items-center justify-between animate-in fade-in slide-in-from-top-2">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className="text-xs text-neutral-500 font-bold uppercase tracking-wider">Descanso</span>
-                                                                        <RestTimerDisplay
-                                                                            status={set.restStatus}
-                                                                            accumulated={set.restAccumulated || 0}
-                                                                            lastStartTime={set.restLastStartTime}
-                                                                        />
-                                                                    </div>
+                                                        {(() => {
+                                                            const myIsP1 = isInviter;
+                                                            const timersToRender: { isP1: boolean; status?: any; accumulated: number; lastStartTime?: number }[] = [];
 
-                                                                    {/* Pause/Resume Button (Only if not completed/stopped by next set) */}
-                                                                    {(set.restStatus !== 'completed' && !isReadOnly) && (
-                                                                        <button
-                                                                            onClick={() => toggleTimerPause(mapIndex, setIndex)}
-                                                                            className={`p-1.5 rounded-full transition-colors ${set.restStatus === 'paused' ? 'bg-yellow-500/10 text-yellow-500' : 'text-neutral-500 hover:text-white'}`}
-                                                                            title={set.restStatus === 'paused' ? "Reanudar" : "Pausar"}
-                                                                        >
-                                                                            {set.restStatus === 'paused' ? <Play size={14} fill="currentColor" /> : <Pause size={14} fill="currentColor" />}
-                                                                        </button>
-                                                                    )}
-                                                                </div>
-                                                            )
-                                                        }
+                                                            if (set.completed && (set.restStatus === 'running' || set.restStatus === 'paused' || set.restStatus === 'completed')) {
+                                                                timersToRender.push({
+                                                                    isP1: true,
+                                                                    status: set.restStatus,
+                                                                    accumulated: set.restAccumulated || 0,
+                                                                    lastStartTime: set.restLastStartTime
+                                                                });
+                                                            }
+
+                                                            if (isMultiplayer && multiplayerMode === 'conjunto' && set.p2_completed && (set.p2_restStatus === 'running' || set.p2_restStatus === 'paused' || set.p2_restStatus === 'completed')) {
+                                                                timersToRender.push({
+                                                                    isP1: false,
+                                                                    status: set.p2_restStatus,
+                                                                    accumulated: set.p2_restAccumulated || 0,
+                                                                    lastStartTime: set.p2_restLastStartTime
+                                                                });
+                                                            }
+
+                                                            return timersToRender.map((timer) => {
+                                                                const isMine = timer.isP1 === myIsP1;
+
+                                                                return (
+                                                                    <div
+                                                                        key={timer.isP1 ? 'p1' : 'p2'}
+                                                                        className={`w-full bg-neutral-900/50 border rounded-lg p-2 mt-1 flex items-center justify-between animate-in fade-in slide-in-from-top-2 ${
+                                                                            isMine ? 'border-gym-primary/30 shadow-[0_0_15px_rgba(250,204,21,0.05)]' : 'border-neutral-800'
+                                                                        }`}
+                                                                    >
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className={`text-xs uppercase tracking-wider ${
+                                                                                isMine ? 'text-gym-primary font-black' : 'text-neutral-500 font-bold'
+                                                                            }`}>
+                                                                                Descanso
+                                                                            </span>
+                                                                            <RestTimerDisplay
+                                                                                status={timer.status}
+                                                                                accumulated={timer.accumulated}
+                                                                                lastStartTime={timer.lastStartTime}
+                                                                                isGold={isMine}
+                                                                            />
+                                                                        </div>
+
+                                                                        {/* Pause/Resume Button (Only if not completed/stopped by next set) */}
+                                                                        {(timer.status !== 'completed' && !isReadOnly) && (
+                                                                            <button
+                                                                                onClick={() => toggleTimerPause(mapIndex, setIndex, timer.isP1)}
+                                                                                className={`p-1.5 rounded-full transition-colors ${
+                                                                                    timer.status === 'paused'
+                                                                                        ? 'bg-yellow-500/10 text-yellow-500'
+                                                                                        : isMine
+                                                                                            ? 'text-gym-primary hover:text-white'
+                                                                                            : 'text-neutral-500 hover:text-white'
+                                                                                }`}
+                                                                                title={timer.status === 'paused' ? "Reanudar" : "Pausar"}
+                                                                            >
+                                                                                {timer.status === 'paused' ? <Play size={14} fill="currentColor" /> : <Pause size={14} fill="currentColor" />}
+                                                                            </button>
+                                                                        )}
+                                                                    </div>
+                                                                );
+                                                            });
+                                                        })()}
                                                     </Fragment>
                                                 );
                                             })}
