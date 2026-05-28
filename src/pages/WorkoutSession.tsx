@@ -177,9 +177,10 @@ export const WorkoutSession = () => {
                     lastIncomingState.current = incomingStr;
 
                     if (multiplayerMode === 'conjunto') {
-                        // Smart merge: only protect a timer that is ALREADY running/paused locally.
-                        // If local timer is undefined or 'completed', accept the incoming value
-                        // (e.g. partner filled our row and started our timer remotely).
+                        // Merge rule:
+                        // - P1 (inviter): accept incoming fully except own rest timer when running/paused
+                        // - P2 (invitee): ALWAYS keep own p2_* fields. Accept P1 timer from incoming.
+                        //   This ensures P2's timer/completion is never erased by a stale P1 broadcast.
                         setActiveExercises(prev => {
                             if (!prev || prev.length === 0) return exercises;
                             return exercises.map((inEx, eIdx) => {
@@ -192,7 +193,7 @@ export const WorkoutSession = () => {
                                         const loc = localEx.sets?.[sIdx];
                                         if (!loc) return inSet;
                                         if (meIsP1) {
-                                            // P1: only protect timer if it is actively running/paused locally
+                                            // I am P1: protect my own rest timer only when running/paused
                                             const localTimerActive = loc.restStatus === 'running' || loc.restStatus === 'paused';
                                             if (localTimerActive) {
                                                 return {
@@ -202,26 +203,30 @@ export const WorkoutSession = () => {
                                                     restAccumulated: loc.restAccumulated,
                                                 };
                                             }
-                                            // Local timer not started or already done — accept incoming fully
                                             return inSet;
                                         } else {
-                                            // P2 (invitee): only protect own p2_ timer if actively running/paused
-                                            const localP2Active = loc.p2_restStatus === 'running' || loc.p2_restStatus === 'paused';
-                                            if (localP2Active) {
-                                                return {
-                                                    ...inSet,
-                                                    p2_restStatus: loc.p2_restStatus,
-                                                    p2_restLastStartTime: loc.p2_restLastStartTime,
-                                                    p2_restAccumulated: loc.p2_restAccumulated,
-                                                    p2_completed: loc.p2_completed ?? inSet.p2_completed,
-                                                    p2_locked: loc.p2_locked ?? inSet.p2_locked,
-                                                    p2_completedAt: loc.p2_completedAt ?? inSet.p2_completedAt,
-                                                    p2_weight: loc.p2_weight ?? inSet.p2_weight,
-                                                    p2_reps: loc.p2_reps ?? inSet.p2_reps,
-                                                };
-                                            }
-                                            // P2 timer not started — accept incoming fully
-                                            return inSet;
+                                            // I am P2: ALWAYS preserve my own p2_* fields.
+                                            // Accept P1 rest timer from incoming (it comes from P1's device).
+                                            return {
+                                                ...inSet,
+                                                // P1 rest timer: take from incoming (P1 manages it)
+                                                restStatus: inSet.restStatus,
+                                                restLastStartTime: inSet.restLastStartTime,
+                                                restAccumulated: inSet.restAccumulated,
+                                                // P2 own data: ALWAYS use local values
+                                                p2_completed: loc.p2_completed ?? inSet.p2_completed,
+                                                p2_locked: loc.p2_locked ?? inSet.p2_locked,
+                                                p2_completedAt: loc.p2_completedAt ?? inSet.p2_completedAt,
+                                                p2_weight: loc.p2_weight ?? inSet.p2_weight,
+                                                p2_reps: loc.p2_reps ?? inSet.p2_reps,
+                                                p2_time: loc.p2_time ?? inSet.p2_time,
+                                                p2_distance: loc.p2_distance ?? inSet.p2_distance,
+                                                p2_rpe: loc.p2_rpe ?? inSet.p2_rpe,
+                                                // P2 rest timer: always use local (P2 manages it)
+                                                p2_restStatus: loc.p2_restStatus ?? inSet.p2_restStatus,
+                                                p2_restLastStartTime: loc.p2_restLastStartTime ?? inSet.p2_restLastStartTime,
+                                                p2_restAccumulated: loc.p2_restAccumulated ?? inSet.p2_restAccumulated,
+                                            };
                                         }
                                     })
                                 };
