@@ -16,6 +16,11 @@ interface WorkoutRecord {
     duration_minutes: number;
     total_volume: number;
     muscles_trained: string[];
+    is_multiplayer?: boolean;
+    partner_id?: string;
+    partner_session_id?: string;
+    partner_status?: 'in_progress' | 'finished';
+    partner_name?: string;
 }
 
 export const HistoryPage = () => {
@@ -108,12 +113,16 @@ export const HistoryPage = () => {
 
         setLoading(true);
         try {
-            const { data, error } = await supabase
+             const { data, error } = await supabase
                 .from('workout_sessions')
                 .select(`
                     id,
                     started_at,
                     end_time,
+                    is_multiplayer,
+                    multiplayer_mode,
+                    partner_id,
+                    partner_session_id,
                     gyms ( name, id ),
                     workout_logs (
                         weight_kg,
@@ -131,6 +140,27 @@ export const HistoryPage = () => {
                 .order('started_at', { ascending: false });
 
             if (error) throw error;
+
+            // Fetch partner session states for multiplayer workouts
+            const partnerSessionIds = (data || [])
+                .filter((s: any) => s.is_multiplayer && s.partner_session_id)
+                .map((s: any) => s.partner_session_id);
+
+            let partnerSessionsMap = new Map<string, { finished: boolean; username: string }>();
+            if (partnerSessionIds.length > 0) {
+                const { data: partnerData } = await supabase
+                    .from('workout_sessions')
+                    .select('id, finished_at, end_time, user:profiles(username)')
+                    .in('id', partnerSessionIds);
+                
+                if (partnerData) {
+                    partnerData.forEach((ps: any) => {
+                        const isFinished = !!(ps.finished_at || ps.end_time);
+                        const partnerUsername = ps.user?.username || 'Compañero';
+                        partnerSessionsMap.set(ps.id, { finished: isFinished, username: partnerUsername });
+                    });
+                }
+            }
 
             const records = (data || []).map((s: any) => {
                 const muscleSet = new Set<string>();
@@ -204,6 +234,10 @@ export const HistoryPage = () => {
                 const end = new Date(s.end_time).getTime();
                 const duration = Math.round((end - start) / (1000 * 60));
 
+                const partnerInfo = s.is_multiplayer && s.partner_session_id 
+                    ? partnerSessionsMap.get(s.partner_session_id)
+                    : null;
+
                 return {
                     id: s.id,
                     gym_name: s.gyms?.name || 'Gimnasio Desconocido',
@@ -211,7 +245,12 @@ export const HistoryPage = () => {
                     started_at: s.started_at,
                     duration_minutes: duration,
                     total_volume: vol,
-                    muscles_trained: Array.from(muscleSet)
+                    muscles_trained: Array.from(muscleSet),
+                    is_multiplayer: s.is_multiplayer,
+                    partner_id: s.partner_id,
+                    partner_session_id: s.partner_session_id,
+                    partner_status: partnerInfo ? (partnerInfo.finished ? 'finished' : 'in_progress') : (s.is_multiplayer ? 'in_progress' : undefined),
+                    partner_name: partnerInfo?.username || 'Compañero'
                 };
             });
 
@@ -421,11 +460,16 @@ const WorkoutCard = ({
                 {/* Details */}
                 <div className="flex-1 min-w-0 space-y-3">
                     {/* Gym Name */}
-                    <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
                         <div className="text-white font-bold text-base md:text-lg group-hover:text-gym-primary transition-colors flex items-center gap-2 truncate">
                             <MapPin size={16} className="shrink-0" />
                             <span className="truncate">{session.gym_name}</span>
                         </div>
+                        {session.is_multiplayer && (
+                            <span className="shrink-0 inline-flex items-center gap-1 bg-gym-primary/10 border border-gym-primary/30 text-gym-primary px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider">
+                                ⚔️ CO-OP
+                            </span>
+                        )}
                     </div>
 
                     {/* Muscles Trained */}
@@ -439,6 +483,23 @@ const WorkoutCard = ({
                                     💪 {muscle}
                                 </span>
                             ))}
+                        </div>
+                    )}
+
+                    {/* Multiplayer Status Indicator */}
+                    {session.is_multiplayer && (
+                        <div className="flex items-center gap-2 text-xs">
+                            {session.partner_status === 'in_progress' ? (
+                                <span className="inline-flex items-center gap-1.5 text-amber-500 font-bold bg-amber-500/10 px-3 py-1 rounded-xl border border-amber-500/20 animate-pulse">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                    {session.partner_name ? session.partner_name.substring(0, 10) : 'Compañero'} en proceso ⚔️
+                                </span>
+                            ) : (
+                                <span className="inline-flex items-center gap-1.5 text-green-500 font-bold bg-green-500/10 px-3 py-1 rounded-xl border border-green-500/20">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                                    Conjunto con {session.partner_name ? session.partner_name.substring(0, 10) : 'Compañero'} finalizado 🤝
+                                </span>
+                            )}
                         </div>
                     )}
 

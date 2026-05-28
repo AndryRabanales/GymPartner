@@ -142,11 +142,12 @@ export const WorkoutSession = () => {
     const [isRoutineModified, setIsRoutineModified] = useState(false); // Tracks if routine structure changed during session
 
     // --- Multiplayer Sync Hooks ---
-    const [partnerExercises, setPartnerExercises] = useState<WorkoutExercise[]>([]);
+     const [partnerExercises, setPartnerExercises] = useState<WorkoutExercise[]>([]);
     const [viewingMode, setViewingMode] = useState<'mine' | 'partner'>('mine');
     const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
     const lastIncomingState = useRef<string>('');
-        const [partnerName, setPartnerName] = useState<string>('Compañero');
+    const partnerSessionIdRef = useRef<string | null>(null);
+    const [partnerName, setPartnerName] = useState<string>('Compañero');
     const [partnerAvatar, setPartnerAvatar] = useState<string | null>(null);
 
     useEffect(() => {
@@ -170,13 +171,35 @@ export const WorkoutSession = () => {
                 const { exercises, sender } = payload.payload;
                 if (sender === user.id) return; // Ignore echoes
 
-                const incomingStr = JSON.stringify(exercises);
-                lastIncomingState.current = incomingStr;
+                if (exercises && exercises.length > 0) {
+                    const incomingStr = JSON.stringify(exercises);
+                    lastIncomingState.current = incomingStr;
 
-                if (multiplayerMode === 'conjunto') {
-                    setActiveExercises(exercises); // Merge automatically
-                } else if (multiplayerMode === 'separado') {
-                    setPartnerExercises(exercises); // Store for viewing
+                    if (multiplayerMode === 'conjunto') {
+                        setActiveExercises(exercises); // Merge automatically
+                    } else if (multiplayerMode === 'separado') {
+                        setPartnerExercises(exercises); // Store for viewing
+                    }
+                }
+            })
+            .on('broadcast', { event: 'sync_session_id' }, (payload) => {
+                const { sessionId: partnerSessionId, sender } = payload.payload;
+                if (sender === user.id) return; // Ignore echoes
+
+                if (partnerSessionId) {
+                    console.log('🔗 Received partner session ID via broadcast:', partnerSessionId);
+                    partnerSessionIdRef.current = partnerSessionId;
+                    
+                    if (sessionId) {
+                        supabase
+                            .from('workout_sessions')
+                            .update({ partner_session_id: partnerSessionId })
+                            .eq('id', sessionId)
+                            .then(({ error }) => {
+                                if (error) console.error('Error linking partner session:', error);
+                                else console.log('✅ Linked partner session successfully!');
+                            });
+                    }
                 }
             })
             .subscribe((status) => {
@@ -188,6 +211,15 @@ export const WorkoutSession = () => {
                         event: 'sync_state',
                         payload: { exercises: activeExercises, sender: user.id }
                     }).catch(e => console.error(e));
+
+                    // Send session ID if we already have it
+                    if (sessionId) {
+                        channel.send({
+                            type: 'broadcast',
+                            event: 'sync_session_id',
+                            payload: { sessionId: sessionId, sender: user.id }
+                        }).catch(e => console.error(e));
+                    }
                 }
             });
 
@@ -199,7 +231,7 @@ export const WorkoutSession = () => {
 
     // Send local updates
     useEffect(() => {
-        if (!isMultiplayer || !channelRef.current || !user) return;
+        if (!isMultiplayer || !channelRef.current || !user || activeExercises.length === 0) return;
         const currentStr = JSON.stringify(activeExercises);
         
         // Prevent echo loops
@@ -211,6 +243,31 @@ export const WorkoutSession = () => {
             }).catch(e => console.error(e));
         }
     }, [activeExercises, isMultiplayer, user]);
+
+    // Delay link of partner session ID if it arrived before our sessionId was created
+    useEffect(() => {
+        if (sessionId && partnerSessionIdRef.current) {
+            console.log('🔗 Delayed linking of partner session:', partnerSessionIdRef.current);
+            supabase
+                .from('workout_sessions')
+                .update({ partner_session_id: partnerSessionIdRef.current })
+                .eq('id', sessionId)
+                .then(({ error }) => {
+                    if (error) console.error('Error linking partner session delayed:', error);
+                    else console.log('✅ Delayed linking successful!');
+                });
+        }
+    }, [sessionId]);
+
+    // Send session ID broadcast as soon as sessionId is created
+    useEffect(() => {
+        if (!isMultiplayer || !channelRef.current || !user || !sessionId) return;
+        channelRef.current.send({
+            type: 'broadcast',
+            event: 'sync_session_id',
+            payload: { sessionId: sessionId, sender: user.id }
+        }).catch(e => console.error('Error sending sessionId broadcast:', e));
+    }, [sessionId, isMultiplayer, user]);
     // --- End Multiplayer Sync Hooks ---
 
     // NEW: Start Options Modal
@@ -843,7 +900,13 @@ export const WorkoutSession = () => {
 
             console.log("📍 GPS already resolved or pre-selected. Using finalGymId:", finalGymId);
 
-            const { data: newSession, error: startError } = await workoutService.startSession(user.id, finalGymId || undefined);
+            const { data: newSession, error: startError } = await workoutService.startSession(
+                user.id, 
+                finalGymId || undefined,
+                isMultiplayer,
+                multiplayerMode || undefined,
+                partnerId || undefined
+            );
             if (startError) throw startError;
 
             // Clear local backup on success
@@ -2043,7 +2106,7 @@ export const WorkoutSession = () => {
                                                                     const myName = user?.user_metadata?.full_name || user?.user_metadata?.username || user?.user_metadata?.name || 'Yo';
                                                                     const pName = isP1 ? (isInviter ? myName : partnerName) : (isInviter ? partnerName : myName);
                                                                     const displayName = pName ? pName.split(' ')[0].substring(0, 10) + (pName.split(' ')[0].length > 10 ? '...' : '') : 'Jugador ' + playerNum;
-                                                                    const isMyRow = (isInviter && isP1) || (!isInviter && !isP1);
+                                                                    const isMyRow = pName === myName;
                                                                     const rowReadOnly = isReadOnly; // Both athletes can edit either row to log workout targets mutually!
 
                                                                     const rowWeight = isP1 ? set.weight : (set.p2_weight || 0);
@@ -2060,12 +2123,12 @@ export const WorkoutSession = () => {
                                                                             {/* Premium Name Tag column on the left of each row */}
                                                                             {(isMultiplayer && multiplayerMode === 'conjunto') && (
                                                                                 <div className={`flex items-center justify-center min-w-[65px] max-w-[65px] bg-neutral-900/60 py-1.5 px-1.5 rounded-lg shadow-md transition-all ${
-                                                                                    isP1
-                                                                                        ? 'border border-gym-primary/30 bg-gym-primary/5 shadow-gym-primary/5'
+                                                                                    isMyRow
+                                                                                        ? 'border border-gym-primary/40 bg-gym-primary/10 shadow-gym-primary/5'
                                                                                         : 'border border-white/5'
                                                                                 }`}>
                                                                                     <span className={`text-[9px] font-black tracking-tight uppercase truncate text-center w-full transition-colors ${
-                                                                                        isP1 ? 'text-gym-primary' : 'text-neutral-300'
+                                                                                        isMyRow ? 'text-gym-primary font-bold' : 'text-neutral-400'
                                                                                     }`}>
                                                                                         {displayName}
                                                                                     </span>

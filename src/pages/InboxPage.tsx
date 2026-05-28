@@ -187,7 +187,8 @@ export const InboxPage = () => {
                         isMultiplayer: true, 
                         multiplayerMode: mode, 
                         partnerId: senderId,
-                        chatId: notification.data?.chat_id
+                        chatId: notification.data?.chat_id,
+                        isInviter: false
                     } 
                 });
                 setProcessingId(null);

@@ -31,13 +31,22 @@ export interface WorkoutSetData {
 
 class WorkoutService {
     // Start a new empty session (The "Battle" begins)
-    async startSession(userId: string, gymId?: string): Promise<{ data?: WorkoutSession; error?: any }> {
+    async startSession(
+        userId: string, 
+        gymId?: string,
+        isMultiplayer?: boolean,
+        multiplayerMode?: string,
+        partnerId?: string
+    ): Promise<{ data?: WorkoutSession; error?: any }> {
         const { data, error } = await supabase
             .from('workout_sessions')
             .insert({
                 user_id: userId,
                 gym_id: gymId,
-                started_at: new Date().toISOString()
+                started_at: new Date().toISOString(),
+                is_multiplayer: isMultiplayer || false,
+                multiplayer_mode: multiplayerMode || null,
+                partner_id: partnerId || null
             })
             .select()
             .single();

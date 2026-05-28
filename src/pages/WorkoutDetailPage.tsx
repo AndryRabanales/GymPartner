@@ -46,6 +46,16 @@ interface WorkoutDetail {
     duration_minutes: number;
     total_volume: number;
     exercises: ExerciseDetail[];
+    is_multiplayer?: boolean;
+    multiplayer_mode?: string;
+    partner_id?: string;
+    partner_session_id?: string;
+    partner_name?: string;
+    partner_avatar?: string;
+    partner_status?: 'in_progress' | 'finished';
+    partner_exercises?: ExerciseDetail[];
+    partner_volume?: number;
+    partner_duration_minutes?: number;
 }
 
 export default function WorkoutDetailPage() {
@@ -55,6 +65,7 @@ export default function WorkoutDetailPage() {
     const [deleting, setDeleting] = useState(false);
     const [workout, setWorkout] = useState<WorkoutDetail | null>(null);
     const [currentUser, setCurrentUser] = useState<any | null>(null);
+    const [viewMode, setViewMode] = useState<'mine' | 'partner' | 'joint'>('mine');
 
     useEffect(() => {
         supabase.auth.getUser().then(({ data: { user } }) => {
@@ -101,6 +112,10 @@ export default function WorkoutDetailPage() {
                     user_id,
                     started_at,
                     end_time,
+                    is_multiplayer,
+                    multiplayer_mode,
+                    partner_id,
+                    partner_session_id,
                     gyms ( name, id )
                 `)
                 .eq('id', id)
@@ -108,7 +123,28 @@ export default function WorkoutDetailPage() {
 
             if (sessionError) throw sessionError;
 
-            // Get workout logs with exercise details
+            // Auto-heal matching partner session ID if it isn't set yet
+            let resolvedPartnerSessionId = session.partner_session_id;
+            if (session.is_multiplayer && !resolvedPartnerSessionId && session.partner_id) {
+                const { data: foundPartner } = await supabase
+                    .from('workout_sessions')
+                    .select('id')
+                    .eq('user_id', session.partner_id)
+                    .eq('is_multiplayer', true)
+                    .eq('partner_id', session.user_id)
+                    .order('started_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+                
+                if (foundPartner?.id) {
+                    resolvedPartnerSessionId = foundPartner.id;
+                    await supabase
+                        .from('workout_sessions')
+                        .update({ partner_session_id: foundPartner.id })
+                        .eq('id', session.id);
+                }
+            }
+
             // Get workout logs with exercise details
             const { data: logs, error: logsError } = await supabase
                 .from('workout_logs')
@@ -192,6 +228,125 @@ export default function WorkoutDetailPage() {
                 };
             });
 
+            // Fetch partner logs if multiplayer
+            let partnerName = 'Compañero';
+            let partnerAvatar = undefined;
+            let partnerStatus: 'in_progress' | 'finished' = 'in_progress';
+            let partnerExercises: ExerciseDetail[] = [];
+            let partnerVol = 0;
+            let partnerDuration = 0;
+
+            if (session.is_multiplayer && session.partner_id) {
+                const { data: pProfile } = await supabase
+                    .from('profiles')
+                    .select('username, avatar_url')
+                    .eq('id', session.partner_id)
+                    .maybeSingle();
+                
+                if (pProfile?.username) partnerName = pProfile.username;
+                if (pProfile?.avatar_url) partnerAvatar = pProfile.avatar_url;
+            }
+
+            if (resolvedPartnerSessionId) {
+                const { data: pSession } = await supabase
+                    .from('workout_sessions')
+                    .select('started_at, end_time, finished_at')
+                    .eq('id', resolvedPartnerSessionId)
+                    .maybeSingle();
+
+                if (pSession) {
+                    const pFinished = !!(pSession.finished_at || pSession.end_time);
+                    partnerStatus = pFinished ? 'finished' : 'in_progress';
+
+                    // Fetch partner logs
+                    const { data: pLogs } = await supabase
+                        .from('workout_logs')
+                        .select(`
+                            exercise_id,
+                            set_number,
+                            weight_kg,
+                            reps,
+                            rpe,
+                            time,
+                            distance,
+                            metrics_data,
+                            is_pr,
+                            category_snapshot,
+                            equipment:exercise_id ( name, target_muscle_group )
+                        `)
+                        .eq('session_id', resolvedPartnerSessionId)
+                        .order('exercise_id')
+                        .order('set_number');
+
+                    if (pLogs && pLogs.length > 0) {
+                        const pExerciseMap = new Map<string, ExerciseDetail>();
+                        pLogs.forEach((log: any) => {
+                            const exId = log.exercise_id;
+                            if (!pExerciseMap.has(exId)) {
+                                pExerciseMap.set(exId, {
+                                    exercise_id: exId,
+                                    exercise_name: log.equipment?.name || 'Ejercicio Desconocido',
+                                    muscle_group: log.category_snapshot || log.equipment?.target_muscle_group || 'General',
+                                    sets: []
+                                });
+                            }
+
+                            const exercise = pExerciseMap.get(exId)!;
+                            exercise.sets.push({
+                                set_number: log.set_number,
+                                weight_kg: log.weight_kg || 0,
+                                reps: log.reps || 0,
+                                rpe: log.rpe,
+                                time: log.time,
+                                distance: log.distance,
+                                metrics_data: log.metrics_data || {},
+                                is_pr: log.is_pr || false,
+                                completedAt: log.metrics_data?._checklist_timestamp,
+                                restDuration: log.metrics_data?._rest_duration_ms,
+                                restStatus: log.metrics_data?._rest_status,
+                                weightUnit: log.metrics_data?._weight_unit || 'kg'
+                            });
+
+                            partnerVol += (log.weight_kg || 0) * (log.reps || 0);
+                        });
+
+                        pExerciseMap.forEach((ex) => {
+                            const allCustomKeys = new Set<string>();
+                            const internalKeys = ['_checklist_timestamp', '_rest_duration_ms', '_rest_status'];
+
+                            ex.sets.forEach(s => {
+                                if (s.metrics_data) {
+                                    Object.keys(s.metrics_data).forEach(k => {
+                                        if (!internalKeys.includes(k)) {
+                                            allCustomKeys.add(k);
+                                        }
+                                    });
+                                }
+                            });
+
+                            ex.metrics = {
+                                hasWeight: ex.sets.some(s => s.weight_kg > 0),
+                                hasReps: ex.sets.some(s => s.reps > 0),
+                                hasTime: ex.sets.some(s => (s.time || 0) > 0),
+                                hasDistance: ex.sets.some(s => (s.distance || 0) > 0),
+                                hasRpe: ex.sets.some(s => (s.rpe || 0) > 0),
+                                hasCompletedAt: ex.sets.some(s => !!s.completedAt),
+                                hasRestDuration: ex.sets.some(s => (s.restDuration || 0) > 0),
+                                customKeys: Array.from(allCustomKeys)
+                            };
+                        });
+
+                        partnerExercises = Array.from(pExerciseMap.values());
+                    }
+
+                    if (pSession.started_at && (pSession.end_time || pSession.finished_at)) {
+                        const pStart = new Date(pSession.started_at).getTime();
+                        const pEnd = new Date(pSession.end_time || pSession.finished_at).getTime();
+                        partnerDuration = Math.round((pEnd - pStart) / (1000 * 60));
+                    }
+                }
+            }
+
             const start = new Date(session.started_at).getTime();
             const end = new Date(session.end_time).getTime();
             const duration = Math.round((end - start) / (1000 * 60));
@@ -208,7 +363,17 @@ export default function WorkoutDetailPage() {
                 gym_id: gymData?.id,
                 duration_minutes: duration,
                 total_volume: totalVol,
-                exercises: Array.from(exerciseMap.values())
+                exercises: Array.from(exerciseMap.values()),
+                is_multiplayer: session.is_multiplayer,
+                multiplayer_mode: session.multiplayer_mode,
+                partner_id: session.partner_id,
+                partner_session_id: resolvedPartnerSessionId,
+                partner_name: partnerName,
+                partner_avatar: partnerAvatar,
+                partner_status: partnerStatus,
+                partner_exercises: partnerExercises,
+                partner_volume: partnerVol,
+                partner_duration_minutes: partnerDuration
             });
 
             setLoading(false);
@@ -311,185 +476,358 @@ export default function WorkoutDetailPage() {
                         </span>
                     </div>
                 </div>
+
+                {/* Multiplayer Co-op Header Banner */}
+                {workout.is_multiplayer && (
+                    <div className="mt-6 p-4 rounded-3xl bg-gradient-to-r from-yellow-500/10 via-amber-500/10 to-transparent border border-yellow-500/20">
+                        <div className="flex items-center justify-between mb-3">
+                            <span className="text-xs font-black text-gym-primary uppercase tracking-widest flex items-center gap-1.5">
+                                ⚔️ ENTRENAMIENTO COOPERATIVO
+                            </span>
+                            {workout.partner_status === 'in_progress' ? (
+                                <span className="text-[10px] bg-amber-500/10 text-amber-500 border border-amber-500/20 px-2.5 py-0.5 rounded-full font-bold animate-pulse">
+                                    ⚡ {workout.partner_name?.substring(0, 10)} entrenando...
+                                </span>
+                            ) : (
+                                <span className="text-[10px] bg-green-500/10 text-green-500 border border-green-500/20 px-2.5 py-0.5 rounded-full font-bold">
+                                    🤝 Completado
+                                </span>
+                            )}
+                        </div>
+
+                        {/* Stats Comparison Summary */}
+                        <div className="grid grid-cols-2 gap-4 text-sm mt-2">
+                            <div className="bg-neutral-950 p-3 rounded-2xl border border-neutral-800">
+                                <div className="text-[10px] text-neutral-400 font-bold uppercase">Mi Volumen</div>
+                                <div className="text-lg font-black text-white font-mono">{workout.total_volume} kg</div>
+                                <div className="text-[10px] text-neutral-500">{workout.duration_minutes} min</div>
+                            </div>
+                            <div className="bg-neutral-950 p-3 rounded-2xl border border-neutral-800">
+                                <div className="text-[10px] text-neutral-400 font-bold uppercase">{workout.partner_name?.substring(0, 10)}</div>
+                                {workout.partner_status === 'in_progress' ? (
+                                    <div className="text-xs font-bold text-amber-500 italic mt-1 animate-pulse">
+                                        Aún entrenando...
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="text-lg font-black text-white font-mono">{workout.partner_volume || 0} kg</div>
+                                        <div className="text-[10px] text-neutral-500">{workout.partner_duration_minutes || 0} min</div>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* View Mode Tabs Selector */}
+                        <div className="flex gap-2 mt-4 bg-neutral-950 p-1 rounded-2xl border border-neutral-800">
+                            <button
+                                onClick={() => setViewMode('mine')}
+                                className={`flex-1 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${viewMode === 'mine' ? 'bg-gym-primary text-black' : 'text-neutral-400 hover:text-white'}`}
+                            >
+                                Mis Datos
+                            </button>
+                            <button
+                                onClick={() => setViewMode('partner')}
+                                className={`flex-1 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 ${viewMode === 'partner' ? 'bg-gym-primary text-black' : 'text-neutral-400 hover:text-white'}`}
+                            >
+                                {workout.partner_name?.substring(0, 10)}
+                            </button>
+                            <button
+                                onClick={() => {
+                                    if (workout.partner_status === 'in_progress') {
+                                        toast.error(`¡${workout.partner_name} aún está entrenando! Espera a que termine.`);
+                                    } else {
+                                        setViewMode('joint');
+                                    }
+                                }}
+                                className={`flex-1 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${workout.partner_status === 'in_progress' ? 'opacity-40 cursor-not-allowed' : ''} ${viewMode === 'joint' ? 'bg-gradient-to-r from-yellow-500 to-amber-500 text-black shadow-lg font-black' : 'text-neutral-400 hover:text-white'}`}
+                            >
+                                Historial Conjunto 🤝
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Exercise List */}
             <div className="max-w-4xl mx-auto p-4 space-y-6">
-                {workout.exercises.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 text-neutral-500 space-y-4">
-                        <Dumbbell size={48} className="opacity-20" />
-                        <p className="text-sm uppercase tracking-widest font-bold">No se registraron ejercicios</p>
-                    </div>
-                ) : (
-                    workout.exercises.map((exercise) => (
-                        <div
-                            key={exercise.exercise_id}
-                            className="bg-neutral-900 border border-neutral-800 rounded-3xl overflow-hidden shadow-2xl relative group"
-                        >
-                            {/* Decorative Gradient Blob */}
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-gym-primary/5 rounded-full blur-3xl group-hover:bg-gym-primary/10 transition-all pointer-events-none" />
-
-                            {/* Exercise Header */}
-                            <div className="p-6 border-b border-neutral-800 flex justify-between items-start bg-neutral-900/50 backdrop-blur-sm">
-                                <div>
-                                    <h3 className="text-xl md:text-2xl font-black text-white italic uppercase tracking-tight mb-2">
-                                        {exercise.exercise_name}
-                                    </h3>
-                                    <span className="inline-flex items-center gap-1.5 bg-neutral-800 text-neutral-400 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-gym-primary" />
-                                        {exercise.muscle_group}
-                                    </span>
-                                </div>
-                                <div className="text-right">
-                                    <div className="text-2xl font-black text-gym-primary font-mono tracking-tighter">
-                                        {exercise.sets.reduce((sum, set) => sum + (set.weight_kg * set.reps), 0).toFixed(0)}
-                                        <span className="text-xs text-neutral-500 ml-1 font-sans font-bold">KG</span>
-                                    </div>
-                                    <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Volumen Total</div>
-                                </div>
-                            </div>
-
-                            {/* Sets Table */}
-                            <div className="p-4">
-                                <div className="overflow-x-auto pb-1">
-                                    <div className="min-w-fit space-y-1">
-                                        {/* Dynamic Header */}
-                                        <div className="flex gap-1 px-2 pb-2 text-[9px] font-black text-neutral-500 uppercase tracking-widest text-center border-b border-neutral-800/50">
-                                            <div className="w-6 text-center">#</div>
-                                            {exercise.metrics?.hasWeight && <div className="flex-1 min-w-[50px]">KG</div>}
-                                            {exercise.metrics?.hasReps && <div className="flex-1 min-w-[50px]">Reps</div>}
-                                            {exercise.metrics?.hasTime && <div className="flex-1 min-w-[50px]">Tie</div>}
-                                            {exercise.metrics?.hasDistance && <div className="flex-1 min-w-[50px]">Dist</div>}
-                                            {exercise.metrics?.hasRpe && <div className="flex-1 min-w-[40px]">RPE</div>}
-                                            {exercise.metrics?.hasCompletedAt && <div className="flex-1 min-w-[50px]">Fin</div>}
-                                            {exercise.metrics?.hasRestDuration && <div className="flex-1 min-w-[50px]">Desc</div>}
-                                            {/* Dynamic Custom Headers */}
-                                            {exercise.metrics?.customKeys?.map(key => (
-                                                <div key={key} className="flex-1 min-w-[50px] truncate" title={key}>
-                                                    {key.substring(0, 4)}
-                                                </div>
-                                            ))}
-                                            {/* Total Volume Column only if we have weight/reps */}
-                                            {(exercise.metrics?.hasWeight && exercise.metrics?.hasReps) && <div className="flex-1 min-w-[50px] text-right">Vol</div>}
-                                        </div>
-
-                                        {/* Dynamic Rows */}
-                                        <div className="space-y-1 mt-1">
-                                            {exercise.sets.map((set, index) => (
-                                                <div
-                                                    key={`set-${index}-${set.set_number}`}
-                                                    className={`flex gap-1 px-2 py-2 rounded-lg items-center text-center transition-colors ${set.is_pr
-                                                        ? 'bg-gradient-to-r from-gym-primary/10 to-transparent border border-gym-primary/20'
-                                                        : 'hover:bg-neutral-800/30'
-                                                        }`}
-                                                >
-                                                    {/* Set Number */}
-                                                    <div className="w-6 text-center font-bold text-neutral-500 text-xs flex justify-center">
-                                                        <span className="w-5 h-5 rounded flex items-center justify-center bg-neutral-800/50">
-                                                            {set.set_number}
-                                                        </span>
-                                                    </div>
-
-                                                    {/* Weight */}
-                                                    {exercise.metrics?.hasWeight && (
-                                                        <div className="flex-1 min-w-[50px] font-mono font-bold text-white text-sm">
-                                                            {set.weightUnit === 'lb'
-                                                                ? `${(set.weight_kg * 2.20462).toFixed(1).replace(/\.0$/, '')} lb`
-                                                                : `${set.weight_kg} kg`
-                                                            }
-                                                        </div>
-                                                    )}
-
-                                                    {/* Reps */}
-                                                    {exercise.metrics?.hasReps && (
-                                                        <div className="flex-1 min-w-[50px] font-mono font-bold text-white text-sm">
-                                                            {set.reps > 0 ? set.reps : <span className="text-neutral-700">-</span>}
-                                                        </div>
-                                                    )}
-
-                                                    {/* Time */}
-                                                    {exercise.metrics?.hasTime && (
-                                                        <div className="flex-1 min-w-[50px] font-mono font-bold text-white text-sm">
-                                                            {set.time ? `${set.time}s` : <span className="text-neutral-700">-</span>}
-                                                        </div>
-                                                    )}
-
-                                                    {/* Distance */}
-                                                    {exercise.metrics?.hasDistance && (
-                                                        <div className="flex-1 min-w-[50px] font-mono font-bold text-white text-sm">
-                                                            {set.distance ? `${set.distance}m` : <span className="text-neutral-700">-</span>}
-                                                        </div>
-                                                    )}
-
-                                                    {/* RPE */}
-                                                    {exercise.metrics?.hasRpe && (
-                                                        <div className="flex-1 min-w-[40px] font-mono font-bold text-gym-primary/80 text-xs">
-                                                            {set.rpe || <span className="text-neutral-700">-</span>}
-                                                        </div>
-                                                    )}
-
-                                                    {/* Completed At (Elapsed) */}
-                                                    {exercise.metrics?.hasCompletedAt && (
-                                                        <div className="flex-1 min-w-[50px] font-mono font-bold text-white text-xs">
-                                                            {set.completedAt ? (() => {
-                                                                const start = new Date(workout.started_at).getTime();
-                                                                const completedTime = Number(set.completedAt);
-                                                                if (isNaN(completedTime)) return '-';
-                                                                const diff = completedTime - start;
-                                                                if (diff < 0) return '-';
-                                                                const totalSeconds = Math.floor(diff / 1000);
-                                                                const h = Math.floor(totalSeconds / 3600);
-                                                                const m = Math.floor((totalSeconds % 3600) / 60);
-                                                                const s = totalSeconds % 60;
-                                                                
-                                                                let timeStr = '';
-                                                                if (h > 0) timeStr += `${h}h `;
-                                                                if (m > 0 || h > 0) timeStr += `${m}m `;
-                                                                timeStr += `${s}s`;
-                                                                
-                                                                return timeStr.trim();
-                                                            })() : <span className="text-neutral-700">-</span>}
-                                                        </div>
-                                                    )}
-
-                                                    {/* Rest Duration */}
-                                                    {exercise.metrics?.hasRestDuration && (
-                                                        <div className="flex-1 min-w-[50px] font-mono font-bold text-blue-400 text-xs">
-                                                            {set.restDuration ? (() => {
-                                                                const secs = Math.floor(set.restDuration / 1000);
-                                                                const m = Math.floor(secs / 60);
-                                                                const s = secs % 60;
-                                                                return `${m}:${s.toString().padStart(2, '0')}`;
-                                                            })() : <span className="text-neutral-700">-</span>}
-                                                        </div>
-                                                    )}
-
-                                                    {/* Dynamic Custom Cells */}
-                                                    {exercise.metrics?.customKeys?.map(key => (
-                                                        <div key={key} className="flex-1 min-w-[50px] font-mono font-bold text-white text-sm">
-                                                            {set.metrics_data?.[key] ? set.metrics_data[key] : <span className="text-neutral-700">-</span>}
-                                                        </div>
-                                                    ))}
-
-                                                    {/* Volume (Calculated) */}
-                                                    {(exercise.metrics?.hasWeight && exercise.metrics?.hasReps) && (
-                                                        <div className="flex-1 min-w-[50px] text-right font-mono font-black text-neutral-600 text-[10px]">
-                                                            {set.weight_kg > 0 && set.reps > 0
-                                                                ? (set.weight_kg * set.reps).toFixed(0)
-                                                                : '-'
-                                                            }
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                {viewMode === 'mine' && (
+                    workout.exercises.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-20 text-neutral-500 space-y-4">
+                            <Dumbbell size={48} className="opacity-20" />
+                            <p className="text-sm uppercase tracking-widest font-bold">No se registraron ejercicios</p>
                         </div>
-                    ))
+                    ) : (
+                        workout.exercises.map((exercise) => (
+                            <ExerciseCard key={exercise.exercise_id} exercise={exercise} isMine={true} workoutStartedAt={workout.started_at} />
+                        ))
+                    )
+                )}
+
+                {viewMode === 'partner' && (
+                    !workout.partner_exercises || workout.partner_exercises.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-20 text-neutral-500 bg-neutral-900 border border-neutral-800 rounded-3xl space-y-4">
+                            <Dumbbell size={48} className="opacity-20 text-blue-500" />
+                            <p className="text-sm uppercase tracking-widest font-bold text-neutral-400">
+                                {workout.partner_name} no ha registrado ejercicios aún
+                            </p>
+                        </div>
+                    ) : (
+                        workout.partner_exercises.map((exercise) => (
+                            <ExerciseCard key={exercise.exercise_id} exercise={exercise} isMine={false} workoutStartedAt={workout.started_at} partnerName={workout.partner_name} />
+                        ))
+                    )
+                )}
+
+                {viewMode === 'joint' && (
+                    (() => {
+                        const allExerciseIds = Array.from(new Set([
+                            ...workout.exercises.map(e => e.exercise_id),
+                            ...(workout.partner_exercises || []).map(e => e.exercise_id)
+                        ]));
+
+                        if (allExerciseIds.length === 0) {
+                            return (
+                                <div className="flex flex-col items-center justify-center py-20 text-neutral-500 bg-neutral-900 border border-neutral-800 rounded-3xl space-y-4">
+                                    <Dumbbell size={48} className="opacity-20" />
+                                    <p className="text-sm uppercase tracking-widest font-bold">No hay ejercicios para comparar</p>
+                                </div>
+                            );
+                        }
+
+                        return allExerciseIds.map((exId) => {
+                            const myEx = workout.exercises.find(e => e.exercise_id === exId);
+                            const partnerEx = (workout.partner_exercises || []).find(e => e.exercise_id === exId);
+                            const name = myEx?.exercise_name || partnerEx?.exercise_name || 'Ejercicio Desconocido';
+                            const muscle = myEx?.muscle_group || partnerEx?.muscle_group || 'General';
+
+                            return (
+                                <div key={exId} className="bg-neutral-900 border border-neutral-800 rounded-3xl overflow-hidden shadow-2xl relative">
+                                    {/* Header */}
+                                    <div className="p-6 border-b border-neutral-800 flex justify-between items-center bg-neutral-900/50 backdrop-blur-sm">
+                                        <div>
+                                            <h3 className="text-xl md:text-2xl font-black text-white italic uppercase tracking-tight mb-2">
+                                                {name}
+                                            </h3>
+                                            <span className="inline-flex items-center gap-1.5 bg-neutral-800 text-neutral-400 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-gym-primary" />
+                                                {muscle}
+                                            </span>
+                                        </div>
+                                        <div className="text-right flex gap-4">
+                                            <div>
+                                                <div className="text-lg font-black text-gym-primary font-mono tracking-tighter">
+                                                    {myEx?.sets.reduce((sum, set) => sum + (set.weight_kg * set.reps), 0).toFixed(0) || '0'}
+                                                    <span className="text-[10px] text-neutral-500 ml-0.5 font-sans font-bold">KG</span>
+                                                </div>
+                                                <div className="text-[8px] text-neutral-500 font-bold uppercase tracking-widest">Mi Vol</div>
+                                            </div>
+                                            <div className="border-l border-neutral-800 pl-4">
+                                                <div className="text-lg font-black text-blue-400 font-mono tracking-tighter">
+                                                    {partnerEx?.sets.reduce((sum, set) => sum + (set.weight_kg * set.reps), 0).toFixed(0) || '0'}
+                                                    <span className="text-[10px] text-neutral-500 ml-0.5 font-sans font-bold">KG</span>
+                                                </div>
+                                                <div className="text-[8px] text-neutral-500 font-bold uppercase tracking-widest">{workout.partner_name?.substring(0, 8)}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Side by side comparison layout */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-neutral-800">
+                                        {/* My Sets */}
+                                        <div className="p-4 space-y-3">
+                                            <div className="text-xs font-black text-gym-primary uppercase tracking-widest px-2 flex justify-between">
+                                                <span>Mis Series ⚡</span>
+                                                <span className="text-[10px] text-neutral-500 font-normal lowercase">({myEx?.sets.length || 0} series)</span>
+                                            </div>
+                                            {myEx ? (
+                                                <SetsTableCompact exercise={myEx} workoutStartedAt={workout.started_at} isMine={true} />
+                                            ) : (
+                                                <div className="text-center py-6 text-xs text-neutral-600 italic">No realizado</div>
+                                            )}
+                                        </div>
+
+                                        {/* Partner Sets */}
+                                        <div className="p-4 space-y-3">
+                                            <div className="text-xs font-black text-blue-400 uppercase tracking-widest px-2 flex justify-between">
+                                                <span>{workout.partner_name} ⚔️</span>
+                                                <span className="text-[10px] text-neutral-500 font-normal lowercase">({partnerEx?.sets.length || 0} series)</span>
+                                            </div>
+                                            {partnerEx ? (
+                                                <SetsTableCompact exercise={partnerEx} workoutStartedAt={workout.started_at} isMine={false} />
+                                            ) : (
+                                                <div className="text-center py-6 text-xs text-neutral-600 italic">No realizado</div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        });
+                    })()
                 )}
             </div>
         </div>
     );
 }
+
+// Helper components to keep things exceptionally structured and premium
+const ExerciseCard = ({ exercise, isMine, workoutStartedAt, partnerName }: { exercise: ExerciseDetail; isMine: boolean; workoutStartedAt: string; partnerName?: string }) => {
+    return (
+        <div className="bg-neutral-900 border border-neutral-800 rounded-3xl overflow-hidden shadow-2xl relative group">
+            <div className={`absolute top-0 right-0 w-32 h-32 ${isMine ? 'bg-gym-primary/5' : 'bg-blue-500/5'} rounded-full blur-3xl group-hover:opacity-100 transition-all pointer-events-none`} />
+
+            <div className="p-6 border-b border-neutral-800 flex justify-between items-start bg-neutral-900/50 backdrop-blur-sm">
+                <div>
+                    <h3 className="text-xl md:text-2xl font-black text-white italic uppercase tracking-tight mb-2">
+                        {exercise.exercise_name}
+                    </h3>
+                    <span className="inline-flex items-center gap-1.5 bg-neutral-800 text-neutral-400 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
+                        <div className={`w-1.5 h-1.5 rounded-full ${isMine ? 'bg-gym-primary' : 'bg-blue-400'}`} />
+                        {exercise.muscle_group}
+                    </span>
+                </div>
+                <div className="text-right">
+                    <div className={`text-2xl font-black ${isMine ? 'text-gym-primary' : 'text-blue-400'} font-mono tracking-tighter`}>
+                        {exercise.sets.reduce((sum, set) => sum + (set.weight_kg * set.reps), 0).toFixed(0)}
+                        <span className="text-xs text-neutral-500 ml-1 font-sans font-bold">KG</span>
+                    </div>
+                    <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">
+                        {isMine ? 'Mi Volumen' : `Volumen de ${partnerName?.substring(0, 10)}`}
+                    </div>
+                </div>
+            </div>
+
+            <div className="p-4">
+                <SetsTableCompact exercise={exercise} workoutStartedAt={workoutStartedAt} isMine={isMine} />
+            </div>
+        </div>
+    );
+};
+
+const SetsTableCompact = ({ exercise, workoutStartedAt, isMine }: { exercise: ExerciseDetail; workoutStartedAt: string; isMine: boolean }) => {
+    return (
+        <div className="overflow-x-auto pb-1">
+            <div className="min-w-fit space-y-1">
+                {/* Dynamic Header */}
+                <div className="flex gap-1 px-2 pb-2 text-[9px] font-black text-neutral-500 uppercase tracking-widest text-center border-b border-neutral-800/50">
+                    <div className="w-6 text-center">#</div>
+                    {exercise.metrics?.hasWeight && <div className="flex-1 min-w-[50px]">KG</div>}
+                    {exercise.metrics?.hasReps && <div className="flex-1 min-w-[50px]">Reps</div>}
+                    {exercise.metrics?.hasTime && <div className="flex-1 min-w-[50px]">Tie</div>}
+                    {exercise.metrics?.hasDistance && <div className="flex-1 min-w-[50px]">Dist</div>}
+                    {exercise.metrics?.hasRpe && <div className="flex-1 min-w-[40px]">RPE</div>}
+                    {exercise.metrics?.hasCompletedAt && <div className="flex-1 min-w-[50px]">Fin</div>}
+                    {exercise.metrics?.hasRestDuration && <div className="flex-1 min-w-[50px]">Desc</div>}
+                    {exercise.metrics?.customKeys?.map(key => (
+                        <div key={key} className="flex-1 min-w-[50px] truncate" title={key}>
+                            {key.substring(0, 4)}
+                        </div>
+                    ))}
+                    {(exercise.metrics?.hasWeight && exercise.metrics?.hasReps) && <div className="flex-1 min-w-[50px] text-right">Vol</div>}
+                </div>
+
+                {/* Rows */}
+                <div className="space-y-1 mt-1">
+                    {exercise.sets.map((set, index) => (
+                        <div
+                            key={`set-${index}-${set.set_number}`}
+                            className={`flex gap-1 px-2 py-1.5 rounded-lg items-center text-center transition-colors ${set.is_pr
+                                ? isMine 
+                                    ? 'bg-gradient-to-r from-gym-primary/10 to-transparent border border-gym-primary/20'
+                                    : 'bg-gradient-to-r from-blue-500/10 to-transparent border border-blue-500/20'
+                                : 'hover:bg-neutral-800/30'
+                            }`}
+                        >
+                            <div className="w-6 text-center font-bold text-neutral-500 text-[10px] flex justify-center">
+                                <span className="w-4 h-4 rounded flex items-center justify-center bg-neutral-800/50">
+                                    {set.set_number}
+                                </span>
+                            </div>
+
+                            {exercise.metrics?.hasWeight && (
+                                <div className="flex-1 min-w-[50px] font-mono font-bold text-white text-xs">
+                                    {set.weightUnit === 'lb'
+                                        ? `${(set.weight_kg * 2.20462).toFixed(1).replace(/\.0$/, '')} lb`
+                                        : `${set.weight_kg} kg`
+                                    }
+                                </div>
+                            )}
+
+                            {exercise.metrics?.hasReps && (
+                                <div className="flex-1 min-w-[50px] font-mono font-bold text-white text-xs">
+                                    {set.reps > 0 ? set.reps : <span className="text-neutral-700">-</span>}
+                                </div>
+                            )}
+
+                            {exercise.metrics?.hasTime && (
+                                <div className="flex-1 min-w-[50px] font-mono font-bold text-white text-xs">
+                                    {set.time ? `${set.time}s` : <span className="text-neutral-700">-</span>}
+                                </div>
+                            )}
+
+                            {exercise.metrics?.hasDistance && (
+                                <div className="flex-1 min-w-[50px] font-mono font-bold text-white text-xs">
+                                    {set.distance ? `${set.distance}m` : <span className="text-neutral-700">-</span>}
+                                </div>
+                            )}
+
+                            {exercise.metrics?.hasRpe && (
+                                <div className={`flex-1 min-w-[40px] font-mono font-bold ${isMine ? 'text-gym-primary/80' : 'text-blue-400/80'} text-[10px]`}>
+                                    {set.rpe || <span className="text-neutral-700">-</span>}
+                                </div>
+                            )}
+
+                            {exercise.metrics?.hasCompletedAt && (
+                                <div className="flex-1 min-w-[50px] font-mono font-bold text-white text-[10px]">
+                                    {set.completedAt ? (() => {
+                                        const start = new Date(workoutStartedAt).getTime();
+                                        const completedTime = Number(set.completedAt);
+                                        if (isNaN(completedTime)) return '-';
+                                        const diff = completedTime - start;
+                                        if (diff < 0) return '-';
+                                        const totalSeconds = Math.floor(diff / 1000);
+                                        const h = Math.floor(totalSeconds / 3600);
+                                        const m = Math.floor((totalSeconds % 3600) / 60);
+                                        const s = totalSeconds % 60;
+                                        
+                                        let timeStr = '';
+                                        if (h > 0) timeStr += `${h}h `;
+                                        if (m > 0 || h > 0) timeStr += `${m}m `;
+                                        timeStr += `${s}s`;
+                                        
+                                        return timeStr.trim();
+                                    })() : <span className="text-neutral-700">-</span>}
+                                </div>
+                            )}
+
+                            {exercise.metrics?.hasRestDuration && (
+                                <div className="flex-1 min-w-[50px] font-mono font-bold text-blue-400 text-[10px]">
+                                    {set.restDuration ? (() => {
+                                        const secs = Math.floor(set.restDuration / 1000);
+                                        const m = Math.floor(secs / 60);
+                                        const s = secs % 60;
+                                        return `${m}:${s.toString().padStart(2, '0')}`;
+                                    })() : <span className="text-neutral-700">-</span>}
+                                </div>
+                            )}
+
+                            {exercise.metrics?.customKeys?.map(key => (
+                                <div key={key} className="flex-1 min-w-[50px] font-mono font-bold text-white text-xs">
+                                    {set.metrics_data?.[key] ? set.metrics_data[key] : <span className="text-neutral-700">-</span>}
+                                </div>
+                            ))}
+
+                            {(exercise.metrics?.hasWeight && exercise.metrics?.hasReps) && (
+                                <div className="flex-1 min-w-[50px] text-right font-mono font-black text-neutral-600 text-[9px]">
+                                    {set.weight_kg > 0 && set.reps > 0
+                                        ? (set.weight_kg * set.reps).toFixed(0)
+                                        : '-'
+                                    }
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+};
