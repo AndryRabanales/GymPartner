@@ -107,11 +107,21 @@ export const WorkoutSession = () => {
     const location = useLocation();
     
     // Multiplayer State
-    const navState = location.state as any || {};
-    const [isMultiplayer, setIsMultiplayer] = useState<boolean>(navState.isMultiplayer || false);
-    const [multiplayerMode, setMultiplayerMode] = useState<'conjunto' | 'separado' | null>(navState.multiplayerMode || null);
-    const [partnerId, setPartnerId] = useState<string | null>(navState.partnerId || null);
-    const [chatId, setChatId] = useState<string | null>(navState.chatId || null);
+        const navState = location.state as any || {};
+    const cachedCoopStr = localStorage.getItem('ginx_coop_state');
+    const cachedCoop = cachedCoopStr ? JSON.parse(cachedCoopStr) : {};
+
+    const [isMultiplayer, setIsMultiplayer] = useState<boolean>(navState.isMultiplayer ?? cachedCoop.isMultiplayer ?? false);
+    const [multiplayerMode, setMultiplayerMode] = useState<'conjunto' | 'separado' | null>(navState.multiplayerMode ?? cachedCoop.multiplayerMode ?? null);
+    const [partnerId, setPartnerId] = useState<string | null>(navState.partnerId ?? cachedCoop.partnerId ?? null);
+    const [chatId, setChatId] = useState<string | null>(navState.chatId ?? cachedCoop.chatId ?? null);
+    const [isInviter, setIsInviter] = useState<boolean>(navState.isInviter ?? cachedCoop.isInviter ?? true);
+    
+    useEffect(() => {
+        if (isMultiplayer) {
+            localStorage.setItem('ginx_coop_state', JSON.stringify({ isMultiplayer, multiplayerMode, partnerId, chatId, isInviter }));
+        }
+    }, [isMultiplayer, multiplayerMode, partnerId, chatId, isInviter]);
 
     // State
     const [loading, setLoading] = useState(true);
@@ -136,15 +146,17 @@ export const WorkoutSession = () => {
     const [viewingMode, setViewingMode] = useState<'mine' | 'partner'>('mine');
     const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
     const lastIncomingState = useRef<string>('');
-    const [partnerName, setPartnerName] = useState<string>('Compañero');
+        const [partnerName, setPartnerName] = useState<string>('Compañero');
+    const [partnerAvatar, setPartnerAvatar] = useState<string | null>(null);
 
     useEffect(() => {
         if (!isMultiplayer || !partnerId || !chatId || !user) return;
 
-        // Fetch partner name
+        // Fetch partner info
         const fetchPartner = async () => {
-            const { data } = await supabase.from('profiles').select('full_name').eq('id', partnerId).single();
+            const { data } = await supabase.from('profiles').select('full_name, avatar_url').eq('id', partnerId).single();
             if (data?.full_name) setPartnerName(data.full_name);
+            if (data?.avatar_url) setPartnerAvatar(data.avatar_url);
         };
         fetchPartner();
 
@@ -1801,13 +1813,22 @@ export const WorkoutSession = () => {
             {/* Multiplayer Coop Header */}
             {isMultiplayer && (
                 <div className="fixed top-0 left-0 w-full z-[80] bg-neutral-950/80 backdrop-blur-md border-b border-yellow-500/20 px-4 py-2 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center border border-yellow-500/40">
-                            <Swords size={16} className="text-yellow-500" />
+                    <div className="flex items-center gap-3">
+                        <div className="relative">
+                            {partnerAvatar ? (
+                                <img src={partnerAvatar} alt={partnerName} className="w-10 h-10 rounded-full object-cover border-2 border-yellow-500/50 shadow-[0_0_10px_rgba(250,204,21,0.2)]" />
+                            ) : (
+                                <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center border-2 border-yellow-500/40 shadow-[0_0_10px_rgba(250,204,21,0.2)]">
+                                    <Swords size={18} className="text-yellow-500" />
+                                </div>
+                            )}
+                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-neutral-950 rounded-full animate-pulse" title="En línea" />
                         </div>
                         <div>
-                            <h3 className="text-white font-black text-[10px] uppercase tracking-wider">MODO COOP</h3>
-                            <p className="text-neutral-400 text-[9px] font-bold uppercase">{multiplayerMode === 'conjunto' ? 'CONJUNTO' : 'SEPARADO'} CON {partnerName}</p>
+                            <h3 className="text-white font-black text-xs uppercase tracking-wider flex items-center gap-1">
+                                <span className="text-yellow-500">CO-OP</span> {multiplayerMode?.toUpperCase()}
+                            </h3>
+                            <p className="text-neutral-400 text-[10px] font-bold uppercase truncate max-w-[150px]">Aliado: {partnerName}</p>
                         </div>
                     </div>
                     {multiplayerMode === 'separado' && (
@@ -1826,19 +1847,34 @@ export const WorkoutSession = () => {
                 {/* Empty State / Fallback if Modal is Closed */}
                 {activeExercises.length === 0 && !showAddModal && !loading && (
                     <div className="h-[80vh] flex flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in duration-300">
-                        <div className="bg-neutral-900/50 p-8 rounded-full border border-neutral-800 mb-8 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
-                            <Swords size={80} className="text-neutral-600" strokeWidth={1} />
-                        </div>
-                        <h2 className="text-3xl font-black italic uppercase text-white mb-4 tracking-tighter">¿Listo para entrenar?</h2>
-                        <p className="text-neutral-500 font-bold mb-8 max-w-xs mx-auto">Selecciona tus ejercicios para comenzar la batalla.</p>
+                        {(isMultiplayer && multiplayerMode === 'conjunto' && !isInviter) ? (
+                            <>
+                                <div className="bg-neutral-900/50 p-8 rounded-full border border-neutral-800 mb-8 shadow-[0_0_50px_rgba(250,204,21,0.1)] relative">
+                                    <div className="absolute inset-0 border-2 border-yellow-500/30 border-t-yellow-500 rounded-full animate-spin"></div>
+                                    <Swords size={60} className="text-yellow-500 animate-pulse" strokeWidth={1.5} />
+                                </div>
+                                <h2 className="text-3xl font-black italic uppercase text-white mb-4 tracking-tighter">Esperando Aliado</h2>
+                                <p className="text-neutral-500 font-bold mb-8 max-w-xs mx-auto text-sm">
+                                    Esperando a que <span className="text-yellow-500">{partnerName}</span> configure la misión y seleccione los ejercicios...
+                                </p>
+                            </>
+                        ) : (
+                            <>
+                                <div className="bg-neutral-900/50 p-8 rounded-full border border-neutral-800 mb-8 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+                                    <Swords size={80} className="text-neutral-600" strokeWidth={1} />
+                                </div>
+                                <h2 className="text-3xl font-black italic uppercase text-white mb-4 tracking-tighter">¿Listo para entrenar?</h2>
+                                <p className="text-neutral-500 font-bold mb-8 max-w-xs mx-auto">Selecciona tus ejercicios para comenzar la batalla.</p>
 
-                        <button
-                            onClick={() => setShowAddModal(true)}
-                            className="w-full max-w-xs bg-gym-primary hover:bg-yellow-400 text-black font-black uppercase tracking-widest py-5 rounded-2xl shadow-[0_0_30px_rgba(250,204,21,0.3)] hover:scale-105 transition-all text-xl flex items-center justify-center gap-3"
-                        >
-                            <Plus size={24} strokeWidth={3} />
-                            ABRIR CATÁLOGO
-                        </button>
+                                <button
+                                    onClick={() => setShowAddModal(true)}
+                                    className="w-full max-w-xs bg-gym-primary hover:bg-yellow-400 text-black font-black uppercase tracking-widest py-5 rounded-2xl shadow-[0_0_30px_rgba(250,204,21,0.3)] hover:scale-105 transition-all text-xl flex items-center justify-center gap-3"
+                                >
+                                    <Plus size={24} strokeWidth={3} />
+                                    ABRIR CATÁLOGO
+                                </button>
+                            </>
+                        )}
                     </div>
                 )}
 
@@ -1902,6 +1938,7 @@ export const WorkoutSession = () => {
                         >
                             {displayedExercises.map((exercise, mapIndex) => {
                                 const isReadOnly = viewingMode === 'partner';
+                                const canModifyStructure = (isMultiplayer && multiplayerMode === 'conjunto') ? isInviter : !isReadOnly;
                                 return (
                                 <div key={exercise.id} className="h-full flex flex-col bg-neutral-900/40 border border-white/5 rounded-2xl overflow-hidden backdrop-blur-sm shadow-xl mx-1 relative">
                                     {/* Header */}
@@ -1910,7 +1947,7 @@ export const WorkoutSession = () => {
                                             <h3 className="text-2xl font-black italic uppercase text-white leading-tight">
                                                 {exercise.equipmentName}
                                             </h3>
-                                            {!isReadOnly && (
+                                            {canModifyStructure && (
                                                 <div className="flex gap-2 mt-2">
                                                     <button
                                                         onClick={() => removeExercise(exercise.id)}
@@ -1939,7 +1976,7 @@ export const WorkoutSession = () => {
                                                                 }`}
                                                         >
                                                             {/* [MOVED] Delete Set Button - Top Left */}
-                                                            {!isReadOnly && (
+                                                            {canModifyStructure && (
                                                             <button
                                                                 onClick={() => removeSet(mapIndex, setIndex)}
                                                                 className="absolute -top-2 -left-2 bg-neutral-900 border border-neutral-800 text-neutral-500 hover:text-red-500 rounded-full p-1.5 shadow-lg z-10 scale-75 hover:scale-100 transition-all"
