@@ -151,10 +151,10 @@ class WorkoutService {
                     const isFirstWorkoutToday = !todaySessions || todaySessions.length <= 1;
 
                     if (isFirstWorkoutToday) {
-                        console.log('🎉 First qualified workout of the day (>= 20 mins)! Awarding 2 GX points and checkins_count.');
+                        console.log('🎉 First qualified workout of the day (>= 20 mins)! Awarding 1 GX point and checkins_count.');
                         
-                        // Award 2 GX points
-                        await userService.addGxPoints(session.user_id, 2, 'workout_finished');
+                        // Award 1 GX point
+                        await userService.addGxPoints(session.user_id, 1, 'workout_finished');
                         
                         // Increment checkins_count in profile
                         const { data: profile } = await supabase

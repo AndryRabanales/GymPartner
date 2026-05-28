@@ -19,6 +19,7 @@ import { Radar } from './pages/Radar';
 import { ChatPage } from './pages/ChatPage';
 import { InboxPage } from './pages/InboxPage';
 import { PublicProfile } from './pages/PublicProfile';
+import { FriendsPage } from './pages/FriendsPage';
 import { BottomNavProvider } from './context/BottomNavContext';
 
 
@@ -51,6 +52,7 @@ function App() {
               <Route path="radar" element={<Radar />} />
 
               <Route path="inbox" element={<InboxPage />} />
+              <Route path="friends" element={<FriendsPage />} />
               <Route path="chat/:chatId" element={<ChatPage />} />
               <Route path="player/:username" element={<PublicProfile />} />
               <Route path="history" element={<HistoryPage />} />

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Radar, Trophy, MessageCircle } from 'lucide-react';
+import { Home, Radar, Trophy, MessageCircle, Users } from 'lucide-react';
 import { notificationService } from '../../services/NotificationService';
 
 interface BottomNavProps {
@@ -35,10 +35,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({ onUploadClick: _ }) => {
                 <div 
                     className="absolute h-9 bg-gym-primary/10 border border-gym-primary/20 rounded-2xl transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] z-0"
                     style={{
-                        width: 'calc(25% - 8px)',
+                        width: 'calc(20% - 6px)',
                         left: isActive('/') ? '4px' : 
-                               isActive('/ranking') ? 'calc(25% + 2px)' : 
-                               isActive('/radar') ? 'calc(50% + 1px)' : 'calc(75% - 1px)',
+                               isActive('/ranking') ? 'calc(20% + 2px)' : 
+                               isActive('/radar') ? 'calc(40% + 1px)' : 
+                               isActive('/inbox') ? 'calc(60% - 1px)' : 'calc(80% - 2px)',
                         top: '4px'
                     }}
                 />
@@ -87,6 +88,16 @@ export const BottomNav: React.FC<BottomNavProps> = ({ onUploadClick: _ }) => {
                             )}
                         </div>
                         <span className={`text-[8px] font-black uppercase tracking-tighter mt-0 transition-all duration-500 ${isActive('/inbox') ? 'text-gym-primary opacity-100' : 'text-neutral-500 opacity-0'}`}>Chat</span>
+                    </Link>
+
+                    {/* 5. AMIGOS */}
+                    <Link to="/friends" className="flex flex-col items-center justify-center w-full h-full relative group">
+                        <Users
+                            size={20}
+                            className={`transition-all duration-500 ${isActive('/friends') ? "text-gym-primary scale-110 drop-shadow-[0_0_12px_rgba(250,204,21,0.5)]" : "text-neutral-500 group-hover:text-neutral-300"}`}
+                            strokeWidth={isActive('/friends') ? 2.5 : 2}
+                        />
+                        <span className={`text-[8px] font-black uppercase tracking-tighter mt-0 transition-all duration-500 ${isActive('/friends') ? 'text-gym-primary opacity-100' : 'text-neutral-500 opacity-0'}`}>Amigos</span>
                     </Link>
                 </div>
             </div>
