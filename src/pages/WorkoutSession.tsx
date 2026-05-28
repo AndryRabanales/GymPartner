@@ -2001,12 +2001,46 @@ export const WorkoutSession = () => {
                                                                 </div>
                                                             </div>
 
-                                                            {/* Inputs Container - Wraps on small screens */}
-                                                            <div className="flex-1 flex flex-col gap-2 min-w-0">
+                                                            {/* Inputs Container */}
+                                                            <div className="flex-1 flex flex-col gap-2.5 min-w-0">
+                                                                
+                                                                {/* Table Header (Rendered once at the top of the set) */}
+                                                                <div className="flex items-center gap-2 text-[10px] font-black text-neutral-500 uppercase tracking-wider px-1">
+                                                                    {(isMultiplayer && multiplayerMode === 'conjunto') && (
+                                                                        <div className="min-w-[65px] max-w-[65px] text-left">Atleta</div>
+                                                                    )}
+                                                                    {exercise.metrics.weight && (
+                                                                        <div className="min-w-[75px] w-[75px] text-center cursor-pointer hover:text-gym-primary transition-colors" onClick={() => !isReadOnly && toggleExerciseUnit(mapIndex)}>
+                                                                            PESO ({(exercise.weightUnit || 'kg').toUpperCase()})
+                                                                        </div>
+                                                                    )}
+                                                                    {exercise.metrics.reps && (
+                                                                        <div className="min-w-[75px] w-[75px] text-center">REPS</div>
+                                                                    )}
+                                                                    {exercise.metrics.time && (
+                                                                        <div className="min-w-[75px] w-[75px] text-center">TIEMPO</div>
+                                                                    )}
+                                                                    {exercise.metrics.distance && (
+                                                                        <div className="min-w-[75px] w-[75px] text-center">DIST</div>
+                                                                    )}
+                                                                    {exercise.metrics.rpe && (
+                                                                        <div className="min-w-[60px] w-[60px] text-center">RPE</div>
+                                                                    )}
+                                                                    {Object.keys(exercise.metrics).map(key => {
+                                                                        if (['weight', 'reps', 'time', 'distance', 'rpe'].includes(key)) return null;
+                                                                        if (!exercise.metrics[key as keyof typeof exercise.metrics]) return null;
+                                                                        return (
+                                                                            <div key={key} className="min-w-[75px] w-[75px] text-center truncate">{key.toUpperCase()}</div>
+                                                                        )
+                                                                    })}
+                                                                    <div className="flex-1 text-right">LISTO</div>
+                                                                </div>
+
+                                                                {/* Player Rows */}
                                                                 {((isMultiplayer && multiplayerMode === 'conjunto') ? [1, 2] : [1]).map(playerNum => {
                                                                     const isP1 = playerNum === 1;
                                                                     const pName = isP1 ? (isInviter ? user?.user_metadata?.full_name : partnerName) : (isInviter ? partnerName : user?.user_metadata?.full_name);
-                                                                    const displayName = pName ? pName.split(' ')[0].substring(0, 10) + (pName.split(' ')[0].length > 10 ? '...' : '') : `Jugador ${playerNum}`;
+                                                                    const displayName = pName ? pName.split(' ')[0].substring(0, 10) + (pName.split(' ')[0].length > 10 ? '...' : '') : 'Jugador ' + playerNum;
                                                                     
                                                                     const isMyRow = (isInviter && isP1) || (!isInviter && !isP1);
                                                                     const rowReadOnly = isReadOnly || !isMyRow;
@@ -2021,11 +2055,11 @@ export const WorkoutSession = () => {
                                                                     const rowCompletedAt = isP1 ? set.completedAt : set.p2_completedAt;
                                                                     
                                                                     return (
-                                                                        <div key={playerNum} className={`flex flex-wrap gap-2 items-start relative ${playerNum === 2 ? 'mt-2 pt-3 border-t border-white/5' : ''}`}>
+                                                                        <div key={playerNum} className={`flex items-center gap-2 w-full flex-nowrap ${playerNum === 2 ? 'mt-1 pt-2 border-t border-white/5' : ''}`}>
                                                                             {/* Premium Name Tag column on the left of each row */}
                                                                             {(isMultiplayer && multiplayerMode === 'conjunto') && (
-                                                                                <div className="flex items-center gap-1 min-w-[65px] max-w-[65px] self-end mb-2.5 mr-1 bg-neutral-900/60 py-1 px-1.5 rounded-lg border border-white/5 shadow-md">
-                                                                                    <div className="w-4 h-4 rounded-full bg-yellow-500/20 border border-yellow-500/30 flex items-center justify-center text-[8px] font-black text-yellow-500 shrink-0">
+                                                                                <div className="flex items-center gap-1 min-w-[65px] max-w-[65px] bg-neutral-900/60 py-1.5 px-1.5 rounded-lg border border-white/5 shadow-md">
+                                                                                    <div className="w-3.5 h-3.5 rounded-full bg-yellow-500/20 border border-yellow-500/30 flex items-center justify-center text-[7px] font-black text-yellow-500 shrink-0">
                                                                                         {displayName.charAt(0)}
                                                                                     </div>
                                                                                     <span className="text-[9px] font-black tracking-tight text-neutral-300 uppercase truncate">
@@ -2036,164 +2070,147 @@ export const WorkoutSession = () => {
                                                                             
                                                                             {exercise.metrics.weight && (
                                                                                 <div className="min-w-[75px] w-[75px]">
-                                                                                    <label
-                                                                            onClick={() => !rowLocked && toggleExerciseUnit(mapIndex)}
-                                                                            className={`text-[9px] font-bold text-neutral-500 block text-center mb-1 select-none ${rowLocked ? 'cursor-not-allowed' : 'cursor-pointer hover:text-gym-primary transition-colors'}`}
-                                                                        >
-                                                                            PESO ({(exercise.weightUnit || 'kg').toUpperCase()})
-                                                                        </label>
-                                                                        <input
-                                                                            type="number"
-                                                                            inputMode="decimal"
-                                                                            disabled={rowLocked || rowReadOnly}
-                                                                            value={rowWeight === 0 ? '' : toDisplayWeight(rowWeight, exercise.weightUnit || 'kg')}
-                                                                            onChange={(e) => updateSet(mapIndex, setIndex, isP1 ? 'weight' : 'p2_weight', toInternalWeight(e.target.value, exercise.weightUnit || 'kg'))}
-                                                                            onBlur={(e) => handleInputBlur(mapIndex, setIndex, e)}
-                                                                            onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
-                                                                            className={`w-full bg-neutral-800 text-center font-black text-xl rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${rowCompleted ? 'text-neutral-500' : 'text-white'} ${rowLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                                            placeholder="0"
-                                                                        />
-                                                                    </div>
-                                                                )}
-                                                                {exercise.metrics.reps && (
-                                                                    <div className="min-w-[75px] w-[75px]">
-                                                                        <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1">REPS</label>
-                                                                        <input
-                                                                            type="number"
-                                                                            inputMode="numeric"
-                                                                            disabled={rowLocked || rowReadOnly}
-                                                                            value={rowReps === 0 ? '' : rowReps}
-                                                                            onChange={(e) => updateSet(mapIndex, setIndex, isP1 ? 'reps' : 'p2_reps', e.target.value)}
-                                                                            onBlur={(e) => handleInputBlur(mapIndex, setIndex, e)}
-                                                                            onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
-                                                                            className={`w-full bg-neutral-800 text-center font-black text-xl rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${rowCompleted ? 'text-neutral-500' : 'text-white'} ${rowLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                                            placeholder="0"
-                                                                        />
-                                                                    </div>
-                                                                )}
-                                                                {exercise.metrics.time && (
-                                                                    <div className="min-w-[75px] w-[75px]">
-                                                                        <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1">TIEMPO (s)</label>
-                                                                        <input
-                                                                            type="number"
-                                                                            inputMode="numeric"
-                                                                            disabled={rowLocked || rowReadOnly}
-                                                                            value={rowTime || ''}
-                                                                            onChange={(e) => updateSet(mapIndex, setIndex, isP1 ? 'time' : 'p2_time', e.target.value)}
-                                                                            onBlur={(e) => handleInputBlur(mapIndex, setIndex, e)}
-                                                                            onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
-                                                                            className={`w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none ${rowLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                                            placeholder="0s"
-                                                                        />
-                                                                    </div>
-                                                                )}
-                                                                {exercise.metrics.distance && (
-                                                                    <div className="min-w-[75px] w-[75px]">
-                                                                        <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1">DIST (m)</label>
-                                                                        <input
-                                                                            type="number"
-                                                                            inputMode="decimal"
-                                                                            disabled={rowLocked || rowReadOnly}
-                                                                            value={rowDistance === 0 ? '' : rowDistance}
-                                                                            onChange={(e) => updateSet(mapIndex, setIndex, isP1 ? 'distance' : 'p2_distance', e.target.value)}
-                                                                            onBlur={(e) => handleInputBlur(mapIndex, setIndex, e)}
-                                                                            onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
-                                                                            className={`w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none ${rowLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                                            placeholder="0m"
-                                                                        />
-                                                                    </div>
-                                                                )}
-                                                                {exercise.metrics.rpe && (
-                                                                    <div className="min-w-[60px] w-[60px]">
-                                                                        <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1">RPE</label>
-                                                                        <input
-                                                                            type="number"
-                                                                            inputMode="numeric"
-                                                                            max={10}
-                                                                            disabled={rowLocked || rowReadOnly}
-                                                                            value={rowRpe || ''}
-                                                                            onChange={(e) => updateSet(mapIndex, setIndex, isP1 ? 'rpe' : 'p2_rpe', e.target.value)}
-                                                                            onBlur={(e) => handleInputBlur(mapIndex, setIndex, e)}
-                                                                            onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
-                                                                            className={`w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none ${rowLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                                            placeholder="-"
-                                                                        />
-                                                                    </div>
-                                                                )}
-                                                                                                                                {/* Custom Metrics inputs */}
-                                                                {Object.keys(exercise.metrics).map(key => {
-                                                                    if (['weight', 'reps', 'time', 'distance', 'rpe'].includes(key)) return null;
-                                                                    if (!exercise.metrics[key as keyof typeof exercise.metrics]) return null;
-                                                                    return (
-                                                                        <div key={key} className="min-w-[75px] w-[75px]">
-                                                                            <label className="text-[9px] font-bold text-neutral-500 block text-center mb-1 uppercase truncate">{key}</label>
-                                                                            <input
-                                                                                type="number"
-                                                                                inputMode="decimal"
-                                                                                disabled={rowLocked || rowReadOnly}
-                                                                                value={set.custom?.[key] || ''}
-                                                                                onChange={(e) => updateSet(mapIndex, setIndex, key, e.target.value, true)} // isCustom=true
-                                                                                onBlur={(e) => handleInputBlur(mapIndex, setIndex, e)}
-                                                                                onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
-                                                                                className={`w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white focus:ring-2 focus:ring-gym-primary outline-none ${rowLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                                            />
+                                                                                    <input
+                                                                                        type="number"
+                                                                                        inputMode="decimal"
+                                                                                        disabled={rowLocked || rowReadOnly}
+                                                                                        value={rowWeight === 0 ? '' : toDisplayWeight(rowWeight, exercise.weightUnit || 'kg')}
+                                                                                        onChange={(e) => updateSet(mapIndex, setIndex, isP1 ? 'weight' : 'p2_weight', toInternalWeight(e.target.value, exercise.weightUnit || 'kg'))}
+                                                                                        onBlur={(e) => handleInputBlur(mapIndex, setIndex, e)}
+                                                                                        onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
+                                                                                        className={`w-full bg-neutral-800 text-center font-black text-base rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${rowCompleted ? 'text-neutral-500 bg-neutral-900/40' : 'text-white'} ${rowLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                                        placeholder="0"
+                                                                                    />
+                                                                                </div>
+                                                                            )}
+                                                                            {exercise.metrics.reps && (
+                                                                                <div className="min-w-[75px] w-[75px]">
+                                                                                    <input
+                                                                                        type="number"
+                                                                                        inputMode="numeric"
+                                                                                        disabled={rowLocked || rowReadOnly}
+                                                                                        value={rowReps === 0 ? '' : rowReps}
+                                                                                        onChange={(e) => updateSet(mapIndex, setIndex, isP1 ? 'reps' : 'p2_reps', e.target.value)}
+                                                                                        onBlur={(e) => handleInputBlur(mapIndex, setIndex, e)}
+                                                                                        onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
+                                                                                        className={`w-full bg-neutral-800 text-center font-black text-base rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${rowCompleted ? 'text-neutral-500 bg-neutral-900/40' : 'text-white'} ${rowLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                                        placeholder="0"
+                                                                                    />
+                                                                                </div>
+                                                                            )}
+                                                                            {exercise.metrics.time && (
+                                                                                <div className="min-w-[75px] w-[75px]">
+                                                                                    <input
+                                                                                        type="number"
+                                                                                        inputMode="numeric"
+                                                                                        disabled={rowLocked || rowReadOnly}
+                                                                                        value={rowTime || ''}
+                                                                                        onChange={(e) => updateSet(mapIndex, setIndex, isP1 ? 'time' : 'p2_time', e.target.value)}
+                                                                                        onBlur={(e) => handleInputBlur(mapIndex, setIndex, e)}
+                                                                                        onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
+                                                                                        className="w-full bg-neutral-800 text-center font-black text-base rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none"
+                                                                                        placeholder="0s"
+                                                                                    />
+                                                                                </div>
+                                                                            )}
+                                                                            {exercise.metrics.distance && (
+                                                                                <div className="min-w-[75px] w-[75px]">
+                                                                                    <input
+                                                                                        type="number"
+                                                                                        inputMode="decimal"
+                                                                                        disabled={rowLocked || rowReadOnly}
+                                                                                        value={rowDistance === 0 ? '' : rowDistance}
+                                                                                        onChange={(e) => updateSet(mapIndex, setIndex, isP1 ? 'distance' : 'p2_distance', e.target.value)}
+                                                                                        onBlur={(e) => handleInputBlur(mapIndex, setIndex, e)}
+                                                                                        onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
+                                                                                        className="w-full bg-neutral-800 text-center font-black text-base rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none"
+                                                                                        placeholder="0m"
+                                                                                    />
+                                                                                </div>
+                                                                            )}
+                                                                            {exercise.metrics.rpe && (
+                                                                                <div className="min-w-[60px] w-[60px]">
+                                                                                    <input
+                                                                                        type="number"
+                                                                                        inputMode="numeric"
+                                                                                        max={10}
+                                                                                        disabled={rowLocked || rowReadOnly}
+                                                                                        value={rowRpe || ''}
+                                                                                        onChange={(e) => updateSet(mapIndex, setIndex, isP1 ? 'rpe' : 'p2_rpe', e.target.value)}
+                                                                                        onBlur={(e) => handleInputBlur(mapIndex, setIndex, e)}
+                                                                                        onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
+                                                                                        className="w-full bg-neutral-800 text-center font-black text-base rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none"
+                                                                                        placeholder="-"
+                                                                                    />
+                                                                                </div>
+                                                                            )}
+                                                                            {Object.keys(exercise.metrics).map(key => {
+                                                                                if (['weight', 'reps', 'time', 'distance', 'rpe'].includes(key)) return null;
+                                                                                if (!exercise.metrics[key as keyof typeof exercise.metrics]) return null;
+                                                                                return (
+                                                                                    <div key={key} className="min-w-[75px] w-[75px]">
+                                                                                        <input
+                                                                                            type="number"
+                                                                                            inputMode="decimal"
+                                                                                            disabled={rowLocked || rowReadOnly}
+                                                                                            value={set.custom?.[key] || ''}
+                                                                                            onChange={(e) => updateSet(mapIndex, setIndex, key, e.target.value, true)} // isCustom=true
+                                                                                            onBlur={(e) => handleInputBlur(mapIndex, setIndex, e)}
+                                                                                            onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
+                                                                                            className="w-full bg-neutral-800 text-center font-black text-base rounded-lg py-2 text-white focus:ring-2 focus:ring-gym-primary outline-none"
+                                                                                        />
+                                                                                    </div>
+                                                                                )
+                                                                            })}
+
+                                                                            {/* Actions Column (Palomita/Lock/Time) - Kept tightly aligned */}
+                                                                            <div className="flex-1 flex items-center justify-end gap-1.5 min-w-[60px] pl-1">
+                                                                                <button
+                                                                                    onClick={() => toggleComplete(mapIndex, setIndex, isP1)}
+                                                                                    disabled={rowLocked || rowReadOnly}
+                                                                                    className={`p-1.5 rounded-full border-2 transition-all shrink-0 ${rowCompleted
+                                                                                        ? rowLocked
+                                                                                            ? 'bg-neutral-800 border-neutral-700 text-neutral-500 cursor-not-allowed opacity-80'
+                                                                                            : 'bg-green-500 border-green-500 text-black shadow-[0_0_10px_rgba(34,197,94,0.4)]'
+                                                                                        : 'bg-transparent border-neutral-700 text-neutral-600 hover:border-neutral-500'
+                                                                                        }`}
+                                                                                    title={rowLocked ? "Desbloquea primero" : (rowCompleted ? "Marcar incompleto" : "Marcar listo")}
+                                                                                >
+                                                                                    <Check size={14} strokeWidth={4} />
+                                                                                </button>
+
+                                                                                {(rowCompleted && !rowReadOnly) && (
+                                                                                    <button
+                                                                                        onClick={() => toggleLock(mapIndex, setIndex, isP1)}
+                                                                                        className={`p-1 rounded-full transition-colors shrink-0 ${rowLocked ? 'text-red-500 bg-red-500/10' : 'text-neutral-500 hover:text-white'}`}
+                                                                                        title={rowLocked ? "Desbloquear para editar" : "Bloquear"}
+                                                                                    >
+                                                                                        {rowLocked ? <Lock size={12} /> : <LockOpen size={12} />}
+                                                                                    </button>
+                                                                                )}
+
+                                                                                {rowCompleted && rowCompletedAt && (
+                                                                                    <span className="text-[8px] font-black text-green-500 tabular-nums tracking-tighter shrink-0 bg-green-500/10 px-1 py-0.5 rounded">
+                                                                                        {(() => {
+                                                                                            const completedTime = Number(rowCompletedAt);
+                                                                                            if (isNaN(completedTime)) return '';
+                                                                                            const start = startTime?.getTime() || Date.now();
+                                                                                            const diff = completedTime - start;
+                                                                                            if (diff < 0) return '00:00';
+                                                                                            const m = Math.floor(diff / 60000);
+                                                                                            const s = Math.floor((diff % 60000) / 1000);
+                                                                                            return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+                                                                                        })()}
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
                                                                         </div>
                                                                     )
                                                                 })}
-
-                                                                {/* [NEW] Toggle Complete Button & Lock */}
-                                                                <div className="flex flex-col items-center justify-center self-center h-full pt-1 pl-1 gap-1">
-                                                                    <div className="flex items-center gap-1">
-                                                                        <button
-                                                                            onClick={() => toggleComplete(mapIndex, setIndex, isP1)}
-                                                                            disabled={rowLocked || rowReadOnly}
-                                                                            className={`p-2 rounded-full border-2 transition-all ${rowCompleted
-                                                                                ? rowLocked
-                                                                                    ? 'bg-neutral-800 border-neutral-700 text-neutral-500 cursor-not-allowed opacity-80' // Locked State
-                                                                                    : 'bg-green-500 border-green-500 text-black shadow-[0_0_15px_rgba(34,197,94,0.6)]' // Unlocked Complete
-                                                                                : 'bg-transparent border-neutral-700 text-neutral-600 hover:border-neutral-500' // Incomplete
-                                                                                }`}
-                                                                            title={rowLocked ? "Desbloquea primero" : (rowCompleted ? "Marcar incompleto" : "Marcar listo")}
-                                                                        >
-                                                                            <Check size={20} strokeWidth={3} />
-                                                                        </button>
-
-                                                                        {/* Lock Icon (Only if completed) - Moved to Right */}
-                                                                        {(rowCompleted && !rowReadOnly) && (
-                                                                            <button
-                                                                                onClick={() => toggleLock(mapIndex, setIndex, isP1)}
-                                                                                className={`p-1 rounded-full transition-colors ${rowLocked ? 'text-red-500 bg-red-500/10' : 'text-neutral-500 hover:text-white'}`}
-                                                                                title={rowLocked ? "Desbloquear para editar" : "Bloquear"}
-                                                                            >
-                                                                                {rowLocked ? <Lock size={15} /> : <LockOpen size={15} />}
-                                                                            </button>
-                                                                        )}
-                                                                    </div>
-                                                                    {/* Timestamp */}
-                                                                    {/* @ts-expect-error - ignore typing */}
-                                                                    {rowCompleted && rowCompletedAt && (
-                                                                        <span className="text-[10px] font-bold text-green-500 mt-0 tabular-nums tracking-tighter">
-                                                                            {(() => {
-                                                                                const completedTime = Number(rowCompletedAt);
-                                                                                if (isNaN(completedTime)) return '';
-                                                                                const start = startTime?.getTime() || Date.now();
-                                                                                const diff = completedTime - start;
-                                                                                if (diff < 0) return '00:00';
-                                                                                const m = Math.floor(diff / 60000);
-                                                                                const s = Math.floor((diff % 60000) / 1000);
-                                                                                return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-                                                                            })()}
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                                        </div>
-                                                                    )
-                                                                })}
-
                                                             </div>
                                                         </div>
 
-                                                        {/* Rest Timer Display (Per Set) */}
+{/* Rest Timer Display (Per Set) */}
                                                         {
                                                             isCompleted && (set.restStatus === 'running' || set.restStatus === 'paused' || set.restStatus === 'completed') && (
                                                                 <div className="w-full bg-neutral-900/50 border border-neutral-800 rounded-lg p-2 mt-1 flex items-center justify-between animate-in fade-in slide-in-from-top-2">
