@@ -27,6 +27,19 @@ interface PlayerProfileModalProps {
     onFollowToggle?: (newIsFollowing: boolean) => void;
 }
 
+const isDefaultBio = (bio?: string | null) => {
+    if (!bio) return true;
+    const clean = bio.trim().toLowerCase();
+    return (
+        clean === '¡hola! soy un nuevo atleta en gympartner.' ||
+        clean === 'hola! soy un nuevo atleta en gympartner.' ||
+        clean === 'hola soy un nuevo atleta en gympartner.' ||
+        clean.includes('entrenando duro para subir de rango') ||
+        clean.includes('entrenando para alcanzar el siguiente nivel') ||
+        clean === 'entrenando duro en gympartner.'
+    );
+};
+
 export const PlayerProfileModal = ({ player, onClose, onFollowToggle }: PlayerProfileModalProps) => {
     const { user } = useAuth();
     const navigate = useNavigate();
@@ -703,7 +716,7 @@ export const PlayerProfileModal = ({ player, onClose, onFollowToggle }: PlayerPr
                         </div>
 
                         {/* Bio Text */}
-                        {customSettings?.description && (
+                        {customSettings?.description && !isDefaultBio(customSettings.description) && (
                             <div className="px-2 mb-6 -mt-2">
                                 <p className="text-sm font-medium text-neutral-400 italic leading-relaxed text-center">
                                     "{customSettings.description}"

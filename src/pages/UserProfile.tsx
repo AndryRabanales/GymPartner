@@ -47,6 +47,19 @@ interface ProfileData {
     boost_until?: string;
 }
 
+const isDefaultBio = (bio?: string | null) => {
+    if (!bio) return true;
+    const clean = bio.trim().toLowerCase();
+    return (
+        clean === '¡hola! soy un nuevo atleta en gympartner.' ||
+        clean === 'hola! soy un nuevo atleta en gympartner.' ||
+        clean === 'hola soy un nuevo atleta en gympartner.' ||
+        clean.includes('entrenando duro para subir de rango') ||
+        clean.includes('entrenando para alcanzar el siguiente nivel') ||
+        clean === 'entrenando duro en gympartner.'
+    );
+};
+
 export const UserProfile = () => {
     const { user, loading: authLoading } = useAuth();
     const { hideBottomNav, showBottomNav } = useBottomNav();
@@ -567,9 +580,13 @@ export const UserProfile = () => {
                         <div className="relative z-10 flex flex-col gap-2 mt-auto pt-2 border-t border-white/5 w-full">
                             {/* Description & Share Row */}
                             <div className="flex flex-row items-center justify-between gap-3 w-full">
-                                <p className="text-neutral-400 text-[10px] sm:text-[11px] leading-snug italic truncate max-w-[70%]">
-                                    &ldquo;{profile?.custom_settings?.description || profile?.description || 'Entrenando duro en GymPartner.'}&rdquo;
-                                </p>
+                                {!(profile?.custom_settings?.description || profile?.description ? isDefaultBio(profile?.custom_settings?.description || profile?.description) : true) ? (
+                                    <p className="text-neutral-400 text-[10px] sm:text-[11px] leading-snug italic truncate max-w-[70%]">
+                                        &ldquo;{profile?.custom_settings?.description || profile?.description}&rdquo;
+                                    </p>
+                                ) : (
+                                    <div />
+                                )}
                                 
                                 <button
                                     onClick={(e) => {

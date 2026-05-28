@@ -43,6 +43,19 @@ const FALLBACK_BANNERS = [
     'https://images.unsplash.com/photo-1571902258032-783ec5ad6dfc?auto=format&fit=crop&q=80'
 ];
 
+const isDefaultBio = (bio?: string | null) => {
+    if (!bio) return true;
+    const clean = bio.trim().toLowerCase();
+    return (
+        clean === '¡hola! soy un nuevo atleta en gympartner.' ||
+        clean === 'hola! soy un nuevo atleta en gympartner.' ||
+        clean === 'hola soy un nuevo atleta en gympartner.' ||
+        clean.includes('entrenando duro para subir de rango') ||
+        clean.includes('entrenando para alcanzar el siguiente nivel') ||
+        clean === 'entrenando duro en gympartner.'
+    );
+};
+
 export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose, actions, hidePermissions = false, isRadar = false }) => {
     console.log("📸 [CARD] Recibiendo datos de perfil:", user.username, "| Pasaporte:", user.gym_passport?.length);
     
@@ -234,13 +247,9 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
                     <h2 className="text-xl font-black text-white italic tracking-tighter uppercase leading-tight drop-shadow-lg px-4">
                         {(user.username || 'Guerrero').replace('_', ' ')}
                     </h2>
-                    {user.gym_name ? (
+                    {user.gym_name && (
                         <p className="text-[9px] font-bold text-neutral-500 mt-0.5 flex items-center justify-center gap-1 uppercase tracking-widest">
                             <MapPin size={9} className="text-gym-primary" /> {user.gym_name}
-                        </p>
-                    ) : (
-                        <p className="text-[9px] font-bold text-neutral-500 mt-0.5 flex items-center justify-center gap-1 uppercase tracking-widest animate-pulse">
-                            <Activity size={9} className="text-gym-primary" /> EXPLORADOR LIBRE
                         </p>
                     )}
                 </div>
@@ -324,19 +333,10 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
                             </p>
                         </div>
                     </div>
-                ) : (
-                    <div className="rounded-[2.5rem] border border-dashed border-white/10 bg-white/[0.01] p-5 text-center min-h-[140px] flex flex-col items-center justify-center space-y-2">
-                        <span className="text-[8px] font-black text-neutral-500 uppercase tracking-[0.2em] italic">
-                            Sin Gimnasio Principal
-                        </span>
-                        <p className="text-xs text-neutral-400 font-medium leading-relaxed max-w-[220px]">
-                            Este guerrero aún está explorando el mapa o entrena de forma libre.
-                        </p>
-                    </div>
-                )}
+                ) : null}
 
                 {/* Bio Text */}
-                {user.bio && (
+                {user.bio && !isDefaultBio(user.bio) && (
                     <div className="px-2">
                         <p className="text-sm font-medium text-neutral-400 italic leading-relaxed text-center">
                             "{user.bio}"

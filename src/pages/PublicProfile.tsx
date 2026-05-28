@@ -75,14 +75,14 @@ export const PublicProfile = () => {
 
                 // 5. MAP FINAL ELITE CARD
                 const settings = (profileData.custom_settings as any) || {};
-                const finalBio = profileData.description || settings.description || settings.bio || "¡Entrenando duro para subir de rango! 💪🔥";
+                const finalBio = profileData.description || settings.description || settings.bio || null;
                 
                 setProfile({
                     ...profileData,
                     avatar_url: finalAvatar,
                     banner_url: settings.banner_url || FALLBACK_BANNERS[0],
                     bio: finalBio,
-                    gym_name: (bestGym?.gyms as any)?.name || "Studio Fitt Transforma",
+                    gym_name: (bestGym?.gyms as any)?.name || null,
                     // PRIORITIZE Public Assets from Profile Table
                     gym_image: profileData.main_base_image || null,
                     gym_color: profileData.main_base_color || '#E5FF00',
@@ -106,12 +106,12 @@ export const PublicProfile = () => {
                 username: identifier || 'Guerrero',
                 avatar_url: authUser?.user_metadata?.avatar_url || null,
                 banner_url: FALLBACK_BANNERS[0],
-                bio: "Sincronizando identidad con Google...",
-                gym_name: "Studio Fitt Transforma",
-                gym_image: FALLBACK_BANNERS[1],
-                training_days_count: 39,
-                followers_count: 10,
-                following_count: 44
+                bio: null,
+                gym_name: null,
+                gym_image: null,
+                training_days_count: 0,
+                followers_count: 0,
+                following_count: 0
             });
         } finally {
             setLoading(false);

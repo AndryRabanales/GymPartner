@@ -40,12 +40,12 @@ export const ProfilePage = () => {
                 setProfile({
                     ...data,
                     banner_url: FALLBACK_BANNERS[Math.floor(Math.random() * FALLBACK_BANNERS.length)],
-                    gym_name: "Base Central GymPartner",
-                    gym_image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80',
-                    training_days_count: Math.floor(Math.random() * 50) + 10,
-                    followers_count: Math.floor(Math.random() * 100),
-                    following_count: Math.floor(Math.random() * 100),
-                    bio: data.bio || "Entrenando para alcanzar el siguiente nivel. ¡Únete a mi equipo! 🔥"
+                    gym_name: null,
+                    gym_image: null,
+                    training_days_count: 0,
+                    followers_count: 0,
+                    following_count: 0,
+                    bio: data.bio || null
                 });
             }
         } catch (error) {

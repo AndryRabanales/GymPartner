@@ -209,8 +209,8 @@ export const LoginPage = () => {
             <div className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-3xl p-8 shadow-2xl relative overflow-hidden text-center">
 
                 <div className="relative z-10 mb-8">
-                    <div className="w-20 h-20 bg-neutral-950 border border-neutral-800 rounded-[1.8rem] flex items-center justify-center mx-auto mb-6 shadow-md">
-                        <span className="text-2xl">🔥</span>
+                    <div className="w-20 h-20 bg-neutral-950 border border-neutral-800 rounded-[1.8rem] flex items-center justify-center mx-auto mb-6 shadow-md overflow-hidden p-3.5">
+                        <img src="/ginxIcon.png" alt="Ginx Logo" className="w-full h-full object-contain animate-pulse" />
                     </div>
                     <h1 className="text-3xl font-bold text-white mb-2">Acceso GymPartner</h1>
                     <p className="text-neutral-400 text-sm">Elige tu método de acceso rápido para continuar.</p>
