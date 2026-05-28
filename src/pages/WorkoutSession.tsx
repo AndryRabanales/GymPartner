@@ -1979,7 +1979,7 @@ export const WorkoutSession = () => {
                                                 return (
                                                     <Fragment key={set.id}>
                                                         <div
-                                                            className={`relative flex flex-wrap gap-2 p-3 rounded-xl transition-all duration-300 items-center ${isCompleted
+                                                            className={`relative flex flex-wrap gap-1.5 px-2 py-2.5 rounded-xl transition-all duration-300 items-center ${isCompleted
                                                                 ? 'bg-neutral-900/80 border border-green-500/20'
                                                                 : 'bg-black/20 border border-transparent'
                                                                 }`}
@@ -1995,8 +1995,8 @@ export const WorkoutSession = () => {
                                                             </button>
                                                             )}
                                                             {/* Set Number */}
-                                                            <div className="w-8 flex justify-center shrink-0 self-center">
-                                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${isCompleted ? 'bg-green-500/20 text-green-500' : 'bg-neutral-800 text-neutral-400'
+                                                            <div className="w-6 flex justify-center shrink-0 self-center">
+                                                                <div className={`w-6 h-6 rounded-full flex items-center justify-center font-black text-xs ${isCompleted ? 'bg-green-500/20 text-green-500' : 'bg-neutral-800 text-neutral-400'
                                                                     }`}>
                                                                     {setIndex + 1}
                                                                 </div>
@@ -2006,7 +2006,7 @@ export const WorkoutSession = () => {
                                                             <div className="flex-1 flex flex-col gap-2.5 min-w-0">
                                                                 
                                                                 {/* Table Header (Rendered once at the top of the set) */}
-                                                                <div className="flex items-center gap-2 text-[10px] font-black text-neutral-500 uppercase tracking-wider px-1">
+                                                                <div className="flex items-center gap-1.5 text-[10px] font-black text-neutral-500 uppercase tracking-wider px-1">
                                                                     {(isMultiplayer && multiplayerMode === 'conjunto') && (
                                                                         <div className="min-w-[85px] max-w-[85px] text-left">Atleta</div>
                                                                     )}
@@ -2056,7 +2056,7 @@ export const WorkoutSession = () => {
                                                                     const rowCompletedAt = isP1 ? set.completedAt : set.p2_completedAt;
                                                                     
                                                                     return (
-                                                                        <div key={playerNum} className={`flex items-center gap-2 w-full flex-nowrap ${playerNum === 2 ? 'mt-1 pt-2 border-t border-white/5' : ''}`}>
+                                                                        <div key={playerNum} className={`flex items-center gap-1.5 w-full flex-nowrap ${playerNum === 2 ? 'mt-1 pt-2 border-t border-white/5' : ''}`}>
                                                                             {/* Premium Name Tag column on the left of each row */}
                                                                             {(isMultiplayer && multiplayerMode === 'conjunto') && (
                                                                                 <div className="flex items-center gap-1 min-w-[85px] max-w-[85px] bg-neutral-900/60 py-1.5 px-1 rounded-lg border border-white/5 shadow-md">
