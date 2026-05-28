@@ -53,6 +53,7 @@ export const PlayerProfileModal = ({ player, onClose, onFollowToggle }: PlayerPr
     const [stats, setStats] = useState<any>({ followersCount: 0, followingCount: 0, totalLikes: 0, workoutsCount: 0 });
     const [viewedPostId, setViewedPostId] = useState<string | null>(null);
     const [isFollowing, setIsFollowing] = useState(false);
+    const [isInviting, setIsInviting] = useState(false);
     // HIDDEN: Community Features - defaulting to routines
     const [activeTab, setActiveTab] = useState<'grid' | 'reels' | 'routines' | 'history'>('routines');
 
@@ -490,6 +491,24 @@ export const PlayerProfileModal = ({ player, onClose, onFollowToggle }: PlayerPr
             alert("Error al procesar la solicitud.");
         } finally {
             setRequestingRoutines(false);
+        }
+    };
+
+    const handleSendInvitation = async () => {
+        if (!user || isInviting) return;
+        setIsInviting(true);
+        try {
+            const success = await notificationService.sendInvitation(player.id, player.username);
+            if (success) {
+                // Track "Match" success (same as Radar)
+                await supabase.rpc('increment_profile_matches', { u_id: player.id });
+                alert("¡Desafío de entrenamiento enviado con éxito! Se le ha notificado a tu aliado.");
+            }
+        } catch (error) {
+            console.error("Error sending invitation:", error);
+            alert("Error al enviar la invitación.");
+        } finally {
+            setIsInviting(false);
         }
     };
 
@@ -1204,11 +1223,16 @@ export const PlayerProfileModal = ({ player, onClose, onFollowToggle }: PlayerPr
                         
                         {/* INVITE */}
                         <button
-                            onClick={() => alert('¡Invitación enviada!')}
-                            className="flex-[1.5] h-12 rounded-full bg-gym-primary text-black font-black text-[9px] uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all flex flex-col items-center justify-center gap-0.5 shadow-[0_0_20px_rgba(229,255,0,0.2)]"
+                            onClick={handleSendInvitation}
+                            disabled={isInviting}
+                            className="flex-[1.5] h-12 rounded-full bg-gym-primary text-black font-black text-[9px] uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all flex flex-col items-center justify-center gap-0.5 shadow-[0_0_20px_rgba(229,255,0,0.2)] disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            <Swords size={14} />
-                            <span>Invitar</span>
+                            {isInviting ? (
+                                <Loader className="animate-spin text-black" size={14} />
+                            ) : (
+                                <Swords size={14} />
+                            )}
+                            <span>{isInviting ? 'Enviando...' : 'Invitar'}</span>
                         </button>
 
                         {/* VIEW FULL PROFILE */}
