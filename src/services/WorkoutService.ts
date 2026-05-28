@@ -128,7 +128,7 @@ class WorkoutService {
 
         // 3. AWARD G-POINTS & TRAINING CUMULATIVE POINT for Training
         try {
-            const { data: session } = await supabase.from('workout_sessions').select('user_id, started_at').eq('id', sessionId).single();
+            const { data: session } = await supabase.from('workout_sessions').select('user_id, started_at, is_multiplayer').eq('id', sessionId).single();
             if (session) {
                 const { userService } = await import('./UserService');
                 
@@ -151,10 +151,14 @@ class WorkoutService {
                     const isFirstWorkoutToday = !todaySessions || todaySessions.length <= 1;
 
                     if (isFirstWorkoutToday) {
-                        console.log('🎉 First qualified workout of the day (>= 20 mins)! Awarding 1 GX point and checkins_count.');
+                        const isMulti = session.is_multiplayer || false;
+                        const pointsAwarded = isMulti ? 3 : 2;
+                        const reason = isMulti ? 'workout_finished_coop' : 'workout_finished';
+
+                        console.log(`🎉 First qualified workout of the day (>= 20 mins)! Awarding ${pointsAwarded} GX points (isMultiplayer: ${isMulti}).`);
                         
-                        // Award 1 GX point
-                        await userService.addGxPoints(session.user_id, 1, 'workout_finished');
+                        // Award GX points
+                        await userService.addGxPoints(session.user_id, pointsAwarded, reason);
                         
                         // Increment checkins_count in profile
                         const { data: profile } = await supabase
