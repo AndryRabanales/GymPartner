@@ -1979,7 +1979,7 @@ export const WorkoutSession = () => {
                                                 return (
                                                     <Fragment key={set.id}>
                                                         <div
-                                                            className={`relative flex flex-wrap gap-1.5 px-2 py-2.5 rounded-xl transition-all duration-300 items-center ${isCompleted
+                                                            className={`relative flex flex-wrap gap-1 px-1.5 py-2.5 rounded-xl transition-all duration-300 items-center ${isCompleted
                                                                 ? 'bg-neutral-900/80 border border-green-500/20'
                                                                 : 'bg-black/20 border border-transparent'
                                                                 }`}
@@ -1995,8 +1995,8 @@ export const WorkoutSession = () => {
                                                             </button>
                                                             )}
                                                             {/* Set Number */}
-                                                            <div className="w-6 flex justify-center shrink-0 self-center">
-                                                                <div className={`w-6 h-6 rounded-full flex items-center justify-center font-black text-xs ${isCompleted ? 'bg-green-500/20 text-green-500' : 'bg-neutral-800 text-neutral-400'
+                                                            <div className="w-5 flex justify-center shrink-0 self-center">
+                                                                <div className={`w-5 h-5 rounded-full flex items-center justify-center font-black text-[10px] ${isCompleted ? 'bg-green-500/20 text-green-500' : 'bg-neutral-800 text-neutral-400'
                                                                     }`}>
                                                                     {setIndex + 1}
                                                                 </div>
@@ -2006,23 +2006,23 @@ export const WorkoutSession = () => {
                                                             <div className="flex-1 flex flex-col gap-2.5 min-w-0">
                                                                 
                                                                 {/* Table Header (Rendered once at the top of the set) */}
-                                                                <div className="flex items-center gap-1.5 text-[10px] font-black text-neutral-500 uppercase tracking-wider px-1">
+                                                                <div className="flex items-center gap-1 text-[10px] font-black text-neutral-500 uppercase tracking-wider px-1">
                                                                     {(isMultiplayer && multiplayerMode === 'conjunto') && (
-                                                                        <div className="min-w-[85px] max-w-[85px] text-left">Atleta</div>
+                                                                        <div className="min-w-[76px] max-w-[76px] text-left">Atleta</div>
                                                                     )}
                                                                     {exercise.metrics.weight && (
-                                                                        <div className="min-w-[75px] w-[75px] text-center cursor-pointer hover:text-gym-primary transition-colors" onClick={() => !isReadOnly && toggleExerciseUnit(mapIndex)}>
+                                                                        <div className="min-w-[70px] w-[70px] text-center cursor-pointer hover:text-gym-primary transition-colors" onClick={() => !isReadOnly && toggleExerciseUnit(mapIndex)}>
                                                                             PESO ({(exercise.weightUnit || 'kg').toUpperCase()})
                                                                         </div>
                                                                     )}
                                                                     {exercise.metrics.reps && (
-                                                                        <div className="min-w-[75px] w-[75px] text-center">REPS</div>
+                                                                        <div className="min-w-[70px] w-[70px] text-center">REPS</div>
                                                                     )}
                                                                     {exercise.metrics.time && (
-                                                                        <div className="min-w-[75px] w-[75px] text-center">TIEMPO</div>
+                                                                        <div className="min-w-[70px] w-[70px] text-center">TIEMPO</div>
                                                                     )}
                                                                     {exercise.metrics.distance && (
-                                                                        <div className="min-w-[75px] w-[75px] text-center">DIST</div>
+                                                                        <div className="min-w-[70px] w-[70px] text-center">DIST</div>
                                                                     )}
                                                                     {exercise.metrics.rpe && (
                                                                         <div className="min-w-[60px] w-[60px] text-center">RPE</div>
@@ -2031,7 +2031,7 @@ export const WorkoutSession = () => {
                                                                         if (['weight', 'reps', 'time', 'distance', 'rpe'].includes(key)) return null;
                                                                         if (!exercise.metrics[key as keyof typeof exercise.metrics]) return null;
                                                                         return (
-                                                                            <div key={key} className="min-w-[75px] w-[75px] text-center truncate">{key.toUpperCase()}</div>
+                                                                            <div key={key} className="min-w-[70px] w-[70px] text-center truncate">{key.toUpperCase()}</div>
                                                                         )
                                                                     })}
                                                                     <div className="flex-1 text-right">LISTO</div>
@@ -2056,21 +2056,21 @@ export const WorkoutSession = () => {
                                                                     const rowCompletedAt = isP1 ? set.completedAt : set.p2_completedAt;
                                                                     
                                                                     return (
-                                                                        <div key={playerNum} className={`flex items-center gap-1.5 w-full flex-nowrap ${playerNum === 2 ? 'mt-1 pt-2 border-t border-white/5' : ''}`}>
+                                                                        <div key={playerNum} className={`flex items-center gap-1 w-full flex-nowrap ${playerNum === 2 ? 'mt-1 pt-2 border-t border-white/5' : ''}`}>
                                                                             {/* Premium Name Tag column on the left of each row */}
                                                                             {(isMultiplayer && multiplayerMode === 'conjunto') && (
-                                                                                <div className="flex items-center gap-1 min-w-[85px] max-w-[85px] bg-neutral-900/60 py-1.5 px-1 rounded-lg border border-white/5 shadow-md">
-                                                                                    <div className="w-3.5 h-3.5 rounded-full bg-yellow-500/20 border border-yellow-500/30 flex items-center justify-center text-[7px] font-black text-yellow-500 shrink-0">
+                                                                                <div className="flex items-center gap-1 min-w-[76px] max-w-[76px] bg-neutral-900/60 py-1 px-1 rounded-lg border border-white/5 shadow-md">
+                                                                                    <div className="w-3 h-3 rounded-full bg-yellow-500/20 border border-yellow-500/30 flex items-center justify-center text-[6px] font-black text-yellow-500 shrink-0">
                                                                                         {displayName.charAt(0)}
                                                                                     </div>
-                                                                                    <span className="text-[9px] font-black tracking-tight text-neutral-300 uppercase truncate">
+                                                                                    <span className="text-[8px] font-black tracking-tighter text-neutral-300 uppercase truncate">
                                                                                         {displayName}
                                                                                     </span>
                                                                                 </div>
                                                                             )}
                                                                             
                                                                             {exercise.metrics.weight && (
-                                                                                <div className="min-w-[75px] w-[75px]">
+                                                                                <div className="min-w-[70px] w-[70px]">
                                                                                     <input
                                                                                         type="number"
                                                                                         inputMode="decimal"
@@ -2085,7 +2085,7 @@ export const WorkoutSession = () => {
                                                                                 </div>
                                                                             )}
                                                                             {exercise.metrics.reps && (
-                                                                                <div className="min-w-[75px] w-[75px]">
+                                                                                <div className="min-w-[70px] w-[70px]">
                                                                                     <input
                                                                                         type="number"
                                                                                         inputMode="numeric"
@@ -2100,7 +2100,7 @@ export const WorkoutSession = () => {
                                                                                 </div>
                                                                             )}
                                                                             {exercise.metrics.time && (
-                                                                                <div className="min-w-[75px] w-[75px]">
+                                                                                <div className="min-w-[70px] w-[70px]">
                                                                                     <input
                                                                                         type="number"
                                                                                         inputMode="numeric"
@@ -2115,7 +2115,7 @@ export const WorkoutSession = () => {
                                                                                 </div>
                                                                             )}
                                                                             {exercise.metrics.distance && (
-                                                                                <div className="min-w-[75px] w-[75px]">
+                                                                                <div className="min-w-[70px] w-[70px]">
                                                                                     <input
                                                                                         type="number"
                                                                                         inputMode="decimal"
