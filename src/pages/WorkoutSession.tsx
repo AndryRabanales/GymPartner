@@ -738,7 +738,11 @@ export const WorkoutSession = () => {
                         });
                         setActiveExercises(restoredExercises);
                     } else {
-                        setShowAddModal(true);
+                        if (isMultiplayer && multiplayerMode === 'conjunto' && !isInviter) {
+                            // Do nothing, P2 must wait!
+                        } else {
+                            setShowAddModal(true);
+                        }
                     }
                 }
             } else {
@@ -751,8 +755,12 @@ export const WorkoutSession = () => {
                     const result = await startNewSession(targetGymId || undefined);
                     await loadRoutine(autoRoutine, result?.freshArsenal || mergedInventory);
                 } else {
-                    if (localRoutines.length === 0) setShowAddModal(true);
-                    else setShowStartOptionsModal(true);
+                    if (isMultiplayer && multiplayerMode === 'conjunto' && !isInviter) {
+                        // Do nothing, P2 must wait for the inviter to pick a routine!
+                    } else {
+                        if (localRoutines.length === 0) setShowAddModal(true);
+                        else setShowStartOptionsModal(true);
+                    }
                 }
             }
 
