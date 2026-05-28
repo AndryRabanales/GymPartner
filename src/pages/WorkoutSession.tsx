@@ -2351,69 +2351,85 @@ export const WorkoutSession = () => {
 {/* Rest Timer Display (Per Set) */}
                                                         {(() => {
                                                             const myIsP1 = isInviter;
-                                                            const timersToRender: { isP1: boolean; status?: any; accumulated: number; lastStartTime?: number }[] = [];
+                                                            const hasP1Timer = set.completed && (set.restStatus === 'running' || set.restStatus === 'paused' || set.restStatus === 'completed');
+                                                            const hasP2Timer = isMultiplayer && multiplayerMode === 'conjunto' && set.p2_completed && (set.p2_restStatus === 'running' || set.p2_restStatus === 'paused' || set.p2_restStatus === 'completed');
 
-                                                            if (set.completed && (set.restStatus === 'running' || set.restStatus === 'paused' || set.restStatus === 'completed')) {
-                                                                timersToRender.push({
-                                                                    isP1: true,
-                                                                    status: set.restStatus,
-                                                                    accumulated: set.restAccumulated || 0,
-                                                                    lastStartTime: set.restLastStartTime
-                                                                });
-                                                            }
+                                                            if (!hasP1Timer && !hasP2Timer) return null;
 
-                                                            if (isMultiplayer && multiplayerMode === 'conjunto' && set.p2_completed && (set.p2_restStatus === 'running' || set.p2_restStatus === 'paused' || set.p2_restStatus === 'completed')) {
-                                                                timersToRender.push({
-                                                                    isP1: false,
-                                                                    status: set.p2_restStatus,
-                                                                    accumulated: set.p2_restAccumulated || 0,
-                                                                    lastStartTime: set.p2_restLastStartTime
-                                                                });
-                                                            }
+                                                            const isP1Mine = myIsP1;
+                                                            const isP2Mine = !myIsP1;
 
-                                                            return timersToRender.map((timer) => {
-                                                                const isMine = timer.isP1 === myIsP1;
+                                                            return (
+                                                                <div className="w-full bg-neutral-900/50 border border-neutral-800 rounded-lg p-2 mt-1 flex items-center justify-between animate-in fade-in slide-in-from-top-2">
+                                                                    <div className="flex items-center gap-4 flex-wrap">
+                                                                        {/* Player 1's Timer */}
+                                                                        {hasP1Timer && (
+                                                                            <div className={`flex items-center gap-2 px-2 py-0.5 rounded-md ${isP1Mine ? 'bg-gym-primary/5 border border-gym-primary/20' : 'bg-neutral-800/30'}`}>
+                                                                                <span className={`text-[10px] uppercase tracking-wider ${
+                                                                                    isP1Mine ? 'text-gym-primary font-black' : 'text-neutral-500 font-bold'
+                                                                                }`}>
+                                                                                    Descanso
+                                                                                </span>
+                                                                                <RestTimerDisplay
+                                                                                    status={set.restStatus}
+                                                                                    accumulated={set.restAccumulated || 0}
+                                                                                    lastStartTime={set.restLastStartTime}
+                                                                                    isGold={isP1Mine}
+                                                                                />
+                                                                                {/* Pause/Resume Button for P1 */}
+                                                                                {(set.restStatus !== 'completed' && !isReadOnly) && (
+                                                                                    <button
+                                                                                        onClick={() => toggleTimerPause(mapIndex, setIndex, true)}
+                                                                                        className={`p-1 rounded-full transition-colors ${
+                                                                                            set.restStatus === 'paused'
+                                                                                                ? 'bg-yellow-500/10 text-yellow-500'
+                                                                                                : isP1Mine
+                                                                                                    ? 'text-gym-primary hover:text-white'
+                                                                                                    : 'text-neutral-500 hover:text-white'
+                                                                                        }`}
+                                                                                        title={set.restStatus === 'paused' ? "Reanudar" : "Pausar"}
+                                                                                    >
+                                                                                        {set.restStatus === 'paused' ? <Play size={12} fill="currentColor" /> : <Pause size={12} fill="currentColor" />}
+                                                                                    </button>
+                                                                                )}
+                                                                            </div>
+                                                                        )}
 
-                                                                return (
-                                                                    <div
-                                                                        key={timer.isP1 ? 'p1' : 'p2'}
-                                                                        className={`w-full bg-neutral-900/50 border rounded-lg p-2 mt-1 flex items-center justify-between animate-in fade-in slide-in-from-top-2 ${
-                                                                            isMine ? 'border-gym-primary/30 shadow-[0_0_15px_rgba(250,204,21,0.05)]' : 'border-neutral-800'
-                                                                        }`}
-                                                                    >
-                                                                        <div className="flex items-center gap-2">
-                                                                            <span className={`text-xs uppercase tracking-wider ${
-                                                                                isMine ? 'text-gym-primary font-black' : 'text-neutral-500 font-bold'
-                                                                            }`}>
-                                                                                Descanso
-                                                                            </span>
-                                                                            <RestTimerDisplay
-                                                                                status={timer.status}
-                                                                                accumulated={timer.accumulated}
-                                                                                lastStartTime={timer.lastStartTime}
-                                                                                isGold={isMine}
-                                                                            />
-                                                                        </div>
-
-                                                                        {/* Pause/Resume Button (Only if not completed/stopped by next set) */}
-                                                                        {(timer.status !== 'completed' && !isReadOnly) && (
-                                                                            <button
-                                                                                onClick={() => toggleTimerPause(mapIndex, setIndex, timer.isP1)}
-                                                                                className={`p-1.5 rounded-full transition-colors ${
-                                                                                    timer.status === 'paused'
-                                                                                        ? 'bg-yellow-500/10 text-yellow-500'
-                                                                                        : isMine
-                                                                                            ? 'text-gym-primary hover:text-white'
-                                                                                            : 'text-neutral-500 hover:text-white'
-                                                                                }`}
-                                                                                title={timer.status === 'paused' ? "Reanudar" : "Pausar"}
-                                                                            >
-                                                                                {timer.status === 'paused' ? <Play size={14} fill="currentColor" /> : <Pause size={14} fill="currentColor" />}
-                                                                            </button>
+                                                                        {/* Player 2's Timer */}
+                                                                        {hasP2Timer && (
+                                                                            <div className={`flex items-center gap-2 px-2 py-0.5 rounded-md ${isP2Mine ? 'bg-gym-primary/5 border border-gym-primary/20' : 'bg-neutral-800/30'}`}>
+                                                                                <span className={`text-[10px] uppercase tracking-wider ${
+                                                                                    isP2Mine ? 'text-gym-primary font-black' : 'text-neutral-500 font-bold'
+                                                                                }`}>
+                                                                                    Descanso
+                                                                                </span>
+                                                                                <RestTimerDisplay
+                                                                                    status={set.p2_restStatus}
+                                                                                    accumulated={set.p2_restAccumulated || 0}
+                                                                                    lastStartTime={set.p2_restLastStartTime}
+                                                                                    isGold={isP2Mine}
+                                                                                />
+                                                                                {/* Pause/Resume Button for P2 */}
+                                                                                {(set.p2_restStatus !== 'completed' && !isReadOnly) && (
+                                                                                    <button
+                                                                                        onClick={() => toggleTimerPause(mapIndex, setIndex, false)}
+                                                                                        className={`p-1 rounded-full transition-colors ${
+                                                                                            set.p2_restStatus === 'paused'
+                                                                                                ? 'bg-yellow-500/10 text-yellow-500'
+                                                                                                : isP2Mine
+                                                                                                    ? 'text-gym-primary hover:text-white'
+                                                                                                    : 'text-neutral-500 hover:text-white'
+                                                                                        }`}
+                                                                                        title={set.p2_restStatus === 'paused' ? "Reanudar" : "Pausar"}
+                                                                                    >
+                                                                                        {set.p2_restStatus === 'paused' ? <Play size={12} fill="currentColor" /> : <Pause size={12} fill="currentColor" />}
+                                                                                    </button>
+                                                                                )}
+                                                                            </div>
                                                                         )}
                                                                     </div>
-                                                                );
-                                                            });
+                                                                </div>
+                                                            );
                                                         })()}
                                                     </Fragment>
                                                 );
