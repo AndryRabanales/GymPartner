@@ -152,10 +152,11 @@ export const WorkoutSession = () => {
     useEffect(() => {
         if (!isMultiplayer || !partnerId || !chatId || !user) return;
 
+
         // Fetch partner info
         const fetchPartner = async () => {
-            const { data } = await supabase.from('profiles').select('full_name, avatar_url').eq('id', partnerId).single();
-            if (data?.full_name) setPartnerName(data.full_name);
+            const { data } = await supabase.from('profiles').select('username, avatar_url').eq('id', partnerId).single();
+            if (data?.username) setPartnerName(data.username);
             if (data?.avatar_url) setPartnerAvatar(data.avatar_url);
         };
         fetchPartner();
@@ -2039,9 +2040,9 @@ export const WorkoutSession = () => {
                                                                 {/* Player Rows */}
                                                                 {((isMultiplayer && multiplayerMode === 'conjunto') ? [1, 2] : [1]).map(playerNum => {
                                                                     const isP1 = playerNum === 1;
-                                                                    const pName = isP1 ? (isInviter ? user?.user_metadata?.full_name : partnerName) : (isInviter ? partnerName : user?.user_metadata?.full_name);
+                                                                    const myName = user?.user_metadata?.full_name || user?.user_metadata?.username || user?.user_metadata?.name || 'Yo';
+                                                                    const pName = isP1 ? (isInviter ? myName : partnerName) : (isInviter ? partnerName : myName);
                                                                     const displayName = pName ? pName.split(' ')[0].substring(0, 10) + (pName.split(' ')[0].length > 10 ? '...' : '') : 'Jugador ' + playerNum;
-                                                                    
                                                                     const isMyRow = (isInviter && isP1) || (!isInviter && !isP1);
                                                                     const rowReadOnly = isReadOnly || !isMyRow;
 
