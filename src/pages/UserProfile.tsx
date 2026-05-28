@@ -54,9 +54,13 @@ const isDefaultBio = (bio?: string | null) => {
         clean === '¡hola! soy un nuevo atleta en ginx.' ||
         clean === 'hola! soy un nuevo atleta en ginx.' ||
         clean === 'hola soy un nuevo atleta en ginx.' ||
+        clean === '¡hola! soy un nuevo atleta en gympartner.' ||
+        clean === 'hola! soy un nuevo atleta en gympartner.' ||
+        clean === 'hola soy un nuevo atleta en gympartner.' ||
         clean.includes('entrenando duro para subir de rango') ||
         clean.includes('entrenando para alcanzar el siguiente nivel') ||
-        clean === 'entrenando duro en ginx.'
+        clean === 'entrenando duro en ginx.' ||
+        clean === 'entrenando duro en gympartner.'
     );
 };
 
@@ -585,7 +589,9 @@ export const UserProfile = () => {
                                         &ldquo;{profile?.custom_settings?.description || profile?.description}&rdquo;
                                     </p>
                                 ) : (
-                                    <div />
+                                    <p className="text-neutral-500 text-[10px] sm:text-[11px] leading-snug italic truncate max-w-[70%]">
+                                        &ldquo;Usuario sin descripción&rdquo;
+                                    </p>
                                 )}
                                 
                                 <button

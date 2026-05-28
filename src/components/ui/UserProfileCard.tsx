@@ -50,9 +50,13 @@ const isDefaultBio = (bio?: string | null) => {
         clean === '¡hola! soy un nuevo atleta en ginx.' ||
         clean === 'hola! soy un nuevo atleta en ginx.' ||
         clean === 'hola soy un nuevo atleta en ginx.' ||
+        clean === '¡hola! soy un nuevo atleta en gympartner.' ||
+        clean === 'hola! soy un nuevo atleta en gympartner.' ||
+        clean === 'hola soy un nuevo atleta en gympartner.' ||
         clean.includes('entrenando duro para subir de rango') ||
         clean.includes('entrenando para alcanzar el siguiente nivel') ||
-        clean === 'entrenando duro en ginx.'
+        clean === 'entrenando duro en ginx.' ||
+        clean === 'entrenando duro en gympartner.'
     );
 };
 
@@ -336,13 +340,11 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
                 ) : null}
 
                 {/* Bio Text */}
-                {user.bio && !isDefaultBio(user.bio) && (
-                    <div className="px-2">
-                        <p className="text-sm font-medium text-neutral-400 italic leading-relaxed text-center">
-                            "{user.bio}"
-                        </p>
-                    </div>
-                )}
+                <div className="px-2">
+                    <p className="text-sm font-medium text-neutral-400 italic leading-relaxed text-center">
+                        {(!user.bio || isDefaultBio(user.bio)) ? '"Usuario sin descripción"' : `"${user.bio}"`}
+                    </p>
+                </div>
 
                 {/* ACCESOS & PERMISOS PANEL */}
                 {authUser && authUser.id !== user.id && !hidePermissions && (
