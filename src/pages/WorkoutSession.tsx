@@ -118,7 +118,8 @@ export const WorkoutSession = () => {
     
     useEffect(() => {
         if (isMultiplayer) {
-            localStorage.setItem('ginx_coop_state', JSON.stringify({ isMultiplayer, multiplayerMode, partnerId, chatId, isInviter }));
+            isInviterRef.current = isInviter; // keep ref in sync
+        localStorage.setItem('ginx_coop_state', JSON.stringify({ isMultiplayer, multiplayerMode, partnerId, chatId, isInviter }));
         }
     }, [isMultiplayer, multiplayerMode, partnerId, chatId, isInviter]);
 
@@ -144,6 +145,7 @@ export const WorkoutSession = () => {
      const [partnerExercises, setPartnerExercises] = useState<WorkoutExercise[]>([]);
     const [viewingMode, setViewingMode] = useState<'mine' | 'partner'>('mine');
     const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+    const isInviterRef = useRef<boolean>(true); // tracks isInviter without stale closure
     const lastIncomingState = useRef<string>('');
     const partnerSessionIdRef = useRef<string | null>(null);
     const [partnerName, setPartnerName] = useState<string>('Compañero');
@@ -175,7 +177,44 @@ export const WorkoutSession = () => {
                     lastIncomingState.current = incomingStr;
 
                     if (multiplayerMode === 'conjunto') {
-                        setActiveExercises(exercises); // Merge automatically
+                        // Smart merge: protect own rest timer from stale partner broadcasts
+                        setActiveExercises(prev => {
+                            if (!prev || prev.length === 0) return exercises;
+                            return exercises.map((inEx, eIdx) => {
+                                const localEx = prev[eIdx];
+                                if (!localEx) return inEx;
+                                const meIsP1 = isInviterRef.current;
+                                return {
+                                    ...inEx,
+                                    sets: inEx.sets.map((inSet, sIdx) => {
+                                        const loc = localEx.sets?.[sIdx];
+                                        if (!loc) return inSet;
+                                        if (meIsP1) {
+                                            // P1: protect own rest timer, accept partner p2_* fully
+                                            return {
+                                                ...inSet,
+                                                restStatus: loc.restStatus,
+                                                restLastStartTime: loc.restLastStartTime,
+                                                restAccumulated: loc.restAccumulated,
+                                            };
+                                        } else {
+                                            // P2 (invitee): protect own p2_ rest timer
+                                            return {
+                                                ...inSet,
+                                                p2_restStatus: loc.p2_restStatus,
+                                                p2_restLastStartTime: loc.p2_restLastStartTime,
+                                                p2_restAccumulated: loc.p2_restAccumulated,
+                                                p2_completed: loc.p2_completed ?? inSet.p2_completed,
+                                                p2_locked: loc.p2_locked ?? inSet.p2_locked,
+                                                p2_completedAt: loc.p2_completedAt ?? inSet.p2_completedAt,
+                                                p2_weight: loc.p2_weight ?? inSet.p2_weight,
+                                                p2_reps: loc.p2_reps ?? inSet.p2_reps,
+                                            };
+                                        }
+                                    })
+                                };
+                            });
+                        });
                     } else if (multiplayerMode === 'separado') {
                         setPartnerExercises(exercises); // Store for viewing
                     }
@@ -1536,16 +1575,22 @@ export const WorkoutSession = () => {
             navigate(-1);
             return;
         }
-        if (window.confirm("¿Seguro que quieres cancelar? Se perderá todo el progreso de esta sesión.")) {
-            // Clear Local Storage
+        const coopMsg = isMultiplayer && multiplayerMode === 'conjunto'
+            ? "¿Salir? Solo tu sesión CO-OP terminará. Tu compañero continuará entrenando."
+            : "¿Seguro que quieres cancelar? Se perderá todo el progreso de esta sesión.";
+        if (window.confirm(coopMsg)) {
             localStorage.removeItem(`workout_draft_${sessionId}`);
             localStorage.removeItem(STORAGE_KEY);
-            setActiveExercises([]); // Clear state
-
-            setLoading(true);
-            await workoutService.deleteSession(sessionId);
-            setLoading(false);
-            navigate(-1);
+            setActiveExercises([]);
+            if (isMultiplayer && multiplayerMode === 'conjunto') {
+                // CO-OP: just leave — don't delete the session, partner continues
+                navigate(-1);
+            } else {
+                setLoading(true);
+                await workoutService.deleteSession(sessionId);
+                setLoading(false);
+                navigate(-1);
+            }
         }
     };
 
