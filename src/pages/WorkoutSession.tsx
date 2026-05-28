@@ -1191,7 +1191,7 @@ export const WorkoutSession = () => {
     };
 
     // [NEW] Auto-complete when leaving input if all data is filled
-    const handleInputBlur = (exerciseIndex: number, setIndex: number, e: React.FocusEvent<HTMLInputElement>) => {
+    const handleInputBlur = (exerciseIndex: number, setIndex: number, isP1: boolean, e: React.FocusEvent<HTMLInputElement>) => {
         // Prevent auto-completion if the user is just clicking another input
         const relatedTarget = e.relatedTarget as HTMLElement;
         if (relatedTarget && relatedTarget.tagName === 'INPUT') {
@@ -1201,30 +1201,38 @@ export const WorkoutSession = () => {
         const exercise = activeExercises[exerciseIndex];
         if (!exercise) return;
         const set = exercise.sets[setIndex];
-        if (!set || set.completed) return;
+        if (!set) return;
+
+        const isCompleted = isP1 ? set.completed : (set.p2_completed || false);
+        if (isCompleted) return;
 
         let isComplete = true;
         let hasAnyMetric = false;
 
         if (exercise.metrics.weight) {
             hasAnyMetric = true;
-            if (set.weight === undefined || set.weight <= 0) isComplete = false;
+            const weightVal = isP1 ? set.weight : set.p2_weight;
+            if (weightVal === undefined || weightVal <= 0) isComplete = false;
         }
         if (exercise.metrics.reps) {
             hasAnyMetric = true;
-            if (set.reps === undefined || set.reps <= 0) isComplete = false;
+            const repsVal = isP1 ? set.reps : set.p2_reps;
+            if (repsVal === undefined || repsVal <= 0) isComplete = false;
         }
         if (exercise.metrics.time) {
             hasAnyMetric = true;
-            if (set.time === undefined || set.time <= 0) isComplete = false;
+            const timeVal = isP1 ? set.time : set.p2_time;
+            if (timeVal === undefined || timeVal <= 0) isComplete = false;
         }
         if (exercise.metrics.distance) {
             hasAnyMetric = true;
-            if (set.distance === undefined || set.distance <= 0) isComplete = false;
+            const distanceVal = isP1 ? set.distance : set.p2_distance;
+            if (distanceVal === undefined || distanceVal <= 0) isComplete = false;
         }
         if (exercise.metrics.rpe) {
             hasAnyMetric = true;
-            if (set.rpe === undefined || set.rpe <= 0) isComplete = false;
+            const rpeVal = isP1 ? set.rpe : set.p2_rpe;
+            if (rpeVal === undefined || rpeVal <= 0) isComplete = false;
         }
 
         Object.keys(exercise.metrics).forEach(key => {
@@ -1236,7 +1244,7 @@ export const WorkoutSession = () => {
         });
 
         if (isComplete && hasAnyMetric) {
-            toggleComplete(exerciseIndex, setIndex);
+            toggleComplete(exerciseIndex, setIndex, isP1);
         }
     };
 
@@ -2142,7 +2150,7 @@ export const WorkoutSession = () => {
                                                                                         disabled={rowLocked || rowReadOnly}
                                                                                         value={rowWeight === 0 ? '' : toDisplayWeight(rowWeight, exercise.weightUnit || 'kg')}
                                                                                         onChange={(e) => updateSet(mapIndex, setIndex, isP1 ? 'weight' : 'p2_weight', toInternalWeight(e.target.value, exercise.weightUnit || 'kg'))}
-                                                                                        onBlur={(e) => handleInputBlur(mapIndex, setIndex, e)}
+                                                                                        onBlur={(e) => handleInputBlur(mapIndex, setIndex, isP1, e)}
                                                                                         onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
                                                                                         className={`w-full bg-neutral-800 text-center font-black text-base rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${rowCompleted ? 'text-neutral-500 bg-neutral-900/40' : 'text-white'} ${rowLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                                         placeholder="0"
@@ -2157,7 +2165,7 @@ export const WorkoutSession = () => {
                                                                                         disabled={rowLocked || rowReadOnly}
                                                                                         value={rowReps === 0 ? '' : rowReps}
                                                                                         onChange={(e) => updateSet(mapIndex, setIndex, isP1 ? 'reps' : 'p2_reps', e.target.value)}
-                                                                                        onBlur={(e) => handleInputBlur(mapIndex, setIndex, e)}
+                                                                                        onBlur={(e) => handleInputBlur(mapIndex, setIndex, isP1, e)}
                                                                                         onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
                                                                                         className={`w-full bg-neutral-800 text-center font-black text-base rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${rowCompleted ? 'text-neutral-500 bg-neutral-900/40' : 'text-white'} ${rowLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                                         placeholder="0"
@@ -2172,7 +2180,7 @@ export const WorkoutSession = () => {
                                                                                         disabled={rowLocked || rowReadOnly}
                                                                                         value={rowTime || ''}
                                                                                         onChange={(e) => updateSet(mapIndex, setIndex, isP1 ? 'time' : 'p2_time', e.target.value)}
-                                                                                        onBlur={(e) => handleInputBlur(mapIndex, setIndex, e)}
+                                                                                        onBlur={(e) => handleInputBlur(mapIndex, setIndex, isP1, e)}
                                                                                         onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
                                                                                         className="w-full bg-neutral-800 text-center font-black text-base rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none"
                                                                                         placeholder="0s"
@@ -2187,7 +2195,7 @@ export const WorkoutSession = () => {
                                                                                         disabled={rowLocked || rowReadOnly}
                                                                                         value={rowDistance === 0 ? '' : rowDistance}
                                                                                         onChange={(e) => updateSet(mapIndex, setIndex, isP1 ? 'distance' : 'p2_distance', e.target.value)}
-                                                                                        onBlur={(e) => handleInputBlur(mapIndex, setIndex, e)}
+                                                                                        onBlur={(e) => handleInputBlur(mapIndex, setIndex, isP1, e)}
                                                                                         onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
                                                                                         className="w-full bg-neutral-800 text-center font-black text-base rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none"
                                                                                         placeholder="0m"
@@ -2203,7 +2211,7 @@ export const WorkoutSession = () => {
                                                                                         disabled={rowLocked || rowReadOnly}
                                                                                         value={rowRpe || ''}
                                                                                         onChange={(e) => updateSet(mapIndex, setIndex, isP1 ? 'rpe' : 'p2_rpe', e.target.value)}
-                                                                                        onBlur={(e) => handleInputBlur(mapIndex, setIndex, e)}
+                                                                                        onBlur={(e) => handleInputBlur(mapIndex, setIndex, isP1, e)}
                                                                                         onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
                                                                                         className="w-full bg-neutral-800 text-center font-black text-base rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none"
                                                                                         placeholder="-"
@@ -2221,7 +2229,7 @@ export const WorkoutSession = () => {
                                                                                             disabled={rowLocked || rowReadOnly}
                                                                                             value={set.custom?.[key] || ''}
                                                                                             onChange={(e) => updateSet(mapIndex, setIndex, key, e.target.value, true)} // isCustom=true
-                                                                                            onBlur={(e) => handleInputBlur(mapIndex, setIndex, e)}
+                                                                                            onBlur={(e) => handleInputBlur(mapIndex, setIndex, isP1, e)}
                                                                                             onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
                                                                                             className="w-full bg-neutral-800 text-center font-black text-base rounded-lg py-2 text-white focus:ring-2 focus:ring-gym-primary outline-none"
                                                                                         />
