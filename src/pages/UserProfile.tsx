@@ -195,7 +195,7 @@ export const UserProfile = () => {
         if (user) {
             try {
                 console.log("🎉 App shared! Awarding 5 GX points.");
-                await userService.addGPoints(user.id, 5, 'app_shared');
+                await userService.addGxPoints(user.id, 5, 'app_shared');
                 loadUserData();
             } catch (e) {
                 console.warn("Could not award sharing GX points:", e);

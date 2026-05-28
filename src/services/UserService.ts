@@ -186,8 +186,8 @@ class UserService {
 
             if (linkError) throw linkError;
             
-            // 3. AWARD G-POINTS for Unlocking Gym
-            await this.addGPoints(userId, 3, 'gym_unlocked');
+            // 3. AWARD GX POINTS for Unlocking Gym
+            await this.addGxPoints(userId, 3, 'gym_unlocked');
 
             // 4. Update Profile Cache (if it's home base)
             if (isFirstGym) {
@@ -298,6 +298,25 @@ class UserService {
             return { success: true };
         } catch (error: any) {
             console.error('Error adding G-Points:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Add GX Points to a user (Gamification score)
+     */
+    async addGxPoints(userId: string, amount: number, reason: string): Promise<{ success: boolean; error?: string }> {
+        try {
+            console.log(`⚡ Adding ${amount} GX Points to ${userId} for ${reason}`);
+            const { error } = await supabase.rpc('increment_gx_points', {
+                u_id: userId,
+                amount: amount
+            });
+
+            if (error) throw error;
+            return { success: true };
+        } catch (error: any) {
+            console.error('Error adding GX Points:', error);
             return { success: false, error: error.message };
         }
     }

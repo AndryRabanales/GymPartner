@@ -162,7 +162,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
             if (hasAvatar && hasBio && !alreadyAwarded) {
                 console.log("🎉 First profile completion! Awarding 2 GX points.");
                 updatedSettings.profile_completed_reward_awarded = true;
-                await userService.addGPoints(user.id, 2, 'first_profile_completion');
+                await userService.addGxPoints(user.id, 2, 'first_profile_completion');
             }
 
             const updateResult = await userService.updateProfile(user.id, {

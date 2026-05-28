@@ -136,7 +136,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     const customSettings = profile?.custom_settings || {};
                     if (customSettings.last_5min_reward_date !== today) {
                         // Award 1 GX point
-                        await userService.addGPoints(user.id, 1, '5min_daily_active');
+                        await userService.addGxPoints(user.id, 1, '5min_daily_active');
 
                         // Save updated custom_settings
                         await supabase

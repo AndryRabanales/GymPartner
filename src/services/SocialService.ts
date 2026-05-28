@@ -577,7 +577,7 @@ class SocialService {
     async followUser(followerId: string, followingId: string) {
         const res = await supabase.from('follows').insert({ follower_id: followerId, following_id: followingId });
         if (!res.error) {
-            await userService.addGPoints(followingId, 1, 'new_follower');
+            await userService.addGxPoints(followingId, 1, 'new_follower');
         }
         return res;
     }
@@ -589,7 +589,7 @@ class SocialService {
             .eq('follower_id', followerId)
             .eq('following_id', followingId);
         if (!res.error) {
-            await userService.addGPoints(followingId, -1, 'lost_follower');
+            await userService.addGxPoints(followingId, -1, 'lost_follower');
         }
         return res;
     }

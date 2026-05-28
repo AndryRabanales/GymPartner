@@ -154,7 +154,7 @@ class WorkoutService {
                         console.log('🎉 First qualified workout of the day (>= 20 mins)! Awarding 2 GX points and checkins_count.');
                         
                         // Award 2 GX points
-                        await userService.addGPoints(session.user_id, 2, 'workout_finished');
+                        await userService.addGxPoints(session.user_id, 2, 'workout_finished');
                         
                         // Increment checkins_count in profile
                         const { data: profile } = await supabase
@@ -175,7 +175,7 @@ class WorkoutService {
                 }
             }
         } catch (e) {
-            console.warn('Could not award G-Points or training cumulative point:', e);
+            console.warn('Could not award GX Points or training cumulative point:', e);
         }
 
         // Notify allies that the session has finished
