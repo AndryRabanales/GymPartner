@@ -126,17 +126,44 @@ class WorkoutService {
             return { success: false, error };
         }
 
-        // 3. AWARD G-POINTS for Training (20 pts)
-        // We fetch the userId from the session first if not available, but usually we know it.
-        // For simplicity, we assume the session finish was successful.
+        // 3. AWARD G-POINTS & TRAINING CUMULATIVE POINT for Training
         try {
             const { data: session } = await supabase.from('workout_sessions').select('user_id').eq('id', sessionId).single();
             if (session) {
                 const { userService } = await import('./UserService');
                 await userService.addGPoints(session.user_id, 20, 'workout_finished');
+
+                // Check if they completed another session today
+                const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+                const { data: todaySessions } = await supabase
+                    .from('workout_sessions')
+                    .select('id')
+                    .eq('user_id', session.user_id)
+                    .not('finished_at', 'is', null)
+                    .like('finished_at', `${today}%`);
+
+                // If this is the only finished session today, increment the cumulative point (checkins_count)
+                const isFirstWorkoutToday = !todaySessions || todaySessions.length <= 1;
+
+                if (isFirstWorkoutToday) {
+                    console.log('🎉 First workout of the day! Awarding training cumulative point (checkins_count)');
+                    
+                    const { data: profile } = await supabase
+                        .from('profiles')
+                        .select('checkins_count')
+                        .eq('id', session.user_id)
+                        .single();
+                        
+                    const currentCount = profile?.checkins_count || 0;
+                    
+                    await supabase
+                        .from('profiles')
+                        .update({ checkins_count: currentCount + 1 })
+                        .eq('id', session.user_id);
+                }
             }
         } catch (e) {
-            console.warn('Could not award G-Points for workout:', e);
+            console.warn('Could not award G-Points or training cumulative point:', e);
         }
 
         // Notify allies that the session has finished

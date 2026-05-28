@@ -86,7 +86,7 @@ export const PublicProfile = () => {
                     // PRIORITIZE Public Assets from Profile Table
                     gym_image: profileData.main_base_image || null,
                     gym_color: profileData.main_base_color || '#E5FF00',
-                    training_days_count: stats.workoutsCount > 0 ? stats.workoutsCount : (profileData.checkins_count || 0),
+                    training_days_count: profileData.checkins_count || 0,
                     followers_count: stats.followersCount,
                     following_count: stats.followingCount,
                     distance: 'Local'

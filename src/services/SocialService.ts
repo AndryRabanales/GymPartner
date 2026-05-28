@@ -598,6 +598,15 @@ class SocialService {
 
     async getProfileStats(userId: string): Promise<SocialProfileStats> {
         try {
+            // Get profiles.checkins_count for cumulative training points
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('checkins_count')
+                .eq('id', userId)
+                .maybeSingle();
+
+            const checkins = profile?.checkins_count || 0;
+
             // 1. Try fetching via SECURITY DEFINER database RPC for exact, RLS-unrestricted numbers
             const { data, error } = await supabase.rpc('get_profile_stats', { user_id_param: userId });
             
@@ -607,7 +616,7 @@ class SocialService {
                 return {
                     followersCount: Number(data.followersCount) || 0,
                     followingCount: Number(data.followingCount) || 0,
-                    workoutsCount: Number(data.workoutsCount) || 0,
+                    workoutsCount: checkins, // Overridden to use cumulative training points (checkins_count)
                     totalLikes: Number(data.totalLikes) || 0
                 };
             }
@@ -616,10 +625,10 @@ class SocialService {
             console.warn("RPC failed, falling back to client-side count:", e);
             try {
                 // 2. Client-side fallback count (subject to RLS policies)
-                const [followers, following, workouts, postsWithLikes] = await Promise.all([
+                const [followers, following, profileRes, postsWithLikes] = await Promise.all([
                     supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', userId),
                     supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', userId),
-                    supabase.from('workout_sessions').select('*', { count: 'exact', head: true }).eq('user_id', userId).or('finished_at.not.is.null,end_time.not.is.null'),
+                    supabase.from('profiles').select('checkins_count').eq('id', userId).maybeSingle(),
                     supabase.from('posts').select('id, post_likes(count)', { count: 'exact' }).eq('user_id', userId)
                 ]);
 
@@ -630,7 +639,7 @@ class SocialService {
                 return {
                     followersCount: followers.count || 0,
                     followingCount: following.count || 0,
-                    workoutsCount: workouts.count || 0,
+                    workoutsCount: profileRes.data?.checkins_count || 0, // Overridden to use cumulative training points (checkins_count)
                     totalLikes: totalLikesReceived
                 };
             } catch (fallbackErr) {

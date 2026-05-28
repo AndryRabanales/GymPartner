@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useRef, useState } from 'r
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 import { userService } from '../services/UserService';
+import { streakService } from '../services/StreakService';
 
 interface AuthContextType {
     user: User | null;
@@ -139,6 +140,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             } else {
                 console.log('✅ [Profile] Already exists.');
             }
+
+            // Record daily app entry streak
+            streakService.recordAppEntry(currentUser.id).catch(e =>
+                console.error('❌ [Auth] recordAppEntry failed:', e)
+            );
 
             // Referral processing
             if (!isProcessingReferral.current) {
