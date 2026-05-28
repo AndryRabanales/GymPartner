@@ -30,9 +30,10 @@ export const ChatPage = () => {
 
     // Auto-scroll ref
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const isFirstLoadRef = useRef(true);
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const scrollToBottom = (smooth = true) => {
+        messagesEndRef.current?.scrollIntoView({ behavior: smooth ? "smooth" : "auto" });
     };
 
     const markAsRead = async () => {
@@ -96,7 +97,12 @@ export const ChatPage = () => {
 
     useEffect(() => {
         if (messages.length > 0) {
-            scrollToBottom();
+            if (isFirstLoadRef.current) {
+                scrollToBottom(false);
+                isFirstLoadRef.current = false;
+            } else {
+                scrollToBottom(true);
+            }
         }
     }, [messages]);
 
@@ -229,14 +235,12 @@ export const ChatPage = () => {
                             {otherUser?.username?.[0]?.toUpperCase() || '?'}
                         </div>
                     )}
-                    <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-neutral-950 rounded-full animate-pulse"></span>
                 </div>
 
                 <div className="flex-1 min-w-0">
                     <h2 className="font-black text-sm uppercase tracking-tight text-white italic truncate flex items-center gap-1.5">
                         {otherUser?.username || 'Usuario'}
                     </h2>
-                    <p className="text-[9px] font-bold text-gym-primary/70 tracking-widest uppercase italic animate-pulse">Conexión Segura</p>
                 </div>
 
                 <div className="relative">
