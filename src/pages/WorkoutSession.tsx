@@ -1575,17 +1575,23 @@ export const WorkoutSession = () => {
             navigate(-1);
             return;
         }
-        const coopMsg = isMultiplayer && multiplayerMode === 'conjunto'
-            ? "¿Salir? Solo tu sesión CO-OP terminará. Tu compañero continuará entrenando."
-            : "¿Seguro que quieres cancelar? Se perderá todo el progreso de esta sesión.";
-        if (window.confirm(coopMsg)) {
-            localStorage.removeItem(`workout_draft_${sessionId}`);
-            localStorage.removeItem(STORAGE_KEY);
-            setActiveExercises([]);
-            if (isMultiplayer && multiplayerMode === 'conjunto') {
-                // CO-OP: just leave — don't delete the session, partner continues
+        if (isMultiplayer && multiplayerMode === 'conjunto') {
+            // CO-OP EXIT: player can leave and come back anytime.
+            // We keep the session in DB AND keep the local draft so they can resume.
+            const leave = window.confirm(
+                "¿Salir del entrenamiento CO-OP?\n\nPodrás VOLVER en cualquier momento y retomar donde lo dejaste. Tu compañero continuará entrenando."
+            );
+            if (leave) {
+                // DO NOT remove draft — preserve it so "Volver" prompt appears on re-enter
+                // DO NOT delete session — partner continues
                 navigate(-1);
-            } else {
+            }
+        } else {
+            // SOLO cancel: confirm then wipe everything
+            if (window.confirm("¿Seguro que quieres cancelar? Se perderá todo el progreso de esta sesión.")) {
+                localStorage.removeItem(`workout_draft_${sessionId}`);
+                localStorage.removeItem(STORAGE_KEY);
+                setActiveExercises([]);
                 setLoading(true);
                 await workoutService.deleteSession(sessionId);
                 setLoading(false);
