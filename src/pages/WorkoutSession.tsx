@@ -67,29 +67,29 @@ const RestTimerDisplay = ({ status, accumulated, lastStartTime, isGold }: { stat
     const [elapsed, setElapsed] = useState(0);
 
     useEffect(() => {
-        const calculateElapsed = () => {
+        const getInitial = () => {
             if (status === 'running' && lastStartTime) {
-                return Math.floor((accumulated + (Date.now() - lastStartTime)) / 1000);
+                const diff = Date.now() - Number(lastStartTime);
+                if (diff < 0 || diff > 86400000) return Math.floor(accumulated / 1000);
+                return Math.floor((accumulated + diff) / 1000);
             }
             return Math.floor(accumulated / 1000);
         };
 
-        if (status !== 'running') {
-            setElapsed(calculateElapsed());
-        }
+        // Set immediately (no 1-sec lag) then tick locally every second
+        setElapsed(getInitial());
 
         if (status === 'running') {
-            const interval = setInterval(() => {
-                setElapsed(calculateElapsed());
-            }, 1000);
+            const interval = setInterval(() => setElapsed(prev => prev + 1), 1000);
             return () => clearInterval(interval);
         }
     }, [status, accumulated, lastStartTime]);
 
     const formatTime = (secs: number) => {
-        const m = Math.floor(secs / 60);
-        const s = secs % 60;
-        return `${m}:${s.toString().padStart(2, '0')}`;
+        const s = Math.max(0, secs);
+        const m = Math.floor(s / 60);
+        const sec = s % 60;
+        return String(m) + ':' + String(sec).padStart(2, '0');
     };
 
     return (
@@ -98,7 +98,6 @@ const RestTimerDisplay = ({ status, accumulated, lastStartTime, isGold }: { stat
         </span>
     );
 };
-
 export const WorkoutSession = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
