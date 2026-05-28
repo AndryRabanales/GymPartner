@@ -30,6 +30,21 @@ export const FriendsPage = () => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user || !friend.other_user) return;
 
+        // Anti-spam 2 minutes cooldown
+        const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+        const { data: recentInvites } = await supabase
+            .from('notifications')
+            .select('created_at, data')
+            .eq('user_id', friend.other_user.id)
+            .eq('type', 'coop_invite')
+            .gt('created_at', twoMinutesAgo);
+
+        const hasRecent = recentInvites?.some(invite => invite.data?.sender_id === user.id);
+        if (hasRecent) {
+            alert(`⚠️ Ya has enviado una invitación recientemente. Debes esperar 2 minutos antes de enviar otra a este guerrero.`);
+            return;
+        }
+
         // Obtain user name for notification
         const { data: profile } = await supabase
             .from('profiles')

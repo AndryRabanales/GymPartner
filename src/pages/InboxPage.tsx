@@ -150,6 +150,14 @@ export const InboxPage = () => {
             await notificationService.updateInvitationStatus(notification, 'accepted');
 
             if (notification.type === 'coop_invite') {
+                const isExpired = (new Date().getTime() - new Date(notification.created_at).getTime()) > 2 * 60 * 1000;
+                if (isExpired) {
+                    alert("⚠️ Esta invitación de entrenamiento ha caducado (duración máxima: 2 minutos).");
+                    await notificationService.updateInvitationStatus(notification, 'rejected');
+                    loadData();
+                    return;
+                }
+
                 const mode = notification.data?.mode || 'separado';
                 navigate('/workout', { 
                     state: { 
@@ -263,57 +271,67 @@ export const InboxPage = () => {
                                         <p className="text-[10px] text-neutral-500 max-w-xs font-medium leading-relaxed">No has recibido invitaciones nuevas por ahora. Busca aliados en el Radar para lanzar un desafío táctico.</p>
                                     </div>
                                 ) : (
-                                    invitations.map(invite => (
-                                        <div
-                                            key={invite.id}
-                                            className="bg-neutral-900/40 backdrop-blur-md border border-white/5 rounded-2xl p-5 shadow-[0_4px_25px_rgba(0,0,0,0.3)] transition-all hover:border-yellow-500/20 hover:bg-neutral-900/60 relative overflow-hidden group"
-                                        >
-                                            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-yellow-500/5 to-transparent pointer-events-none rounded-full blur-xl"></div>
+                                    invitations.map(invite => {
+                                        const isCoop = invite.type === 'coop_invite';
+                                        const isExpired = isCoop && (new Date().getTime() - new Date(invite.created_at).getTime()) > 2 * 60 * 1000;
+                                        
+                                        return (
+                                            <div
+                                                key={invite.id}
+                                                className={`bg-neutral-900/40 backdrop-blur-md border border-white/5 rounded-2xl p-5 shadow-[0_4px_25px_rgba(0,0,0,0.3)] transition-all hover:border-yellow-500/20 hover:bg-neutral-900/60 relative overflow-hidden group ${isExpired ? 'opacity-50 saturate-[0.25]' : ''}`}
+                                            >
+                                                <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-yellow-500/5 to-transparent pointer-events-none rounded-full blur-xl"></div>
 
-                                            <div className="flex items-start gap-4">
-                                                <div className="w-12 h-12 rounded-full bg-neutral-950 overflow-hidden shrink-0 border border-white/10 ring-2 ring-yellow-500/10 group-hover:ring-yellow-500/30 transition-all relative">
-                                                    {invite.sender?.avatar_url ? (
-                                                        <FadeInImage src={invite.sender.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <div className="w-full h-full bg-gradient-to-br from-neutral-800 to-black flex items-center justify-center text-sm font-black text-yellow-500 italic">
-                                                            {invite.sender?.username?.[0].toUpperCase() || 'G'}
+                                                <div className="flex items-start gap-4">
+                                                    <div className="w-12 h-12 rounded-full bg-neutral-950 overflow-hidden shrink-0 border border-white/10 ring-2 ring-yellow-500/10 group-hover:ring-yellow-500/30 transition-all relative">
+                                                        {invite.sender?.avatar_url ? (
+                                                            <FadeInImage src={invite.sender.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <div className="w-full h-full bg-gradient-to-br from-neutral-800 to-black flex items-center justify-center text-sm font-black text-yellow-500 italic">
+                                                                {invite.sender?.username?.[0].toUpperCase() || 'G'}
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                                                            <span className="text-xs font-black text-white uppercase italic tracking-tight truncate group-hover:text-yellow-400 transition-colors">
+                                                                @{invite.sender?.username || invite.data?.sender_name || 'Guerrero'}
+                                                            </span>
+                                                            <span className="text-[8px] font-bold text-neutral-600 shrink-0 font-mono">
+                                                                {new Date(invite.created_at).toLocaleDateString()}
+                                                            </span>
                                                         </div>
+                                                        <p className="text-[11px] text-neutral-400 font-medium leading-relaxed">
+                                                            {isCoop 
+                                                                ? `Te ha invitado a un entrenamiento ${invite.data?.mode === 'conjunto' ? 'CONJUNTO' : 'SEPARADO'}.${isExpired ? ' (⚠️ INVITACIÓN CADUCADA)' : ''}`
+                                                                : 'Te ha enviado un desafío de gimnasio. ¿Aceptas el entrenamiento?'
+                                                            }
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="mt-4 flex items-center gap-2 relative z-10">
+                                                    <button
+                                                        onClick={() => handleReject(invite)}
+                                                        className="flex-1 py-2.5 px-3 rounded-xl bg-neutral-950/80 text-neutral-400 font-bold text-[9px] uppercase tracking-wider border border-white/5 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                                                    >
+                                                        <X size={12} />
+                                                        {isExpired ? 'LIMPIAR' : 'IGNORAR'}
+                                                    </button>
+                                                    {!isExpired && (
+                                                        <button
+                                                            onClick={() => handleAccept(invite)}
+                                                            className="flex-1 py-2.5 px-3 rounded-xl bg-gradient-to-br from-gym-primary to-yellow-500 text-neutral-950 font-black text-[9px] uppercase tracking-wider hover:shadow-[0_0_15px_rgba(255,215,0,0.35)] transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                                                        >
+                                                            <Zap size={11} fill="currentColor" />
+                                                            ACEPTAR RETO
+                                                        </button>
                                                     )}
                                                 </div>
-
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center justify-between gap-2 mb-1.5">
-                                                        <span className="text-xs font-black text-white uppercase italic tracking-tight truncate group-hover:text-yellow-400 transition-colors">
-                                                            @{invite.sender?.username || invite.data?.sender_name || 'Guerrero'}
-                                                        </span>
-                                                        <span className="text-[8px] font-bold text-neutral-600 shrink-0 font-mono">
-                                                            {new Date(invite.created_at).toLocaleDateString()}
-                                                        </span>
-                                                    </div>
-                                                    <p className="text-[11px] text-neutral-400 font-medium leading-relaxed">
-                                                        Te ha enviado un desafío de gimnasio. ¿Aceptas el entrenamiento conjunto?
-                                                    </p>
-                                                </div>
                                             </div>
-
-                                            <div className="mt-4 flex items-center gap-2 relative z-10">
-                                                <button
-                                                    onClick={() => handleReject(invite)}
-                                                    className="flex-1 py-2.5 px-3 rounded-xl bg-neutral-950/80 text-neutral-400 font-bold text-[9px] uppercase tracking-wider border border-white/5 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 transition-all active:scale-95 flex items-center justify-center gap-1.5"
-                                                >
-                                                    <X size={12} />
-                                                    IGNORAR
-                                                </button>
-                                                <button
-                                                    onClick={() => handleAccept(invite)}
-                                                    className="flex-1 py-2.5 px-3 rounded-xl bg-gradient-to-br from-gym-primary to-yellow-500 text-neutral-950 font-black text-[9px] uppercase tracking-wider hover:shadow-[0_0_15px_rgba(255,215,0,0.35)] transition-all active:scale-95 flex items-center justify-center gap-1.5"
-                                                >
-                                                    <Zap size={11} fill="currentColor" />
-                                                    ACEPTAR RETO
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))
+                                        );
+                                    })
                                 )}
                             </div>
                         )}
