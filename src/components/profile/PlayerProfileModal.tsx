@@ -633,11 +633,6 @@ export const PlayerProfileModal = ({ player, onClose, onFollowToggle }: PlayerPr
                             <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter leading-none drop-shadow-lg">
                                 {player.username}
                             </h2>
-                            <p className="text-xs text-neutral-400 font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-2">
-                                <span className="w-1 h-1 rounded-full bg-yellow-500"></span>
-                                Atleta de Alto Rendimiento
-                                <span className="w-1 h-1 rounded-full bg-yellow-500"></span>
-                            </p>
                             {player.gym_name && (
                                 <div className="flex items-center justify-center gap-1.5 text-xs text-neutral-500 mt-2 bg-neutral-800/50 py-1 px-3 rounded-full mx-auto w-fit border border-white/5">
                                     <MapPin size={10} />
