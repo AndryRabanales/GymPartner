@@ -94,6 +94,7 @@ export const notificationService = {
     async updateInvitationStatus(notification: Notification, status: 'accepted' | 'rejected') {
         const senderId = notification.data?.sender_id;
         const currentUserId = notification.user_id;
+        const notificationType = notification.type;
 
         try {
             if (senderId && currentUserId) {
@@ -102,7 +103,7 @@ export const notificationService = {
                     .from('notifications')
                     .select('id, data')
                     .eq('user_id', currentUserId)
-                    .eq('type', 'invitation');
+                    .eq('type', notificationType);
 
                 if (siblingInvites) {
                     const targetIds = siblingInvites
@@ -310,6 +311,40 @@ export const notificationService = {
     async acceptInvitation(senderId: string): Promise<string | null> {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return null;
+
+        // Clean up and mark ALL invitation notifications between these two users as accepted
+        try {
+            const { data: pendingInvites } = await supabase
+                .from('notifications')
+                .select('id, user_id, data')
+                .eq('type', 'invitation')
+                .in('user_id', [user.id, senderId]);
+
+            if (pendingInvites && pendingInvites.length > 0) {
+                const targetInvites = pendingInvites.filter(invite => {
+                    const sId = invite.data?.sender_id;
+                    const uId = invite.user_id;
+                    return (uId === user.id && sId === senderId) || (uId === senderId && sId === user.id);
+                });
+
+                if (targetInvites.length > 0) {
+                    await Promise.all(targetInvites.map(async (invite) => {
+                        await supabase
+                            .from('notifications')
+                            .update({
+                                is_read: true,
+                                data: {
+                                    ...(invite.data || {}),
+                                    status: 'accepted'
+                                }
+                            })
+                            .eq('id', invite.id);
+                    }));
+                }
+            }
+        } catch (cleanErr) {
+            console.error("Error cleaning up duplicate sibling invites on accept:", cleanErr);
+        }
 
         // 1. Create Chat (or get existing due to UNIQUE index)
         const { data: chat, error } = await supabase

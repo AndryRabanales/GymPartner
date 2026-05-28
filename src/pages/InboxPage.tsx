@@ -11,6 +11,7 @@ export const InboxPage = () => {
     const [invitations, setInvitations] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState<'chats' | 'matches'>('chats');
+    const [processingId, setProcessingId] = useState<string | null>(null);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -142,10 +143,14 @@ export const InboxPage = () => {
         setLoading(false);
     };
 
+
+
     const handleAccept = async (notification: any) => {
+        if (processingId) return;
         const senderId = notification.data?.sender_id;
         if (!senderId) return;
 
+        setProcessingId(notification.id);
         try {
             await notificationService.updateInvitationStatus(notification, 'accepted');
 
@@ -155,6 +160,7 @@ export const InboxPage = () => {
                     alert("⚠️ Esta invitación de entrenamiento ha caducado (duración máxima: 2 minutos).");
                     await notificationService.updateInvitationStatus(notification, 'rejected');
                     loadData();
+                    setProcessingId(null);
                     return;
                 }
 
@@ -167,6 +173,7 @@ export const InboxPage = () => {
                         chatId: notification.data?.chat_id
                     } 
                 });
+                setProcessingId(null);
                 return;
             }
 
@@ -177,15 +184,21 @@ export const InboxPage = () => {
             loadData();
         } catch (error) {
             console.error("Error accepting invite:", error);
+        } finally {
+            setProcessingId(null);
         }
     };
 
     const handleReject = async (notification: any) => {
+        if (processingId) return;
+        setProcessingId(notification.id);
         try {
             await notificationService.updateInvitationStatus(notification, 'rejected');
             loadData();
         } catch (error) {
             console.error("Error rejecting invite:", error);
+        } finally {
+            setProcessingId(null);
         }
     };
 
@@ -314,18 +327,20 @@ export const InboxPage = () => {
                                                 <div className="mt-4 flex items-center gap-2 relative z-10">
                                                     <button
                                                         onClick={() => handleReject(invite)}
-                                                        className="flex-1 py-2.5 px-3 rounded-xl bg-neutral-950/80 text-neutral-400 font-bold text-[9px] uppercase tracking-wider border border-white/5 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                                                        disabled={!!processingId}
+                                                        className="flex-1 py-2.5 px-3 rounded-xl bg-neutral-950/80 text-neutral-400 font-bold text-[9px] uppercase tracking-wider border border-white/5 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 transition-all active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:pointer-events-none"
                                                     >
                                                         <X size={12} />
-                                                        {isExpired ? 'LIMPIAR' : 'IGNORAR'}
+                                                        {isExpired ? 'LIMPIAR' : (processingId === invite.id ? 'ESPERA...' : 'IGNORAR')}
                                                     </button>
                                                     {!isExpired && (
                                                         <button
                                                             onClick={() => handleAccept(invite)}
-                                                            className="flex-1 py-2.5 px-3 rounded-xl bg-gradient-to-br from-gym-primary to-yellow-500 text-neutral-950 font-black text-[9px] uppercase tracking-wider hover:shadow-[0_0_15px_rgba(255,215,0,0.35)] transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                                                            disabled={!!processingId}
+                                                            className="flex-1 py-2.5 px-3 rounded-xl bg-gradient-to-br from-gym-primary to-yellow-500 text-neutral-950 font-black text-[9px] uppercase tracking-wider hover:shadow-[0_0_15px_rgba(255,215,0,0.35)] transition-all active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:pointer-events-none"
                                                         >
                                                             <Zap size={11} fill="currentColor" />
-                                                            ACEPTAR RETO
+                                                            {processingId === invite.id ? 'PROCESANDO...' : 'ACEPTAR RETO'}
                                                         </button>
                                                     )}
                                                 </div>
