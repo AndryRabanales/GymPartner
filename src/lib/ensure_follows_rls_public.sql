@@ -1,5 +1,5 @@
 -- ============================================================
--- GYMPARTNER: PUBLIC SELECT READ FOR FOLLOWS TABLE
+-- GINX: PUBLIC SELECT READ FOR FOLLOWS TABLE
 -- Description: Ensures all authenticated users can read all follows 
 --              records to guarantee 100% consistent stats between
 --              ranking list, radar, and user profiles.

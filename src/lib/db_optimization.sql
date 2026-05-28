@@ -1,5 +1,5 @@
 -- ============================================================
--- GYMPARTNER DATABASE CLEANUP & OPTIMIZATION SCRIPT
+-- GINX DATABASE CLEANUP & OPTIMIZATION SCRIPT
 -- Version: 1.1
 -- Description: Removes redundant tables, unifies naming, 
 --              and adds necessary indices/constraints.

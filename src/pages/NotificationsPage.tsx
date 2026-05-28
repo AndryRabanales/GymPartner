@@ -366,7 +366,7 @@ const WorkoutNotificationCard = ({ n, setSelectedPlayer, navigate }: WorkoutNoti
                         {/* Footer informativo */}
                         <div className="mt-5 pt-4 border-t border-white/5 text-center">
                             <p className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider">
-                                GymPartner Live Tracker
+                                Ginx Live Tracker
                             </p>
                         </div>
                     </div>

@@ -13,7 +13,7 @@ Este documento consolida toda la información requerida para la presentación y 
 *   Existe una falta de validación real de la asistencia ("No fui, pero dije que sí").
 *   Entrenar solo es desmotivante sin un factor social.
 
-**La Solución (GymPartner):**
+**La Solución (Ginx):**
 *   Una App Web Progresiva (PWA) que digitaliza el entrenamiento.
 *   **Innovación:** Usa geolocalización (GPS) para validar que el usuario realmente está en el gimnasio antes de permitirle registrar datos ("Proof of Workout").
 *   **Factor Social:** Un feed de actividad local y gamificación (XP) para competir con amigos.

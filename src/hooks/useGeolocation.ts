@@ -17,7 +17,7 @@ interface GeolocationState {
     loading: boolean;
 }
 
-const STORAGE_KEY = 'gympartner_last_known_location';
+const STORAGE_KEY = 'ginx_last_known_location';
 
 export const useGeolocation = (enableHighAccuracy = true) => {
     const [state, setState] = useState<GeolocationState>(() => {

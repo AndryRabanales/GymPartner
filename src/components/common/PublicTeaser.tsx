@@ -75,7 +75,7 @@ export const PublicTeaser = ({
 
                 <div className="pt-8">
                     <p className="text-[10px] text-neutral-600 uppercase tracking-[0.3em] font-black">
-                        GymPartner Intel • Status: Esperando Despliegue
+                        Ginx Intel • Status: Esperando Despliegue
                     </p>
                 </div>
             </div>

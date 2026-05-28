@@ -1,4 +1,4 @@
-# INFORME TÉCNICO: Arquitectura y Diseño de Software - GymPartner
+# INFORME TÉCNICO: Arquitectura y Diseño de Software - Ginx
 
 Este documento detalla la estructura, patrones de diseño y decisiones arquitectónicas del proyecto para fines de documentación y defensa en Ingeniería de Software.
 
@@ -88,4 +88,4 @@ El uso de **TypeScript** impone contratos estrictos (Interfaces) sobre los datos
 
 ## 5. Conclusión para la Presentación
 
-El proyecto **GymPartner** no es un script desordenado; es un sistema de software diseñado bajo **arquitectura modular de capas**, utilizando **patrones de diseño reconocidos** (Singleton, Facade) y **mejores prácticas de ingeniería** (TypeScript, CI/CD, Code Reviews implícitos en la estructura) que facilitan directamente los procesos de **Mantenimiento Perfectivo, Adaptativo, Correctivo y Preventivo**.
+El proyecto **Ginx** no es un script desordenado; es un sistema de software diseñado bajo **arquitectura modular de capas**, utilizando **patrones de diseño reconocidos** (Singleton, Facade) y **mejores prácticas de ingeniería** (TypeScript, CI/CD, Code Reviews implícitos en la estructura) que facilitan directamente los procesos de **Mantenimiento Perfectivo, Adaptativo, Correctivo y Preventivo**.

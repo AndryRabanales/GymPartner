@@ -1,6 +1,6 @@
-# GymPartner Deployment Guide
+# Ginx Deployment Guide
 
-This guide details how to deploy your GymPartner application to [Railway](https://railway.app/).
+This guide details how to deploy your Ginx application to [Railway](https://railway.app/).
 
 ## Prerequisites
 
@@ -16,7 +16,7 @@ This guide details how to deploy your GymPartner application to [Railway](https:
 1.  Log in to your Railway dashboard.
 2.  Click **"New Project"**.
 3.  Select **"Deploy from GitHub repo"**.
-4.  Choose your repository (`GymPartner`).
+4.  Choose your repository (`Ginx`).
 5.  Railway will automatically detect the project settings. It should identify `npm` and the `start` command from `package.json`.
 
 ## 2. Environment Variables

@@ -149,8 +149,8 @@ export const FeedViewerOverlay: React.FC<FeedViewerOverlayProps> = ({ initialPos
 
             if (navigator.share) {
                 await navigator.share({
-                    title: `GymPartner: ${post.profiles?.username}`,
-                    text: post.caption || 'Checa este post en GymPartner',
+                    title: `Ginx: ${post.profiles?.username}`,
+                    text: post.caption || 'Checa este post en Ginx',
                     url: window.location.href
                 });
             } else {

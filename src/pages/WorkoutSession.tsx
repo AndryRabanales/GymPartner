@@ -42,7 +42,7 @@ interface WorkoutSet {
     db_id?: string;
 }
 
-const STORAGE_KEY = 'gympartner_active_session';
+const STORAGE_KEY = 'ginx_active_session';
 
 interface WorkoutExercise {
     id: string; // Temp UI ID
@@ -193,7 +193,7 @@ export const WorkoutSession = () => {
 
     // Load Default Weight Unit on Mount
     useEffect(() => {
-        const savedUnit = localStorage.getItem('gympartner_weight_unit');
+        const savedUnit = localStorage.getItem('ginx_weight_unit');
         if (savedUnit === 'lb') setDefaultWeightUnit('lb');
     }, []);
 
@@ -238,7 +238,7 @@ export const WorkoutSession = () => {
         updated[exerciseIndex].weightUnit = currentUnit === 'kg' ? 'lb' : 'kg';
         setActiveExercises(updated);
         // Save as new default preference for future added exercises
-        localStorage.setItem('gympartner_weight_unit', updated[exerciseIndex].weightUnit!);
+        localStorage.setItem('ginx_weight_unit', updated[exerciseIndex].weightUnit!);
         setDefaultWeightUnit(updated[exerciseIndex].weightUnit!);
     };
 

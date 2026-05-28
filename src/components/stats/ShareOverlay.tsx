@@ -250,7 +250,7 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                 const image = canvas.toDataURL("image/png", 1.0);
                 const link = document.createElement('a');
                 link.href = image;
-                link.download = `GymPartner_Story_${new Date().toISOString().slice(0, 10)}.png`;
+                link.download = `Ginx_Story_${new Date().toISOString().slice(0, 10)}.png`;
                 link.click();
             } catch (err) {
                 console.error("Error", err);
@@ -392,7 +392,7 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                                 </div>
                                 <div className="mt-1 ml-2 flex items-center gap-1">
                                     <div className="w-1.5 h-1.5 bg-gym-primary rounded-full animate-pulse" />
-                                    <span className="text-[8px] font-black text-white/80 uppercase tracking-[0.2em] italic">GymPartner Elite</span>
+                                    <span className="text-[8px] font-black text-white/80 uppercase tracking-[0.2em] italic">Ginx Elite</span>
                                 </div>
                             </div>
                         </StickerWrapper>
@@ -437,7 +437,7 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                             <div className="pointer-events-none opacity-80 mix-blend-screen">
                                 <div className="w-24 h-24 border-[3px] border-white/40 rounded-full flex items-center justify-center p-1 transform -rotate-12">
                                     <div className="w-full h-full border border-white/20 rounded-full flex flex-col items-center justify-center text-center">
-                                        <p className="text-[6px] text-white font-bold uppercase tracking-[0.2em] curve-text">GymPartner • Worldwide</p>
+                                        <p className="text-[6px] text-white font-bold uppercase tracking-[0.2em] curve-text">Ginx • Worldwide</p>
                                         <p className="text-2xl font-black text-white/90 italic">GYM</p>
                                         <p className="text-xs font-bold text-gym-primary uppercase">Rat</p>
                                         <p className="text-[6px] text-white/60 font-mono mt-1">{new Date().getFullYear()}</p>

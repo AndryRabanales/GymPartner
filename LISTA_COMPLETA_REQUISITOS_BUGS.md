@@ -2,7 +2,7 @@
 **Versión:** 1.0.0
 **Estado:** Aprobado para Mantenimiento
 
-Este documento detalla exhaustivamente todos los requisitos funcionales y no funcionales del sistema GymPartner, así como la lista de defectos conocidos (bugs) a corregir.
+Este documento detalla exhaustivamente todos los requisitos funcionales y no funcionales del sistema Ginx, así como la lista de defectos conocidos (bugs) a corregir.
 
 ---
 

@@ -1,5 +1,5 @@
 -- ==============================================================================
--- GYMPARTNER: BULLETPROOF PROFILES TRIGGER & RETROACTIVE REPAIR
+-- GINX: BULLETPROOF PROFILES TRIGGER & RETROACTIVE REPAIR
 -- Description: Ensures handle_new_user trigger never fails for Facebook/Meta
 --              or Google signups by adding safe fallback values for usernames,
 --              even if email or raw metadata fields are null.
@@ -32,7 +32,7 @@ BEGIN
         'guerrero_' || floor(1000 + random() * 9000)::text
       ),
       COALESCE(new.raw_user_meta_data->>'avatar_url', ''),
-      '¡Hola! Soy un nuevo atleta en GymPartner.',
+      '¡Hola! Soy un nuevo atleta en Ginx.',
       1000, -- Initialize with 1000 G-Points
       0,
       0,
@@ -75,7 +75,7 @@ SELECT
     'guerrero_' || floor(1000 + random() * 9000)::text
   ), 
   COALESCE(raw_user_meta_data->>'avatar_url', ''), 
-  '¡Hola! Soy un nuevo atleta en GymPartner.', 
+  '¡Hola! Soy un nuevo atleta en Ginx.', 
   1000, 
   0, 
   0, 

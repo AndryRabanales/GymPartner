@@ -297,7 +297,7 @@ export const ChatPage = () => {
                         <ShieldAlert size={36} className="mx-auto text-gym-primary opacity-60 mb-3 animate-bounce" />
                         <h4 className="text-xs font-black text-white uppercase italic tracking-wider">CANAL TÁCTICO INICIADO</h4>
                         <p className="text-[10px] text-neutral-400 mt-2 font-medium leading-relaxed">
-                            Inicio de la comunicación encriptada. Saluda a tu nuevo GymPartner y acuerden el próximo entrenamiento en el gimnasio.
+                            Inicio de la comunicación encriptada. Saluda a tu nuevo Ginx y acuerden el próximo entrenamiento en el gimnasio.
                         </p>
                     </div>
                 )}

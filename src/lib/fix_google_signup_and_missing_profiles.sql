@@ -1,5 +1,5 @@
 -- ============================================================
--- GYMPARTNER: GOOGLE SIGNUP & MISSING PROFILES REPAIR SCRIPT
+-- GINX: GOOGLE SIGNUP & MISSING PROFILES REPAIR SCRIPT
 -- Description: Fixes the Google OAuth "bounce" and registration failure
 --              by creating a 100% fail-safe auth trigger and repairing
 --              missing user profiles in public.profiles.
@@ -29,7 +29,7 @@ BEGIN
         split_part(new.email, '@', 1)
       ),
       COALESCE(new.raw_user_meta_data->>'avatar_url', ''),
-      '¡Hola! Soy un nuevo atleta en GymPartner.',
+      '¡Hola! Soy un nuevo atleta en Ginx.',
       0,
       0,
       0,
@@ -66,7 +66,7 @@ SELECT
   id, 
   COALESCE(raw_user_meta_data->>'username', raw_user_meta_data->>'full_name', split_part(email, '@', 1)), 
   COALESCE(raw_user_meta_data->>'avatar_url', ''), 
-  '¡Hola! Soy un nuevo atleta en GymPartner.', 
+  '¡Hola! Soy un nuevo atleta en Ginx.', 
   0, 
   0, 
   0, 

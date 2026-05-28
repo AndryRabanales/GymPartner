@@ -1,4 +1,4 @@
-# PROYECTO DE MANTENIMIENTO DE SOFTWARE: GymPartner
+# PROYECTO DE MANTENIMIENTO DE SOFTWARE: Ginx
 
 > Este documento contiene el texto sugerido para las diapositivas de la presentación. Copia y pega el contenido en tu PowerPoint.
 
@@ -7,7 +7,7 @@
 ## 1. Diapositiva de Título (Portada)
 
 **Título del Proyecto:**
-GymPartner: Tu compañero de entrenamiento inteligente.
+Ginx: Tu compañero de entrenamiento inteligente.
 
 **Equipo de Desarrollo:**
 *   [Nombre del Integrante 1]
@@ -27,7 +27,7 @@ Mantenimiento de Software
 *   Falta de validación real de asistencia al gimnasio (la gente dice que va, pero no va).
 *   Entrenar solo puede ser desmotivante sin un componente social o competitivo.
 
-**La Solución (GymPartner):**
+**La Solución (Ginx):**
 *   Una aplicación web progresiva (PWA) que digitaliza la gestión de rutinas y ejercicios.
 *   **Innovación:** Validación de asistencia mediante Geolocalización (GPS) para garantizar que el usuario realmente está en un gimnasio ("Proof of Workout").
 *   Gamificación y redes sociales para aumentar la retención y motivación.

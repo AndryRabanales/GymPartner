@@ -131,7 +131,7 @@ export const StatsPage = () => {
                     });
                 });
 
-                // ADVANCED ANALYTICS (GymPartner Intelligence)
+                // ADVANCED ANALYTICS (Ginx Intelligence)
                 const muscleBalanceData = StatsAnalyzer.processMuscleBalance(sessions as any);
                 const volumeTrendData = StatsAnalyzer.processVolumeTrends(sessions as any);
                 const consistencyData = StatsAnalyzer.processConsistency(sessions as any);

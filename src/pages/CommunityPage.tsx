@@ -122,8 +122,8 @@ export const CommunityPage = () => {
         try {
             if (navigator.share) {
                 await navigator.share({
-                    title: `GymPartner: ${post.profiles?.username}`,
-                    text: post.caption || 'Entrenamiento en GymPartner',
+                    title: `Ginx: ${post.profiles?.username}`,
+                    text: post.caption || 'Entrenamiento en Ginx',
                     url: window.location.href
                 });
             } else {

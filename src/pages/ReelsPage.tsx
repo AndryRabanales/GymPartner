@@ -244,7 +244,7 @@ export const ReelsPage = () => {
 
             if (navigator.share) {
                 await navigator.share({
-                    title: `GymPartner: ${post.profiles?.username}`,
+                    title: `Ginx: ${post.profiles?.username}`,
                     text: post.caption,
                     url: window.location.href
                 });

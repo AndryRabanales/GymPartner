@@ -52,7 +52,7 @@ export const ReferralModal: React.FC<ReferralModalProps> = ({ isOpen, onClose, u
     };
 
     const handleShareWhatsapp = () => {
-        const text = `¡Únete a GymPartner! 🏋️‍♂️\n\nEntrena, gana G-Points y sube de rango.\n\nRegístrate aquí: ${referralLink}`;
+        const text = `¡Únete a Ginx! 🏋️‍♂️\n\nEntrena, gana G-Points y sube de rango.\n\nRegístrate aquí: ${referralLink}`;
         window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
     };
 

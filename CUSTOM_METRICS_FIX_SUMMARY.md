@@ -10,7 +10,7 @@ Las métricas personalizadas NO se mostraban durante el entrenamiento porque **l
 ## 🔧 Cambios Realizados
 
 ### 1. **Interfaz TypeScript Actualizada** ⭐
-**Archivo**: [`WorkoutSession.tsx:35-48`](file:///c:/Users/andry/Desktop/GymPartner/src/pages/WorkoutSession.tsx#L35-L48)
+**Archivo**: [`WorkoutSession.tsx:35-48`](file:///c:/Users/andry/Desktop/Ginx/src/pages/WorkoutSession.tsx#L35-L48)
 
 ```typescript
 interface WorkoutExercise {
@@ -33,7 +33,7 @@ interface WorkoutExercise {
 - Cualquier métrica que el usuario cree
 
 ### 2. **Logging Mejorado** 📊
-**Archivo**: [`WorkoutSession.tsx:262-368`](file:///c:/Users/andry/Desktop/GymPartner/src/pages/WorkoutSession.tsx#L262-L368)
+**Archivo**: [`WorkoutSession.tsx:262-368`](file:///c:/Users/andry/Desktop/Ginx/src/pages/WorkoutSession.tsx#L262-L368)
 
 Agregamos logs detallados para rastrear el flujo completo:
 
@@ -53,7 +53,7 @@ console.log(`👻 Initialized ghost custom metric "${mid}"`);
 ```
 
 ### 3. **Script de Verificación SQL** 🔍
-**Archivo**: [`verify_custom_metrics.sql`](file:///c:/Users/andry/Desktop/GymPartner/scripts/verify_custom_metrics.sql)
+**Archivo**: [`verify_custom_metrics.sql`](file:///c:/Users/andry/Desktop/Ginx/scripts/verify_custom_metrics.sql)
 
 Queries para verificar:
 - Métricas en `gym_equipment.metrics` (JSONB)
@@ -152,11 +152,11 @@ Exit code: 0
 
 ## 📦 Archivos Modificados
 
-1. [`src/pages/WorkoutSession.tsx`](file:///c:/Users/andry/Desktop/GymPartner/src/pages/WorkoutSession.tsx)
+1. [`src/pages/WorkoutSession.tsx`](file:///c:/Users/andry/Desktop/Ginx/src/pages/WorkoutSession.tsx)
    - Línea 46: Agregado index signature a `WorkoutExercise.metrics`
    - Líneas 262-368: Logging mejorado para rastrear métricas
 
-2. [`scripts/verify_custom_metrics.sql`](file:///c:/Users/andry/Desktop/GymPartner/scripts/verify_custom_metrics.sql) (NUEVO)
+2. [`scripts/verify_custom_metrics.sql`](file:///c:/Users/andry/Desktop/Ginx/scripts/verify_custom_metrics.sql) (NUEVO)
    - Queries de verificación completas
 
 ## 🎉 Resultado Final

@@ -1,5 +1,5 @@
 -- ============================================================
--- GYMPARTNER: XP TRIGGER & FUNCTION CLEANUP
+-- GINX: XP TRIGGER & FUNCTION CLEANUP
 -- Description: Fixes the "record 'new' has no field 'xp'" error
 --              by removing or updating obsolete triggers.
 -- ============================================================

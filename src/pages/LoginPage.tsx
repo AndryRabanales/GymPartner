@@ -76,10 +76,10 @@ const InstagramEscapeScreen = () => {
             {/* Main content — centered, clean branding */}
             <div className="relative z-10 flex flex-col items-center justify-center max-w-sm w-full text-center px-4">
                 
-                {/* GymPartner Logo Brand */}
+                {/* Ginx Logo Brand */}
                 <div className="flex flex-col items-center mb-10">
                     <span className="text-4xl font-black italic tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-gym-primary to-yellow-300 uppercase">
-                        GymPartner
+                        Ginx
                     </span>
                     <div className="h-[2px] w-12 bg-gym-primary mt-2 rounded-full shadow-[0_0_10px_rgba(250,204,21,0.5)]" />
                 </div>
@@ -177,10 +177,10 @@ export const LoginPage = () => {
                 <div className="absolute w-[350px] h-[350px] bg-gym-primary/10 rounded-full blur-[100px] pointer-events-none animate-pulse"></div>
 
                 <div className="relative z-10 flex flex-col items-center max-w-sm text-center space-y-6 animate-in fade-in zoom-in duration-500">
-                    {/* GymPartner metallic logo */}
+                    {/* Ginx metallic logo */}
                     <div className="flex flex-col items-center">
                         <span className="text-3xl font-black italic tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-gym-primary to-yellow-300 uppercase">
-                            GymPartner
+                            Ginx
                         </span>
                         <div className="h-[2px] w-12 bg-gym-primary mt-1.5 rounded-full" />
                     </div>
@@ -212,7 +212,7 @@ export const LoginPage = () => {
                     <div className="w-24 h-24 bg-neutral-950 border border-neutral-800 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-md overflow-hidden p-0">
                         <img src="/ginxIcon.png" alt="Ginx Logo" className="w-full h-full object-cover animate-pulse" />
                     </div>
-                    <h1 className="text-3xl font-bold text-white mb-2">Acceso GymPartner</h1>
+                    <h1 className="text-3xl font-bold text-white mb-2">Acceso Ginx</h1>
                     <p className="text-neutral-400 text-sm">Elige tu método de acceso rápido para continuar.</p>
                 </div>
 

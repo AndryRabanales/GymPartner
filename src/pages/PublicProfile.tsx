@@ -220,7 +220,7 @@ export const PublicProfile = () => {
                                     className="w-full py-4 bg-white text-black font-black text-xs uppercase tracking-[0.2em] rounded-2xl shadow-xl hover:bg-gym-primary transition-all active:scale-95 flex items-center justify-center gap-3"
                                 >
                                     <Zap size={18} fill="currentColor" />
-                                    ÚNETE A GYMPARTNER
+                                    ÚNETE A GINX
                                 </button>
                             )}
                         </div>

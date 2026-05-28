@@ -1,5 +1,5 @@
 -- ============================================================
--- GYMPARTNER: RANKING & ACCOUNT AUDIT SCRIPT
+-- GINX: RANKING & ACCOUNT AUDIT SCRIPT
 -- Description: Ensures all users are assigned to a gym and 
 --              recalculates stats for accurate leaderboard ranking.
 -- ============================================================

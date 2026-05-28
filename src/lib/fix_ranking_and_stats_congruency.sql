@@ -1,5 +1,5 @@
 -- ============================================================
--- GYMPARTNER: RANKING & SOCIAL STATS CONGRUENCY FIX
+-- GINX: RANKING & SOCIAL STATS CONGRUENCY FIX
 -- Description: Ensures followers counts are identical between
 --              the ranking list and individual player profiles,
 --              excluding deleted profiles and bypassing RLS.

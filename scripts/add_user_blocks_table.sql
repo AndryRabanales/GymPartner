@@ -1,5 +1,5 @@
 -- ============================================================
--- GYMPARTNER: MIGRACIÓN DE BLOQUEO DE USUARIOS (user_blocks)
+-- GINX: MIGRACIÓN DE BLOQUEO DE USUARIOS (user_blocks)
 -- Descripción: Crea la tabla de bloqueos y políticas RLS para
 --              que los usuarios bloqueados no puedan enviar mensajes
 --              o ver perfiles.

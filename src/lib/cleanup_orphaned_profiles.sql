@@ -1,5 +1,5 @@
 -- ============================================================
--- GYMPARTNER: RETROSPECTIVE CLEANUP OF ORPHANED PROFILES
+-- GINX: RETROSPECTIVE CLEANUP OF ORPHANED PROFILES
 -- Description: Scans all 15+ database tables for records belonging
 --              to users who have already been deleted from auth.users,
 --              and cleanly deletes them. This completely erases

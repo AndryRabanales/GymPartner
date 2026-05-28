@@ -1,5 +1,5 @@
 -- ============================================================
--- GYMPARTNER: BULLETPROOF USER DELETION & CLEANUP TRIGGER
+-- GINX: BULLETPROOF USER DELETION & CLEANUP TRIGGER
 -- Description: Completely wipes out a user's data across all 15+
 --              tables BEFORE the user is deleted from auth.users,
 --              preventing foreign key blocks and orphaned profiles.

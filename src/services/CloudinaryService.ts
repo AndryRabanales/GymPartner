@@ -27,7 +27,7 @@ class CloudinaryService {
     constructor() {
         // Get credentials from environment variables
         this.cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || '';
-        this.uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'gympartner_videos';
+        this.uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'ginx_videos';
     }
 
     /**

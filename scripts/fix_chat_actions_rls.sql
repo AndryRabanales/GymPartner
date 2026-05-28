@@ -1,5 +1,5 @@
 -- =========================================================================
--- MIGRACIÓN DE GYMPARTNER: MÓDULO DE BLOQUEOS, CANCELACIONES Y POLÍTICAS DE CHAT
+-- MIGRACIÓN DE GINX: MÓDULO DE BLOQUEOS, CANCELACIONES Y POLÍTICAS DE CHAT
 -- Descripción: Habilita el correcto funcionamiento de borrar mensajes,
 --              cancelar chat/match, y bloquear persona agregando las políticas
 --              de DELETE y UPDATE necesarias que faltaban en Supabase.

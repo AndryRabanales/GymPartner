@@ -31,12 +31,12 @@ const isDefaultBio = (bio?: string | null) => {
     if (!bio) return true;
     const clean = bio.trim().toLowerCase();
     return (
-        clean === '¡hola! soy un nuevo atleta en gympartner.' ||
-        clean === 'hola! soy un nuevo atleta en gympartner.' ||
-        clean === 'hola soy un nuevo atleta en gympartner.' ||
+        clean === '¡hola! soy un nuevo atleta en ginx.' ||
+        clean === 'hola! soy un nuevo atleta en ginx.' ||
+        clean === 'hola soy un nuevo atleta en ginx.' ||
         clean.includes('entrenando duro para subir de rango') ||
         clean.includes('entrenando para alcanzar el siguiente nivel') ||
-        clean === 'entrenando duro en gympartner.'
+        clean === 'entrenando duro en ginx.'
     );
 };
 
