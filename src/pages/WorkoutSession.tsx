@@ -177,7 +177,9 @@ export const WorkoutSession = () => {
                     lastIncomingState.current = incomingStr;
 
                     if (multiplayerMode === 'conjunto') {
-                        // Smart merge: protect own rest timer from stale partner broadcasts
+                        // Smart merge: only protect a timer that is ALREADY running/paused locally.
+                        // If local timer is undefined or 'completed', accept the incoming value
+                        // (e.g. partner filled our row and started our timer remotely).
                         setActiveExercises(prev => {
                             if (!prev || prev.length === 0) return exercises;
                             return exercises.map((inEx, eIdx) => {
@@ -190,26 +192,36 @@ export const WorkoutSession = () => {
                                         const loc = localEx.sets?.[sIdx];
                                         if (!loc) return inSet;
                                         if (meIsP1) {
-                                            // P1: protect own rest timer, accept partner p2_* fully
-                                            return {
-                                                ...inSet,
-                                                restStatus: loc.restStatus,
-                                                restLastStartTime: loc.restLastStartTime,
-                                                restAccumulated: loc.restAccumulated,
-                                            };
+                                            // P1: only protect timer if it is actively running/paused locally
+                                            const localTimerActive = loc.restStatus === 'running' || loc.restStatus === 'paused';
+                                            if (localTimerActive) {
+                                                return {
+                                                    ...inSet,
+                                                    restStatus: loc.restStatus,
+                                                    restLastStartTime: loc.restLastStartTime,
+                                                    restAccumulated: loc.restAccumulated,
+                                                };
+                                            }
+                                            // Local timer not started or already done — accept incoming fully
+                                            return inSet;
                                         } else {
-                                            // P2 (invitee): protect own p2_ rest timer
-                                            return {
-                                                ...inSet,
-                                                p2_restStatus: loc.p2_restStatus,
-                                                p2_restLastStartTime: loc.p2_restLastStartTime,
-                                                p2_restAccumulated: loc.p2_restAccumulated,
-                                                p2_completed: loc.p2_completed ?? inSet.p2_completed,
-                                                p2_locked: loc.p2_locked ?? inSet.p2_locked,
-                                                p2_completedAt: loc.p2_completedAt ?? inSet.p2_completedAt,
-                                                p2_weight: loc.p2_weight ?? inSet.p2_weight,
-                                                p2_reps: loc.p2_reps ?? inSet.p2_reps,
-                                            };
+                                            // P2 (invitee): only protect own p2_ timer if actively running/paused
+                                            const localP2Active = loc.p2_restStatus === 'running' || loc.p2_restStatus === 'paused';
+                                            if (localP2Active) {
+                                                return {
+                                                    ...inSet,
+                                                    p2_restStatus: loc.p2_restStatus,
+                                                    p2_restLastStartTime: loc.p2_restLastStartTime,
+                                                    p2_restAccumulated: loc.p2_restAccumulated,
+                                                    p2_completed: loc.p2_completed ?? inSet.p2_completed,
+                                                    p2_locked: loc.p2_locked ?? inSet.p2_locked,
+                                                    p2_completedAt: loc.p2_completedAt ?? inSet.p2_completedAt,
+                                                    p2_weight: loc.p2_weight ?? inSet.p2_weight,
+                                                    p2_reps: loc.p2_reps ?? inSet.p2_reps,
+                                                };
+                                            }
+                                            // P2 timer not started — accept incoming fully
+                                            return inSet;
                                         }
                                     })
                                 };
