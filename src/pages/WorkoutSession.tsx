@@ -2044,7 +2044,7 @@ export const WorkoutSession = () => {
                                                                     const pName = isP1 ? (isInviter ? myName : partnerName) : (isInviter ? partnerName : myName);
                                                                     const displayName = pName ? pName.split(' ')[0].substring(0, 10) + (pName.split(' ')[0].length > 10 ? '...' : '') : 'Jugador ' + playerNum;
                                                                     const isMyRow = (isInviter && isP1) || (!isInviter && !isP1);
-                                                                    const rowReadOnly = isReadOnly || !isMyRow;
+                                                                    const rowReadOnly = isReadOnly; // Both athletes can edit either row to log workout targets mutually!
 
                                                                     const rowWeight = isP1 ? set.weight : (set.p2_weight || 0);
                                                                     const rowReps = isP1 ? set.reps : (set.p2_reps || 0);
@@ -2059,8 +2059,14 @@ export const WorkoutSession = () => {
                                                                         <div key={playerNum} className={`flex items-center gap-1 w-full flex-nowrap ${playerNum === 2 ? 'mt-1 pt-2 border-t border-white/5' : ''}`}>
                                                                             {/* Premium Name Tag column on the left of each row */}
                                                                             {(isMultiplayer && multiplayerMode === 'conjunto') && (
-                                                                                <div className="flex items-center justify-center min-w-[65px] max-w-[65px] bg-neutral-900/60 py-1.5 px-1.5 rounded-lg border border-white/5 shadow-md">
-                                                                                    <span className="text-[9px] font-black tracking-tight text-neutral-300 uppercase truncate text-center w-full">
+                                                                                <div className={`flex items-center justify-center min-w-[65px] max-w-[65px] bg-neutral-900/60 py-1.5 px-1.5 rounded-lg shadow-md transition-all ${
+                                                                                    isP1
+                                                                                        ? 'border border-gym-primary/30 bg-gym-primary/5 shadow-gym-primary/5'
+                                                                                        : 'border border-white/5'
+                                                                                }`}>
+                                                                                    <span className={`text-[9px] font-black tracking-tight uppercase truncate text-center w-full transition-colors ${
+                                                                                        isP1 ? 'text-gym-primary' : 'text-neutral-300'
+                                                                                    }`}>
                                                                                         {displayName}
                                                                                     </span>
                                                                                 </div>
