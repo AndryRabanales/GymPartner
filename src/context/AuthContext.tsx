@@ -102,6 +102,82 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         };
     }, []);
 
+    // ⏰ 5-minute Daily Active Tracker (1 GX Point)
+    useEffect(() => {
+        if (!user || !supabase) return;
+
+        const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+        const localKey = `ginx_5min_reward_${user.id}_${today}`;
+
+        // If local storage says we already rewarded today, skip completely
+        if (localStorage.getItem(localKey) === 'true') {
+            return;
+        }
+
+        console.log('⏰ [Active Tracker] Active session tracker started.');
+        
+        let sessionSecs = parseInt(sessionStorage.getItem(`active_secs_${user.id}_${today}`) || '0', 10);
+
+        const interval = setInterval(async () => {
+            sessionSecs += 1;
+            sessionStorage.setItem(`active_secs_${user.id}_${today}`, sessionSecs.toString());
+
+            if (sessionSecs >= 300) { // 5 minutes
+                clearInterval(interval);
+                
+                // Double check DB to ensure they haven't received it today
+                try {
+                    const { data: profile } = await supabase
+                        .from('profiles')
+                        .select('custom_settings')
+                        .eq('id', user.id)
+                        .single();
+
+                    const customSettings = profile?.custom_settings || {};
+                    if (customSettings.last_5min_reward_date !== today) {
+                        // Award 1 GX point
+                        await userService.addGPoints(user.id, 1, '5min_daily_active');
+
+                        // Save updated custom_settings
+                        await supabase
+                            .from('profiles')
+                            .update({
+                                custom_settings: {
+                                    ...customSettings,
+                                    last_5min_reward_date: today
+                                }
+                            })
+                            .eq('id', user.id);
+
+                        // Mark locally
+                        localStorage.setItem(localKey, 'true');
+
+                        console.log('🎉 5 minutes daily active achieved! Awarded 1 GX point.');
+                        const toastModule = await import('react-hot-toast');
+                        toastModule.default.success('🔥 ¡Ganaste +1 GX por estar activo 5 minutos hoy!', {
+                            duration: 5000,
+                            icon: '⚡',
+                            style: {
+                                background: '#171717',
+                                color: '#fff',
+                                border: '1px solid rgba(250, 204, 21, 0.2)',
+                                fontWeight: 'black',
+                                textTransform: 'uppercase',
+                                fontSize: '11px'
+                            }
+                        });
+                    } else {
+                        localStorage.setItem(localKey, 'true');
+                    }
+                } catch (err) {
+                    console.error('Error rewarding 5-min active time:', err);
+                }
+            }
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [user]);
+
     // ─── Helper: ensure profile row exists in public.profiles ───
     const ensureProfileExists = async (currentUser: User) => {
         if (!supabase) return;
@@ -130,7 +206,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
                 const { error: insertErr } = await supabase
                     .from('profiles')
-                    .insert({ id: currentUser.id, username, avatar_url: avatarUrl, checkins_count: 0, g_points: 1000 });
+                    .insert({ id: currentUser.id, username, avatar_url: avatarUrl, checkins_count: 0, g_points: 0 });
 
                 if (insertErr) {
                     console.error('❌ [Profile] Insert failed:', insertErr);

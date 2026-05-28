@@ -145,15 +145,30 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
 
             // 3. Update Profile Data (including description)
             console.log("Saving Profile with Routine ID:", selectedRoutineId); // DEBUG
+
+            // Check for first profile completion reward (2gx)
+            const updatedSettings = {
+                ...currentSettings,
+                banner_url: newBannerUrl,
+                description: description.trim(), // Save description here
+                is_history_public: isHistoryPublic,
+                profile_completed_reward_awarded: currentSettings?.profile_completed_reward_awarded ?? false
+            };
+
+            const hasAvatar = newAvatarUrl && !newAvatarUrl.includes('ui-avatars.com') && !newAvatarUrl.includes('pravatar.cc');
+            const hasBio = description.trim().length > 0;
+            const alreadyAwarded = currentSettings?.profile_completed_reward_awarded === true;
+
+            if (hasAvatar && hasBio && !alreadyAwarded) {
+                console.log("🎉 First profile completion! Awarding 2 GX points.");
+                updatedSettings.profile_completed_reward_awarded = true;
+                await userService.addGPoints(user.id, 2, 'first_profile_completion');
+            }
+
             const updateResult = await userService.updateProfile(user.id, {
                 username: username,
                 avatar_url: newAvatarUrl,
-                custom_settings: {
-                    ...currentSettings,
-                    banner_url: newBannerUrl,
-                    description: description.trim(), // Save description here
-                    is_history_public: isHistoryPublic
-                },
+                custom_settings: updatedSettings,
                 featured_routine_id: selectedRoutineId // Save selected routine
             });
 

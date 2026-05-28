@@ -187,7 +187,7 @@ class UserService {
             if (linkError) throw linkError;
             
             // 3. AWARD G-POINTS for Unlocking Gym
-            await this.addGPoints(userId, 50, 'gym_unlocked');
+            await this.addGPoints(userId, 3, 'gym_unlocked');
 
             // 4. Update Profile Cache (if it's home base)
             if (isFirstGym) {

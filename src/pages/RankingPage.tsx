@@ -16,6 +16,8 @@ interface RankedUser {
     username: string;
     avatar_url: string;
     followers_count: number;
+    gx_points: number;
+    current_streak: number;
     is_boosted?: boolean;
     rank: number;
     gym_name?: string;
@@ -23,6 +25,12 @@ interface RankedUser {
     banner_url?: string;
     featured_routine_id?: string | null;
 }
+
+const isDefaultBio = (bio?: string | null) => {
+    if (!bio) return true;
+    const clean = bio.trim().toLowerCase();
+    return clean.includes('nuevo atleta') || clean.includes('entrenando') || clean.includes('gympartner') || clean.includes('ginx');
+};
 
 export const RankingPage = () => {
     const { user } = useAuth();
@@ -64,29 +72,75 @@ export const RankingPage = () => {
             if (!targetGym) return;
 
             try {
-                // Fetching leaderboard based on follower count within the gym
-                const { data: leaderboardData, error } = await supabase
-                    .rpc('get_gym_followers_leaderboard', { gym_id_param: targetGym.gym_id });
+                // Fetch profiles in this gym
+                const { data: profiles, error: pErr } = await supabase
+                    .from('profiles')
+                    .select('id, username, avatar_url, description, checkins_count, g_points, boost_until, custom_settings')
+                    .eq('home_gym_id', targetGym.gym_id);
 
-                if (error) console.error('Error fetching gym leaderboard:', error);
+                if (pErr) throw pErr;
 
-                if (leaderboardData) {
-                    const mapped = leaderboardData.map((p: any, index: number) => ({
+                // Fetch follows count for all
+                const { data: follows } = await supabase
+                    .from('follows')
+                    .select('following_id');
+
+                // Fetch streaks for all
+                const { data: streaks } = await supabase
+                    .from('user_streaks')
+                    .select('user_id, current_streak');
+
+                const followsCountMap = (follows || []).reduce((acc: Record<string, number>, f: any) => {
+                    acc[f.following_id] = (acc[f.following_id] || 0) + 1;
+                    return acc;
+                }, {});
+
+                const streaksMap = (streaks || []).reduce((acc: Record<string, number>, s: any) => {
+                    acc[s.user_id] = s.current_streak || 0;
+                    return acc;
+                }, {});
+
+                const mapped: RankedUser[] = (profiles || []).map((p: any) => {
+                    const followersCount = followsCountMap[p.id] || 0;
+                    const currentStreak = streaksMap[p.id] || 0;
+
+                    // Calculate Total GX Points:
+                    // basePoints = g_points.
+                    // Multiplier = currentStreak >= 10 ? 2 : 1.
+                    // Total GX = basePoints * Multiplier.
+                    const basePoints = p.g_points || 0;
+                    const gxPoints = basePoints * (currentStreak >= 10 ? 2 : 1);
+
+                    return {
                         id: p.id,
                         username: p.username || 'Usuario',
                         avatar_url: p.avatar_url || `https://ui-avatars.com/api/?name=${p.username || 'U'}&background=random`,
-                        followers_count: Number(p.followers_count) || 0,
-                        is_boosted: p.is_boosted || false,
-                        rank: index + 1,
-                        gym_name: p.gym_name || targetGym.gym_name,
+                        followers_count: followersCount,
+                        gx_points: gxPoints,
+                        current_streak: currentStreak,
+                        is_boosted: p.boost_until ? new Date(p.boost_until) > new Date() : false,
+                        gym_name: targetGym.gym_name,
                         is_current_user: p.id === user.id,
-                        banner_url: p.banner_url || null,
-                        featured_routine_id: null
-                    }));
-                    setLeaderboard(mapped);
-                } else {
-                    setLeaderboard([]);
-                }
+                        banner_url: p.custom_settings?.banner_url || null,
+                        featured_routine_id: p.featured_routine_id || null,
+                        description: p.custom_settings?.description || p.description || ''
+                    };
+                });
+
+                // Sort by boosted state first, then by GX points
+                const sorted = mapped.sort((a, b) => {
+                    if (a.is_boosted !== b.is_boosted) {
+                        return a.is_boosted ? -1 : 1;
+                    }
+                    return b.gx_points - a.gx_points;
+                });
+
+                // Assign Rank
+                sorted.forEach((p, idx) => {
+                    p.rank = idx + 1;
+                });
+
+                setLeaderboard(sorted);
             } catch (err) {
                 console.error('Error in ranking fetch:', err);
                 setLeaderboard([]);
@@ -191,8 +245,10 @@ export const RankingPage = () => {
                             </div>
                         </div>
                         <div className="shrink-0 flex flex-col items-end">
-                            <span className="font-black text-white text-sm italic">{player.followers_count}</span>
-                            <span className="text-[8px] text-neutral-500 font-bold uppercase">Seguidores</span>
+                            <span className="font-black text-gym-primary text-sm italic">{player.gx_points} GX</span>
+                            <span className="text-[8px] text-neutral-500 font-bold uppercase">
+                                {player.current_streak >= 10 ? '🔥 x2 RACHA' : 'Racha: ' + player.current_streak}
+                            </span>
                         </div>
                     </button>
                 ))}
@@ -207,9 +263,14 @@ export const RankingPage = () => {
                         setLeaderboard(prev => {
                             const updated = prev.map(p => {
                                 if (p.id === selectedPlayer.id) {
+                                    const diff = newIsFollowing ? 1 : -1;
+                                    const newFollowers = Math.max(0, p.followers_count + diff);
+                                    const multiplier = p.current_streak >= 10 ? 2 : 1;
+                                    const newGxPoints = Math.max(0, p.gx_points + (diff * multiplier));
                                     return {
                                         ...p,
-                                        followers_count: Math.max(0, p.followers_count + (newIsFollowing ? 1 : -1))
+                                        followers_count: newFollowers,
+                                        gx_points: newGxPoints
                                     };
                                 }
                                 return p;
@@ -218,7 +279,7 @@ export const RankingPage = () => {
                                 if (a.is_boosted !== b.is_boosted) {
                                     return a.is_boosted ? -1 : 1;
                                 }
-                                return b.followers_count - a.followers_count;
+                                return b.gx_points - a.gx_points;
                             });
                             return sorted.map((p, idx) => ({ ...p, rank: idx + 1 }));
                         });

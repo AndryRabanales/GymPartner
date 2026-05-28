@@ -575,15 +575,23 @@ class SocialService {
     // ============================================================================
 
     async followUser(followerId: string, followingId: string) {
-        return await supabase.from('follows').insert({ follower_id: followerId, following_id: followingId });
+        const res = await supabase.from('follows').insert({ follower_id: followerId, following_id: followingId });
+        if (!res.error) {
+            await userService.addGPoints(followingId, 1, 'new_follower');
+        }
+        return res;
     }
 
     async unfollowUser(followerId: string, followingId: string) {
-        return await supabase
+        const res = await supabase
             .from('follows')
             .delete()
             .eq('follower_id', followerId)
             .eq('following_id', followingId);
+        if (!res.error) {
+            await userService.addGPoints(followingId, -1, 'lost_follower');
+        }
+        return res;
     }
 
     async getFollowStatus(followerId: string, followingId: string): Promise<boolean> {

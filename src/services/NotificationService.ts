@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { socialService } from './SocialService';
+import { userService } from './UserService';
 import toast from 'react-hot-toast';
 
 export interface Notification {
@@ -346,6 +347,14 @@ export const notificationService = {
                 .from('chats')
                 .update({ last_message_at: new Date().toISOString() })
                 .eq('id', chat.id);
+
+            // Award 1 GX point to both participants for match completed
+            try {
+                await userService.addGPoints(user.id, 1, 'match_accepted');
+                await userService.addGPoints(senderId, 1, 'match_accepted');
+            } catch (gxErr) {
+                console.error("Error awarding match GX points:", gxErr);
+            }
 
             return chat.id;
         }

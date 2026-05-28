@@ -128,38 +128,50 @@ class WorkoutService {
 
         // 3. AWARD G-POINTS & TRAINING CUMULATIVE POINT for Training
         try {
-            const { data: session } = await supabase.from('workout_sessions').select('user_id').eq('id', sessionId).single();
+            const { data: session } = await supabase.from('workout_sessions').select('user_id, started_at').eq('id', sessionId).single();
             if (session) {
                 const { userService } = await import('./UserService');
-                await userService.addGPoints(session.user_id, 20, 'workout_finished');
+                
+                // Calculate session duration
+                const startTime = new Date(session.started_at).getTime();
+                const endTime = new Date(now).getTime();
+                const durationMinutes = (endTime - startTime) / (1000 * 60);
+                
+                if (durationMinutes >= 20) {
+                    // Check if they completed another session today
+                    const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+                    const { data: todaySessions } = await supabase
+                        .from('workout_sessions')
+                        .select('id')
+                        .eq('user_id', session.user_id)
+                        .not('finished_at', 'is', null)
+                        .like('finished_at', `${today}%`);
 
-                // Check if they completed another session today
-                const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
-                const { data: todaySessions } = await supabase
-                    .from('workout_sessions')
-                    .select('id')
-                    .eq('user_id', session.user_id)
-                    .not('finished_at', 'is', null)
-                    .like('finished_at', `${today}%`);
+                    // If this is the only finished session today, it is the first qualified workout of the day!
+                    const isFirstWorkoutToday = !todaySessions || todaySessions.length <= 1;
 
-                // If this is the only finished session today, increment the cumulative point (checkins_count)
-                const isFirstWorkoutToday = !todaySessions || todaySessions.length <= 1;
-
-                if (isFirstWorkoutToday) {
-                    console.log('🎉 First workout of the day! Awarding training cumulative point (checkins_count)');
-                    
-                    const { data: profile } = await supabase
-                        .from('profiles')
-                        .select('checkins_count')
-                        .eq('id', session.user_id)
-                        .single();
+                    if (isFirstWorkoutToday) {
+                        console.log('🎉 First qualified workout of the day (>= 20 mins)! Awarding 2 GX points and checkins_count.');
                         
-                    const currentCount = profile?.checkins_count || 0;
-                    
-                    await supabase
-                        .from('profiles')
-                        .update({ checkins_count: currentCount + 1 })
-                        .eq('id', session.user_id);
+                        // Award 2 GX points
+                        await userService.addGPoints(session.user_id, 2, 'workout_finished');
+                        
+                        // Increment checkins_count in profile
+                        const { data: profile } = await supabase
+                            .from('profiles')
+                            .select('checkins_count')
+                            .eq('id', session.user_id)
+                            .single();
+                            
+                        const currentCount = profile?.checkins_count || 0;
+                        
+                        await supabase
+                            .from('profiles')
+                            .update({ checkins_count: currentCount + 1 })
+                            .eq('id', session.user_id);
+                    }
+                } else {
+                    console.log(`⚠️ Session duration (${durationMinutes.toFixed(1)} mins) is less than 20 mins. No GX points awarded.`);
                 }
             }
         } catch (e) {
