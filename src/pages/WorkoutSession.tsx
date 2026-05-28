@@ -2469,6 +2469,9 @@ export const WorkoutSession = () => {
                                                             );
                                                         })()}
                                                     </Fragment>
+                                                 );
+                                            })}
+
                                             {/* Add Set Button */}
                                             {!isReadOnly && (
                                                 <button
