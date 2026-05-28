@@ -26,7 +26,7 @@ export const FriendsPage = () => {
         setLoading(false);
     };
 
-    const handleInviteToWorkout = async (friend: ChatPreview) => {
+    const handleInviteToWorkout = async (friend: ChatPreview, mode: 'conjunto' | 'separado') => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user || !friend.other_user) return;
 
@@ -38,20 +38,22 @@ export const FriendsPage = () => {
             .single();
             
         const displayName = profile?.username || 'Un amigo';
+        const modeLabel = mode === 'conjunto' ? 'CONJUNTO' : 'SEPARADO';
 
         // Send a custom notification to start a Co-op Workout
         await notificationService.createNotification(friend.other_user.id, {
             type: 'coop_invite',
-            title: '🔥 Invitación de Entrenamiento',
-            content: `¡${displayName} te ha invitado a entrenar juntos!`,
+            title: `🔥 Invitación de Entrenamiento ${modeLabel}`,
+            content: `¡${displayName} te ha invitado a entrenar en modo ${modeLabel}!`,
             data: {
                 sender_id: user.id,
                 sender_name: displayName,
-                chat_id: friend.id
+                chat_id: friend.id,
+                mode: mode
             }
         });
 
-        alert(`Invitación enviada a ${friend.other_user.username}. ¡Preparando los fierros!`);
+        alert(`Invitación de Entrenamiento ${modeLabel} enviada a ${friend.other_user.username}.`);
     };
 
     return (
@@ -104,14 +106,21 @@ export const FriendsPage = () => {
                                         </p>
                                     </div>
                                     
-                                    {/* Action Button */}
-                                    <button 
-                                        onClick={() => handleInviteToWorkout(friend)}
-                                        className="h-10 px-4 rounded-xl bg-gym-primary text-black font-black uppercase tracking-widest text-[10px] flex items-center gap-2 transition-transform active:scale-95 shadow-[0_0_15px_rgba(250,204,21,0.2)]"
-                                    >
-                                        <Dumbbell size={14} />
-                                        <span>Invitar</span>
-                                    </button>
+                                    {/* Action Buttons */}
+                                    <div className="flex flex-col gap-2 shrink-0">
+                                        <button 
+                                            onClick={() => handleInviteToWorkout(friend, 'conjunto')}
+                                            className="h-8 px-3 rounded-lg bg-gym-primary text-black font-black uppercase tracking-widest text-[9px] flex items-center justify-center gap-1.5 shadow-[0_0_10px_rgba(250,204,21,0.2)] active:scale-95"
+                                        >
+                                            <Users size={12} /> CONJUNTO
+                                        </button>
+                                        <button 
+                                            onClick={() => handleInviteToWorkout(friend, 'separado')}
+                                            className="h-8 px-3 rounded-lg bg-neutral-800 border border-white/10 text-white font-black uppercase tracking-widest text-[9px] flex items-center justify-center gap-1.5 hover:bg-white/5 active:scale-95"
+                                        >
+                                            <Swords size={12} /> SEPARADO
+                                        </button>
+                                    </div>
                                 </div>
                             );
                         })}

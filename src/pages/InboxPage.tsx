@@ -6,14 +6,11 @@ import { chatService } from '../services/ChatService';
 import type { ChatPreview } from '../services/ChatService';
 import { FadeInImage } from '../components/ui/FadeInImage';
 import { notificationService } from '../services/NotificationService';
-import { CoopWorkoutModal } from '../components/common/CoopWorkoutModal';
-
 export const InboxPage = () => {
     const [chats, setChats] = useState<ChatPreview[]>([]);
     const [invitations, setInvitations] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState<'chats' | 'matches'>('chats');
-    const [selectedCoopInvite, setSelectedCoopInvite] = useState<any>(null);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -149,13 +146,22 @@ export const InboxPage = () => {
         const senderId = notification.data?.sender_id;
         if (!senderId) return;
 
-        if (notification.type === 'coop_invite') {
-            setSelectedCoopInvite(notification);
-            return;
-        }
-
         try {
             await notificationService.updateInvitationStatus(notification, 'accepted');
+
+            if (notification.type === 'coop_invite') {
+                const mode = notification.data?.mode || 'separado';
+                navigate('/workout', { 
+                    state: { 
+                        isMultiplayer: true, 
+                        multiplayerMode: mode, 
+                        partnerId: senderId,
+                        chatId: notification.data?.chat_id
+                    } 
+                });
+                return;
+            }
+
             const chatId = await notificationService.acceptInvitation(senderId);
             if (chatId) {
                 navigate(`/chat/${chatId}`);
@@ -163,28 +169,6 @@ export const InboxPage = () => {
             loadData();
         } catch (error) {
             console.error("Error accepting invite:", error);
-        }
-    };
-
-    const handleCoopAccept = async (mode: 'conjunto' | 'separado') => {
-        if (!selectedCoopInvite) return;
-        
-        try {
-            await notificationService.updateInvitationStatus(selectedCoopInvite, 'accepted');
-            // Navigate to workout session with multiplayer params
-            // Let's pass the partner_id and mode in the route state
-            navigate('/workout', { 
-                state: { 
-                    isMultiplayer: true, 
-                    multiplayerMode: mode, 
-                    partnerId: selectedCoopInvite.data.sender_id,
-                    chatId: selectedCoopInvite.data.chat_id
-                } 
-            });
-        } catch (error) {
-            console.error("Error starting coop workout:", error);
-        } finally {
-            setSelectedCoopInvite(null);
         }
     };
 
@@ -409,13 +393,6 @@ export const InboxPage = () => {
                     </div>
                 )}
             </div>
-            <CoopWorkoutModal 
-                isOpen={!!selectedCoopInvite}
-                onClose={() => setSelectedCoopInvite(null)}
-                onAccept={handleCoopAccept}
-                inviterUsername={selectedCoopInvite?.sender?.username || selectedCoopInvite?.data?.sender_name || 'Alguien'}
-                inviterAvatarUrl={selectedCoopInvite?.sender?.avatar_url}
-            />
         </div>
     );
 };

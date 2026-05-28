@@ -186,8 +186,13 @@ export const notificationService = {
     async sendInvitation(targetUserId: string, passedName?: string): Promise<boolean> {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return false;
-
         const senderName = user.user_metadata?.full_name || user.user_metadata?.username || passedName || "Un GymRat";
+
+        if (targetUserId === user.id) {
+            console.error("Self-match prevented.");
+            toast.error("No puedes desafiarte a ti mismo.");
+            return false;
+        }
 
         // 🛡️ 1. Check if they already have an active chat/connection
         try {
