@@ -2082,7 +2082,7 @@ export const WorkoutSession = () => {
                         >
                             {displayedExercises.map((exercise, mapIndex) => {
                                 const isReadOnly = viewingMode === 'partner';
-                                const canModifyStructure = (isMultiplayer && multiplayerMode === 'conjunto') ? isInviter : !isReadOnly;
+                                const canModifyStructure = !isReadOnly;
                                 return (
                                 <div key={exercise.id} className="h-full flex flex-col bg-neutral-900/40 border border-white/5 rounded-2xl overflow-hidden backdrop-blur-sm shadow-xl mx-1 relative">
                                     {/* Header */}
@@ -2360,8 +2360,8 @@ export const WorkoutSession = () => {
                                                             const isP2Mine = !myIsP1;
 
                                                             return (
-                                                                <div className="w-full bg-neutral-900/50 border border-neutral-800 rounded-lg p-2 mt-1 flex items-center justify-between animate-in fade-in slide-in-from-top-2">
-                                                                    <div className="flex items-center gap-4 flex-wrap">
+                                                                <div className="w-full bg-neutral-900/50 border border-neutral-800 rounded-lg p-2.5 mt-1 flex items-center justify-center animate-in fade-in slide-in-from-top-2">
+                                                                    <div className="flex items-center justify-center gap-4 flex-wrap w-full">
                                                                         {/* Player 1's Timer */}
                                                                         {hasP1Timer && (
                                                                             <div className={`flex items-center gap-2 px-2 py-0.5 rounded-md ${isP1Mine ? 'bg-gym-primary/5 border border-gym-primary/20' : 'bg-neutral-800/30'}`}>
