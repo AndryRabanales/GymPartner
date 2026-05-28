@@ -37,7 +37,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ onUploadClick: _ }) => {
                     style={{
                         width: 'calc(20% - 6px)',
                         left: isActive('/') ? '4px' : 
-                               isActive('/ranking') ? 'calc(20% + 2px)' : 
+                               isActive('/friends') ? 'calc(20% + 2px)' : 
                                isActive('/radar') ? 'calc(40% + 1px)' : 
                                isActive('/inbox') ? 'calc(60% - 1px)' : 'calc(80% - 2px)',
                         top: '4px'
@@ -55,14 +55,14 @@ export const BottomNav: React.FC<BottomNavProps> = ({ onUploadClick: _ }) => {
                         <span className={`text-[8px] font-black uppercase tracking-tighter mt-0 transition-all duration-500 ${isActive('/') ? 'text-gym-primary opacity-100' : 'text-neutral-500 opacity-0'}`}>Inicio</span>
                     </Link>
 
-                    {/* 2. RANKING */}
-                    <Link to="/ranking" className="flex flex-col items-center justify-center w-full h-full relative group">
-                        <Trophy
+                    {/* 2. AMIGOS */}
+                    <Link to="/friends" className="flex flex-col items-center justify-center w-full h-full relative group">
+                        <Users
                             size={20}
-                            className={`transition-all duration-500 ${isActive('/ranking') ? "text-gym-primary scale-110 drop-shadow-[0_0_12px_rgba(250,204,21,0.5)]" : "text-neutral-500 group-hover:text-neutral-300"}`}
-                            strokeWidth={isActive('/ranking') ? 2.5 : 2}
+                            className={`transition-all duration-500 ${isActive('/friends') ? "text-gym-primary scale-110 drop-shadow-[0_0_12px_rgba(250,204,21,0.5)]" : "text-neutral-500 group-hover:text-neutral-300"}`}
+                            strokeWidth={isActive('/friends') ? 2.5 : 2}
                         />
-                        <span className={`text-[8px] font-black uppercase tracking-tighter mt-0 transition-all duration-500 ${isActive('/ranking') ? 'text-gym-primary opacity-100' : 'text-neutral-500 opacity-0'}`}>Ranking</span>
+                        <span className={`text-[8px] font-black uppercase tracking-tighter mt-0 transition-all duration-500 ${isActive('/friends') ? 'text-gym-primary opacity-100' : 'text-neutral-500 opacity-0'}`}>Amigos</span>
                     </Link>
 
                     {/* 3. RADAR */}
@@ -90,14 +90,14 @@ export const BottomNav: React.FC<BottomNavProps> = ({ onUploadClick: _ }) => {
                         <span className={`text-[8px] font-black uppercase tracking-tighter mt-0 transition-all duration-500 ${isActive('/inbox') ? 'text-gym-primary opacity-100' : 'text-neutral-500 opacity-0'}`}>Chat</span>
                     </Link>
 
-                    {/* 5. AMIGOS */}
-                    <Link to="/friends" className="flex flex-col items-center justify-center w-full h-full relative group">
-                        <Users
+                    {/* 5. RANKING */}
+                    <Link to="/ranking" className="flex flex-col items-center justify-center w-full h-full relative group">
+                        <Trophy
                             size={20}
-                            className={`transition-all duration-500 ${isActive('/friends') ? "text-gym-primary scale-110 drop-shadow-[0_0_12px_rgba(250,204,21,0.5)]" : "text-neutral-500 group-hover:text-neutral-300"}`}
-                            strokeWidth={isActive('/friends') ? 2.5 : 2}
+                            className={`transition-all duration-500 ${isActive('/ranking') ? "text-gym-primary scale-110 drop-shadow-[0_0_12px_rgba(250,204,21,0.5)]" : "text-neutral-500 group-hover:text-neutral-300"}`}
+                            strokeWidth={isActive('/ranking') ? 2.5 : 2}
                         />
-                        <span className={`text-[8px] font-black uppercase tracking-tighter mt-0 transition-all duration-500 ${isActive('/friends') ? 'text-gym-primary opacity-100' : 'text-neutral-500 opacity-0'}`}>Amigos</span>
+                        <span className={`text-[8px] font-black uppercase tracking-tighter mt-0 transition-all duration-500 ${isActive('/ranking') ? 'text-gym-primary opacity-100' : 'text-neutral-500 opacity-0'}`}>Ranking</span>
                     </Link>
                 </div>
             </div>
