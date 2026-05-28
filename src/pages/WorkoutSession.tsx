@@ -2008,7 +2008,7 @@ export const WorkoutSession = () => {
                                                                 {/* Table Header (Rendered once at the top of the set) */}
                                                                 <div className="flex items-center gap-1 text-[10px] font-black text-neutral-500 uppercase tracking-wider px-1">
                                                                     {(isMultiplayer && multiplayerMode === 'conjunto') && (
-                                                                        <div className="min-w-[76px] max-w-[76px] text-left">Atleta</div>
+                                                                        <div className="min-w-[65px] max-w-[65px] text-center">ATLETA</div>
                                                                     )}
                                                                     {exercise.metrics.weight && (
                                                                         <div className="min-w-[70px] w-[70px] text-center cursor-pointer hover:text-gym-primary transition-colors" onClick={() => !isReadOnly && toggleExerciseUnit(mapIndex)}>
@@ -2059,16 +2059,12 @@ export const WorkoutSession = () => {
                                                                         <div key={playerNum} className={`flex items-center gap-1 w-full flex-nowrap ${playerNum === 2 ? 'mt-1 pt-2 border-t border-white/5' : ''}`}>
                                                                             {/* Premium Name Tag column on the left of each row */}
                                                                             {(isMultiplayer && multiplayerMode === 'conjunto') && (
-                                                                                <div className="flex items-center gap-1 min-w-[76px] max-w-[76px] bg-neutral-900/60 py-1 px-1 rounded-lg border border-white/5 shadow-md">
-                                                                                    <div className="w-3 h-3 rounded-full bg-yellow-500/20 border border-yellow-500/30 flex items-center justify-center text-[6px] font-black text-yellow-500 shrink-0">
-                                                                                        {displayName.charAt(0)}
-                                                                                    </div>
-                                                                                    <span className="text-[8px] font-black tracking-tighter text-neutral-300 uppercase truncate">
+                                                                                <div className="flex items-center justify-center min-w-[65px] max-w-[65px] bg-neutral-900/60 py-1.5 px-1.5 rounded-lg border border-white/5 shadow-md">
+                                                                                    <span className="text-[9px] font-black tracking-tight text-neutral-300 uppercase truncate text-center w-full">
                                                                                         {displayName}
                                                                                     </span>
                                                                                 </div>
                                                                             )}
-                                                                            
                                                                             {exercise.metrics.weight && (
                                                                                 <div className="min-w-[70px] w-[70px]">
                                                                                     <input
