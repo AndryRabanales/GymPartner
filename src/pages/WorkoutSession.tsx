@@ -148,6 +148,10 @@ export const WorkoutSession = () => {
     const isInviterRef = useRef<boolean>(true); // tracks isInviter without stale closure
     const lastIncomingState = useRef<string>('');
     const partnerSessionIdRef = useRef<string | null>(null);
+    const sessionIdRef = useRef<string | null>(null);
+    useEffect(() => {
+        sessionIdRef.current = sessionId;
+    }, [sessionId]);
     const [partnerName, setPartnerName] = useState<string>('Compañero');
     const [partnerAvatar, setPartnerAvatar] = useState<string | null>(null);
 
@@ -238,22 +242,31 @@ export const WorkoutSession = () => {
                 }
             })
             .on('broadcast', { event: 'sync_session_id' }, (payload) => {
-                const { sessionId: partnerSessionId, sender } = payload.payload;
+                const { sessionId: partnerSessionId, startTime: partnerStartTime, sender } = payload.payload;
                 if (sender === user.id) return; // Ignore echoes
 
                 if (partnerSessionId) {
                     console.log('🔗 Received partner session ID via broadcast:', partnerSessionId);
                     partnerSessionIdRef.current = partnerSessionId;
                     
-                    if (sessionId) {
+                    const currentSessionId = sessionIdRef.current;
+                    if (currentSessionId) {
                         supabase
                             .from('workout_sessions')
                             .update({ partner_session_id: partnerSessionId })
-                            .eq('id', sessionId)
+                            .eq('id', currentSessionId)
                             .then(({ error }) => {
                                 if (error) console.error('Error linking partner session:', error);
                                 else console.log('✅ Linked partner session successfully!');
                             });
+                    } else if (!isInviterRef.current) {
+                        // Guest auto-starts their own session to activate their timer and enable logging
+                        console.log('🚀 Guest auto-starting session on partner session ID sync...');
+                        startNewSession().then(() => {
+                            if (partnerStartTime) {
+                                setStartTime(new Date(partnerStartTime));
+                            }
+                        });
                     }
                 }
             })
@@ -328,9 +341,9 @@ export const WorkoutSession = () => {
         channelRef.current.send({
             type: 'broadcast',
             event: 'sync_session_id',
-            payload: { sessionId: sessionId, sender: user.id }
+            payload: { sessionId: sessionId, startTime: startTime?.toISOString(), sender: user.id }
         }).catch(e => console.error('Error sending sessionId broadcast:', e));
-    }, [sessionId, isMultiplayer, user]);
+    }, [sessionId, startTime, isMultiplayer, user]);
     // --- End Multiplayer Sync Hooks ---
 
     // NEW: Start Options Modal
@@ -681,11 +694,12 @@ export const WorkoutSession = () => {
             setUserSettings(settings);
 
             // 2. PHASE 2: Fetch Inventory and Routines using predicted gym
-            const [items, localRoutines, activeResult, personalItems] = await Promise.all([
+            const [items, localRoutines, activeResult, personalItems, partnerActiveResult] = await Promise.all([
                 equipmentService.getInventory(targetGymId || ''),
                 workoutService.getUserRoutines(userId, targetGymId),
                 workoutService.getActiveSession(userId),
-                equipmentService.getPersonalInventory(userId)
+                equipmentService.getPersonalInventory(userId),
+                (isMultiplayer && partnerId) ? workoutService.getActiveSession(partnerId) : Promise.resolve({ data: null, error: null })
             ]);
 
             setRoutines(localRoutines);
@@ -876,11 +890,25 @@ export const WorkoutSession = () => {
                     const result = await startNewSession(targetGymId || undefined);
                     await loadRoutine(autoRoutine, result?.freshArsenal || mergedInventory);
                 } else {
-                    if (isMultiplayer && multiplayerMode === 'conjunto' && !isInviter) {
-                        // Do nothing, P2 must wait for the inviter to pick a routine!
+                    // Check if partner has an active session
+                    const partnerActive = partnerActiveResult?.data;
+                    if (partnerActive) {
+                        console.log("🔗 Found active partner session on init:", partnerActive.id);
+                        partnerSessionIdRef.current = partnerActive.id;
+                        
+                        if (isMultiplayer && multiplayerMode === 'conjunto' && !isInviter) {
+                            console.log('🚀 Guest auto-starting session because partner has active session...');
+                            // Wait for guest session to start so we have a sessionId and startTime
+                            await startNewSession(partnerActive.gym_id || undefined);
+                            setStartTime(new Date(partnerActive.started_at));
+                        }
                     } else {
-                        if (localRoutines.length === 0) setShowAddModal(true);
-                        else setShowStartOptionsModal(true);
+                        if (isMultiplayer && multiplayerMode === 'conjunto' && !isInviter) {
+                            // Do nothing, P2 must wait for the inviter to pick a routine!
+                        } else {
+                            if (localRoutines.length === 0) setShowAddModal(true);
+                            else setShowStartOptionsModal(true);
+                        }
                     }
                 }
             }
