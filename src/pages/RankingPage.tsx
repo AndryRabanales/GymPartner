@@ -72,75 +72,32 @@ export const RankingPage = () => {
             if (!targetGym) return;
 
             try {
-                // Fetch profiles in this gym
-                const { data: profiles, error: pErr } = await supabase
-                    .from('profiles')
-                    .select('id, username, avatar_url, description, checkins_count, g_points, boost_until, custom_settings')
-                    .eq('home_gym_id', targetGym.gym_id);
+                // Fetch profiles in this gym via the safe SECURITY DEFINER RPC
+                const { data: leaderboardData, error } = await supabase
+                    .rpc('get_gym_followers_leaderboard', { gym_id_param: targetGym.gym_id });
 
-                if (pErr) throw pErr;
+                if (error) throw error;
 
-                // Fetch follows count for all
-                const { data: follows } = await supabase
-                    .from('follows')
-                    .select('following_id');
-
-                // Fetch streaks for all
-                const { data: streaks } = await supabase
-                    .from('user_streaks')
-                    .select('user_id, current_streak');
-
-                const followsCountMap = (follows || []).reduce((acc: Record<string, number>, f: any) => {
-                    acc[f.following_id] = (acc[f.following_id] || 0) + 1;
-                    return acc;
-                }, {});
-
-                const streaksMap = (streaks || []).reduce((acc: Record<string, number>, s: any) => {
-                    acc[s.user_id] = s.current_streak || 0;
-                    return acc;
-                }, {});
-
-                const mapped: RankedUser[] = (profiles || []).map((p: any) => {
-                    const followersCount = followsCountMap[p.id] || 0;
-                    const currentStreak = streaksMap[p.id] || 0;
-
-                    // Calculate Total GX Points:
-                    // basePoints = g_points.
-                    // Multiplier = currentStreak >= 10 ? 2 : 1.
-                    // Total GX = basePoints * Multiplier.
-                    const basePoints = p.g_points || 0;
-                    const gxPoints = basePoints * (currentStreak >= 10 ? 2 : 1);
-
-                    return {
+                if (leaderboardData) {
+                    const mapped: RankedUser[] = leaderboardData.map((p: any, index: number) => ({
                         id: p.id,
                         username: p.username || 'Usuario',
                         avatar_url: p.avatar_url || `https://ui-avatars.com/api/?name=${p.username || 'U'}&background=random`,
-                        followers_count: followersCount,
-                        gx_points: gxPoints,
-                        current_streak: currentStreak,
-                        is_boosted: p.boost_until ? new Date(p.boost_until) > new Date() : false,
-                        gym_name: targetGym.gym_name,
+                        followers_count: Number(p.followers_count) || 0,
+                        gx_points: Number(p.gx_points) || 0,
+                        current_streak: Number(p.current_streak) || 0,
+                        is_boosted: p.is_boosted || false,
+                        rank: index + 1,
+                        gym_name: p.gym_name || targetGym.gym_name,
                         is_current_user: p.id === user.id,
-                        banner_url: p.custom_settings?.banner_url || null,
+                        banner_url: p.banner_url || null,
                         featured_routine_id: p.featured_routine_id || null,
-                        description: p.custom_settings?.description || p.description || ''
-                    };
-                });
-
-                // Sort by boosted state first, then by GX points
-                const sorted = mapped.sort((a, b) => {
-                    if (a.is_boosted !== b.is_boosted) {
-                        return a.is_boosted ? -1 : 1;
-                    }
-                    return b.gx_points - a.gx_points;
-                });
-
-                // Assign Rank
-                sorted.forEach((p, idx) => {
-                    p.rank = idx + 1;
-                });
-
-                setLeaderboard(sorted);
+                        description: p.description || ''
+                    }));
+                    setLeaderboard(mapped);
+                } else {
+                    setLeaderboard([]);
+                }
             } catch (err) {
                 console.error('Error in ranking fetch:', err);
                 setLeaderboard([]);
