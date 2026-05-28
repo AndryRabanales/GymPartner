@@ -170,7 +170,8 @@ export const AppLayout = () => {
                                                 isMultiplayer: true, 
                                                 multiplayerMode: mode, 
                                                 partnerId: senderId,
-                                                chatId: newNotification.data?.chat_id
+                                                chatId: newNotification.data?.chat_id,
+                                                isInviter: false
                                             } 
                                         });
                                     }}
@@ -189,7 +190,8 @@ export const AppLayout = () => {
                             isMultiplayer: true, 
                             multiplayerMode: newNotification.data?.mode || 'separado', 
                             partnerId: newNotification.data?.partner_id,
-                            chatId: newNotification.data?.chat_id
+                            chatId: newNotification.data?.chat_id,
+                            isInviter: true
                         } 
                     });
                 }

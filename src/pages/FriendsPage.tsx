@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Users, Swords, Dumbbell } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { chatService, ChatPreview } from '../services/ChatService';
+import { chatService, type ChatPreview } from '../services/ChatService';
 import { FadeInImage } from '../components/ui/FadeInImage';
 import { BottomNav } from '../components/navigation/BottomNav';
 import { notificationService } from '../services/NotificationService';

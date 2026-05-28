@@ -1188,7 +1188,7 @@ export const WorkoutSession = () => {
     };
 
     // [NEW] Toggle Completion with Timestamp & Lock Logic (Deep Copy)
-    const toggleComplete = (exerciseIndex: number, setIndex: number) => {
+    const toggleComplete = (exerciseIndex: number, setIndex: number, isP1: boolean = true) => {
         // Deep Copy
         const updated = activeExercises.map(ex => ({
             ...ex,
@@ -1197,67 +1197,84 @@ export const WorkoutSession = () => {
 
         const set = updated[exerciseIndex].sets[setIndex];
 
-        // 1. If Locked, Block Interaction
-        if (set.locked && set.completed) {
-            return;
-        }
-
-        if (set.completed) {
-            // UNMARKING
-            set.completed = false;
-            // @ts-expect-error - ignore typing
-            set.completedAt = undefined;
-            // Reset Timer state
-            set.restStatus = undefined;
-            set.restAccumulated = 0;
-            set.restLastStartTime = undefined;
-
-            set.locked = false;
-
-            // Clear legacy global timer
-            if (restTimerSetKey === `${exerciseIndex}-${setIndex}`) {
-                setRestTimerSetKey(null);
+        if (isP1) {
+            // 1. If Locked, Block Interaction
+            if (set.locked && set.completed) {
+                return;
             }
 
-        } else {
-            // MARKING COMPLETE
-            set.completed = true;
-            set.locked = true; // Auto-lock
-            // @ts-expect-error - ignore typing
-            set.completedAt = Date.now();
+            if (set.completed) {
+                // UNMARKING
+                set.completed = false;
+                // @ts-expect-error - ignore typing
+                set.completedAt = undefined;
+                // Reset Timer state
+                set.restStatus = undefined;
+                set.restAccumulated = 0;
+                set.restLastStartTime = undefined;
 
-            // Start Rest Timer for THIS set
-            set.restStatus = 'running';
-            set.restLastStartTime = Date.now();
-            set.restAccumulated = 0;
+                set.locked = false;
 
-            // Set Legacy Global Timer (Visual backup)
-            setRestTimerSetKey(`${exerciseIndex}-${setIndex}`);
-
-            // FREEZE PREVIOUS TIMER
-            let prevSetFound = false;
-            for (let i = exerciseIndex; i >= 0; i--) {
-                const startJ = i === exerciseIndex ? setIndex - 1 : updated[i].sets.length - 1;
-                for (let j = startJ; j >= 0; j--) {
-                    const prevSet = updated[i].sets[j];
-                    if (prevSet.completed && prevSet.restStatus === 'running') {
-                        // Stop it (Complete it)
-                        const now = Date.now();
-                        prevSet.restAccumulated = (prevSet.restAccumulated || 0) + (now - (prevSet.restLastStartTime || now));
-                        prevSet.restStatus = 'completed';
-                        prevSet.restLastStartTime = undefined;
-
-                        prevSetFound = true;
-                        break;
-                    }
+                // Clear legacy global timer
+                if (restTimerSetKey === `${exerciseIndex}-${setIndex}`) {
+                    setRestTimerSetKey(null);
                 }
-                if (prevSetFound) break;
+
+            } else {
+                // MARKING COMPLETE
+                set.completed = true;
+                set.locked = true; // Auto-lock
+                // @ts-expect-error - ignore typing
+                set.completedAt = Date.now();
+
+                // Start Rest Timer for THIS set
+                set.restStatus = 'running';
+                set.restLastStartTime = Date.now();
+                set.restAccumulated = 0;
+
+                // Set Legacy Global Timer (Visual backup)
+                setRestTimerSetKey(`${exerciseIndex}-${setIndex}`);
+
+                // FREEZE PREVIOUS TIMER
+                let prevSetFound = false;
+                for (let i = exerciseIndex; i >= 0; i--) {
+                    const startJ = i === exerciseIndex ? setIndex - 1 : updated[i].sets.length - 1;
+                    for (let j = startJ; j >= 0; j--) {
+                        const prevSet = updated[i].sets[j];
+                        if (prevSet.completed && prevSet.restStatus === 'running') {
+                            // Stop it (Complete it)
+                            const now = Date.now();
+                            prevSet.restAccumulated = (prevSet.restAccumulated || 0) + (now - (prevSet.restLastStartTime || now));
+                            prevSet.restStatus = 'completed';
+                            prevSet.restLastStartTime = undefined;
+
+                            prevSetFound = true;
+                            break;
+                        }
+                    }
+                    if (prevSetFound) break;
+                }
+            }
+        } else {
+            // P2 Logic
+            if (set.p2_locked && set.p2_completed) {
+                return;
+            }
+
+            if (set.p2_completed) {
+                set.p2_completed = false;
+                set.p2_completedAt = undefined;
+                set.p2_locked = false;
+            } else {
+                set.p2_completed = true;
+                set.p2_locked = true;
+                set.p2_completedAt = Date.now();
             }
         }
         setActiveExercises(updated);
     };
 
-    const toggleLock = (exerciseIndex: number, setIndex: number) => {
+    const toggleLock = (exerciseIndex: number, setIndex: number, isP1: boolean = true) => {
         const updated = activeExercises.map(ex => ({
             ...ex,
             sets: ex.sets.map(s => ({ ...s }))
@@ -1265,10 +1282,17 @@ export const WorkoutSession = () => {
 
         const set = updated[exerciseIndex].sets[setIndex];
 
-        // Only toggle lock if completed
-        if (set.completed) {
-            set.locked = !set.locked;
-            setActiveExercises(updated);
+        if (isP1) {
+            // Only toggle lock if completed
+            if (set.completed) {
+                set.locked = !set.locked;
+                setActiveExercises(updated);
+            }
+        } else {
+            if (set.p2_completed) {
+                set.p2_locked = !set.p2_locked;
+                setActiveExercises(updated);
+            }
         }
     };
 
@@ -1933,25 +1957,50 @@ export const WorkoutSession = () => {
                                                             </div>
 
                                                             {/* Inputs Container - Wraps on small screens */}
-                                                            <div className="flex-1 flex flex-wrap gap-2 items-start min-w-0">
+                                                            <div className="flex-1 flex flex-col gap-2 min-w-0">
+                                                                {((isMultiplayer && multiplayerMode === 'conjunto') ? [1, 2] : [1]).map(playerNum => {
+                                                                    const isP1 = playerNum === 1;
+                                                                    const pName = isP1 ? (isInviter ? user?.user_metadata?.full_name : partnerName) : (isInviter ? partnerName : user?.user_metadata?.full_name);
+                                                                    const displayName = pName ? pName.split(' ')[0].substring(0, 10) + (pName.split(' ')[0].length > 10 ? '...' : '') : `Jugador ${playerNum}`;
+                                                                    
+                                                                    const isMyRow = (isInviter && isP1) || (!isInviter && !isP1);
+                                                                    const rowReadOnly = isReadOnly || !isMyRow;
+
+                                                                    const rowWeight = isP1 ? set.weight : (set.p2_weight || 0);
+                                                                    const rowReps = isP1 ? set.reps : (set.p2_reps || 0);
+                                                                    const rowTime = isP1 ? set.time : (set.p2_time || 0);
+                                                                    const rowDistance = isP1 ? set.distance : (set.p2_distance || 0);
+                                                                    const rowRpe = isP1 ? set.rpe : (set.p2_rpe || 0);
+                                                                    const rowCompleted = isP1 ? set.completed : (set.p2_completed || false);
+                                                                    const rowLocked = isP1 ? set.locked : (set.p2_locked || false);
+                                                                    const rowCompletedAt = isP1 ? set.completedAt : set.p2_completedAt;
+                                                                    
+                                                                    return (
+                                                                        <div key={playerNum} className={`flex flex-wrap gap-2 items-start relative ${playerNum === 2 ? 'mt-2 pt-3 border-t border-white/5' : ''}`}>
+                                                                            {(isMultiplayer && multiplayerMode === 'conjunto') && (
+                                                                                <div className="absolute -top-3 left-1 bg-neutral-900 px-2 py-0.5 rounded-full border border-neutral-800 text-[8px] font-black uppercase text-yellow-500 shadow-md z-10 whitespace-nowrap max-w-[100px] overflow-hidden text-ellipsis">
+                                                                                    {displayName}
+                                                                                </div>
+                                                                            )}
+                                                                            
 
                                                                 {exercise.metrics.weight && (
                                                                     <div className="min-w-[75px] w-[75px]">
                                                                         <label
-                                                                            onClick={() => !set.locked && toggleExerciseUnit(mapIndex)}
-                                                                            className={`text-[9px] font-bold text-neutral-500 block text-center mb-1 select-none ${set.locked ? 'cursor-not-allowed' : 'cursor-pointer hover:text-gym-primary transition-colors'}`}
+                                                                            onClick={() => !rowLocked && toggleExerciseUnit(mapIndex)}
+                                                                            className={`text-[9px] font-bold text-neutral-500 block text-center mb-1 select-none ${rowLocked ? 'cursor-not-allowed' : 'cursor-pointer hover:text-gym-primary transition-colors'}`}
                                                                         >
                                                                             PESO ({(exercise.weightUnit || 'kg').toUpperCase()})
                                                                         </label>
                                                                         <input
                                                                             type="number"
                                                                             inputMode="decimal"
-                                                                            disabled={set.locked || isReadOnly}
-                                                                            value={set.weight === 0 ? '' : toDisplayWeight(set.weight, exercise.weightUnit || 'kg')}
-                                                                            onChange={(e) => updateSet(mapIndex, setIndex, 'weight', toInternalWeight(e.target.value, exercise.weightUnit || 'kg'))}
+                                                                            disabled={rowLocked || rowReadOnly}
+                                                                            value={rowWeight === 0 ? '' : toDisplayWeight(rowWeight, exercise.weightUnit || 'kg')}
+                                                                            onChange={(e) => updateSet(mapIndex, setIndex, isP1 ? 'weight' : 'p2_weight', toInternalWeight(e.target.value, exercise.weightUnit || 'kg'))}
                                                                             onBlur={(e) => handleInputBlur(mapIndex, setIndex, e)}
                                                                             onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
-                                                                            className={`w-full bg-neutral-800 text-center font-black text-xl rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${isCompleted ? 'text-neutral-500' : 'text-white'} ${set.locked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                            className={`w-full bg-neutral-800 text-center font-black text-xl rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${rowCompleted ? 'text-neutral-500' : 'text-white'} ${rowLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                             placeholder="0"
                                                                         />
                                                                     </div>
@@ -1962,12 +2011,12 @@ export const WorkoutSession = () => {
                                                                         <input
                                                                             type="number"
                                                                             inputMode="numeric"
-                                                                            disabled={set.locked || isReadOnly}
-                                                                            value={set.reps === 0 ? '' : set.reps}
-                                                                            onChange={(e) => updateSet(mapIndex, setIndex, 'reps', e.target.value)}
+                                                                            disabled={rowLocked || rowReadOnly}
+                                                                            value={rowReps === 0 ? '' : rowReps}
+                                                                            onChange={(e) => updateSet(mapIndex, setIndex, isP1 ? 'reps' : 'p2_reps', e.target.value)}
                                                                             onBlur={(e) => handleInputBlur(mapIndex, setIndex, e)}
                                                                             onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
-                                                                            className={`w-full bg-neutral-800 text-center font-black text-xl rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${isCompleted ? 'text-neutral-500' : 'text-white'} ${set.locked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                            className={`w-full bg-neutral-800 text-center font-black text-xl rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${rowCompleted ? 'text-neutral-500' : 'text-white'} ${rowLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                             placeholder="0"
                                                                         />
                                                                     </div>
@@ -1978,12 +2027,12 @@ export const WorkoutSession = () => {
                                                                         <input
                                                                             type="number"
                                                                             inputMode="numeric"
-                                                                            disabled={set.locked || isReadOnly}
-                                                                            value={set.time || ''}
-                                                                            onChange={(e) => updateSet(mapIndex, setIndex, 'time', e.target.value)}
+                                                                            disabled={rowLocked || rowReadOnly}
+                                                                            value={rowTime || ''}
+                                                                            onChange={(e) => updateSet(mapIndex, setIndex, isP1 ? 'time' : 'p2_time', e.target.value)}
                                                                             onBlur={(e) => handleInputBlur(mapIndex, setIndex, e)}
                                                                             onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
-                                                                            className={`w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none ${set.locked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                            className={`w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none ${rowLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                             placeholder="0s"
                                                                         />
                                                                     </div>
@@ -1994,12 +2043,12 @@ export const WorkoutSession = () => {
                                                                         <input
                                                                             type="number"
                                                                             inputMode="decimal"
-                                                                            disabled={set.locked || isReadOnly}
-                                                                            value={set.distance === 0 ? '' : set.distance}
-                                                                            onChange={(e) => updateSet(mapIndex, setIndex, 'distance', e.target.value)}
+                                                                            disabled={rowLocked || rowReadOnly}
+                                                                            value={rowDistance === 0 ? '' : rowDistance}
+                                                                            onChange={(e) => updateSet(mapIndex, setIndex, isP1 ? 'distance' : 'p2_distance', e.target.value)}
                                                                             onBlur={(e) => handleInputBlur(mapIndex, setIndex, e)}
                                                                             onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
-                                                                            className={`w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none ${set.locked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                            className={`w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none ${rowLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                             placeholder="0m"
                                                                         />
                                                                     </div>
@@ -2011,17 +2060,17 @@ export const WorkoutSession = () => {
                                                                             type="number"
                                                                             inputMode="numeric"
                                                                             max={10}
-                                                                            disabled={set.locked || isReadOnly}
-                                                                            value={set.rpe || ''}
-                                                                            onChange={(e) => updateSet(mapIndex, setIndex, 'rpe', e.target.value)}
+                                                                            disabled={rowLocked || rowReadOnly}
+                                                                            value={rowRpe || ''}
+                                                                            onChange={(e) => updateSet(mapIndex, setIndex, isP1 ? 'rpe' : 'p2_rpe', e.target.value)}
                                                                             onBlur={(e) => handleInputBlur(mapIndex, setIndex, e)}
                                                                             onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
-                                                                            className={`w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none ${set.locked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                            className={`w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none ${rowLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                             placeholder="-"
                                                                         />
                                                                     </div>
                                                                 )}
-                                                                {/* Custom Metrics inputs */}
+                                                                                                                                {/* Custom Metrics inputs */}
                                                                 {Object.keys(exercise.metrics).map(key => {
                                                                     if (['weight', 'reps', 'time', 'distance', 'rpe'].includes(key)) return null;
                                                                     if (!exercise.metrics[key as keyof typeof exercise.metrics]) return null;
@@ -2031,53 +2080,51 @@ export const WorkoutSession = () => {
                                                                             <input
                                                                                 type="number"
                                                                                 inputMode="decimal"
-                                                                                disabled={set.locked || isReadOnly}
+                                                                                disabled={rowLocked || rowReadOnly}
                                                                                 value={set.custom?.[key] || ''}
                                                                                 onChange={(e) => updateSet(mapIndex, setIndex, key, e.target.value, true)} // isCustom=true
                                                                                 onBlur={(e) => handleInputBlur(mapIndex, setIndex, e)}
                                                                                 onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
-                                                                                className={`w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white focus:ring-2 focus:ring-gym-primary outline-none ${set.locked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                                className={`w-full bg-neutral-800 text-center font-bold text-lg rounded-lg py-2 text-white focus:ring-2 focus:ring-gym-primary outline-none ${rowLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                             />
                                                                         </div>
                                                                     )
                                                                 })}
 
-
-
                                                                 {/* [NEW] Toggle Complete Button & Lock */}
                                                                 <div className="flex flex-col items-center justify-center self-center h-full pt-1 pl-1 gap-1">
                                                                     <div className="flex items-center gap-1">
                                                                         <button
-                                                                            onClick={() => toggleComplete(mapIndex, setIndex)}
-                                                                            disabled={set.locked || isReadOnly}
-                                                                            className={`p-2 rounded-full border-2 transition-all ${isCompleted
-                                                                                ? set.locked
+                                                                            onClick={() => toggleComplete(mapIndex, setIndex, isP1)}
+                                                                            disabled={rowLocked || rowReadOnly}
+                                                                            className={`p-2 rounded-full border-2 transition-all ${rowCompleted
+                                                                                ? rowLocked
                                                                                     ? 'bg-neutral-800 border-neutral-700 text-neutral-500 cursor-not-allowed opacity-80' // Locked State
                                                                                     : 'bg-green-500 border-green-500 text-black shadow-[0_0_15px_rgba(34,197,94,0.6)]' // Unlocked Complete
                                                                                 : 'bg-transparent border-neutral-700 text-neutral-600 hover:border-neutral-500' // Incomplete
                                                                                 }`}
-                                                                            title={set.locked ? "Desbloquea primero" : (isCompleted ? "Marcar incompleto" : "Marcar listo")}
+                                                                            title={rowLocked ? "Desbloquea primero" : (rowCompleted ? "Marcar incompleto" : "Marcar listo")}
                                                                         >
                                                                             <Check size={20} strokeWidth={3} />
                                                                         </button>
 
                                                                         {/* Lock Icon (Only if completed) - Moved to Right */}
-                                                                        {(isCompleted && !isReadOnly) && (
+                                                                        {(rowCompleted && !rowReadOnly) && (
                                                                             <button
-                                                                                onClick={() => toggleLock(mapIndex, setIndex)}
-                                                                                className={`p-1 rounded-full transition-colors ${set.locked ? 'text-red-500 bg-red-500/10' : 'text-neutral-500 hover:text-white'}`}
-                                                                                title={set.locked ? "Desbloquear para editar" : "Bloquear"}
+                                                                                onClick={() => toggleLock(mapIndex, setIndex, isP1)}
+                                                                                className={`p-1 rounded-full transition-colors ${rowLocked ? 'text-red-500 bg-red-500/10' : 'text-neutral-500 hover:text-white'}`}
+                                                                                title={rowLocked ? "Desbloquear para editar" : "Bloquear"}
                                                                             >
-                                                                                {set.locked ? <Lock size={15} /> : <LockOpen size={15} />}
+                                                                                {rowLocked ? <Lock size={15} /> : <LockOpen size={15} />}
                                                                             </button>
                                                                         )}
                                                                     </div>
                                                                     {/* Timestamp */}
                                                                     {/* @ts-expect-error - ignore typing */}
-                                                                    {isCompleted && set.completedAt && (
+                                                                    {rowCompleted && rowCompletedAt && (
                                                                         <span className="text-[10px] font-bold text-green-500 mt-0 tabular-nums tracking-tighter">
                                                                             {(() => {
-                                                                                const completedTime = Number(set.completedAt);
+                                                                                const completedTime = Number(rowCompletedAt);
                                                                                 if (isNaN(completedTime)) return '';
                                                                                 const start = startTime?.getTime() || Date.now();
                                                                                 const diff = completedTime - start;
@@ -2089,6 +2136,10 @@ export const WorkoutSession = () => {
                                                                         </span>
                                                                     )}
                                                                 </div>
+                                                                        </div>
+                                                                    )
+                                                                })}
+
                                                             </div>
                                                         </div>
 
