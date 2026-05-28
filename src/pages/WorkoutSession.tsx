@@ -284,19 +284,27 @@ export const WorkoutSession = () => {
         };
     }, [isMultiplayer, partnerId, chatId, user, multiplayerMode]);
 
-    // Send local updates
+    // Send local updates (Debounced to prevent network spam and echo loops while typing)
     useEffect(() => {
         if (!isMultiplayer || !channelRef.current || !user || activeExercises.length === 0) return;
         const currentStr = JSON.stringify(activeExercises);
         
         // Prevent echo loops
-        if (currentStr !== lastIncomingState.current) {
-            channelRef.current.send({
-                type: 'broadcast',
-                event: 'sync_state',
-                payload: { exercises: activeExercises, sender: user.id }
-            }).catch(e => console.error(e));
-        }
+        if (currentStr === lastIncomingState.current) return;
+
+        const handler = setTimeout(() => {
+            if (channelRef.current) {
+                const stateStr = JSON.stringify(activeExercises);
+                lastIncomingState.current = stateStr; // Mark as sent to prevent incoming echo loops
+                channelRef.current.send({
+                    type: 'broadcast',
+                    event: 'sync_state',
+                    payload: { exercises: activeExercises, sender: user.id }
+                }).catch(e => console.error(e));
+            }
+        }, 500); // 500ms debounce to allow fluent typing without focus loss
+
+        return () => clearTimeout(handler);
     }, [activeExercises, isMultiplayer, user]);
 
     // Delay link of partner session ID if it arrived before our sessionId was created
