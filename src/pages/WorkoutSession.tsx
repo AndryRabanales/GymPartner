@@ -2022,16 +2022,21 @@ export const WorkoutSession = () => {
                                                                     
                                                                     return (
                                                                         <div key={playerNum} className={`flex flex-wrap gap-2 items-start relative ${playerNum === 2 ? 'mt-2 pt-3 border-t border-white/5' : ''}`}>
+                                                                            {/* Premium Name Tag column on the left of each row */}
                                                                             {(isMultiplayer && multiplayerMode === 'conjunto') && (
-                                                                                <div className="absolute -top-3 left-1 bg-neutral-900 px-2 py-0.5 rounded-full border border-neutral-800 text-[8px] font-black uppercase text-yellow-500 shadow-md z-10 whitespace-nowrap max-w-[100px] overflow-hidden text-ellipsis">
-                                                                                    {displayName}
+                                                                                <div className="flex items-center gap-1 min-w-[65px] max-w-[65px] self-end mb-2.5 mr-1 bg-neutral-900/60 py-1 px-1.5 rounded-lg border border-white/5 shadow-md">
+                                                                                    <div className="w-4 h-4 rounded-full bg-yellow-500/20 border border-yellow-500/30 flex items-center justify-center text-[8px] font-black text-yellow-500 shrink-0">
+                                                                                        {displayName.charAt(0)}
+                                                                                    </div>
+                                                                                    <span className="text-[9px] font-black tracking-tight text-neutral-300 uppercase truncate">
+                                                                                        {displayName}
+                                                                                    </span>
                                                                                 </div>
                                                                             )}
                                                                             
-
-                                                                {exercise.metrics.weight && (
-                                                                    <div className="min-w-[75px] w-[75px]">
-                                                                        <label
+                                                                            {exercise.metrics.weight && (
+                                                                                <div className="min-w-[75px] w-[75px]">
+                                                                                    <label
                                                                             onClick={() => !rowLocked && toggleExerciseUnit(mapIndex)}
                                                                             className={`text-[9px] font-bold text-neutral-500 block text-center mb-1 select-none ${rowLocked ? 'cursor-not-allowed' : 'cursor-pointer hover:text-gym-primary transition-colors'}`}
                                                                         >
