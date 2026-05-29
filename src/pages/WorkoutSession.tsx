@@ -32,14 +32,39 @@ interface WorkoutSet {
     rpe?: number;      // 1-10
     custom?: Record<string, number>; // Dynamic metrics (jumps, cadence, etc.)
     completed: boolean;
-    completedAt?: number; // Timestamp of completion
+    completedAt?: number; // Snapshot time
     locked?: boolean;
     // Enhanced Timer Props
     restStatus?: 'running' | 'paused' | 'completed';
     restAccumulated?: number; // ms stored
     restLastStartTime?: number; // ms timestamp of current run start
-
     db_id?: string;
+
+    // dynamic player performance maps
+    playerWeights?: Record<string, number>;
+    playerReps?: Record<string, number>;
+    playerTimes?: Record<string, number>;
+    playerDistances?: Record<string, number>;
+    playerRpes?: Record<string, number>;
+    playerCompleted?: Record<string, boolean>;
+    playerLocked?: Record<string, boolean>;
+    playerCompletedAt?: Record<string, string>;
+    playerRestStatus?: Record<string, 'running' | 'paused' | 'completed'>;
+    playerRestAccumulated?: Record<string, number>;
+    playerRestLastStartTime?: Record<string, number>;
+
+    // P2 companion fields
+    p2_weight?: number;
+    p2_reps?: number;
+    p2_time?: number;
+    p2_distance?: number;
+    p2_rpe?: number;
+    p2_completed?: boolean;
+    p2_locked?: boolean;
+    p2_completedAt?: string;
+    p2_restStatus?: 'running' | 'paused' | 'completed';
+    p2_restAccumulated?: number;
+    p2_restLastStartTime?: number;
 }
 
 const STORAGE_KEY = 'ginx_active_session';
@@ -149,6 +174,20 @@ export const WorkoutSession = () => {
     const [isRoutineModified, setIsRoutineModified] = useState(false); // Tracks if routine structure changed during session
 
     // --- Multiplayer Sync Hooks ---
+    const [participants, setParticipants] = useState<any[]>([]);
+
+    useEffect(() => {
+        if (!isMultiplayer || multiplayerMode !== 'conjunto') {
+            setParticipants([
+                {
+                    id: user?.id || 'single-user',
+                    username: user?.user_metadata?.username || user?.user_metadata?.full_name || 'Yo',
+                    avatarUrl: user?.user_metadata?.avatar_url || ''
+                }
+            ]);
+        }
+    }, [isMultiplayer, multiplayerMode, user]);
+
      const [partnerExercises, setPartnerExercises] = useState<WorkoutExercise[]>([]);
     const [viewingMode, setViewingMode] = useState<'mine' | 'partner'>('mine');
     const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -165,7 +204,6 @@ export const WorkoutSession = () => {
     useEffect(() => {
         if (!isMultiplayer || !partnerId || !chatId || !user) return;
 
-
         // Fetch partner info
         const fetchPartner = async () => {
             const { data } = await supabase.from('profiles').select('username, avatar_url').eq('id', partnerId).single();
@@ -175,10 +213,47 @@ export const WorkoutSession = () => {
         fetchPartner();
 
         const chId = `coop-workout-${chatId}`;
-        const channel = supabase.channel(chId);
+        const channel = supabase.channel(chId, {
+            config: {
+                presence: {
+                    key: user.id
+                }
+            }
+        });
         channelRef.current = channel;
 
         channel
+            .on('presence', { event: 'sync' }, () => {
+                const state = channel.presenceState();
+                const list = Object.values(state)
+                    .flat()
+                    .map((p: any) => ({
+                        id: p.user_id,
+                        username: p.username,
+                        avatarUrl: p.avatar_url
+                    }));
+                
+                // Deduplicate list by id
+                const uniqueList: any[] = [];
+                const seen = new Set<string>();
+                list.forEach((p: any) => {
+                    if (p.id && !seen.has(p.id)) {
+                        seen.add(p.id);
+                        uniqueList.push(p);
+                    }
+                });
+
+                // Ensure current user is always included in the list
+                if (!seen.has(user.id)) {
+                    uniqueList.push({
+                        id: user.id,
+                        username: user.user_metadata?.username || user.user_metadata?.full_name || 'Yo',
+                        avatarUrl: user.user_metadata?.avatar_url || ''
+                    });
+                }
+
+                setParticipants(uniqueList.slice(0, 8)); // Limit to maximum 8 players!
+            })
             .on('broadcast', { event: 'sync_state' }, (payload) => {
                 const { exercises, sender } = payload.payload;
                 if (sender === user.id) return; // Ignore echoes
@@ -188,57 +263,104 @@ export const WorkoutSession = () => {
                     lastIncomingState.current = incomingStr;
 
                     if (multiplayerMode === 'conjunto') {
-                        // Merge rule:
-                        // - P1 (inviter): accept incoming fully except own rest timer when running/paused
-                        // - P2 (invitee): ALWAYS keep own p2_* fields. Accept P1 timer from incoming.
-                        //   This ensures P2's timer/completion is never erased by a stale P1 broadcast.
+                        // Merge rule: Own-Data Isolation merge strategy for up to 8 players!
                         setActiveExercises(prev => {
                             if (!prev || prev.length === 0) return exercises;
                             return exercises.map((inEx, eIdx) => {
                                 const localEx = prev[eIdx];
                                 if (!localEx) return inEx;
-                                const meIsP1 = isInviterRef.current;
                                 return {
                                     ...inEx,
                                     sets: inEx.sets.map((inSet, sIdx) => {
                                         const loc = localEx.sets?.[sIdx];
                                         if (!loc) return inSet;
-                                        if (meIsP1) {
-                                            // I am P1: protect my own rest timer only when running/paused
-                                            const localTimerActive = loc.restStatus === 'running' || loc.restStatus === 'paused';
-                                            if (localTimerActive) {
-                                                return {
-                                                    ...inSet,
-                                                    restStatus: loc.restStatus,
-                                                    restLastStartTime: loc.restLastStartTime,
-                                                    restAccumulated: loc.restAccumulated,
-                                                };
-                                            }
-                                            return inSet;
+
+                                        // Initialize / merge dynamic maps
+                                        const w = { ...inSet.playerWeights, [user.id]: loc.playerWeights?.[user.id] ?? (isInviterRef.current ? loc.weight : loc.p2_weight) };
+                                        const r = { ...inSet.playerReps, [user.id]: loc.playerReps?.[user.id] ?? (isInviterRef.current ? loc.reps : loc.p2_reps) };
+                                        const t = { ...inSet.playerTimes, [user.id]: loc.playerTimes?.[user.id] ?? (isInviterRef.current ? loc.time : loc.p2_time) };
+                                        const d = { ...inSet.playerDistances, [user.id]: loc.playerDistances?.[user.id] ?? (isInviterRef.current ? loc.distance : loc.p2_distance) };
+                                        const rpe = { ...inSet.playerRpes, [user.id]: loc.playerRpes?.[user.id] ?? (isInviterRef.current ? loc.rpe : loc.p2_rpe) };
+                                        const comp = { ...inSet.playerCompleted, [user.id]: loc.playerCompleted?.[user.id] ?? (isInviterRef.current ? loc.completed : loc.p2_completed) };
+                                        const lock = { ...inSet.playerLocked, [user.id]: loc.playerLocked?.[user.id] ?? (isInviterRef.current ? loc.locked : loc.p2_locked) };
+                                        const compAt = { ...inSet.playerCompletedAt, [user.id]: loc.playerCompletedAt?.[user.id] ?? (isInviterRef.current ? loc.completedAt : loc.p2_completedAt) };
+
+                                        // Rest timers dynamic merge
+                                        const rStatus = { ...inSet.playerRestStatus, [user.id]: loc.playerRestStatus?.[user.id] ?? (isInviterRef.current ? loc.restStatus : loc.p2_restStatus) };
+                                        const rAcc = { ...inSet.playerRestAccumulated, [user.id]: loc.playerRestAccumulated?.[user.id] ?? (isInviterRef.current ? loc.restAccumulated : loc.p2_restAccumulated) };
+                                        const rLst = { ...inSet.playerRestLastStartTime, [user.id]: loc.playerRestLastStartTime?.[user.id] ?? (isInviterRef.current ? loc.restLastStartTime : loc.p2_restLastStartTime) };
+
+                                        // Isolate legacy fields to prevent overwrite
+                                        let finalWeight = inSet.weight;
+                                        let finalReps = inSet.reps;
+                                        let finalCompleted = inSet.completed;
+                                        let finalLocked = inSet.locked;
+                                        let finalCompletedAt = inSet.completedAt;
+                                        let finalRestStatus = inSet.restStatus;
+                                        let finalRestAccumulated = inSet.restAccumulated;
+                                        let finalRestLastStartTime = inSet.restLastStartTime;
+
+                                        let finalP2Weight = inSet.p2_weight;
+                                        let finalP2Reps = inSet.p2_reps;
+                                        let finalP2Completed = inSet.p2_completed;
+                                        let finalP2Locked = inSet.p2_locked;
+                                        let finalP2CompletedAt = inSet.p2_completedAt;
+                                        let finalP2RestStatus = inSet.p2_restStatus;
+                                        let finalP2RestAccumulated = inSet.p2_restAccumulated;
+                                        let finalP2RestLastStartTime = inSet.p2_restLastStartTime;
+
+                                        if (isInviterRef.current) {
+                                            finalWeight = loc.weight;
+                                            finalReps = loc.reps;
+                                            finalCompleted = loc.completed;
+                                            finalLocked = loc.locked;
+                                            finalCompletedAt = loc.completedAt;
+                                            finalRestStatus = loc.restStatus;
+                                            finalRestAccumulated = loc.restAccumulated;
+                                            finalRestLastStartTime = loc.restLastStartTime;
                                         } else {
-                                            // I am P2: ALWAYS preserve my own p2_* fields.
-                                            // Accept P1 rest timer from incoming (it comes from P1's device).
-                                            return {
-                                                ...inSet,
-                                                // P1 rest timer: take from incoming (P1 manages it)
-                                                restStatus: inSet.restStatus,
-                                                restLastStartTime: inSet.restLastStartTime,
-                                                restAccumulated: inSet.restAccumulated,
-                                                // P2 own data: ALWAYS use local values
-                                                p2_completed: loc.p2_completed ?? inSet.p2_completed,
-                                                p2_locked: loc.p2_locked ?? inSet.p2_locked,
-                                                p2_completedAt: loc.p2_completedAt ?? inSet.p2_completedAt,
-                                                p2_weight: loc.p2_weight ?? inSet.p2_weight,
-                                                p2_reps: loc.p2_reps ?? inSet.p2_reps,
-                                                p2_time: loc.p2_time ?? inSet.p2_time,
-                                                p2_distance: loc.p2_distance ?? inSet.p2_distance,
-                                                p2_rpe: loc.p2_rpe ?? inSet.p2_rpe,
-                                                // P2 rest timer: always use local (P2 manages it)
-                                                p2_restStatus: loc.p2_restStatus ?? inSet.p2_restStatus,
-                                                p2_restLastStartTime: loc.p2_restLastStartTime ?? inSet.p2_restLastStartTime,
-                                                p2_restAccumulated: loc.p2_restAccumulated ?? inSet.p2_restAccumulated,
-                                            };
+                                            finalP2Weight = loc.p2_weight;
+                                            finalP2Reps = loc.p2_reps;
+                                            finalP2Completed = loc.p2_completed;
+                                            finalP2Locked = loc.p2_locked;
+                                            finalP2CompletedAt = loc.p2_completedAt;
+                                            finalP2RestStatus = loc.p2_restStatus;
+                                            finalP2RestAccumulated = loc.p2_restAccumulated;
+                                            finalP2RestLastStartTime = loc.p2_restLastStartTime;
                                         }
+
+                                        return {
+                                            ...inSet,
+                                            playerWeights: w,
+                                            playerReps: r,
+                                            playerTimes: t,
+                                            playerDistances: d,
+                                            playerRpes: rpe,
+                                            playerCompleted: comp,
+                                            playerLocked: lock,
+                                            playerCompletedAt: compAt,
+                                            playerRestStatus: rStatus,
+                                            playerRestAccumulated: rAcc,
+                                            playerRestLastStartTime: rLst,
+
+                                            weight: finalWeight,
+                                            reps: finalReps,
+                                            completed: finalCompleted,
+                                            locked: finalLocked,
+                                            completedAt: finalCompletedAt,
+                                            restStatus: finalRestStatus,
+                                            restAccumulated: finalRestAccumulated,
+                                            restLastStartTime: finalRestLastStartTime,
+
+                                            p2_weight: finalP2Weight,
+                                            p2_reps: finalP2Reps,
+                                            p2_completed: finalP2Completed,
+                                            p2_locked: finalP2Locked,
+                                            p2_completedAt: finalP2CompletedAt,
+                                            p2_restStatus: finalP2RestStatus,
+                                            p2_restAccumulated: finalP2RestAccumulated,
+                                            p2_restLastStartTime: finalP2RestLastStartTime
+                                        };
                                     })
                                 };
                             });
@@ -265,7 +387,7 @@ export const WorkoutSession = () => {
                             .then(({ error }) => {
                                 if (error) console.error('Error linking partner session:', error);
                                 else console.log('✅ Linked partner session successfully!');
-                            });
+                             });
                     } else if (!isInviterRef.current) {
                         // Guest auto-starts their own session to activate their timer and enable logging
                         console.log('🚀 Guest auto-starting session on partner session ID sync...');
@@ -277,9 +399,17 @@ export const WorkoutSession = () => {
                     }
                 }
             })
-            .subscribe((status) => {
+            .subscribe(async (status) => {
                 if (status === 'SUBSCRIBED') {
                     console.log('✅ Conectado al canal multijugador');
+                    
+                    // Track local presence state
+                    await channel.track({
+                        user_id: user.id,
+                        username: user.user_metadata?.username || user.user_metadata?.full_name || 'Yo',
+                        avatar_url: user.user_metadata?.avatar_url || ''
+                    });
+
                     // Send initial state immediately
                     channel.send({
                         type: 'broadcast',
@@ -1564,6 +1694,304 @@ export const WorkoutSession = () => {
     };
 
 
+    // [NEW LOBBY SYSTEM] Scalable 8-Player Helper Methods
+    const getPlayerRestTimer = (set: any, targetUserId: string, pIdx: number) => {
+        const isHost = pIdx === 0 || (pIdx === -1 && targetUserId === (isInviter ? user?.id : partnerId));
+        const isFirstGuest = pIdx === 1 || (pIdx === -1 && targetUserId === (isInviter ? partnerId : user?.id));
+
+        const status = set.playerRestStatus?.[targetUserId] ?? (isHost ? set.restStatus : (isFirstGuest ? set.p2_restStatus : undefined));
+        const accumulated = set.playerRestAccumulated?.[targetUserId] ?? (isHost ? set.restAccumulated : (isFirstGuest ? set.p2_restAccumulated : 0));
+        const lastStartTime = set.playerRestLastStartTime?.[targetUserId] ?? (isHost ? set.restLastStartTime : (isFirstGuest ? set.playerRestLastStartTime : undefined));
+
+        return { status, accumulated, lastStartTime };
+    };
+
+    const updatePlayerSet = (
+        exerciseIndex: number,
+        setIndex: number,
+        targetUserId: string,
+        fieldKey: 'weight' | 'reps' | 'time' | 'distance' | 'rpe' | 'completed' | 'locked',
+        value: any
+    ) => {
+        setActiveExercises(prev => {
+            const next = prev.map(ex => ({
+                ...ex,
+                sets: ex.sets.map(s => ({ ...s }))
+            }));
+            const ex = next[exerciseIndex];
+            if (!ex) return prev;
+            const set = ex.sets[setIndex];
+            if (!set) return prev;
+
+            if (!set.playerWeights) set.playerWeights = {};
+            if (!set.playerReps) set.playerReps = {};
+            if (!set.playerTimes) set.playerTimes = {};
+            if (!set.playerDistances) set.playerDistances = {};
+            if (!set.playerRpes) set.playerRpes = {};
+            if (!set.playerCompleted) set.playerCompleted = {};
+            if (!set.playerLocked) set.playerLocked = {};
+            if (!set.playerCompletedAt) set.playerCompletedAt = {};
+
+            const numVal = typeof value === 'string' ? parseFloat(value) : value;
+
+            if (fieldKey === 'weight') set.playerWeights[targetUserId] = isNaN(numVal) ? 0 : numVal;
+            if (fieldKey === 'reps') set.playerReps[targetUserId] = isNaN(numVal) ? 0 : numVal;
+            if (fieldKey === 'time') set.playerTimes[targetUserId] = isNaN(numVal) ? 0 : numVal;
+            if (fieldKey === 'distance') set.playerDistances[targetUserId] = isNaN(numVal) ? 0 : numVal;
+            if (fieldKey === 'rpe') set.playerRpes[targetUserId] = isNaN(numVal) ? 0 : numVal;
+            if (fieldKey === 'completed') set.playerCompleted[targetUserId] = Boolean(value);
+            if (fieldKey === 'locked') set.playerLocked[targetUserId] = Boolean(value);
+
+            const userIdx = participants.findIndex(p => p.id === targetUserId);
+            const isHost = userIdx === 0 || (userIdx === -1 && targetUserId === (isInviter ? user?.id : partnerId));
+            const isFirstGuest = userIdx === 1 || (userIdx === -1 && targetUserId === (isInviter ? partnerId : user?.id));
+
+            if (isHost) {
+                if (fieldKey === 'weight') set.weight = isNaN(numVal) ? 0 : numVal;
+                if (fieldKey === 'reps') set.reps = isNaN(numVal) ? 0 : numVal;
+                if (fieldKey === 'time') set.time = isNaN(numVal) ? 0 : numVal;
+                if (fieldKey === 'distance') set.distance = isNaN(numVal) ? 0 : numVal;
+                if (fieldKey === 'rpe') set.rpe = isNaN(numVal) ? 0 : numVal;
+                if (fieldKey === 'completed') set.completed = Boolean(value);
+                if (fieldKey === 'locked') set.locked = Boolean(value);
+            } else if (isFirstGuest) {
+                if (fieldKey === 'weight') set.p2_weight = isNaN(numVal) ? 0 : numVal;
+                if (fieldKey === 'reps') set.p2_reps = isNaN(numVal) ? 0 : numVal;
+                if (fieldKey === 'time') set.p2_time = isNaN(numVal) ? 0 : numVal;
+                if (fieldKey === 'distance') set.p2_distance = isNaN(numVal) ? 0 : numVal;
+                if (fieldKey === 'rpe') set.p2_rpe = isNaN(numVal) ? 0 : numVal;
+                if (fieldKey === 'completed') set.p2_completed = Boolean(value);
+                if (fieldKey === 'locked') set.p2_locked = Boolean(value);
+            }
+
+            return next;
+        });
+    };
+
+    const togglePlayerSetComplete = (exerciseIndex: number, setIndex: number, targetUserId: string) => {
+        const ex = activeExercises[exerciseIndex];
+        if (!ex) return;
+        const set = ex.sets[setIndex];
+        if (!set) return;
+
+        const currentCompleted = set.playerCompleted?.[targetUserId] ?? (
+            participants.findIndex(p => p.id === targetUserId) === 0 || (participants.findIndex(p => p.id === targetUserId) === -1 && targetUserId === (isInviter ? user?.id : partnerId))
+                ? set.completed 
+                : (set.p2_completed || false)
+        );
+        const nextCompleted = !currentCompleted;
+
+        updatePlayerSet(exerciseIndex, setIndex, targetUserId, 'completed', nextCompleted);
+        updatePlayerSet(exerciseIndex, setIndex, targetUserId, 'locked', nextCompleted);
+
+        setActiveExercises(prev => {
+            const next = prev.map(e => ({
+                ...e,
+                sets: e.sets.map(s => ({ ...s }))
+            }));
+            const s = next[exerciseIndex]?.sets[setIndex];
+            if (s) {
+                if (!s.playerCompletedAt) s.playerCompletedAt = {};
+                if (!s.playerRestStatus) s.playerRestStatus = {};
+                if (!s.playerRestAccumulated) s.playerRestAccumulated = {};
+                if (!s.playerRestLastStartTime) s.playerRestLastStartTime = {};
+
+                const userIdx = participants.findIndex(p => p.id === targetUserId);
+                const isHost = userIdx === 0 || (userIdx === -1 && targetUserId === (isInviter ? user?.id : partnerId));
+                const isFirstGuest = userIdx === 1 || (userIdx === -1 && targetUserId === (isInviter ? partnerId : user?.id));
+
+                if (nextCompleted) {
+                    s.playerCompletedAt[targetUserId] = Date.now().toString();
+                    s.playerRestStatus[targetUserId] = 'running';
+                    s.playerRestLastStartTime[targetUserId] = Date.now();
+                    s.playerRestAccumulated[targetUserId] = 0;
+
+                    if (isHost) {
+                        s.completedAt = Date.now();
+                        s.restStatus = 'running';
+                        s.restLastStartTime = Date.now();
+                        s.restAccumulated = 0;
+                        setRestTimerSetKey(`${exerciseIndex}-${setIndex}`);
+                    } else if (isFirstGuest) {
+                        s.p2_completedAt = Date.now().toString();
+                        s.p2_restStatus = 'running';
+                        s.p2_restLastStartTime = Date.now();
+                        s.p2_restAccumulated = 0;
+                    }
+
+                    // Freeze previous timer for target user
+                    let prevFound = false;
+                    for (let i = exerciseIndex; i >= 0; i--) {
+                        const startJ = i === exerciseIndex ? setIndex - 1 : next[i].sets.length - 1;
+                        for (let j = startJ; j >= 0; j--) {
+                            const prevSet = next[i].sets[j];
+                            if (!prevSet.playerRestStatus) prevSet.playerRestStatus = {};
+                            if (!prevSet.playerRestAccumulated) prevSet.playerRestAccumulated = {};
+                            if (!prevSet.playerRestLastStartTime) prevSet.playerRestLastStartTime = {};
+
+                            const prevStatus = prevSet.playerRestStatus[targetUserId] ?? (isHost ? prevSet.restStatus : (isFirstGuest ? prevSet.p2_restStatus : undefined));
+                            if (prevStatus === 'running') {
+                                const now = Date.now();
+                                const prevLastStart = prevSet.playerRestLastStartTime[targetUserId] ?? (isHost ? prevSet.restLastStartTime : (isFirstGuest ? prevSet.p2_restLastStartTime : undefined));
+                                const prevAcc = prevSet.playerRestAccumulated[targetUserId] ?? (isHost ? prevSet.restAccumulated : (isFirstGuest ? prevSet.p2_restAccumulated : 0));
+                                const newAcc = (prevAcc || 0) + (now - (prevLastStart || now));
+
+                                prevSet.playerRestAccumulated[targetUserId] = newAcc;
+                                prevSet.playerRestStatus[targetUserId] = 'completed';
+                                delete prevSet.playerRestLastStartTime[targetUserId];
+
+                                if (isHost) {
+                                    prevSet.restAccumulated = newAcc;
+                                    prevSet.restStatus = 'completed';
+                                    prevSet.restLastStartTime = undefined;
+                                } else if (isFirstGuest) {
+                                    prevSet.p2_restAccumulated = newAcc;
+                                    prevSet.p2_restStatus = 'completed';
+                                    prevSet.p2_restLastStartTime = undefined;
+                                }
+
+                                prevFound = true;
+                                break;
+                            }
+                        }
+                        if (prevFound) break;
+                    }
+
+                } else {
+                    delete s.playerCompletedAt[targetUserId];
+                    delete s.playerRestStatus[targetUserId];
+                    delete s.playerRestAccumulated[targetUserId];
+                    delete s.playerRestLastStartTime[targetUserId];
+
+                    if (isHost) {
+                        s.completedAt = undefined;
+                        s.restStatus = undefined;
+                        s.restLastStartTime = undefined;
+                        s.restAccumulated = 0;
+                        if (restTimerSetKey === `${exerciseIndex}-${setIndex}`) {
+                            setRestTimerSetKey(null);
+                        }
+                    } else if (isFirstGuest) {
+                        s.p2_completedAt = undefined;
+                        s.p2_restStatus = undefined;
+                        s.p2_restLastStartTime = undefined;
+                        s.p2_restAccumulated = 0;
+                    }
+                }
+            }
+            return next;
+        });
+    };
+
+    const togglePlayerTimerPause = (exerciseIndex: number, setIndex: number, targetUserId: string) => {
+        setActiveExercises(prev => {
+            const next = prev.map(ex => ({
+                ...ex,
+                sets: ex.sets.map(s => ({ ...s }))
+            }));
+            const ex = next[exerciseIndex];
+            if (!ex) return prev;
+            const set = ex.sets[setIndex];
+            if (!set) return prev;
+
+            if (!set.playerRestStatus) set.playerRestStatus = {};
+            if (!set.playerRestAccumulated) set.playerRestAccumulated = {};
+            if (!set.playerRestLastStartTime) set.playerRestLastStartTime = {};
+
+            const userIdx = participants.findIndex(p => p.id === targetUserId);
+            const isHost = userIdx === 0 || (userIdx === -1 && targetUserId === (isInviter ? user?.id : partnerId));
+            const isFirstGuest = userIdx === 1 || (userIdx === -1 && targetUserId === (isInviter ? partnerId : user?.id));
+
+            const currentStatus = set.playerRestStatus[targetUserId] ?? (isHost ? set.restStatus : (isFirstGuest ? set.p2_restStatus : undefined));
+            const currentAccumulated = set.playerRestAccumulated[targetUserId] ?? (isHost ? set.restAccumulated : (isFirstGuest ? set.p2_restAccumulated : 0));
+            const currentLastStartTime = set.playerRestLastStartTime[targetUserId] ?? (isHost ? set.restLastStartTime : (isFirstGuest ? set.p2_restLastStartTime : undefined));
+
+            if (currentStatus === 'running') {
+                const now = Date.now();
+                const newAcc = (currentAccumulated || 0) + (now - (currentLastStartTime || now));
+                set.playerRestStatus[targetUserId] = 'paused';
+                set.playerRestAccumulated[targetUserId] = newAcc;
+                delete set.playerRestLastStartTime[targetUserId];
+
+                if (isHost) {
+                    set.restStatus = 'paused';
+                    set.restAccumulated = newAcc;
+                    set.restLastStartTime = undefined;
+                } else if (isFirstGuest) {
+                    set.p2_restStatus = 'paused';
+                    set.p2_restAccumulated = newAcc;
+                    set.p2_restLastStartTime = undefined;
+                }
+            } else if (currentStatus === 'paused') {
+                const now = Date.now();
+                set.playerRestStatus[targetUserId] = 'running';
+                set.playerRestLastStartTime[targetUserId] = now;
+
+                if (isHost) {
+                    set.restStatus = 'running';
+                    set.restLastStartTime = now;
+                } else if (isFirstGuest) {
+                    set.p2_restStatus = 'running';
+                    set.p2_restLastStartTime = now;
+                }
+            }
+
+            return next;
+        });
+    };
+
+    const handlePlayerInputBlur = (exerciseIndex: number, setIndex: number, targetUserId: string, e: React.FocusEvent<HTMLInputElement>) => {
+        const relatedTarget = e.relatedTarget as HTMLElement;
+        if (relatedTarget && relatedTarget.tagName === 'INPUT') {
+            return;
+        }
+
+        const exercise = activeExercises[exerciseIndex];
+        if (!exercise) return;
+        const set = exercise.sets[setIndex];
+        if (!set) return;
+
+        const userIdx = participants.findIndex(p => p.id === targetUserId);
+        const isHost = userIdx === 0 || (userIdx === -1 && targetUserId === (isInviter ? user?.id : partnerId));
+        const isFirstGuest = userIdx === 1 || (userIdx === -1 && targetUserId === (isInviter ? partnerId : user?.id));
+
+        const isCompleted = set.playerCompleted?.[targetUserId] ?? (isHost ? set.completed : (isFirstGuest ? (set.p2_completed || false) : false));
+        if (isCompleted) return;
+
+        let isComplete = true;
+        let hasAnyMetric = false;
+
+        if (exercise.metrics.weight) {
+            hasAnyMetric = true;
+            const weightVal = set.playerWeights?.[targetUserId] ?? (isHost ? set.weight : (isFirstGuest ? (set.p2_weight || 0) : 0));
+            if (weightVal === undefined || weightVal <= 0) isComplete = false;
+        }
+        if (exercise.metrics.reps) {
+            hasAnyMetric = true;
+            const repsVal = set.playerReps?.[targetUserId] ?? (isHost ? set.reps : (isFirstGuest ? (set.p2_reps || 0) : 0));
+            if (repsVal === undefined || repsVal <= 0) isComplete = false;
+        }
+        if (exercise.metrics.time) {
+            hasAnyMetric = true;
+            const timeVal = set.playerTimes?.[targetUserId] ?? (isHost ? set.time : (isFirstGuest ? (set.p2_time || 0) : 0));
+            if (timeVal === undefined || timeVal <= 0) isComplete = false;
+        }
+        if (exercise.metrics.distance) {
+            hasAnyMetric = true;
+            const distanceVal = set.playerDistances?.[targetUserId] ?? (isHost ? set.distance : (isFirstGuest ? (set.p2_distance || 0) : 0));
+            if (distanceVal === undefined || distanceVal <= 0) isComplete = false;
+        }
+        if (exercise.metrics.rpe) {
+            hasAnyMetric = true;
+            const rpeVal = set.playerRpes?.[targetUserId] ?? (isHost ? set.rpe : (isFirstGuest ? (set.p2_rpe || 0) : 0));
+            if (rpeVal === undefined || rpeVal <= 0) isComplete = false;
+        }
+
+        if (isComplete && hasAnyMetric) {
+            togglePlayerSetComplete(exerciseIndex, setIndex, targetUserId);
+        }
+    };
+
     const addSet = (exerciseIndex: number) => {
         // Deep Copy
         const updated = activeExercises.map(ex => ({
@@ -2068,21 +2496,33 @@ export const WorkoutSession = () => {
             {isMultiplayer && (
                 <div className="fixed top-0 left-0 w-full z-[80] bg-neutral-950/80 backdrop-blur-md border-b border-yellow-500/20 px-4 py-2 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="relative">
-                            {partnerAvatar ? (
-                                <img src={partnerAvatar} alt={partnerName} className="w-10 h-10 rounded-full object-cover border-2 border-yellow-500/50 shadow-[0_0_10px_rgba(250,204,21,0.2)]" />
-                            ) : (
-                                <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center border-2 border-yellow-500/40 shadow-[0_0_10px_rgba(250,204,21,0.2)]">
-                                    <Swords size={18} className="text-yellow-500" />
+                        <div className="flex items-center -space-x-2.5">
+                            {participants.map((p, idx) => (
+                                <div key={p.id} className="relative group shrink-0" style={{ zIndex: 10 - idx }}>
+                                    {p.avatarUrl ? (
+                                        <img 
+                                            src={p.avatarUrl} 
+                                            alt={p.username} 
+                                            className="w-9 h-9 rounded-full object-cover border-2 border-yellow-500/50 shadow-[0_0_8px_rgba(250,204,21,0.15)] bg-neutral-950" 
+                                        />
+                                    ) : (
+                                        <div className="w-9 h-9 rounded-full bg-yellow-500/20 flex items-center justify-center border-2 border-yellow-500/40 shadow-[0_0_8px_rgba(250,204,21,0.15)] bg-neutral-950">
+                                            <span className="text-[10px] font-black text-yellow-500 uppercase">{p.username?.[0] || 'G'}</span>
+                                        </div>
+                                    )}
+                                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-neutral-950 rounded-full animate-pulse" title="En línea" />
+                                    {/* Tooltip on Hover */}
+                                    <div className="absolute top-10 left-1/2 -translate-x-1/2 scale-0 group-hover:scale-100 bg-black/95 border border-white/10 text-white text-[9px] font-bold py-1 px-2 rounded-md shadow-xl transition-all pointer-events-none whitespace-nowrap z-50">
+                                        {p.username || 'Guerrero'}
+                                    </div>
                                 </div>
-                            )}
-                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-neutral-950 rounded-full animate-pulse" title="En línea" />
+                            ))}
                         </div>
                         <div>
-                            <h3 className="text-white font-black text-xs uppercase tracking-wider flex items-center gap-1">
-                                <span className="text-yellow-500">CO-OP</span> {multiplayerMode?.toUpperCase()}
+                            <h3 className="text-white font-black text-xs uppercase tracking-wider flex items-center gap-1.5">
+                                <span className="text-yellow-500 font-extrabold">OPEN LOBBY</span> ({participants.length}/8)
                             </h3>
-                            <p className="text-neutral-400 text-[10px] font-bold uppercase truncate max-w-[150px]">Aliado: {partnerName}</p>
+                            <p className="text-neutral-400 text-[8px] font-black uppercase tracking-tight">Gimnasio Multijugador Activo</p>
                         </div>
                     </div>
                     {multiplayerMode === 'separado' && (
@@ -2283,25 +2723,27 @@ export const WorkoutSession = () => {
                                                                 </div>
 
                                                                 {/* Player Rows */}
-                                                                {((isMultiplayer && multiplayerMode === 'conjunto') ? [1, 2] : [1]).map(playerNum => {
-                                                                    const isP1 = playerNum === 1;
+                                                                {((isMultiplayer && multiplayerMode === 'conjunto') ? participants : [{ id: user?.id || 'single-user', username: 'Yo' }]).map((p, pIdx) => {
                                                                     const myName = user?.user_metadata?.full_name || user?.user_metadata?.username || user?.user_metadata?.name || 'Yo';
-                                                                    const pName = isP1 ? (isInviter ? myName : partnerName) : (isInviter ? partnerName : myName);
-                                                                    const displayName = pName ? pName.split(' ')[0].substring(0, 10) + (pName.split(' ')[0].length > 10 ? '...' : '') : 'Jugador ' + playerNum;
-                                                                    const isMyRow = pName === myName;
-                                                                    const rowReadOnly = isReadOnly; // Both athletes can edit either row to log workout targets mutually!
+                                                                    const pName = p.id === user?.id ? myName : (p.username || 'Guerrero');
+                                                                    const displayName = pName ? pName.split(' ')[0].substring(0, 10) + (pName.split(' ')[0].length > 10 ? '...' : '') : 'Jugador';
+                                                                    const isMyRow = p.id === user?.id;
+                                                                    const rowReadOnly = isReadOnly;
 
-                                                                    const rowWeight = isP1 ? set.weight : (set.p2_weight || 0);
-                                                                    const rowReps = isP1 ? set.reps : (set.p2_reps || 0);
-                                                                    const rowTime = isP1 ? set.time : (set.p2_time || 0);
-                                                                    const rowDistance = isP1 ? set.distance : (set.p2_distance || 0);
-                                                                    const rowRpe = isP1 ? set.rpe : (set.p2_rpe || 0);
-                                                                    const rowCompleted = isP1 ? set.completed : (set.p2_completed || false);
-                                                                    const rowLocked = isP1 ? set.locked : (set.p2_locked || false);
-                                                                    const rowCompletedAt = isP1 ? set.completedAt : set.p2_completedAt;
+                                                                    const isHost = pIdx === 0 || (pIdx === -1 && p.id === (isInviter ? user?.id : partnerId));
+                                                                    const isFirstGuest = pIdx === 1 || (pIdx === -1 && p.id === (isInviter ? partnerId : user?.id));
+
+                                                                    const rowWeight = set.playerWeights?.[p.id] ?? (isHost ? set.weight : (isFirstGuest ? (set.p2_weight || 0) : 0));
+                                                                    const rowReps = set.playerReps?.[p.id] ?? (isHost ? set.reps : (isFirstGuest ? (set.p2_reps || 0) : 0));
+                                                                    const rowTime = set.playerTimes?.[p.id] ?? (isHost ? set.time : (isFirstGuest ? (set.p2_time || 0) : 0));
+                                                                    const rowDistance = set.playerDistances?.[p.id] ?? (isHost ? set.distance : (isFirstGuest ? (set.p2_distance || 0) : 0));
+                                                                    const rowRpe = set.playerRpes?.[p.id] ?? (isHost ? set.rpe : (isFirstGuest ? (set.p2_rpe || 0) : 0));
+                                                                    const rowCompleted = set.playerCompleted?.[p.id] ?? (isHost ? set.completed : (isFirstGuest ? (set.p2_completed || false) : false));
+                                                                    const rowLocked = set.playerLocked?.[p.id] ?? (isHost ? set.locked : (isFirstGuest ? (set.p2_locked || false) : false));
+                                                                    const rowCompletedAt = set.playerCompletedAt?.[p.id] ?? (isHost ? set.completedAt : (isFirstGuest ? set.p2_completedAt : undefined));
                                                                     
                                                                     return (
-                                                                        <div key={playerNum} className={`flex items-center gap-1 w-full flex-nowrap ${playerNum === 2 ? 'mt-1 pt-2 border-t border-white/5' : ''}`}>
+                                                                        <div key={p.id} className={`flex items-center gap-1 w-full flex-nowrap ${pIdx > 0 ? 'mt-1 pt-2 border-t border-white/5' : ''}`}>
                                                                             {/* Premium Name Tag column on the left of each row */}
                                                                             {(isMultiplayer && multiplayerMode === 'conjunto') && (
                                                                                 <div className={`flex items-center justify-center min-w-[65px] max-w-[65px] bg-neutral-900/60 py-1.5 px-1.5 rounded-lg shadow-md transition-all ${
@@ -2323,8 +2765,8 @@ export const WorkoutSession = () => {
                                                                                         inputMode="decimal"
                                                                                         disabled={rowLocked || rowReadOnly}
                                                                                         value={rowWeight === 0 ? '' : toDisplayWeight(rowWeight, exercise.weightUnit || 'kg')}
-                                                                                        onChange={(e) => updateSet(mapIndex, setIndex, isP1 ? 'weight' : 'p2_weight', toInternalWeight(e.target.value, exercise.weightUnit || 'kg'))}
-                                                                                        onBlur={(e) => handleInputBlur(mapIndex, setIndex, isP1, e)}
+                                                                                        onChange={(e) => updatePlayerSet(mapIndex, setIndex, p.id, 'weight', toInternalWeight(e.target.value, exercise.weightUnit || 'kg'))}
+                                                                                        onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
                                                                                         onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
                                                                                         className={`w-full bg-neutral-800 text-center font-black text-base rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${rowCompleted ? 'text-neutral-500 bg-neutral-900/40' : 'text-white'} ${rowLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                                         placeholder="0"
@@ -2338,8 +2780,8 @@ export const WorkoutSession = () => {
                                                                                         inputMode="numeric"
                                                                                         disabled={rowLocked || rowReadOnly}
                                                                                         value={rowReps === 0 ? '' : rowReps}
-                                                                                        onChange={(e) => updateSet(mapIndex, setIndex, isP1 ? 'reps' : 'p2_reps', e.target.value)}
-                                                                                        onBlur={(e) => handleInputBlur(mapIndex, setIndex, isP1, e)}
+                                                                                        onChange={(e) => updatePlayerSet(mapIndex, setIndex, p.id, 'reps', e.target.value)}
+                                                                                        onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
                                                                                         onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
                                                                                         className={`w-full bg-neutral-800 text-center font-black text-base rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${rowCompleted ? 'text-neutral-500 bg-neutral-900/40' : 'text-white'} ${rowLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                                         placeholder="0"
@@ -2353,8 +2795,8 @@ export const WorkoutSession = () => {
                                                                                         inputMode="numeric"
                                                                                         disabled={rowLocked || rowReadOnly}
                                                                                         value={rowTime || ''}
-                                                                                        onChange={(e) => updateSet(mapIndex, setIndex, isP1 ? 'time' : 'p2_time', e.target.value)}
-                                                                                        onBlur={(e) => handleInputBlur(mapIndex, setIndex, isP1, e)}
+                                                                                        onChange={(e) => updatePlayerSet(mapIndex, setIndex, p.id, 'time', e.target.value)}
+                                                                                        onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
                                                                                         onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
                                                                                         className="w-full bg-neutral-800 text-center font-black text-base rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none"
                                                                                         placeholder="0s"
@@ -2368,8 +2810,8 @@ export const WorkoutSession = () => {
                                                                                         inputMode="decimal"
                                                                                         disabled={rowLocked || rowReadOnly}
                                                                                         value={rowDistance === 0 ? '' : rowDistance}
-                                                                                        onChange={(e) => updateSet(mapIndex, setIndex, isP1 ? 'distance' : 'p2_distance', e.target.value)}
-                                                                                        onBlur={(e) => handleInputBlur(mapIndex, setIndex, isP1, e)}
+                                                                                        onChange={(e) => updatePlayerSet(mapIndex, setIndex, p.id, 'distance', e.target.value)}
+                                                                                        onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
                                                                                         onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
                                                                                         className="w-full bg-neutral-800 text-center font-black text-base rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none"
                                                                                         placeholder="0m"
@@ -2384,8 +2826,8 @@ export const WorkoutSession = () => {
                                                                                         max={10}
                                                                                         disabled={rowLocked || rowReadOnly}
                                                                                         value={rowRpe || ''}
-                                                                                        onChange={(e) => updateSet(mapIndex, setIndex, isP1 ? 'rpe' : 'p2_rpe', e.target.value)}
-                                                                                        onBlur={(e) => handleInputBlur(mapIndex, setIndex, isP1, e)}
+                                                                                        onChange={(e) => updatePlayerSet(mapIndex, setIndex, p.id, 'rpe', e.target.value)}
+                                                                                        onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
                                                                                         onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
                                                                                         className="w-full bg-neutral-800 text-center font-black text-base rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none"
                                                                                         placeholder="-"
@@ -2403,18 +2845,14 @@ export const WorkoutSession = () => {
                                                                                             disabled={rowLocked || rowReadOnly}
                                                                                             value={set.custom?.[key] || ''}
                                                                                             onChange={(e) => updateSet(mapIndex, setIndex, key, e.target.value, true)} // isCustom=true
-                                                                                            onBlur={(e) => handleInputBlur(mapIndex, setIndex, isP1, e)}
+                                                                                            onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
                                                                                             onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
                                                                                             className="w-full bg-neutral-800 text-center font-black text-base rounded-lg py-2 text-white focus:ring-2 focus:ring-gym-primary outline-none"
                                                                                         />
-                                                                                    </div>
-                                                                                )
-                                                                            })}
-
-                                                                            {/* Actions Column (Palomita/Lock/Time) - Kept tightly aligned */}
+                                                                                                                                                    {/* Actions Column (Palomita/Lock/Time) - Kept tightly aligned */}
                                                                             <div className="flex-1 flex items-center justify-end gap-1.5 min-w-[60px] pl-1">
                                                                                 <button
-                                                                                    onClick={() => toggleComplete(mapIndex, setIndex, isP1)}
+                                                                                    onClick={() => togglePlayerSetComplete(mapIndex, setIndex, p.id)}
                                                                                     disabled={rowLocked || rowReadOnly}
                                                                                     className={`p-1.5 rounded-full border-2 transition-all shrink-0 ${rowCompleted
                                                                                         ? rowLocked
@@ -2427,9 +2865,21 @@ export const WorkoutSession = () => {
                                                                                     <Check size={14} strokeWidth={4} />
                                                                                 </button>
 
-                                                                                {(rowCompleted && !rowReadOnly) && (
+                                                                                {(rowCompleted && !rowReadOnly && isMyRow) && (
                                                                                     <button
-                                                                                        onClick={() => toggleLock(mapIndex, setIndex, isP1)}
+                                                                                        onClick={() => {
+                                                                                            setActiveExercises(prev => {
+                                                                                                const next = prev.map(ex => ({ ...ex, sets: ex.sets.map(s => ({ ...s })) }));
+                                                                                                const s = next[mapIndex]?.sets[setIndex];
+                                                                                                if (s) {
+                                                                                                    if (!s.playerLocked) s.playerLocked = {};
+                                                                                                    s.playerLocked[p.id] = !s.playerLocked[p.id];
+                                                                                                    if (isHost) s.locked = !s.locked;
+                                                                                                    else if (isFirstGuest) s.p2_locked = !s.p2_locked;
+                                                                                                }
+                                                                                                return next;
+                                                                                            });
+                                                                                        }}
                                                                                         className={`p-1 rounded-full transition-colors shrink-0 ${rowLocked ? 'text-red-500 bg-red-500/10' : 'text-neutral-500 hover:text-white'}`}
                                                                                         title={rowLocked ? "Desbloquear para editar" : "Bloquear"}
                                                                                     >
@@ -2455,99 +2905,74 @@ export const WorkoutSession = () => {
                                                                         </div>
                                                                     )
                                                                 })}
-                                                            </div>
-                                                        </div>
+                                                                                                                const activeParticipants = (isMultiplayer && multiplayerMode === 'conjunto') ? participants : [{ id: user?.id || 'single-user', username: 'Yo' }];
+                                                            const timersCount = activeParticipants.filter(p => {
+                                                                const isHost = p.id === (isInviter ? user?.id : partnerId);
+                                                                const isFirstGuest = p.id === (isInviter ? partnerId : user?.id);
+                                                                const pCompleted = set.playerCompleted?.[p.id] ?? (isHost ? set.completed : (isFirstGuest ? (set.p2_completed || false) : false));
+                                                                const pRestStatus = set.playerRestStatus?.[p.id] ?? (isHost ? set.restStatus : (isFirstGuest ? (set.p2_restStatus || 'idle') : 'idle'));
+                                                                return pCompleted && (pRestStatus === 'running' || pRestStatus === 'paused' || pRestStatus === 'completed');
+                                                            }).length;
 
-{/* Rest Timer Display (Per Set) */}
-                                                        {(() => {
-                                                            const myIsP1 = isInviter;
-                                                            const hasP1Timer = set.completed && (set.restStatus === 'running' || set.restStatus === 'paused' || set.restStatus === 'completed');
-                                                            const hasP2Timer = isMultiplayer && multiplayerMode === 'conjunto' && set.p2_completed && (set.p2_restStatus === 'running' || set.p2_restStatus === 'paused' || set.p2_restStatus === 'completed');
-
-                                                            if (!hasP1Timer && !hasP2Timer) return null;
-
-                                                            const isP1Mine = myIsP1;
-                                                            const isP2Mine = !myIsP1;
+                                                            if (timersCount === 0) return null;
 
                                                             if (isMultiplayer && multiplayerMode === 'conjunto') {
                                                                 return (
                                                                     <div className="w-full bg-neutral-900/50 border border-neutral-800 rounded-lg p-2 mt-1 animate-in fade-in slide-in-from-top-2">
-                                                                        <div className="grid grid-cols-2 gap-2 w-full items-center">
-                                                                            {/* Left Column: Player 1 (Inviter) */}
-                                                                            <div className="flex justify-center w-full">
-                                                                                {hasP1Timer ? (
-                                                                                    <div className={`flex items-center justify-center gap-2 px-2 py-0.5 rounded-md w-full ${isP1Mine ? 'bg-gym-primary/5 border border-gym-primary/20' : 'bg-neutral-800/30'}`}>
-                                                                                        <span className={`text-[10px] uppercase tracking-wider ${
-                                                                                            isP1Mine ? 'text-gym-primary font-black' : 'text-neutral-500 font-bold'
-                                                                                        }`}>
-                                                                                            Descanso
-                                                                                        </span>
-                                                                                        <RestTimerDisplay
-                                                                                            status={set.restStatus}
-                                                                                            accumulated={set.restAccumulated || 0}
-                                                                                            lastStartTime={set.restLastStartTime}
-                                                                                            isGold={isP1Mine}
-                                                                                        />
-                                                                                        {(set.restStatus !== 'completed' && !isReadOnly) && (
-                                                                                            <button
-                                                                                                onClick={() => toggleTimerPause(mapIndex, setIndex, true)}
-                                                                                                className={`p-1 rounded-full transition-colors ${
-                                                                                                    set.restStatus === 'paused'
-                                                                                                        ? 'bg-yellow-500/10 text-yellow-500'
-                                                                                                        : isP1Mine
-                                                                                                            ? 'text-gym-primary hover:text-white'
-                                                                                                            : 'text-neutral-500 hover:text-white'
-                                                                                                }`}
-                                                                                                title={set.restStatus === 'paused' ? "Reanudar" : "Pausar"}
-                                                                                            >
-                                                                                                {set.restStatus === 'paused' ? <Play size={12} fill="currentColor" /> : <Pause size={12} fill="currentColor" />}
-                                                                                            </button>
-                                                                                        )}
-                                                                                    </div>
-                                                                                ) : (
-                                                                                    <div className="text-[10px] text-neutral-600 font-bold uppercase tracking-wider text-center py-1">
-                                                                                        Entrenando...
-                                                                                    </div>
-                                                                                )}
-                                                                            </div>
+                                                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full items-center">
+                                                                            {activeParticipants.map((p, pIdx) => {
+                                                                                const isMyTimer = p.id === user?.id;
+                                                                                const isHost = pIdx === 0 || (pIdx === -1 && p.id === (isInviter ? user?.id : partnerId));
+                                                                                const isFirstGuest = pIdx === 1 || (pIdx === -1 && p.id === (isInviter ? partnerId : user?.id));
 
-                                                                            {/* Right Column: Player 2 (Invitee) */}
-                                                                            <div className="flex justify-center w-full">
-                                                                                {hasP2Timer ? (
-                                                                                    <div className={`flex items-center justify-center gap-2 px-2 py-0.5 rounded-md w-full ${isP2Mine ? 'bg-gym-primary/5 border border-gym-primary/20' : 'bg-neutral-800/30'}`}>
-                                                                                        <span className={`text-[10px] uppercase tracking-wider ${
-                                                                                            isP2Mine ? 'text-gym-primary font-black' : 'text-neutral-500 font-bold'
-                                                                                        }`}>
-                                                                                            Descanso
-                                                                                        </span>
-                                                                                        <RestTimerDisplay
-                                                                                            status={set.p2_restStatus}
-                                                                                            accumulated={set.p2_restAccumulated || 0}
-                                                                                            lastStartTime={set.p2_restLastStartTime}
-                                                                                            isGold={isP2Mine}
-                                                                                        />
-                                                                                        {(set.p2_restStatus !== 'completed' && !isReadOnly) && (
-                                                                                            <button
-                                                                                                onClick={() => toggleTimerPause(mapIndex, setIndex, false)}
-                                                                                                className={`p-1 rounded-full transition-colors ${
-                                                                                                    set.p2_restStatus === 'paused'
-                                                                                                        ? 'bg-yellow-500/10 text-yellow-500'
-                                                                                                        : isP2Mine
-                                                                                                            ? 'text-gym-primary hover:text-white'
-                                                                                                            : 'text-neutral-500 hover:text-white'
-                                                                                                }`}
-                                                                                                title={set.p2_restStatus === 'paused' ? "Reanudar" : "Pausar"}
-                                                                                            >
-                                                                                                {set.p2_restStatus === 'paused' ? <Play size={12} fill="currentColor" /> : <Pause size={12} fill="currentColor" />}
-                                                                                            </button>
+                                                                                const pRestStatus = set.playerRestStatus?.[p.id] ?? (isHost ? set.restStatus : (isFirstGuest ? (set.p2_restStatus || 'idle') : 'idle'));
+                                                                                const pRestAccumulated = set.playerRestAccumulated?.[p.id] ?? (isHost ? set.restAccumulated : (isFirstGuest ? (set.p2_restAccumulated || 0) : 0));
+                                                                                const pRestLastStartTime = set.playerRestLastStartTime?.[p.id] ?? (isHost ? set.restLastStartTime : (isFirstGuest ? set.p2_restLastStartTime : undefined));
+                                                                                const pCompleted = set.playerCompleted?.[p.id] ?? (isHost ? set.completed : (isFirstGuest ? (set.p2_completed || false) : false));
+
+                                                                                const hasTimer = pCompleted && (pRestStatus === 'running' || pRestStatus === 'paused' || pRestStatus === 'completed');
+                                                                                
+                                                                                const myName = user?.user_metadata?.full_name || user?.user_metadata?.username || user?.user_metadata?.name || 'Yo';
+                                                                                const pName = p.id === user?.id ? myName : (p.username || 'Guerrero');
+                                                                                const displayName = pName ? pName.split(' ')[0].substring(0, 10) + (pName.split(' ')[0].length > 10 ? '...' : '') : 'Jugador';
+
+                                                                                return (
+                                                                                    <div key={p.id} className="flex justify-center w-full">
+                                                                                        {hasTimer ? (
+                                                                                            <div className={`flex items-center justify-center gap-1.5 px-2 py-1 rounded-md w-full ${isMyTimer ? 'bg-gym-primary/5 border border-gym-primary/20' : 'bg-neutral-800/30'}`}>
+                                                                                                <span className={`text-[8px] uppercase tracking-wider truncate max-w-[50px] ${
+                                                                                                    isMyTimer ? 'text-gym-primary font-black' : 'text-neutral-500 font-bold'
+                                                                                                }`}>
+                                                                                                    {displayName}
+                                                                                                </span>
+                                                                                                <RestTimerDisplay
+                                                                                                    status={pRestStatus}
+                                                                                                    accumulated={pRestAccumulated}
+                                                                                                    lastStartTime={pRestLastStartTime}
+                                                                                                    isGold={isMyTimer}
+                                                                                                />
+                                                                                                {(pRestStatus !== 'completed' && !isReadOnly && isMyTimer) && (
+                                                                                                    <button
+                                                                                                        onClick={() => togglePlayerTimerPause(mapIndex, setIndex, p.id)}
+                                                                                                        className={`p-1 rounded-full transition-colors ${
+                                                                                                            pRestStatus === 'paused'
+                                                                                                                ? 'bg-yellow-500/10 text-yellow-500'
+                                                                                                                : 'text-gym-primary hover:text-white'
+                                                                                                        }`}
+                                                                                                        title={pRestStatus === 'paused' ? "Reanudar" : "Pausar"}
+                                                                                                    >
+                                                                                                        {pRestStatus === 'paused' ? <Play size={10} fill="currentColor" /> : <Pause size={10} fill="currentColor" />}
+                                                                                                    </button>
+                                                                                                )}
+                                                                                            </div>
+                                                                                        ) : (
+                                                                                            <div className="text-[8px] text-neutral-600 font-bold uppercase tracking-wider text-center py-1 truncate">
+                                                                                                {displayName}: 🔥
+                                                                                            </div>
                                                                                         )}
                                                                                     </div>
-                                                                                ) : (
-                                                                                    <div className="text-[10px] text-neutral-600 font-bold uppercase tracking-wider text-center py-1">
-                                                                                        Entrenando...
-                                                                                    </div>
-                                                                                )}
-                                                                            </div>
+                                                                                );
+                                                                            })}
                                                                         </div>
                                                                     </div>
                                                                 );
@@ -3080,3 +3505,4 @@ export const WorkoutSession = () => {
 // --- HELPER FUNCTIONS ---
 
 // GPS Helpers Removed
+
