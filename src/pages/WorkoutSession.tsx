@@ -427,104 +427,121 @@ export const WorkoutSession = () => {
                         // Merge rule: Own-Data Isolation merge strategy for up to 8 players!
                         setActiveExercises(prev => {
                             if (!prev || prev.length === 0) return exercises;
-                            return exercises.map((inEx, eIdx) => {
+                            
+                            const maxEx = Math.max(prev.length, exercises.length);
+                            const mergedEx = [];
+                            
+                            for (let eIdx = 0; eIdx < maxEx; eIdx++) {
                                 const localEx = prev[eIdx];
-                                if (!localEx) return inEx;
-                                return {
+                                const inEx = exercises[eIdx];
+                                
+                                if (!localEx) { mergedEx.push(inEx); continue; }
+                                if (!inEx) { mergedEx.push(localEx); continue; }
+                                
+                                const maxSets = Math.max(localEx.sets.length, inEx.sets.length);
+                                const mergedSets = [];
+                                
+                                for (let sIdx = 0; sIdx < maxSets; sIdx++) {
+                                    const loc = localEx.sets[sIdx];
+                                    const inSet = inEx.sets[sIdx];
+                                    
+                                    if (!loc) { mergedSets.push(inSet); continue; }
+                                    if (!inSet) { mergedSets.push(loc); continue; }
+
+                                    // Initialize / merge dynamic maps
+                                    const w = { ...loc.playerWeights, ...inSet.playerWeights };
+                                    const r = { ...loc.playerReps, ...inSet.playerReps };
+                                    const t = { ...loc.playerTimes, ...inSet.playerTimes };
+                                    const d = { ...loc.playerDistances, ...inSet.playerDistances };
+                                    const rpe = { ...loc.playerRpes, ...inSet.playerRpes };
+                                    const comp = { ...loc.playerCompleted, ...inSet.playerCompleted };
+                                    const lock = { ...loc.playerLocked, ...inSet.playerLocked };
+                                    const compAt = { ...loc.playerCompletedAt, ...inSet.playerCompletedAt };
+
+                                    // Rest timers dynamic merge
+                                    const rStatus = { ...loc.playerRestStatus, ...inSet.playerRestStatus };
+                                    const rAcc = { ...loc.playerRestAccumulated, ...inSet.playerRestAccumulated };
+                                    const rLst = { ...loc.playerRestLastStartTime, ...inSet.playerRestLastStartTime };
+
+                                    // Isolate legacy fields to prevent overwrite
+                                    let finalWeight = inSet.weight;
+                                    let finalReps = inSet.reps;
+                                    let finalCompleted = inSet.completed;
+                                    let finalLocked = inSet.locked;
+                                    let finalCompletedAt = inSet.completedAt;
+                                    let finalRestStatus = inSet.restStatus;
+                                    let finalRestAccumulated = inSet.restAccumulated;
+                                    let finalRestLastStartTime = inSet.restLastStartTime;
+
+                                    let finalP2Weight = inSet.p2_weight;
+                                    let finalP2Reps = inSet.p2_reps;
+                                    let finalP2Completed = inSet.p2_completed;
+                                    let finalP2Locked = inSet.p2_locked;
+                                    let finalP2CompletedAt = inSet.p2_completedAt;
+                                    let finalP2RestStatus = inSet.p2_restStatus;
+                                    let finalP2RestAccumulated = inSet.p2_restAccumulated;
+                                    let finalP2RestLastStartTime = inSet.p2_restLastStartTime;
+
+                                    if (false) {
+                                        finalWeight = loc.weight;
+                                        finalReps = loc.reps;
+                                        finalCompleted = loc.completed;
+                                        finalLocked = loc.locked;
+                                        finalCompletedAt = loc.completedAt;
+                                        finalRestStatus = loc.restStatus;
+                                        finalRestAccumulated = loc.restAccumulated;
+                                        finalRestLastStartTime = loc.restLastStartTime;
+                                    } else if (false) {
+                                        finalP2Weight = loc.p2_weight;
+                                        finalP2Reps = loc.p2_reps;
+                                        finalP2Completed = loc.p2_completed;
+                                        finalP2Locked = loc.p2_locked;
+                                        finalP2CompletedAt = loc.p2_completedAt;
+                                        finalP2RestStatus = loc.p2_restStatus;
+                                        finalP2RestAccumulated = loc.p2_restAccumulated;
+                                        finalP2RestLastStartTime = loc.p2_restLastStartTime;
+                                    }
+
+                                    mergedSets.push({
+                                        ...inSet,
+                                        playerWeights: w,
+                                        playerReps: r,
+                                        playerTimes: t,
+                                        playerDistances: d,
+                                        playerRpes: rpe,
+                                        playerCompleted: comp,
+                                        playerLocked: lock,
+                                        playerCompletedAt: compAt,
+                                        playerRestStatus: rStatus,
+                                        playerRestAccumulated: rAcc,
+                                        playerRestLastStartTime: rLst,
+
+                                        weight: finalWeight,
+                                        reps: finalReps,
+                                        completed: finalCompleted,
+                                        locked: finalLocked,
+                                        completedAt: finalCompletedAt,
+                                        restStatus: finalRestStatus,
+                                        restAccumulated: finalRestAccumulated,
+                                        restLastStartTime: finalRestLastStartTime,
+
+                                        p2_weight: finalP2Weight,
+                                        p2_reps: finalP2Reps,
+                                        p2_completed: finalP2Completed,
+                                        p2_locked: finalP2Locked,
+                                        p2_completedAt: finalP2CompletedAt,
+                                        p2_restStatus: finalP2RestStatus,
+                                        p2_restAccumulated: finalP2RestAccumulated,
+                                        p2_restLastStartTime: finalP2RestLastStartTime
+                                    });
+                                }
+                                
+                                mergedEx.push({
                                     ...inEx,
-                                    sets: inEx.sets.map((inSet, sIdx) => {
-                                        const loc = localEx.sets?.[sIdx];
-                                        if (!loc) return inSet;
-
-                                        // Initialize / merge dynamic maps
-                                        const w = { ...loc.playerWeights, ...inSet.playerWeights };
-                                        const r = { ...loc.playerReps, ...inSet.playerReps };
-                                        const t = { ...loc.playerTimes, ...inSet.playerTimes };
-                                        const d = { ...loc.playerDistances, ...inSet.playerDistances };
-                                        const rpe = { ...loc.playerRpes, ...inSet.playerRpes };
-                                        const comp = { ...loc.playerCompleted, ...inSet.playerCompleted };
-                                        const lock = { ...loc.playerLocked, ...inSet.playerLocked };
-                                        const compAt = { ...loc.playerCompletedAt, ...inSet.playerCompletedAt };
-
-                                        // Rest timers dynamic merge
-                                        const rStatus = { ...loc.playerRestStatus, ...inSet.playerRestStatus };
-                                        const rAcc = { ...loc.playerRestAccumulated, ...inSet.playerRestAccumulated };
-                                        const rLst = { ...loc.playerRestLastStartTime, ...inSet.playerRestLastStartTime };
-
-                                        // Isolate legacy fields to prevent overwrite
-                                        let finalWeight = inSet.weight;
-                                        let finalReps = inSet.reps;
-                                        let finalCompleted = inSet.completed;
-                                        let finalLocked = inSet.locked;
-                                        let finalCompletedAt = inSet.completedAt;
-                                        let finalRestStatus = inSet.restStatus;
-                                        let finalRestAccumulated = inSet.restAccumulated;
-                                        let finalRestLastStartTime = inSet.restLastStartTime;
-
-                                        let finalP2Weight = inSet.p2_weight;
-                                        let finalP2Reps = inSet.p2_reps;
-                                        let finalP2Completed = inSet.p2_completed;
-                                        let finalP2Locked = inSet.p2_locked;
-                                        let finalP2CompletedAt = inSet.p2_completedAt;
-                                        let finalP2RestStatus = inSet.p2_restStatus;
-                                        let finalP2RestAccumulated = inSet.p2_restAccumulated;
-                                        let finalP2RestLastStartTime = inSet.p2_restLastStartTime;
-
-                                        if (false) {
-                                            finalWeight = loc.weight;
-                                            finalReps = loc.reps;
-                                            finalCompleted = loc.completed;
-                                            finalLocked = loc.locked;
-                                            finalCompletedAt = loc.completedAt;
-                                            finalRestStatus = loc.restStatus;
-                                            finalRestAccumulated = loc.restAccumulated;
-                                            finalRestLastStartTime = loc.restLastStartTime;
-                                        } else if (false) {
-                                            finalP2Weight = loc.p2_weight;
-                                            finalP2Reps = loc.p2_reps;
-                                            finalP2Completed = loc.p2_completed;
-                                            finalP2Locked = loc.p2_locked;
-                                            finalP2CompletedAt = loc.p2_completedAt;
-                                            finalP2RestStatus = loc.p2_restStatus;
-                                            finalP2RestAccumulated = loc.p2_restAccumulated;
-                                            finalP2RestLastStartTime = loc.p2_restLastStartTime;
-                                        }
-
-                                        return {
-                                            ...inSet,
-                                            playerWeights: w,
-                                            playerReps: r,
-                                            playerTimes: t,
-                                            playerDistances: d,
-                                            playerRpes: rpe,
-                                            playerCompleted: comp,
-                                            playerLocked: lock,
-                                            playerCompletedAt: compAt,
-                                            playerRestStatus: rStatus,
-                                            playerRestAccumulated: rAcc,
-                                            playerRestLastStartTime: rLst,
-
-                                            weight: finalWeight,
-                                            reps: finalReps,
-                                            completed: finalCompleted,
-                                            locked: finalLocked,
-                                            completedAt: finalCompletedAt,
-                                            restStatus: finalRestStatus,
-                                            restAccumulated: finalRestAccumulated,
-                                            restLastStartTime: finalRestLastStartTime,
-
-                                            p2_weight: finalP2Weight,
-                                            p2_reps: finalP2Reps,
-                                            p2_completed: finalP2Completed,
-                                            p2_locked: finalP2Locked,
-                                            p2_completedAt: finalP2CompletedAt,
-                                            p2_restStatus: finalP2RestStatus,
-                                            p2_restAccumulated: finalP2RestAccumulated,
-                                            p2_restLastStartTime: finalP2RestLastStartTime
-                                        };
-                                    })
-                                };
-                            });
+                                    sets: mergedSets
+                                });
+                            }
+                            return mergedEx;
                         });
                     } else if (multiplayerMode === 'separado') {
                         setPartnerExercises(exercises); // Store for viewing
