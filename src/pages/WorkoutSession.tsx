@@ -224,6 +224,8 @@ export const WorkoutSession = () => {
     const [isRoutineModified, setIsRoutineModified] = useState(false); // Tracks if routine structure changed during session
 
     // --- Multiplayer Sync Hooks ---
+    const [partnerName, setPartnerName] = useState<string>('Compañero');
+    const [partnerAvatar, setPartnerAvatar] = useState<string | null>(null);
     const [participants, setParticipants] = useState<any[]>([]);
 
     useEffect(() => {
@@ -271,8 +273,6 @@ export const WorkoutSession = () => {
         sessionIdRef.current = sessionId;
     }, [sessionId]);
     const syncRoomId = isInviter ? sessionId : (partnerSessionId || chatId);
-    const [partnerName, setPartnerName] = useState<string>('Compañero');
-    const [partnerAvatar, setPartnerAvatar] = useState<string | null>(null);
 
     useEffect(() => {
         if (!isMultiplayer || !partnerId || !syncRoomId || !user) return;
