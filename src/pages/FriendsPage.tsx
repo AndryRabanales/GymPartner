@@ -41,11 +41,13 @@ export const FriendsPage = () => {
             let activeSessionsMap = new Map<string, any>();
             
             if (friendIds.length > 0) {
+                const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
                 const { data: activeSessions } = await supabase
                     .from('workout_sessions')
                     .select('id, user_id, partner_id, started_at, is_multiplayer, multiplayer_mode, partner_session_id')
                     .or(`user_id.in.(${friendIds.join(',')}),partner_id.in.(${friendIds.join(',')})`)
-                    .is('finished_at', null);
+                    .is('finished_at', null)
+                    .gt('started_at', twelveHoursAgo);
                 
                 if (activeSessions) {
                     friendIds.forEach(fId => {
