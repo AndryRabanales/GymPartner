@@ -264,6 +264,7 @@ export const WorkoutSession = () => {
     const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
     const isInviterRef = useRef<boolean>(true); // tracks isInviter without stale closure
     const lastIncomingState = useRef<string>('');
+    const isStartingSessionRef = useRef<boolean>(false);
     const partnerSessionIdRef = useRef<string | null>(partnerSessionId);
     useEffect(() => {
         partnerSessionIdRef.current = partnerSessionId;
@@ -1296,6 +1297,11 @@ export const WorkoutSession = () => {
 
     const startNewSession = async (customGymId?: string): Promise<{ gymId: string | null; freshArsenal?: any[] }> => {
         if (!user) return { gymId: null };
+        if (isStartingSessionRef.current) {
+            console.log("⚠️ startNewSession already in progress, ignoring duplicate call");
+            return { gymId: null };
+        }
+        isStartingSessionRef.current = true;
         setLoading(true);
         try {
             console.log("🚀 Starting NEW Session explicitly...");
@@ -1332,6 +1338,7 @@ export const WorkoutSession = () => {
             return { gymId: null };
         } finally {
             setLoading(false);
+            isStartingSessionRef.current = false;
         }
     };
 
