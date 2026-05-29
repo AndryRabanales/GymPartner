@@ -437,19 +437,19 @@ export const WorkoutSession = () => {
                                         if (!loc) return inSet;
 
                                         // Initialize / merge dynamic maps
-                                        const w = { ...inSet.playerWeights, [user.id]: loc.playerWeights?.[user.id] ?? (isInviterRef.current ? loc.weight : loc.p2_weight) };
-                                        const r = { ...inSet.playerReps, [user.id]: loc.playerReps?.[user.id] ?? (isInviterRef.current ? loc.reps : loc.p2_reps) };
-                                        const t = { ...inSet.playerTimes, [user.id]: loc.playerTimes?.[user.id] ?? (isInviterRef.current ? loc.time : loc.p2_time) };
-                                        const d = { ...inSet.playerDistances, [user.id]: loc.playerDistances?.[user.id] ?? (isInviterRef.current ? loc.distance : loc.p2_distance) };
-                                        const rpe = { ...inSet.playerRpes, [user.id]: loc.playerRpes?.[user.id] ?? (isInviterRef.current ? loc.rpe : loc.p2_rpe) };
-                                        const comp = { ...inSet.playerCompleted, [user.id]: loc.playerCompleted?.[user.id] ?? (isInviterRef.current ? loc.completed : loc.p2_completed) };
-                                        const lock = { ...inSet.playerLocked, [user.id]: loc.playerLocked?.[user.id] ?? (isInviterRef.current ? loc.locked : loc.p2_locked) };
-                                        const compAt = { ...inSet.playerCompletedAt, [user.id]: loc.playerCompletedAt?.[user.id] ?? (isInviterRef.current ? loc.completedAt : loc.p2_completedAt) };
+                                        const w = { ...loc.playerWeights, ...inSet.playerWeights };
+                                        const r = { ...loc.playerReps, ...inSet.playerReps };
+                                        const t = { ...loc.playerTimes, ...inSet.playerTimes };
+                                        const d = { ...loc.playerDistances, ...inSet.playerDistances };
+                                        const rpe = { ...loc.playerRpes, ...inSet.playerRpes };
+                                        const comp = { ...loc.playerCompleted, ...inSet.playerCompleted };
+                                        const lock = { ...loc.playerLocked, ...inSet.playerLocked };
+                                        const compAt = { ...loc.playerCompletedAt, ...inSet.playerCompletedAt };
 
                                         // Rest timers dynamic merge
-                                        const rStatus = { ...inSet.playerRestStatus, [user.id]: loc.playerRestStatus?.[user.id] ?? (isInviterRef.current ? loc.restStatus : loc.p2_restStatus) };
-                                        const rAcc = { ...inSet.playerRestAccumulated, [user.id]: loc.playerRestAccumulated?.[user.id] ?? (isInviterRef.current ? loc.restAccumulated : loc.p2_restAccumulated) };
-                                        const rLst = { ...inSet.playerRestLastStartTime, [user.id]: loc.playerRestLastStartTime?.[user.id] ?? (isInviterRef.current ? loc.restLastStartTime : loc.p2_restLastStartTime) };
+                                        const rStatus = { ...loc.playerRestStatus, ...inSet.playerRestStatus };
+                                        const rAcc = { ...loc.playerRestAccumulated, ...inSet.playerRestAccumulated };
+                                        const rLst = { ...loc.playerRestLastStartTime, ...inSet.playerRestLastStartTime };
 
                                         // Isolate legacy fields to prevent overwrite
                                         let finalWeight = inSet.weight;
@@ -470,7 +470,7 @@ export const WorkoutSession = () => {
                                         let finalP2RestAccumulated = inSet.p2_restAccumulated;
                                         let finalP2RestLastStartTime = inSet.p2_restLastStartTime;
 
-                                        if (isInviterRef.current) {
+                                        if (false) {
                                             finalWeight = loc.weight;
                                             finalReps = loc.reps;
                                             finalCompleted = loc.completed;
@@ -479,7 +479,7 @@ export const WorkoutSession = () => {
                                             finalRestStatus = loc.restStatus;
                                             finalRestAccumulated = loc.restAccumulated;
                                             finalRestLastStartTime = loc.restLastStartTime;
-                                        } else {
+                                        } else if (false) {
                                             finalP2Weight = loc.p2_weight;
                                             finalP2Reps = loc.p2_reps;
                                             finalP2Completed = loc.p2_completed;

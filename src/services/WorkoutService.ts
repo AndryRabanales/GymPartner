@@ -85,7 +85,7 @@ class WorkoutService {
 
             if (shares && shares.length > 0) {
                 const notificationsPayload = shares
-                    .filter(share => share.shared_with !== userId) // 🚫 Do not notify oneself
+                    .filter(share => share.shared_with !== userId && share.shared_with !== partnerId) // 🚫 Do not notify oneself OR the training partner!
                     .map(share => ({
                         user_id: share.shared_with,
                         type: 'system',
