@@ -149,8 +149,9 @@ export const FriendsPage = () => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user || !friend.other_user || !friend.activeSession) return;
 
+        const isGuest = !!friend.activeSession.partner_session_id;
         const roomSessionId = friend.activeSession.partner_session_id || friend.activeSession.id;
-        const hostId = friend.activeSession.user_id;
+        const hostId = isGuest ? friend.activeSession.partner_id : friend.activeSession.user_id;
 
         // Obtain host's username to display to the user
         const { data: hostProfile } = await supabase

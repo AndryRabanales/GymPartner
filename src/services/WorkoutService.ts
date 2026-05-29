@@ -36,7 +36,8 @@ class WorkoutService {
         gymId?: string,
         isMultiplayer?: boolean,
         multiplayerMode?: string,
-        partnerId?: string
+        partnerId?: string,
+        partnerSessionId?: string
     ): Promise<{ data?: WorkoutSession; error?: any }> {
         const { data, error } = await supabase
             .from('workout_sessions')
@@ -46,7 +47,8 @@ class WorkoutService {
                 started_at: new Date().toISOString(),
                 is_multiplayer: isMultiplayer || false,
                 multiplayer_mode: multiplayerMode || null,
-                partner_id: partnerId || null
+                partner_id: partnerId || null,
+                partner_session_id: partnerSessionId || null
             })
             .select()
             .single();

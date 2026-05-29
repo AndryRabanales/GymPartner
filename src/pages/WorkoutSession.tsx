@@ -1038,10 +1038,17 @@ export const WorkoutSession = () => {
     useEffect(() => {
         if (!user) return;
         initializeBattle(user.id);
-    }, [user, routeGymId]);
+    }, [user, routeGymId, location.key]);
 
     const initializeBattle = async (userId: string) => {
         if (!userId) return navigate('/login');
+
+        // Extract fresh state variables directly from location to avoid closure staleness on route navigation
+        const navState = location.state as any || {};
+        const currentIsMultiplayer = navState.isMultiplayer ?? isMultiplayer;
+        const currentPartnerId = navState.partnerId ?? partnerId;
+        const currentMultiplayerMode = navState.multiplayerMode ?? multiplayerMode;
+        const currentIsInviter = navState.isInviter ?? isInviter;
 
         // Parallelize Initial Data Fetching
         try {
@@ -1076,7 +1083,7 @@ export const WorkoutSession = () => {
                 workoutService.getUserRoutines(userId, targetGymId),
                 workoutService.getActiveSession(userId),
                 equipmentService.getPersonalInventory(userId),
-                (isMultiplayer && partnerId) ? workoutService.getActiveSession(partnerId) : Promise.resolve({ data: null, error: null })
+                (currentIsMultiplayer && currentPartnerId) ? workoutService.getActiveSession(currentPartnerId) : Promise.resolve({ data: null, error: null })
             ]);
 
             setRoutines(localRoutines);
@@ -1168,7 +1175,7 @@ export const WorkoutSession = () => {
 
             // 3. Restore or Start Logic
             const active = activeResult.data;
-            const shouldRestore = active && !(isMultiplayer && !isInviter);
+            const shouldRestore = active && !(currentIsMultiplayer && !currentIsInviter);
 
             if (shouldRestore) {
                 setSessionId(active.id);
@@ -1252,7 +1259,7 @@ export const WorkoutSession = () => {
                         });
                         setActiveExercises(restoredExercises);
                     } else {
-                        if (isMultiplayer && multiplayerMode === 'conjunto' && !isInviter) {
+                        if (currentIsMultiplayer && currentMultiplayerMode === 'conjunto' && !currentIsInviter) {
                             // Do nothing, P2 must wait!
                         } else {
                             setShowAddModal(true);
@@ -1295,14 +1302,14 @@ export const WorkoutSession = () => {
                         partnerSessionIdRef.current = partnerActive.id;
                         setPartnerSessionId(partnerActive.id);
                         
-                        if (isMultiplayer && multiplayerMode === 'conjunto' && !isInviter) {
+                        if (currentIsMultiplayer && currentMultiplayerMode === 'conjunto' && !currentIsInviter) {
                             console.log('🚀 Guest auto-starting session because partner has active session...');
                             // Wait for guest session to start so we have a sessionId and startTime
-                            await startNewSession(partnerActive.gym_id || undefined);
+                            await startNewSession(partnerActive.gym_id || undefined, partnerActive.id);
                             setStartTime(new Date(partnerActive.started_at));
                         }
                     } else {
-                        if (isMultiplayer && multiplayerMode === 'conjunto' && !isInviter) {
+                        if (currentIsMultiplayer && currentMultiplayerMode === 'conjunto' && !currentIsInviter) {
                             // Do nothing, P2 must wait for the inviter to pick a routine!
                         } else {
                             if (localRoutines.length === 0) setShowAddModal(true);
@@ -1379,7 +1386,7 @@ export const WorkoutSession = () => {
         return null;
     };
 
-    const startNewSession = async (customGymId?: string): Promise<{ gymId: string | null; freshArsenal?: any[] }> => {
+    const startNewSession = async (customGymId?: string, forcePartnerSessionId?: string): Promise<{ gymId: string | null; freshArsenal?: any[] }> => {
         if (!user) return { gymId: null };
         if (isStartingSessionRef.current) {
             console.log("⚠️ startNewSession already in progress, ignoring duplicate call");
@@ -1400,7 +1407,8 @@ export const WorkoutSession = () => {
                 finalGymId || undefined,
                 isMultiplayer,
                 multiplayerMode || undefined,
-                partnerId || undefined
+                partnerId || undefined,
+                forcePartnerSessionId || partnerSessionId || undefined
             );
             if (startError) throw startError;
 
