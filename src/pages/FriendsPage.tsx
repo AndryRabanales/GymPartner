@@ -20,16 +20,16 @@ export const FriendsPage = () => {
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'workout_sessions' },
                 () => {
-                    console.log('🔄 Workout status changed, reloading matches...');
-                    loadFriends();
+                    console.log('🔄 Workout status changed, reloading matches silently...');
+                    loadFriends(true);
                 }
             )
             .on(
                 'postgres_changes',
                 { event: 'UPDATE', schema: 'public', table: 'profiles' },
                 () => {
-                    console.log('🔄 Profiles status updated, reloading matches...');
-                    loadFriends();
+                    console.log('🔄 Profiles status updated, reloading matches silently...');
+                    loadFriends(true);
                 }
             )
             .subscribe();
@@ -39,8 +39,8 @@ export const FriendsPage = () => {
         };
     }, []);
 
-    const loadFriends = async () => {
-        setLoading(true);
+    const loadFriends = async (isSilent = false) => {
+        if (!isSilent) setLoading(true);
         try {
             const data = await chatService.getMyChats();
             
