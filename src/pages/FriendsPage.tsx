@@ -13,7 +13,7 @@ export const FriendsPage = () => {
     useEffect(() => {
         loadFriends();
 
-        // Subscribe to real-time changes to workout_sessions and profiles tables
+        // Subscribe to real-time changes to workout_sessions, profiles, and chats tables
         const channel = supabase
             .channel('realtime:workout_sessions_status')
             .on(
@@ -29,6 +29,14 @@ export const FriendsPage = () => {
                 { event: 'UPDATE', schema: 'public', table: 'profiles' },
                 () => {
                     console.log('🔄 Profiles status updated, reloading matches silently...');
+                    loadFriends(true);
+                }
+            )
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'chats' },
+                () => {
+                    console.log('🔄 Chats changed, reloading matches silently...');
                     loadFriends(true);
                 }
             )
@@ -142,8 +150,18 @@ export const FriendsPage = () => {
         if (!user || !friend.other_user || !friend.activeSession) return;
 
         const roomSessionId = friend.activeSession.partner_session_id || friend.activeSession.id;
+        const hostId = friend.activeSession.user_id;
 
-        // Obtain user name for notification
+        // Obtain host's username to display to the user
+        const { data: hostProfile } = await supabase
+            .from('profiles')
+            .select('username')
+            .eq('id', hostId)
+            .single();
+
+        const hostName = hostProfile?.username || friend.other_user.username;
+
+        // Obtain our user name for notification
         const { data: profile } = await supabase
             .from('profiles')
             .select('username')
@@ -152,8 +170,8 @@ export const FriendsPage = () => {
             
         const displayName = profile?.username || 'Un amigo';
 
-        // Send a coop_join_request notification to the training friend
-        await notificationService.createNotification(friend.other_user.id, {
+        // Send a coop_join_request notification ALWAYS to the host of the workout session
+        await notificationService.createNotification(hostId, {
             type: 'coop_join_request',
             title: `🔥 Solicitud de Unión`,
             content: `¡${displayName} quiere unirse a tu entrenamiento!`,
@@ -165,7 +183,7 @@ export const FriendsPage = () => {
             }
         });
 
-        alert(`Solicitud para unirse al entrenamiento enviada a ${friend.other_user.username}.`);
+        alert(`Solicitud para unirse al entrenamiento enviada a @${hostName}.`);
     };
 
     return (

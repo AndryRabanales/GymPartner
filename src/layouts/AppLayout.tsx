@@ -218,7 +218,7 @@ const CoopJoinRequestToast = ({
                         // Update our own active session to multiplayer in the DB!
                         const { data: activeSession } = await supabase
                             .from('workout_sessions')
-                            .select('id, partner_session_id')
+                            .select('id, partner_session_id, partner_id')
                             .eq('user_id', user.id)
                             .is('finished_at', null)
                             .maybeSingle();
@@ -229,7 +229,7 @@ const CoopJoinRequestToast = ({
                                 .update({
                                     is_multiplayer: true,
                                     multiplayer_mode: 'conjunto',
-                                    partner_id: senderId
+                                    partner_id: activeSession.partner_id || senderId
                                 })
                                 .eq('id', activeSession.id);
                         }
