@@ -13,7 +13,7 @@ export const FriendsPage = () => {
     useEffect(() => {
         loadFriends();
 
-        // Subscribe to real-time changes to workout_sessions table
+        // Subscribe to real-time changes to workout_sessions and profiles tables
         const channel = supabase
             .channel('realtime:workout_sessions_status')
             .on(
@@ -21,6 +21,14 @@ export const FriendsPage = () => {
                 { event: '*', schema: 'public', table: 'workout_sessions' },
                 () => {
                     console.log('🔄 Workout status changed, reloading matches...');
+                    loadFriends();
+                }
+            )
+            .on(
+                'postgres_changes',
+                { event: 'UPDATE', schema: 'public', table: 'profiles' },
+                () => {
+                    console.log('🔄 Profiles status updated, reloading matches...');
                     loadFriends();
                 }
             )
