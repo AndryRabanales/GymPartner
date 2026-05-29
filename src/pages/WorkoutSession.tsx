@@ -781,13 +781,23 @@ export const WorkoutSession = () => {
         }
     }, [activeMuscleFilter, searchTerm]);
 
-    // Sync Selected Catalog Items when modal opens
+    // Sync Selected Catalog Items reactively with active exercises
     useEffect(() => {
         if (showAddModal) {
-            const currentIds = activeExercises.map(e => e.equipmentId).filter(Boolean) as string[];
-            setSelectedCatalogItems(new Set(currentIds));
+            setSelectedCatalogItems(prev => {
+                const updated = new Set(prev);
+                activeExercises.forEach(e => {
+                    if (e.equipmentId) updated.add(e.equipmentId);
+                    if (e.equipmentName) {
+                        updated.add(`virtual-${e.equipmentName}`);
+                        // Also handle edge cases where the name is slightly different
+                        updated.add(`virtual-${e.equipmentName.trim()}`);
+                    }
+                });
+                return updated;
+            });
         }
-    }, [showAddModal]);
+    }, [showAddModal, activeExercises]);
 
     // Helpers for Unit Conversion
     const toDisplayWeight = (kgVal: number, unit: 'kg' | 'lb' = 'kg'): string => {
@@ -908,7 +918,12 @@ export const WorkoutSession = () => {
         });
 
         // Find which selected equipment IDs are new (not already in activeExercises)
-        const existingEquipmentIds = new Set(activeExercises.map(e => e.equipmentId).filter(Boolean));
+        const existingEquipmentIds = new Set<string>();
+        activeExercises.forEach(e => {
+            if (e.equipmentId) existingEquipmentIds.add(e.equipmentId);
+            if (e.equipmentName) existingEquipmentIds.add(`virtual-${e.equipmentName}`);
+        });
+
         const newEquipmentIdsToAdd = Array.from(selectedCatalogItems).filter(id => !existingEquipmentIds.has(id));
 
         const itemsToAdd: Equipment[] = [];
