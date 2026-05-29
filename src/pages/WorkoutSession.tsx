@@ -1292,7 +1292,7 @@ export const WorkoutSession = () => {
                 if (autoRoutine) {
                     console.log("⚡ Auto-loading routine from search parameter:", autoRoutine.name);
                     setCurrentRoutineName(autoRoutine.name);
-                    const result = await startNewSession(targetGymId || undefined);
+                    const result = await startNewSession(targetGymId || undefined, undefined, currentIsMultiplayer, currentMultiplayerMode, currentPartnerId);
                     await loadRoutine(autoRoutine, result?.freshArsenal || mergedInventory);
                 } else {
                     // Check if partner has an active session
@@ -1305,7 +1305,7 @@ export const WorkoutSession = () => {
                         if (currentIsMultiplayer && currentMultiplayerMode === 'conjunto' && !currentIsInviter) {
                             console.log('🚀 Guest auto-starting session because partner has active session...');
                             // Wait for guest session to start so we have a sessionId and startTime
-                            await startNewSession(partnerActive.gym_id || undefined, partnerActive.id);
+                            await startNewSession(partnerActive.gym_id || undefined, partnerActive.id, currentIsMultiplayer, currentMultiplayerMode, currentPartnerId);
                             setStartTime(new Date(partnerActive.started_at));
                         }
                     } else {
@@ -1386,7 +1386,13 @@ export const WorkoutSession = () => {
         return null;
     };
 
-    const startNewSession = async (customGymId?: string, forcePartnerSessionId?: string): Promise<{ gymId: string | null; freshArsenal?: any[] }> => {
+    const startNewSession = async (
+        customGymId?: string, 
+        forcePartnerSessionId?: string,
+        overrideIsMultiplayer?: boolean,
+        overrideMultiplayerMode?: string | null,
+        overridePartnerId?: string | null
+    ): Promise<{ gymId: string | null; freshArsenal?: any[] }> => {
         if (!user) return { gymId: null };
         if (isStartingSessionRef.current) {
             console.log("⚠️ startNewSession already in progress, ignoring duplicate call");
@@ -1400,16 +1406,33 @@ export const WorkoutSession = () => {
             let finalGymId = customGymId || resolvedGymId;
             let freshArsenal: any[] | undefined = undefined;
 
+            const finalIsMultiplayer = overrideIsMultiplayer ?? isMultiplayer;
+            const finalMultiplayerMode = overrideMultiplayerMode ?? multiplayerMode;
+            const finalPartnerId = overridePartnerId ?? partnerId;
+
             console.log("📍 GPS already resolved or pre-selected. Using finalGymId:", finalGymId);
+            console.log("📡 [startNewSession] Argumentos para startSession:", {
+                userId: user.id,
+                finalGymId,
+                isMultiplayer: finalIsMultiplayer,
+                multiplayerMode: finalMultiplayerMode,
+                partnerId: finalPartnerId,
+                forcePartnerSessionId,
+                partnerSessionId,
+                finalPartnerSessionId: forcePartnerSessionId || partnerSessionId || undefined
+            });
 
             const { data: newSession, error: startError } = await workoutService.startSession(
                 user.id, 
                 finalGymId || undefined,
-                isMultiplayer,
-                multiplayerMode || undefined,
-                partnerId || undefined,
+                finalIsMultiplayer,
+                finalMultiplayerMode || undefined,
+                finalPartnerId || undefined,
                 forcePartnerSessionId || partnerSessionId || undefined
             );
+            
+            console.log("📡 [startNewSession] Respuesta de startSession:", { newSession, startError });
+
             if (startError) throw startError;
 
             // Clear local backup on success
