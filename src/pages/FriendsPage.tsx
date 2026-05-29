@@ -43,12 +43,17 @@ export const FriendsPage = () => {
             if (friendIds.length > 0) {
                 const { data: activeSessions } = await supabase
                     .from('workout_sessions')
-                    .select('id, user_id, started_at, is_multiplayer, multiplayer_mode, partner_session_id')
-                    .in('user_id', friendIds)
+                    .select('id, user_id, partner_id, started_at, is_multiplayer, multiplayer_mode, partner_session_id')
+                    .or(`user_id.in.(${friendIds.join(',')}),partner_id.in.(${friendIds.join(',')})`)
                     .is('finished_at', null);
                 
                 if (activeSessions) {
-                    activeSessionsMap = new Map(activeSessions.map(s => [s.user_id, s]));
+                    friendIds.forEach(fId => {
+                        const sess = activeSessions.find(s => s.user_id === fId || s.partner_id === fId);
+                        if (sess) {
+                            activeSessionsMap.set(fId, sess);
+                        }
+                    });
                 }
             }
 
