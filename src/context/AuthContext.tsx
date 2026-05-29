@@ -302,6 +302,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const signOut = async () => {
         console.log('🚪 [Auth] Signing out...');
 
+        // Clear presence in DB before logging out
+        if (user && supabase) {
+            try {
+                await supabase
+                    .from('profiles')
+                    .update({ last_active_at: null })
+                    .eq('id', user.id);
+            } catch (err) {
+                console.error("Error resetting active status on logout:", err);
+            }
+        }
+
         // 1. Clear state immediately so UI reflects logout right away
         setUser(null);
         setSession(null);

@@ -1,5 +1,5 @@
 import { MapPin, LogIn, LogOut } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { UploadModal } from '../components/social/UploadModal';
@@ -280,25 +280,87 @@ export const AppLayout = () => {
     const location = useLocation();
     const navigate = useNavigate();
 
+    const tokenRef = useRef<string | null>(null);
+
+    // Keep tokenRef synchronously updated with current user session token
+    useEffect(() => {
+        supabase.auth.getSession().then(({ data }) => {
+            tokenRef.current = data.session?.access_token || null;
+        });
+        
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            tokenRef.current = session?.access_token || null;
+        });
+        
+        return () => subscription.unsubscribe();
+    }, []);
+
     // Real-time user activity tracker (online status presence)
     useEffect(() => {
         if (!user) return;
 
-        const updateActiveStatus = async () => {
+        const updateActiveStatus = async (status: string | null) => {
             try {
                 await supabase
                     .from('profiles')
-                    .update({ last_active_at: new Date().toISOString() })
+                    .update({ last_active_at: status })
                     .eq('id', user.id);
             } catch (err) {
                 console.error("Error updating active status:", err);
             }
         };
 
-        updateActiveStatus();
-        const interval = setInterval(updateActiveStatus, 2 * 60 * 1000); // Update every 2 minutes
+        // 1. Mark as Active initially
+        updateActiveStatus(new Date().toISOString());
+        
+        // 2. Loop update every 2 minutes
+        const interval = setInterval(() => {
+            updateActiveStatus(new Date().toISOString());
+        }, 2 * 60 * 1000);
 
-        return () => clearInterval(interval);
+        // 3. Mark as Offline when tab/app/browser is closed or hidden
+        const handleUnload = () => {
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+            if (!supabaseUrl || !supabaseAnonKey) return;
+            
+            const url = `${supabaseUrl}/rest/v1/profiles?id=eq.${user.id}`;
+            const headers: HeadersInit = {
+                'apikey': supabaseAnonKey,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=minimal'
+            };
+            if (tokenRef.current) {
+                headers['Authorization'] = `Bearer ${tokenRef.current}`;
+            }
+            
+            // Standard keepalive beacon to reset presence instantly on close
+            fetch(url, {
+                method: 'PATCH',
+                headers,
+                body: JSON.stringify({ last_active_at: null }),
+                keepalive: true
+            });
+        };
+
+        window.addEventListener('beforeunload', handleUnload);
+        
+        const handleVisibility = () => {
+            if (document.visibilityState === 'hidden') {
+                handleUnload();
+            } else {
+                updateActiveStatus(new Date().toISOString());
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibility);
+
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener('beforeunload', handleUnload);
+            document.removeEventListener('visibilitychange', handleVisibility);
+            // On unmount (e.g. navigation out of layout/logout), set offline too
+            handleUnload();
+        };
     }, [user]);
 
     // Preload all exercise catalog images for instant rendering without delays
