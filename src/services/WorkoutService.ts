@@ -821,7 +821,7 @@ class WorkoutService {
                 .in('session_id', sessionIds)
                 .order('created_at', { ascending: false })
                 .limit(1)
-                .single();
+                .maybeSingle();
 
             if (lastLogError || !lastLog) return [];
 
@@ -867,7 +867,7 @@ class WorkoutService {
                 .in('session_id', sessionIds)
                 .order('created_at', { ascending: false })
                 .limit(1)
-                .single();
+                .maybeSingle();
 
             if (error) {
                 // It's normal to have no history

@@ -2170,50 +2170,52 @@ export const WorkoutSession = () => {
             return;
         }
 
-        const exercise = activeExercises[exerciseIndex];
-        if (!exercise) return;
-        const set = exercise.sets[setIndex];
-        if (!set) return;
+        setTimeout(() => {
+            const exercise = activeExercisesRef.current[exerciseIndex];
+            if (!exercise) return;
+            const set = exercise.sets[setIndex];
+            if (!set) return;
 
-        const userIdx = participants.findIndex(p => p.id === targetUserId);
-        const isHost = userIdx === 0 || (userIdx === -1 && targetUserId === (isInviter ? user?.id : partnerId));
-        const isFirstGuest = userIdx === 1 || (userIdx === -1 && targetUserId === (isInviter ? partnerId : user?.id));
+            const userIdx = participants.findIndex(p => p.id === targetUserId);
+            const isHost = userIdx === 0 || (userIdx === -1 && targetUserId === (isInviter ? user?.id : partnerId));
+            const isFirstGuest = userIdx === 1 || (userIdx === -1 && targetUserId === (isInviter ? partnerId : user?.id));
 
-        const isCompleted = set.playerCompleted?.[targetUserId] ?? (isHost ? set.completed : (isFirstGuest ? (set.p2_completed || false) : false));
-        if (isCompleted) return;
+            const isCompleted = set.playerCompleted?.[targetUserId] ?? (isHost ? set.completed : (isFirstGuest ? (set.p2_completed || false) : false));
+            if (isCompleted) return;
 
-        let isComplete = true;
-        let hasAnyMetric = false;
+            let isComplete = true;
+            let hasAnyMetric = false;
 
-        if (exercise.metrics.weight) {
-            hasAnyMetric = true;
-            const weightVal = set.playerWeights?.[targetUserId] ?? (isHost ? set.weight : (isFirstGuest ? (set.p2_weight || 0) : 0));
-            if (weightVal === undefined || weightVal <= 0) isComplete = false;
-        }
-        if (exercise.metrics.reps) {
-            hasAnyMetric = true;
-            const repsVal = set.playerReps?.[targetUserId] ?? (isHost ? set.reps : (isFirstGuest ? (set.p2_reps || 0) : 0));
-            if (repsVal === undefined || repsVal <= 0) isComplete = false;
-        }
-        if (exercise.metrics.time) {
-            hasAnyMetric = true;
-            const timeVal = set.playerTimes?.[targetUserId] ?? (isHost ? set.time : (isFirstGuest ? (set.p2_time || 0) : 0));
-            if (timeVal === undefined || timeVal <= 0) isComplete = false;
-        }
-        if (exercise.metrics.distance) {
-            hasAnyMetric = true;
-            const distanceVal = set.playerDistances?.[targetUserId] ?? (isHost ? set.distance : (isFirstGuest ? (set.p2_distance || 0) : 0));
-            if (distanceVal === undefined || distanceVal <= 0) isComplete = false;
-        }
-        if (exercise.metrics.rpe) {
-            hasAnyMetric = true;
-            const rpeVal = set.playerRpes?.[targetUserId] ?? (isHost ? set.rpe : (isFirstGuest ? (set.p2_rpe || 0) : 0));
-            if (rpeVal === undefined || rpeVal <= 0) isComplete = false;
-        }
+            if (exercise.metrics.weight) {
+                hasAnyMetric = true;
+                const weightVal = set.playerWeights?.[targetUserId] ?? (isHost ? set.weight : (isFirstGuest ? (set.p2_weight || 0) : 0));
+                if (weightVal === undefined || weightVal <= 0) isComplete = false;
+            }
+            if (exercise.metrics.reps) {
+                hasAnyMetric = true;
+                const repsVal = set.playerReps?.[targetUserId] ?? (isHost ? set.reps : (isFirstGuest ? (set.p2_reps || 0) : 0));
+                if (repsVal === undefined || repsVal <= 0) isComplete = false;
+            }
+            if (exercise.metrics.time) {
+                hasAnyMetric = true;
+                const timeVal = set.playerTimes?.[targetUserId] ?? (isHost ? set.time : (isFirstGuest ? (set.p2_time || 0) : 0));
+                if (timeVal === undefined || timeVal <= 0) isComplete = false;
+            }
+            if (exercise.metrics.distance) {
+                hasAnyMetric = true;
+                const distanceVal = set.playerDistances?.[targetUserId] ?? (isHost ? set.distance : (isFirstGuest ? (set.p2_distance || 0) : 0));
+                if (distanceVal === undefined || distanceVal <= 0) isComplete = false;
+            }
+            if (exercise.metrics.rpe) {
+                hasAnyMetric = true;
+                const rpeVal = set.playerRpes?.[targetUserId] ?? (isHost ? set.rpe : (isFirstGuest ? (set.p2_rpe || 0) : 0));
+                if (rpeVal === undefined || rpeVal <= 0) isComplete = false;
+            }
 
-        if (isComplete && hasAnyMetric) {
-            togglePlayerSetComplete(exerciseIndex, setIndex, targetUserId);
-        }
+            if (isComplete && hasAnyMetric) {
+                togglePlayerSetComplete(exerciseIndex, setIndex, targetUserId);
+            }
+        }, 150);
     };
 
     const addSet = (exerciseIndex: number) => {
@@ -2239,6 +2241,29 @@ export const WorkoutSession = () => {
                 previousSet.p2_restStatus = 'completed';
                 previousSet.p2_restLastStartTime = undefined;
             }
+
+            if (previousSet.playerRestStatus) {
+                Object.keys(previousSet.playerRestStatus).forEach(pid => {
+                    if (previousSet.playerCompleted?.[pid] && previousSet.playerRestStatus?.[pid] === 'running') {
+                        const now = Date.now();
+                        const accumulated = previousSet.playerRestAccumulated?.[pid] || 0;
+                        const lastStartTime = previousSet.playerRestLastStartTime?.[pid] || now;
+                        
+                        previousSet.playerRestAccumulated = {
+                            ...previousSet.playerRestAccumulated,
+                            [pid]: accumulated + (now - lastStartTime)
+                        };
+                        previousSet.playerRestStatus = {
+                            ...previousSet.playerRestStatus,
+                            [pid]: 'completed'
+                        };
+                        previousSet.playerRestLastStartTime = {
+                            ...previousSet.playerRestLastStartTime,
+                            [pid]: undefined
+                        };
+                    }
+                });
+            }
         }
 
         // Initialize custom metrics based on what's active in the settings
@@ -2252,6 +2277,12 @@ export const WorkoutSession = () => {
             }
         });
 
+        const prevPWeights = previousSet?.playerWeights || {};
+        const prevPReps = previousSet?.playerReps || {};
+        const prevPTimes = previousSet?.playerTimes || {};
+        const prevPDistances = previousSet?.playerDistances || {};
+        const prevPRpes = previousSet?.playerRpes || {};
+
         updated[exerciseIndex].sets.push({
             id: Math.random().toString(),
             weight: previousSet ? previousSet.weight : 0,
@@ -2260,7 +2291,18 @@ export const WorkoutSession = () => {
             distance: previousSet?.distance || 0,
             rpe: previousSet?.rpe || 0,
             custom: customMetrics,
-            completed: false
+            completed: false,
+            playerWeights: { ...prevPWeights },
+            playerReps: { ...prevPReps },
+            playerTimes: { ...prevPTimes },
+            playerDistances: { ...prevPDistances },
+            playerRpes: { ...prevPRpes },
+            playerCompleted: {},
+            playerLocked: {},
+            playerCompletedAt: {},
+            playerRestStatus: {},
+            playerRestAccumulated: {},
+            playerRestLastStartTime: {}
         });
         setActiveExercises(updated);
     };
