@@ -433,6 +433,38 @@ export const WorkoutSession = () => {
                     }
                 }
             })
+            .on('broadcast', { event: 'request_hydration' }, (payload) => {
+                const { sender } = payload.payload;
+                if (sender === user.id) return; // Ignore echoes
+
+                if (activeExercisesRef.current && activeExercisesRef.current.length > 0) {
+                    console.log('🔄 Host/Partner received hydration request. Broadcasting active exercises...', activeExercisesRef.current);
+                    channelRef.current?.send({
+                        type: 'broadcast',
+                        event: 'sync_state',
+                        payload: { 
+                            exercises: activeExercisesRef.current, 
+                            sender: user.id 
+                        }
+                    }).catch(e => console.error('Error broadcasting hydration state:', e));
+                }
+                
+                // Also broadcast the session ID and startTime to sync the timer!
+                const currentSessionId = sessionIdRef.current;
+                const currentStartTime = startTimeRef.current;
+                if (currentSessionId) {
+                    console.log('🔄 Broadcasting session ID and start time for hydration...', currentSessionId);
+                    channelRef.current?.send({
+                        type: 'broadcast',
+                        event: 'sync_session_id',
+                        payload: { 
+                            sessionId: currentSessionId, 
+                            startTime: currentStartTime?.toISOString(), 
+                            sender: user.id 
+                        }
+                    }).catch(e => console.error('Error broadcasting session sync for hydration:', e));
+                }
+            })
             .on('broadcast', { event: 'sync_session_id' }, (payload) => {
                 const { sessionId: partnerSessionId, startTime: partnerStartTime, sender } = payload.payload;
                 if (sender === user.id) return; // Ignore echoes
