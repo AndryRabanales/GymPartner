@@ -2858,7 +2858,11 @@ export const WorkoutSession = () => {
                                                                                             onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
                                                                                             className="w-full bg-neutral-800 text-center font-black text-base rounded-lg py-2 text-white focus:ring-2 focus:ring-gym-primary outline-none"
                                                                                         />
-                                                                                                                                                    {/* Actions Column (Palomita/Lock/Time) - Kept tightly aligned */}
+                                                                                    </div>
+                                                                                );
+                                                                            })}
+
+                                                                            {/* Actions Column (Palomita/Lock/Time) - Kept tightly aligned */}
                                                                             <div className="flex-1 flex items-center justify-end gap-1.5 min-w-[60px] pl-1">
                                                                                 <button
                                                                                     onClick={() => togglePlayerSetComplete(mapIndex, setIndex, p.id)}
@@ -2914,7 +2918,9 @@ export const WorkoutSession = () => {
                                                                         </div>
                                                                     )
                                                                 })}
-                                                                                                                const activeParticipants = (isMultiplayer && multiplayerMode === 'conjunto') ? participants : [{ id: user?.id || 'single-user', username: 'Yo' }];
+                                                            </div>
+                                                            {(() => {
+                                                                const activeParticipants = (isMultiplayer && multiplayerMode === 'conjunto') ? participants : [{ id: user?.id || 'single-user', username: 'Yo' }];
                                                             const timersCount = activeParticipants.filter(p => {
                                                                 const isHost = p.id === (isInviter ? user?.id : partnerId);
                                                                 const isFirstGuest = p.id === (isInviter ? partnerId : user?.id);
@@ -3013,7 +3019,7 @@ export const WorkoutSession = () => {
                                                                 </div>
                                                             );
                                                         })()}
-                                                    </Fragment>
+                                                     </div></Fragment>
                                                  );
                                             })}
 
