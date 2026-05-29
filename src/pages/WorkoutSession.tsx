@@ -304,69 +304,73 @@ export const WorkoutSession = () => {
                     .map((p: any) => ({
                         id: p.user_id,
                         username: p.username,
-                        avatarUrl: p.avatar_url
+                        avatarUrl: p.avatar_url,
+                        isOnline: true
                     }));
                 
-                // Deduplicate list by id
-                const uniqueList: any[] = [];
-                const seen = new Set<string>();
-                list.forEach((p: any) => {
-                    if (p.id && !seen.has(p.id)) {
-                        seen.add(p.id);
-                        uniqueList.push(p);
-                    }
-                });
-
-                // Ensure current user is always included in the list
-                if (!seen.has(user.id)) {
-                    seen.add(user.id);
-                    uniqueList.push({
-                        id: user.id,
-                        username: user.user_metadata?.username || user.user_metadata?.full_name || 'Yo',
-                        avatarUrl: user.user_metadata?.avatar_url || ''
+                setParticipants(prev => {
+                    const uniqueList: any[] = [...prev.map(p => ({ ...p, isOnline: false }))]; 
+                    
+                    // Update with online users or push new ones
+                    list.forEach((p: any) => {
+                        if (p.id) {
+                            const existingIdx = uniqueList.findIndex(x => x.id === p.id);
+                            if (existingIdx >= 0) {
+                                uniqueList[existingIdx] = p; // update with fresh presence
+                            } else {
+                                uniqueList.push(p);
+                            }
+                        }
                     });
-                }
 
-                // Ensure partner is also always included if we have a partnerId
-                if (partnerId && !seen.has(partnerId)) {
-                    seen.add(partnerId);
-                    uniqueList.push({
-                        id: partnerId,
-                        username: partnerName || 'Compañero',
-                        avatarUrl: partnerAvatar || ''
-                    });
-                }
-
-                // Stable ordering: Host first, first guest second, others after
-                const hostId = isInviter ? user.id : partnerId;
-                const firstGuestId = isInviter ? partnerId : user.id;
-
-                const orderedList: any[] = [];
-                const addedIds = new Set<string>();
-
-                // 1. Add host
-                const hostItem = uniqueList.find(p => p.id === hostId);
-                if (hostItem) {
-                    orderedList.push(hostItem);
-                    addedIds.add(hostId);
-                }
-
-                // 2. Add first guest
-                const guestItem = uniqueList.find(p => p.id === firstGuestId);
-                if (guestItem) {
-                    orderedList.push(guestItem);
-                    addedIds.add(firstGuestId);
-                }
-
-                // 3. Add others
-                uniqueList.forEach(p => {
-                    if (p.id && !addedIds.has(p.id)) {
-                        orderedList.push(p);
-                        addedIds.add(p.id);
+                    // Ensure current user
+                    if (!uniqueList.some(p => p.id === user.id)) {
+                        uniqueList.push({
+                            id: user.id,
+                            username: user.user_metadata?.username || user.user_metadata?.full_name || 'Yo',
+                            avatarUrl: user.user_metadata?.avatar_url || '',
+                            isOnline: true
+                        });
                     }
-                });
 
-                setParticipants(orderedList.slice(0, 8)); // Limit to maximum 8 players!
+                    // Ensure partner fallback
+                    if (partnerId && !uniqueList.some(p => p.id === partnerId)) {
+                        uniqueList.push({
+                            id: partnerId,
+                            username: partnerName !== 'Compañero' ? partnerName : 'Compañero',
+                            avatarUrl: partnerAvatar || '',
+                            isOnline: false
+                        });
+                    }
+
+                    // Stable ordering: Host first, first guest second, others after
+                    const hostId = isInviter ? user.id : partnerId;
+                    const firstGuestId = isInviter ? partnerId : user.id;
+
+                    const orderedList: any[] = [];
+                    const addedIds = new Set<string>();
+
+                    const hostItem = uniqueList.find(p => p.id === hostId);
+                    if (hostItem) {
+                        orderedList.push(hostItem);
+                        addedIds.add(hostId);
+                    }
+
+                    const guestItem = uniqueList.find(p => p.id === firstGuestId);
+                    if (guestItem) {
+                        orderedList.push(guestItem);
+                        addedIds.add(firstGuestId);
+                    }
+
+                    uniqueList.forEach(p => {
+                        if (p.id && !addedIds.has(p.id)) {
+                            orderedList.push(p);
+                            addedIds.add(p.id);
+                        }
+                    });
+
+                    return orderedList.slice(0, 8); // Limit to maximum 8 players!
+                });
             })
             .on('presence', { event: 'join' }, ({ newPresences }) => {
                 if (newPresences && newPresences.length > 0 && activeExercisesRef.current.length > 0) {
