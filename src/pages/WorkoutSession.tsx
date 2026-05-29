@@ -522,7 +522,7 @@ export const WorkoutSession = () => {
                                 if (error) console.error('Error linking partner session:', error);
                                 else console.log('✅ Linked partner session successfully!');
                              });
-                    } else if (!isInviterRef.current) {
+                    } else if (!isInviterRef.current && !sessionIdRef.current) {
                         // Guest auto-starts their own session to activate their timer and enable logging
                         console.log('🚀 Guest auto-starting session on partner session ID sync...');
                         startNewSession().then(() => {
