@@ -80,7 +80,14 @@ const RestTimerDisplay = ({ status, accumulated, lastStartTime, isGold }: { stat
         setElapsed(getInitial());
 
         if (status === 'running') {
-            const interval = setInterval(() => setElapsed(prev => prev + 1), 1000);
+            const interval = setInterval(() => {
+                if (lastStartTime) {
+                    const diff = Date.now() - Number(lastStartTime);
+                    setElapsed(Math.max(0, Math.floor((accumulated + diff) / 1000)));
+                } else {
+                    setElapsed(prev => prev + 1);
+                }
+            }, 200);
             return () => clearInterval(interval);
         }
     }, [status, accumulated, lastStartTime]);
@@ -653,7 +660,7 @@ export const WorkoutSession = () => {
         };
 
         tick(); // Immediate update
-        const interval = setInterval(tick, 1000);
+        const interval = setInterval(tick, 200); // High-frequency tick (200ms) to ensure perfect cross-device synchronization
         return () => clearInterval(interval);
     }, [startTime, isFinished]);
 
