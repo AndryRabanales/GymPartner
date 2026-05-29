@@ -218,7 +218,7 @@ const CoopJoinRequestToast = ({
                         // Update our own active session to multiplayer in the DB!
                         const { data: activeSession } = await supabase
                             .from('workout_sessions')
-                            .select('id')
+                            .select('id, partner_session_id')
                             .eq('user_id', user.id)
                             .is('finished_at', null)
                             .maybeSingle();
@@ -234,6 +234,8 @@ const CoopJoinRequestToast = ({
                                 .eq('id', activeSession.id);
                         }
 
+                        const roomSessionId = activeSession ? (activeSession.partner_session_id || activeSession.id) : newNotification.data?.session_id;
+
                         // Send acceptance notification to B
                         await supabase.from('notifications').insert({
                             user_id: senderId,
@@ -243,8 +245,8 @@ const CoopJoinRequestToast = ({
                             data: {
                                 partner_id: user.id,
                                 mode: 'conjunto',
-                                chat_id: newNotification.data?.chat_id,
-                                session_id: activeSession?.id
+                                chat_id: roomSessionId,
+                                session_id: roomSessionId
                             }
                         });
 
@@ -254,7 +256,8 @@ const CoopJoinRequestToast = ({
                                 isMultiplayer: true, 
                                 multiplayerMode: 'conjunto', 
                                 partnerId: senderId,
-                                chatId: newNotification.data?.chat_id,
+                                chatId: roomSessionId,
+                                partnerSessionId: roomSessionId,
                                 isInviter: true
                             } 
                         });
@@ -406,6 +409,7 @@ export const AppLayout = () => {
                             multiplayerMode: 'conjunto', 
                             partnerId: newNotification.data?.partner_id,
                             chatId: newNotification.data?.chat_id,
+                            partnerSessionId: newNotification.data?.session_id,
                             isInviter: false
                         } 
                     });

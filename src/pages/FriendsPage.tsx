@@ -43,7 +43,7 @@ export const FriendsPage = () => {
             if (friendIds.length > 0) {
                 const { data: activeSessions } = await supabase
                     .from('workout_sessions')
-                    .select('id, user_id, started_at, is_multiplayer, multiplayer_mode')
+                    .select('id, user_id, started_at, is_multiplayer, multiplayer_mode, partner_session_id')
                     .in('user_id', friendIds)
                     .is('finished_at', null);
                 
@@ -126,6 +126,8 @@ export const FriendsPage = () => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user || !friend.other_user || !friend.activeSession) return;
 
+        const roomSessionId = friend.activeSession.partner_session_id || friend.activeSession.id;
+
         // Obtain user name for notification
         const { data: profile } = await supabase
             .from('profiles')
@@ -144,7 +146,7 @@ export const FriendsPage = () => {
                 sender_id: user.id,
                 sender_name: displayName,
                 chat_id: friend.id,
-                session_id: friend.activeSession.id
+                session_id: roomSessionId
             }
         });
 

@@ -146,16 +146,17 @@ export const WorkoutSession = () => {
     const [multiplayerMode, setMultiplayerMode] = useState<'conjunto' | 'separado' | null>(navState.multiplayerMode ?? cachedCoop.multiplayerMode ?? null);
     const [partnerId, setPartnerId] = useState<string | null>(navState.partnerId ?? cachedCoop.partnerId ?? null);
     const [chatId, setChatId] = useState<string | null>(navState.chatId ?? cachedCoop.chatId ?? null);
+    const [partnerSessionId, setPartnerSessionId] = useState<string | null>(navState.partnerSessionId ?? cachedCoop.partnerSessionId ?? null);
     const [isInviter, setIsInviter] = useState<boolean>(navState.isInviter ?? cachedCoop.isInviter ?? true);
     
     useEffect(() => {
         if (isMultiplayer) {
             isInviterRef.current = isInviter; // keep ref in sync
-            localStorage.setItem('ginx_coop_state', JSON.stringify({ isMultiplayer, multiplayerMode, partnerId, chatId, isInviter }));
+            localStorage.setItem('ginx_coop_state', JSON.stringify({ isMultiplayer, multiplayerMode, partnerId, chatId, partnerSessionId, isInviter }));
         } else {
             localStorage.removeItem('ginx_coop_state');
         }
-    }, [isMultiplayer, multiplayerMode, partnerId, chatId, isInviter]);
+    }, [isMultiplayer, multiplayerMode, partnerId, chatId, partnerSessionId, isInviter]);
 
     // State
     const [loading, setLoading] = useState(true);
@@ -204,16 +205,20 @@ export const WorkoutSession = () => {
     const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
     const isInviterRef = useRef<boolean>(true); // tracks isInviter without stale closure
     const lastIncomingState = useRef<string>('');
-    const partnerSessionIdRef = useRef<string | null>(null);
+    const partnerSessionIdRef = useRef<string | null>(partnerSessionId);
+    useEffect(() => {
+        partnerSessionIdRef.current = partnerSessionId;
+    }, [partnerSessionId]);
     const sessionIdRef = useRef<string | null>(null);
     useEffect(() => {
         sessionIdRef.current = sessionId;
     }, [sessionId]);
+    const syncRoomId = isInviter ? sessionId : (partnerSessionId || chatId);
     const [partnerName, setPartnerName] = useState<string>('Compañero');
     const [partnerAvatar, setPartnerAvatar] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!isMultiplayer || !partnerId || !chatId || !user) return;
+        if (!isMultiplayer || !partnerId || !syncRoomId || !user) return;
 
         // Fetch partner info
         const fetchPartner = async () => {
@@ -223,7 +228,7 @@ export const WorkoutSession = () => {
         };
         fetchPartner();
 
-        const chId = `coop-workout-${chatId}`;
+        const chId = `coop-workout-${syncRoomId}`;
         const channel = supabase.channel(chId, {
             config: {
                 presence: {
@@ -435,6 +440,7 @@ export const WorkoutSession = () => {
                 if (partnerSessionId) {
                     console.log('🔗 Received partner session ID via broadcast:', partnerSessionId);
                     partnerSessionIdRef.current = partnerSessionId;
+                    setPartnerSessionId(partnerSessionId);
                     
                     const currentSessionId = sessionIdRef.current;
                     if (currentSessionId) {
@@ -500,7 +506,7 @@ export const WorkoutSession = () => {
             supabase.removeChannel(channel);
             channelRef.current = null;
         };
-    }, [isMultiplayer, partnerId, chatId, user, multiplayerMode]);
+    }, [isMultiplayer, partnerId, syncRoomId, user, multiplayerMode]);
 
     // Send local updates (Debounced to prevent network spam and echo loops while typing)
     useEffect(() => {
@@ -1113,6 +1119,7 @@ export const WorkoutSession = () => {
                     if (partnerActive) {
                         console.log("🔗 Found active partner session on init:", partnerActive.id);
                         partnerSessionIdRef.current = partnerActive.id;
+                        setPartnerSessionId(partnerActive.id);
                         
                         if (isMultiplayer && multiplayerMode === 'conjunto' && !isInviter) {
                             console.log('🚀 Guest auto-starting session because partner has active session...');
