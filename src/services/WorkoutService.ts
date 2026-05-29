@@ -344,7 +344,7 @@ class WorkoutService {
             .from('workout_sessions')
             .select('*')
             .eq('user_id', userId)
-            .is('end_time', null)
+            .is('finished_at', null)
             .gt('started_at', twelveHoursAgo) // Only sessions from the last 12 hours
             .order('started_at', { ascending: false })
             .limit(1)

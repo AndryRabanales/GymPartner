@@ -1168,7 +1168,9 @@ export const WorkoutSession = () => {
 
             // 3. Restore or Start Logic
             const active = activeResult.data;
-            if (active) {
+            const shouldRestore = active && !(isMultiplayer && !isInviter);
+
+            if (shouldRestore) {
                 setSessionId(active.id);
                 setStartTime(new Date(active.started_at));
 
@@ -1258,6 +1260,12 @@ export const WorkoutSession = () => {
                     }
                 }
             } else {
+                // If there was a stale active session but we are joining a multiplayer session, finish it first
+                if (active) {
+                    console.log("🧹 Finishing stale active session before joining multiplayer:", active.id);
+                    await workoutService.finishSession(active.id, "Stale session auto-closed to join multiplayer");
+                }
+
                 // Starting a fresh session: reset any stale cached multiplayer flags in local state/storage 
                 // UNLESS we are explicitly coming from a navigation invite/join action (which passes navState)
                 const navState = location.state as any || {};
