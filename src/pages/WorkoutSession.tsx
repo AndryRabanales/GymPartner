@@ -17,7 +17,7 @@ import { normalizeText, getMuscleGroup } from '../utils/inventoryUtils';
 
 // Interface NumpadTarget removed
 // BattleTimer removed
-import { Loader2, ArrowLeft, Image as ImageIcon, MapPin, Search, Plus, Save, Activity, Layers, Tag, Battery, MapIcon, Check, Settings as SettingsIcon, Swords, Trash2, X, RotateCcw, Lock, Play, Loader, MoreVertical, Pause, LockOpen } from 'lucide-react';
+import { Loader2, ArrowLeft, Image as ImageIcon, MapPin, Search, Plus, Save, Activity, Layers, Tag, Battery, MapIcon, Check, Settings as SettingsIcon, Swords, Trash2, X, RotateCcw, Lock, Play, Loader, MoreVertical, Pause, LockOpen, LogOut } from 'lucide-react';
 import { getCurrentPosition } from '../utils/geolocationUtils';
 import type { GymPlace, Database } from '../types/database';
 import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
@@ -151,7 +151,9 @@ export const WorkoutSession = () => {
     useEffect(() => {
         if (isMultiplayer) {
             isInviterRef.current = isInviter; // keep ref in sync
-        localStorage.setItem('ginx_coop_state', JSON.stringify({ isMultiplayer, multiplayerMode, partnerId, chatId, isInviter }));
+            localStorage.setItem('ginx_coop_state', JSON.stringify({ isMultiplayer, multiplayerMode, partnerId, chatId, isInviter }));
+        } else {
+            localStorage.removeItem('ginx_coop_state');
         }
     }, [isMultiplayer, multiplayerMode, partnerId, chatId, isInviter]);
 
@@ -166,6 +168,7 @@ export const WorkoutSession = () => {
     const [showAddModal, setShowAddModal] = useState(false);
     const [resolvedGymId, setResolvedGymId] = useState<string | null>(null);
     const [showExitMenu, setShowExitMenu] = useState(false);
+    const [showCoopExitModal, setShowCoopExitModal] = useState(false);
     const [showSummary, setShowSummary] = useState(false);
     // NEW: Track Routine Name for AI Diagnosis
     const [currentRoutineName, setCurrentRoutineName] = useState<string | undefined>(undefined);
@@ -1018,6 +1021,19 @@ export const WorkoutSession = () => {
                     }
                 }
             } else {
+                // Starting a fresh session: reset any stale cached multiplayer flags in local state/storage 
+                // UNLESS we are explicitly coming from a navigation invite/join action (which passes navState)
+                const navState = location.state as any || {};
+                if (!navState.isMultiplayer) {
+                    setIsMultiplayer(false);
+                    setMultiplayerMode(null);
+                    setPartnerId(null);
+                    setChatId(null);
+                    setIsInviter(true);
+                    isInviterRef.current = true;
+                    localStorage.removeItem('ginx_coop_state');
+                }
+
                 const routineIdParam = searchParams.get('routineId');
                 const autoRoutine = routineIdParam ? localRoutines.find(r => r.id === routineIdParam) : null;
 
@@ -2064,21 +2080,13 @@ export const WorkoutSession = () => {
             return;
         }
         if (isMultiplayer && multiplayerMode === 'conjunto') {
-            // CO-OP EXIT: player can leave and come back anytime.
-            // We keep the session in DB AND keep the local draft so they can resume.
-            const leave = window.confirm(
-                "¿Salir del entrenamiento CO-OP?\n\nPodrás VOLVER en cualquier momento y retomar donde lo dejaste. Tu compañero continuará entrenando."
-            );
-            if (leave) {
-                // DO NOT remove draft — preserve it so "Volver" prompt appears on re-enter
-                // DO NOT delete session — partner continues
-                navigate(-1);
-            }
+            setShowCoopExitModal(true);
         } else {
             // SOLO cancel: confirm then wipe everything
             if (window.confirm("¿Seguro que quieres cancelar? Se perderá todo el progreso de esta sesión.")) {
                 localStorage.removeItem(`workout_draft_${sessionId}`);
                 localStorage.removeItem(STORAGE_KEY);
+                localStorage.removeItem('ginx_coop_state');
                 setActiveExercises([]);
                 setLoading(true);
                 await workoutService.deleteSession(sessionId);
@@ -2381,6 +2389,7 @@ export const WorkoutSession = () => {
                 console.log('✅ Sesión terminada exitosamente');
                 localStorage.removeItem(`workout_draft_${sessionId}`);
                 localStorage.removeItem(STORAGE_KEY); // Also clear global key
+                localStorage.removeItem('ginx_coop_state'); // Clear multiplayer state!
                 // Removed blocking alert. 
                 // We'll rely on the UI showing "Guardando..." or similar via loading state, 
                 // or we could add a specific "Finished" state to show a success message briefly.
@@ -3494,6 +3503,59 @@ export const WorkoutSession = () => {
                             <p className="text-neutral-400 font-medium text-sm animate-pulse">
                                 Persistiendo tus récords y notificando a tus aliados...
                             </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* COOP EXIT OPTIONS MODAL */}
+            {showCoopExitModal && (
+                <div className="fixed inset-0 z-[250] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-4 animate-in fade-in zoom-in duration-300">
+                    <div className="bg-neutral-900 border border-white/10 p-6 md:p-8 rounded-[2rem] w-full max-w-sm text-center shadow-2xl relative overflow-hidden flex flex-col gap-6">
+                        <div className="absolute -top-20 -right-20 w-64 h-64 bg-red-500/5 rounded-full blur-3xl pointer-events-none"></div>
+                        
+                        <div>
+                            <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-500/20">
+                                <LogOut className="text-red-500 w-8 h-8" />
+                            </div>
+                            <h2 className="text-2xl font-black text-white italic uppercase tracking-tighter mb-2">Salir del Entrenamiento</h2>
+                            <p className="text-neutral-400 text-sm">Elige cómo deseas proceder con tu sesión multijugador.</p>
+                        </div>
+                        
+                        <div className="flex flex-col gap-3">
+                            <button
+                                onClick={() => {
+                                    setShowCoopExitModal(false);
+                                    setShowExitMenu(false);
+                                    // Exit temporarily: keep everything
+                                    navigate('/');
+                                }}
+                                className="w-full bg-neutral-800 hover:bg-neutral-700 border border-white/5 rounded-xl py-4 font-black uppercase text-xs tracking-wider text-white transition-all active:scale-95 flex items-center justify-center gap-2"
+                            >
+                                <Play size={14} className="fill-white" />
+                                Salir Temporalmente (Pausar)
+                            </button>
+                            
+                            <button
+                                onClick={async () => {
+                                    setShowCoopExitModal(false);
+                                    setShowExitMenu(false);
+                                    // Finalize permanently: save and exit
+                                    await handleFinalizeSession();
+                                    navigate('/');
+                                }}
+                                className="w-full bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white font-black uppercase text-xs tracking-wider py-4 rounded-xl shadow-[0_4px_15px_rgba(239,68,68,0.2)] transition-all active:scale-95 flex items-center justify-center gap-2"
+                            >
+                                <Check size={14} strokeWidth={3} />
+                                Finalizar / Abandonar (Guardar)
+                            </button>
+                            
+                            <button
+                                onClick={() => setShowCoopExitModal(false)}
+                                className="w-full bg-transparent border border-neutral-800 text-neutral-500 font-bold uppercase text-xs py-3 rounded-xl hover:text-white transition-colors"
+                            >
+                                Volver al Entrenamiento
+                            </button>
                         </div>
                     </div>
                 </div>

@@ -134,6 +134,140 @@ const CoopInviteToast = ({
     );
 };
 
+const CoopJoinRequestToast = ({
+    newNotification,
+    t,
+    user,
+    navigate,
+    notificationService
+}: {
+    newNotification: any;
+    t: any;
+    user: any;
+    navigate: any;
+    notificationService: any;
+}) => {
+    const [sender, setSender] = useState<{ username: string; avatar_url: string | null } | null>(null);
+
+    useEffect(() => {
+        let active = true;
+        const fetchSender = async () => {
+            const senderId = newNotification.data?.sender_id;
+            if (!senderId) return;
+            const { data } = await supabase
+                .from('profiles')
+                .select('username, avatar_url')
+                .eq('id', senderId)
+                .single();
+            if (active && data) {
+                setSender(data);
+            }
+        };
+        fetchSender();
+        return () => {
+            active = false;
+        };
+    }, [newNotification.data?.sender_id]);
+
+    const senderName = sender?.username || newNotification.data?.sender_name || 'Tu compañero';
+    const senderAvatar = sender?.avatar_url;
+
+    return (
+        <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-sm w-full bg-neutral-950/95 backdrop-blur-2xl border border-yellow-500/40 shadow-[0_20px_50px_rgba(250,204,21,0.2)] rounded-3xl pointer-events-auto flex flex-col p-4`}>
+            <div className="flex items-center">
+                <div className="shrink-0">
+                    {senderAvatar ? (
+                        <img
+                            src={senderAvatar}
+                            alt={senderName}
+                            className="w-10 h-10 rounded-full border border-yellow-500/30 object-cover shadow-lg shadow-yellow-500/10"
+                        />
+                    ) : (
+                        <div className="w-10 h-10 rounded-full bg-yellow-500/20 border border-yellow-500/30 flex items-center justify-center text-yellow-500 font-black text-sm uppercase">
+                            {senderName.charAt(0)}
+                        </div>
+                    )}
+                </div>
+                <div className="ml-3 flex-1">
+                    <p className="text-sm font-black text-white uppercase tracking-wider italic">
+                        🔥 SOLICITUD DE UNIÓN
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-neutral-300 font-bold uppercase leading-normal">
+                        <span className="text-yellow-500">@{senderName}</span> quiere unirse a tu entrenamiento actual.
+                    </p>
+                </div>
+            </div>
+            <div className="mt-4 flex gap-2 w-full">
+                <button
+                    onClick={async () => {
+                        toast.dismiss(t.id);
+                        await notificationService.updateInvitationStatus(newNotification, 'rejected');
+                    }}
+                    className="flex-1 py-2 rounded-xl bg-neutral-900 border border-white/5 text-neutral-400 font-bold text-[10px] uppercase tracking-wider hover:bg-red-500/10 hover:text-red-500 transition-all active:scale-95"
+                >
+                    IGNORAR
+                </button>
+                <button
+                    onClick={async () => {
+                        toast.dismiss(t.id);
+                        const senderId = newNotification.data?.sender_id;
+                        if (!senderId) return;
+
+                        await notificationService.updateInvitationStatus(newNotification, 'accepted');
+
+                        // Update our own active session to multiplayer in the DB!
+                        const { data: activeSession } = await supabase
+                            .from('workout_sessions')
+                            .select('id')
+                            .eq('user_id', user.id)
+                            .is('finished_at', null)
+                            .maybeSingle();
+
+                        if (activeSession) {
+                            await supabase
+                                .from('workout_sessions')
+                                .update({
+                                    is_multiplayer: true,
+                                    multiplayer_mode: 'conjunto',
+                                    partner_id: senderId
+                                })
+                                .eq('id', activeSession.id);
+                        }
+
+                        // Send acceptance notification to B
+                        await supabase.from('notifications').insert({
+                            user_id: senderId,
+                            type: 'coop_join_accepted',
+                            title: 'SOLICITUD ACEPTADA',
+                            message: `¡${user.user_metadata.username || 'Tu compañero'} ha aceptado tu solicitud de unión! Entrando al gimnasio...`,
+                            data: {
+                                partner_id: user.id,
+                                mode: 'conjunto',
+                                chat_id: newNotification.data?.chat_id,
+                                session_id: activeSession?.id
+                            }
+                        });
+
+                        // Redirect to the workout session
+                        navigate('/workout', { 
+                            state: { 
+                                isMultiplayer: true, 
+                                multiplayerMode: 'conjunto', 
+                                partnerId: senderId,
+                                chatId: newNotification.data?.chat_id,
+                                isInviter: true
+                            } 
+                        });
+                    }}
+                    className="flex-1 py-2 rounded-xl bg-gradient-to-br from-gym-primary to-yellow-500 text-neutral-950 font-black text-[10px] uppercase tracking-wider hover:shadow-[0_0_15px_rgba(255,215,0,0.35)] transition-all active:scale-95"
+                >
+                    ACEPTAR
+                </button>
+            </div>
+        </div>
+    );
+};
+
 export const AppLayout = () => {
     useAutoCheckin();
     const { user, signOut } = useAuth();
@@ -252,6 +386,27 @@ export const AppLayout = () => {
                             partnerId: newNotification.data?.partner_id,
                             chatId: newNotification.data?.chat_id,
                             isInviter: true
+                        } 
+                    });
+                } else if (newNotification.type === 'coop_join_request') {
+                    toast.custom((t) => (
+                        <CoopJoinRequestToast
+                            newNotification={newNotification}
+                            t={t}
+                            user={user}
+                            navigate={navigate}
+                            notificationService={notificationService}
+                        />
+                    ), { duration: 15000 });
+                } else if (newNotification.type === 'coop_join_accepted') {
+                    toast.success(newNotification.message || "Solicitud aceptada. Entrando al gimnasio...");
+                    navigate('/workout', { 
+                        state: { 
+                            isMultiplayer: true, 
+                            multiplayerMode: 'conjunto', 
+                            partnerId: newNotification.data?.partner_id,
+                            chatId: newNotification.data?.chat_id,
+                            isInviter: false
                         } 
                     });
                 }

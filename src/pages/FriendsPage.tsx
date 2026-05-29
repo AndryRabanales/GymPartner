@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, Swords, Dumbbell } from 'lucide-react';
+import { Users, Swords, Dumbbell, Zap } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { chatService, type ChatPreview } from '../services/ChatService';
 import { FadeInImage } from '../components/ui/FadeInImage';
@@ -7,26 +7,77 @@ import { BottomNav } from '../components/navigation/BottomNav';
 import { notificationService } from '../services/NotificationService';
 
 export const FriendsPage = () => {
-    const [friends, setFriends] = useState<ChatPreview[]>([]);
+    const [friends, setFriends] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         loadFriends();
+
+        // Subscribe to real-time changes to workout_sessions table
+        const channel = supabase
+            .channel('realtime:workout_sessions_status')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'workout_sessions' },
+                () => {
+                    console.log('🔄 Workout status changed, reloading matches...');
+                    loadFriends();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, []);
 
     const loadFriends = async () => {
         setLoading(true);
         try {
             const data = await chatService.getMyChats();
-            // We consider "friends/matches" as users you have an active chat with
-            setFriends(data);
+            
+            // Check active workouts for all friends
+            const friendIds = data.map(f => f.other_user?.id).filter(Boolean) as string[];
+            let activeSessionsMap = new Map<string, any>();
+            
+            if (friendIds.length > 0) {
+                const { data: activeSessions } = await supabase
+                    .from('workout_sessions')
+                    .select('id, user_id, started_at, is_multiplayer, multiplayer_mode')
+                    .in('user_id', friendIds)
+                    .is('finished_at', null);
+                
+                if (activeSessions) {
+                    activeSessionsMap = new Map(activeSessions.map(s => [s.user_id, s]));
+                }
+            }
+
+            // Map and sort friends: active workouts at the top
+            const enrichedFriends = data.map(f => {
+                const activeSession = f.other_user ? activeSessionsMap.get(f.other_user.id) : null;
+                return {
+                    ...f,
+                    activeSession
+                };
+            });
+
+            // Sort: Entrenando goes first
+            const sorted = enrichedFriends.sort((a, b) => {
+                const aActive = !!a.activeSession;
+                const bActive = !!b.activeSession;
+                if (aActive && !bActive) return -1;
+                if (!aActive && bActive) return 1;
+                return 0;
+            });
+
+            setFriends(sorted);
         } catch (e) {
             console.error("Error loading friends:", e);
         }
         setLoading(false);
     };
 
-    const handleInviteToWorkout = async (friend: ChatPreview, mode: 'conjunto' | 'separado') => {
+    const handleInviteToWorkout = async (friend: any, mode: 'conjunto' | 'separado') => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user || !friend.other_user) return;
 
@@ -71,6 +122,35 @@ export const FriendsPage = () => {
         alert(`Invitación de Entrenamiento ${modeLabel} enviada a ${friend.other_user.username}.`);
     };
 
+    const handleJoinWorkout = async (friend: any) => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user || !friend.other_user || !friend.activeSession) return;
+
+        // Obtain user name for notification
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('username')
+            .eq('id', user.id)
+            .single();
+            
+        const displayName = profile?.username || 'Un amigo';
+
+        // Send a coop_join_request notification to the training friend
+        await notificationService.createNotification(friend.other_user.id, {
+            type: 'coop_join_request',
+            title: `🔥 Solicitud de Unión`,
+            content: `¡${displayName} quiere unirse a tu entrenamiento!`,
+            data: {
+                sender_id: user.id,
+                sender_name: displayName,
+                chat_id: friend.id,
+                session_id: friend.activeSession.id
+            }
+        });
+
+        alert(`Solicitud para unirse al entrenamiento enviada a ${friend.other_user.username}.`);
+    };
+
     return (
         <div className="min-h-screen bg-black text-white pb-24">
             {/* HEADER */}
@@ -104,37 +184,70 @@ export const FriendsPage = () => {
                             const other = friend.other_user;
                             if (!other) return null;
                             
+                            const isTraining = !!friend.activeSession;
+                            const isCoop = friend.activeSession?.is_multiplayer && friend.activeSession?.multiplayer_mode === 'conjunto';
+                            const statusText = isTraining ? (isCoop ? "🔥 Entrenando en Conjunto" : "⚡ Entrenando") : "Activo";
+
                             return (
-                                <div key={friend.id} className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 flex items-center gap-4 relative overflow-hidden group">
+                                <div key={friend.id} className={`border rounded-2xl p-4 flex items-center gap-4 relative overflow-hidden group transition-all duration-300 ${
+                                    isTraining 
+                                        ? 'bg-neutral-900/80 border-yellow-500/30 shadow-[0_0_20px_rgba(250,204,21,0.1)]' 
+                                        : 'bg-neutral-900 border-neutral-800'
+                                }`}>
+                                    {/* Pulse Background for training */}
+                                    {isTraining && (
+                                        <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/5 to-transparent pointer-events-none" />
+                                    )}
+
                                     {/* Avatar */}
-                                    <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-neutral-700 flex-shrink-0 relative">
+                                    <div className={`w-14 h-14 rounded-full overflow-hidden border-2 flex-shrink-0 relative ${
+                                        isTraining ? 'border-yellow-500 shadow-[0_0_12px_rgba(250,204,21,0.25)]' : 'border-neutral-700'
+                                    }`}>
                                         <FadeInImage src={other.avatar_url || `https://ui-avatars.com/api/?name=${other.username}&background=2A2A2A&color=fff`} />
+                                        {isTraining && (
+                                            <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-neutral-900 rounded-full animate-ping" />
+                                        )}
                                     </div>
                                     
                                     {/* Info */}
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="font-black text-lg uppercase truncate tracking-tight leading-none mb-1">
+                                        <h3 className={`font-black text-lg uppercase truncate tracking-tight leading-none mb-1 group-hover:text-yellow-400 transition-colors ${
+                                            isTraining ? 'text-yellow-500 italic' : 'text-white'
+                                        }`}>
                                             {other.username}
                                         </h3>
-                                        <p className="text-[10px] text-neutral-400 font-bold tracking-widest uppercase">
-                                            Activo
+                                        <p className={`text-[10px] font-black tracking-widest uppercase ${
+                                            isTraining ? 'text-yellow-500 animate-pulse' : 'text-neutral-500'
+                                        }`}>
+                                            {statusText}
                                         </p>
                                     </div>
                                     
                                     {/* Action Buttons */}
-                                    <div className="flex flex-col gap-2 shrink-0">
-                                        <button 
-                                            onClick={() => handleInviteToWorkout(friend, 'conjunto')}
-                                            className="h-8 px-3 rounded-lg bg-gym-primary text-black font-black uppercase tracking-widest text-[9px] flex items-center justify-center gap-1.5 shadow-[0_0_10px_rgba(250,204,21,0.2)] active:scale-95"
-                                        >
-                                            <Users size={12} /> CONJUNTO
-                                        </button>
-                                        <button 
-                                            onClick={() => handleInviteToWorkout(friend, 'separado')}
-                                            className="h-8 px-3 rounded-lg bg-neutral-800 border border-white/10 text-white font-black uppercase tracking-widest text-[9px] flex items-center justify-center gap-1.5 hover:bg-white/5 active:scale-95"
-                                        >
-                                            <Swords size={12} /> SEPARADO
-                                        </button>
+                                    <div className="flex flex-col gap-2 shrink-0 relative z-10">
+                                        {isTraining ? (
+                                            <button 
+                                                onClick={() => handleJoinWorkout(friend)}
+                                                className="h-10 px-4 rounded-xl bg-gradient-to-r from-yellow-500 to-orange-500 text-black font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-1.5 shadow-[0_0_15px_rgba(250,204,21,0.4)] active:scale-95 transition-all hover:scale-105 border border-yellow-400"
+                                            >
+                                                <Zap size={13} fill="currentColor" /> UNIRSE
+                                            </button>
+                                        ) : (
+                                            <>
+                                                <button 
+                                                    onClick={() => handleInviteToWorkout(friend, 'conjunto')}
+                                                    className="h-8 px-3 rounded-lg bg-gym-primary text-black font-black uppercase tracking-widest text-[9px] flex items-center justify-center gap-1.5 shadow-[0_0_10px_rgba(250,204,21,0.2)] active:scale-95"
+                                                >
+                                                    <Users size={12} /> CONJUNTO
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleInviteToWorkout(friend, 'separado')}
+                                                    className="h-8 px-3 rounded-lg bg-neutral-800 border border-white/10 text-white font-black uppercase tracking-widest text-[9px] flex items-center justify-center gap-1.5 hover:bg-white/5 active:scale-95"
+                                                >
+                                                    <Swords size={12} /> SEPARADO
+                                                </button>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             );
