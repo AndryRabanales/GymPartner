@@ -269,20 +269,12 @@ export const FriendsPage = () => {
                                                 <Zap size={13} fill="currentColor" /> UNIRSE
                                             </button>
                                         ) : isOnline ? (
-                                            <>
-                                                <button 
-                                                    onClick={() => handleInviteToWorkout(friend, 'conjunto')}
-                                                    className="h-8 px-3 rounded-lg bg-gym-primary text-black font-black uppercase tracking-widest text-[9px] flex items-center justify-center gap-1.5 shadow-[0_0_10px_rgba(250,204,21,0.2)] active:scale-95"
-                                                >
-                                                    <Users size={12} /> CONJUNTO
-                                                </button>
-                                                <button 
-                                                    onClick={() => handleInviteToWorkout(friend, 'separado')}
-                                                    className="h-8 px-3 rounded-lg bg-neutral-800 border border-white/10 text-white font-black uppercase tracking-widest text-[9px] flex items-center justify-center gap-1.5 hover:bg-white/5 active:scale-95"
-                                                >
-                                                    <Swords size={12} /> SEPARADO
-                                                </button>
-                                            </>
+                                            <button 
+                                                onClick={() => handleInviteToWorkout(friend, 'conjunto')}
+                                                className="h-9 px-4 rounded-xl bg-gym-primary text-black font-black uppercase tracking-widest text-[9px] flex items-center justify-center gap-1.5 shadow-[0_0_12px_rgba(250,204,21,0.25)] active:scale-95 hover:scale-105 transition-all"
+                                            >
+                                                <Users size={12} /> ENTRENAR JUNTOS
+                                            </button>
                                         ) : null}
                                     </div>
                                 </div>
