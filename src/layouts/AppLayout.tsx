@@ -280,6 +280,27 @@ export const AppLayout = () => {
     const location = useLocation();
     const navigate = useNavigate();
 
+    // Real-time user activity tracker (online status presence)
+    useEffect(() => {
+        if (!user) return;
+
+        const updateActiveStatus = async () => {
+            try {
+                await supabase
+                    .from('profiles')
+                    .update({ last_active_at: new Date().toISOString() })
+                    .eq('id', user.id);
+            } catch (err) {
+                console.error("Error updating active status:", err);
+            }
+        };
+
+        updateActiveStatus();
+        const interval = setInterval(updateActiveStatus, 2 * 60 * 1000); // Update every 2 minutes
+
+        return () => clearInterval(interval);
+    }, [user]);
+
     // Preload all exercise catalog images for instant rendering without delays
     useEffect(() => {
         console.log("🖼️ Preloading exercise catalog images for ultra-fast instant rendering...");

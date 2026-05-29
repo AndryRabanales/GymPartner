@@ -9,6 +9,7 @@ export interface ChatPreview {
         id: string;
         username: string;
         avatar_url: string;
+        last_active_at?: string;
     } | null;
     unread_count?: number;
 }
@@ -44,7 +45,7 @@ export const chatService = {
             // Get profile of the other user
             const { data: profile } = await supabase
                 .from('profiles')
-                .select('id, username, avatar_url')
+                .select('id, username, avatar_url, last_active_at')
                 .eq('id', otherUserId)
                 .single();
 
