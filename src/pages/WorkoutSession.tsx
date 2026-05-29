@@ -3020,7 +3020,7 @@ export const WorkoutSession = () => {
                                                                                     <Check size={14} strokeWidth={4} />
                                                                                 </button>
 
-                                                                                {(rowCompleted && !rowReadOnly && isMyRow) && (
+                                                                                {(rowCompleted && !rowReadOnly) && (
                                                                                     <button
                                                                                         onClick={() => {
                                                                                             setActiveExercises(prev => {
