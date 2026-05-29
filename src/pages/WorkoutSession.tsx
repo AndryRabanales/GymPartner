@@ -171,6 +171,44 @@ export const WorkoutSession = () => {
     useEffect(() => {
         startTimeRef.current = startTime;
     }, [startTime]);
+
+    useEffect(() => {
+        if (!user) return;
+        const state = location.state as any;
+        if (state && state.isMultiplayer) {
+            console.log('🔄 Sincronizando nuevo estado multijugador desde location.state:', state);
+            setIsMultiplayer(true);
+            if (state.multiplayerMode) setMultiplayerMode(state.multiplayerMode);
+            if (state.partnerId) setPartnerId(state.partnerId);
+            if (state.chatId) setChatId(state.chatId);
+            if (state.partnerSessionId) setPartnerSessionId(state.partnerSessionId);
+            if (state.isInviter !== undefined) {
+                setIsInviter(state.isInviter);
+                isInviterRef.current = state.isInviter;
+            }
+
+            // Enrich host's exercises for multiplayer maps!
+            setActiveExercises(prev => {
+                if (!prev || prev.length === 0) return prev;
+                return prev.map(ex => ({
+                    ...ex,
+                    sets: (ex.sets || []).map(set => {
+                        const newWeights = { ...(set.playerWeights || {}), [user.id]: set.playerWeights?.[user.id] ?? set.weight };
+                        const newReps = { ...(set.playerReps || {}), [user.id]: set.playerReps?.[user.id] ?? set.reps };
+                        const newCompleted = { ...(set.playerCompleted || {}), [user.id]: set.playerCompleted?.[user.id] ?? set.completed };
+                        const newLocked = { ...(set.playerLocked || {}), [user.id]: set.playerLocked?.[user.id] ?? set.locked };
+                        return {
+                            ...set,
+                            playerWeights: newWeights,
+                            playerReps: newReps,
+                            playerCompleted: newCompleted,
+                            playerLocked: newLocked
+                        };
+                    })
+                }));
+            });
+        }
+    }, [location.state, user?.id]);
     const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
     const [arsenal, setArsenal] = useState<Equipment[]>([]);
     const [routines, setRoutines] = useState<any[]>([]); // NEW: Local Routines
