@@ -162,6 +162,14 @@ export const WorkoutSession = () => {
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [startTime, setStartTime] = useState<Date | null>(null);
     const [activeExercises, setActiveExercises] = useState<WorkoutExercise[]>([]);
+    const activeExercisesRef = useRef<WorkoutExercise[]>([]);
+    const startTimeRef = useRef<Date | null>(null);
+    useEffect(() => {
+        activeExercisesRef.current = activeExercises;
+    }, [activeExercises]);
+    useEffect(() => {
+        startTimeRef.current = startTime;
+    }, [startTime]);
     const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
     const [arsenal, setArsenal] = useState<Equipment[]>([]);
     const [routines, setRoutines] = useState<any[]>([]); // NEW: Local Routines
@@ -256,6 +264,53 @@ export const WorkoutSession = () => {
                 }
 
                 setParticipants(uniqueList.slice(0, 8)); // Limit to maximum 8 players!
+            })
+            .on('presence', { event: 'join' }, ({ newPresences }) => {
+                if (newPresences && newPresences.length > 0 && activeExercisesRef.current.length > 0) {
+                    console.log('👥 New user joined presence. Hydrating them with active exercises...');
+                    channel.send({
+                        type: 'broadcast',
+                        event: 'sync_state',
+                        payload: { exercises: activeExercisesRef.current, sender: user.id }
+                    }).catch(e => console.error(e));
+                    
+                    if (sessionIdRef.current) {
+                        channel.send({
+                            type: 'broadcast',
+                            event: 'sync_session_id',
+                            payload: { 
+                                sessionId: sessionIdRef.current, 
+                                startTime: startTimeRef.current?.toISOString(), 
+                                sender: user.id 
+                            }
+                        }).catch(e => console.error(e));
+                    }
+                }
+            })
+            .on('broadcast', { event: 'request_hydration' }, (payload) => {
+                const { sender } = payload.payload;
+                if (sender === user.id) return;
+                
+                if (activeExercisesRef.current.length > 0) {
+                    console.log('📢 Host sending hydration to guest:', sender);
+                    channel.send({
+                        type: 'broadcast',
+                        event: 'sync_state',
+                        payload: { exercises: activeExercisesRef.current, sender: user.id }
+                    }).catch(e => console.error(e));
+                    
+                    if (sessionIdRef.current) {
+                        channel.send({
+                            type: 'broadcast',
+                            event: 'sync_session_id',
+                            payload: { 
+                                sessionId: sessionIdRef.current, 
+                                startTime: startTimeRef.current?.toISOString(), 
+                                sender: user.id 
+                            }
+                        }).catch(e => console.error(e));
+                    }
+                }
             })
             .on('broadcast', { event: 'sync_state' }, (payload) => {
                 const { exercises, sender } = payload.payload;
@@ -419,6 +474,16 @@ export const WorkoutSession = () => {
                         event: 'sync_state',
                         payload: { exercises: activeExercises, sender: user.id }
                     }).catch(e => console.error(e));
+
+                    // Guest requests hydration explicitly
+                    if (isMultiplayer && !isInviterRef.current) {
+                        console.log('🔄 Guest requesting hydration from host...');
+                        channel.send({
+                            type: 'broadcast',
+                            event: 'request_hydration',
+                            payload: { sender: user.id }
+                        }).catch(e => console.error(e));
+                    }
 
                     // Send session ID if we already have it
                     if (sessionId) {
