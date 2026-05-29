@@ -3216,7 +3216,7 @@ export const WorkoutSession = () => {
                                                                                                     lastStartTime={pRestLastStartTime}
                                                                                                     isGold={isMyTimer}
                                                                                                 />
-                                                                                                {(pRestStatus !== 'completed' && !isReadOnly && isMyTimer) && (
+                                                                                                {(pRestStatus !== 'completed' && !isReadOnly) && (
                                                                                                     <button
                                                                                                         onClick={() => togglePlayerTimerPause(mapIndex, setIndex, p.id)}
                                                                                                         className={`p-1 rounded-full transition-colors ${
