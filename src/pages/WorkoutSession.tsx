@@ -227,7 +227,7 @@ export const WorkoutSession = () => {
     const [participants, setParticipants] = useState<any[]>([]);
 
     useEffect(() => {
-        if (!isMultiplayer || multiplayerMode !== 'conjunto') {
+        if (!isMultiplayer || multiplayerMode !== 'conjunto' || !user) {
             setParticipants([
                 {
                     id: user?.id || 'single-user',
@@ -235,8 +235,27 @@ export const WorkoutSession = () => {
                     avatarUrl: user?.user_metadata?.avatar_url || ''
                 }
             ]);
+        } else if (partnerId) {
+            const myName = user.user_metadata?.username || user.user_metadata?.full_name || 'Yo';
+            const myAvatar = user.user_metadata?.avatar_url || '';
+            const pName = partnerName || 'Compañero';
+            const pAvatar = partnerAvatar || '';
+
+            const list = [
+                { id: user.id, username: myName, avatarUrl: myAvatar },
+                { id: partnerId, username: pName, avatarUrl: pAvatar }
+            ];
+
+            const ordered = isInviter 
+                ? [list[0], list[1]]
+                : [list[1], list[0]];
+
+            setParticipants(prev => {
+                if (prev.length > 2) return prev;
+                return ordered;
+            });
         }
-    }, [isMultiplayer, multiplayerMode, user]);
+    }, [isMultiplayer, multiplayerMode, user, partnerId, partnerName, partnerAvatar, isInviter]);
 
      const [partnerExercises, setPartnerExercises] = useState<WorkoutExercise[]>([]);
     const [viewingMode, setViewingMode] = useState<'mine' | 'partner'>('mine');
