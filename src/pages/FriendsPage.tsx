@@ -76,23 +76,12 @@ export const FriendsPage = () => {
                 };
             });
 
-            // Sort: Entrenando goes first, then Activo, then Desconectado
+            // Sort: Entrenando goes first
             const sorted = enrichedFriends.sort((a, b) => {
                 const aActive = !!a.activeSession;
                 const bActive = !!b.activeSession;
                 if (aActive && !bActive) return -1;
                 if (!aActive && bActive) return 1;
-                
-                // If neither is training, check online status
-                const aLastActive = a.other_user?.last_active_at ? new Date(a.other_user.last_active_at).getTime() : 0;
-                const bLastActive = b.other_user?.last_active_at ? new Date(b.other_user.last_active_at).getTime() : 0;
-                
-                const aOnline = (Date.now() - aLastActive) < 5 * 60 * 1000;
-                const bOnline = (Date.now() - bLastActive) < 5 * 60 * 1000;
-                
-                if (aOnline && !bOnline) return -1;
-                if (!aOnline && bOnline) return 1;
-                
                 return 0;
             });
 
@@ -211,16 +200,12 @@ export const FriendsPage = () => {
                         {friends.map((friend) => {
                             const other = friend.other_user;
                             if (!other) return null;
-                            
-                            const isTraining = !!friend.activeSession;
+                                  const isTraining = !!friend.activeSession;
                             const isCoop = friend.activeSession?.is_multiplayer && friend.activeSession?.multiplayer_mode === 'conjunto';
-                            
-                            const lastActive = other.last_active_at ? new Date(other.last_active_at).getTime() : 0;
-                            const isOnline = (Date.now() - lastActive) < 5 * 60 * 1000;
                             
                             const statusText = isTraining 
                                 ? (isCoop ? "🔥 Entrenando en Conjunto" : "⚡ Entrenando") 
-                                : (isOnline ? "Activo" : "Desconectado");
+                                : "Inactivo";
 
                             return (
                                 <div key={friend.id} className={`border rounded-2xl p-4 flex items-center gap-4 relative overflow-hidden group transition-all duration-300 ${
@@ -235,13 +220,11 @@ export const FriendsPage = () => {
 
                                     {/* Avatar */}
                                     <div className={`w-14 h-14 rounded-full overflow-hidden border-2 flex-shrink-0 relative ${
-                                        isTraining ? 'border-yellow-500 shadow-[0_0_12px_rgba(250,204,21,0.25)]' : (isOnline ? 'border-green-500/50' : 'border-neutral-700')
+                                        isTraining ? 'border-yellow-500 shadow-[0_0_12px_rgba(250,204,21,0.25)]' : 'border-neutral-700'
                                     }`}>
                                         <FadeInImage src={other.avatar_url || `https://ui-avatars.com/api/?name=${other.username}&background=2A2A2A&color=fff`} />
-                                        {(isTraining || isOnline) && (
-                                            <span className={`absolute bottom-0 right-0 w-3.5 h-3.5 border-2 border-neutral-900 rounded-full ${
-                                                isTraining ? 'bg-yellow-500 animate-ping' : 'bg-green-500'
-                                            }`} />
+                                        {isTraining && (
+                                            <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-yellow-500 border-2 border-neutral-900 rounded-full animate-ping" />
                                         )}
                                     </div>
                                     
@@ -253,7 +236,7 @@ export const FriendsPage = () => {
                                             {other.username}
                                         </h3>
                                         <p className={`text-[10px] font-black tracking-widest uppercase ${
-                                            isTraining ? 'text-yellow-500 animate-pulse' : (isOnline ? 'text-green-500' : 'text-neutral-500')
+                                            isTraining ? 'text-yellow-500 animate-pulse' : 'text-neutral-500'
                                         }`}>
                                             {statusText}
                                         </p>
@@ -261,21 +244,14 @@ export const FriendsPage = () => {
                                     
                                     {/* Action Buttons */}
                                     <div className="flex flex-col gap-2 shrink-0 relative z-10">
-                                        {isTraining ? (
+                                        {isTraining && (
                                             <button 
                                                 onClick={() => handleJoinWorkout(friend)}
                                                 className="h-10 px-4 rounded-xl bg-gradient-to-r from-yellow-500 to-orange-500 text-black font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-1.5 shadow-[0_0_15px_rgba(250,204,21,0.4)] active:scale-95 transition-all hover:scale-105 border border-yellow-400"
                                             >
                                                 <Zap size={13} fill="currentColor" /> UNIRSE
                                             </button>
-                                        ) : isOnline ? (
-                                            <button 
-                                                onClick={() => handleInviteToWorkout(friend, 'conjunto')}
-                                                className="h-9 px-4 rounded-xl bg-gym-primary text-black font-black uppercase tracking-widest text-[9px] flex items-center justify-center gap-1.5 shadow-[0_0_12px_rgba(250,204,21,0.25)] active:scale-95 hover:scale-105 transition-all"
-                                            >
-                                                <Users size={12} /> ENTRENAR JUNTOS
-                                            </button>
-                                        ) : null}
+                                        )}
                                     </div>
                                 </div>
                             );
