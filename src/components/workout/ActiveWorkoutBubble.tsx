@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom'; // Changed useNavigate to 
 import { Play, X } from 'lucide-react';
 import { workoutService } from '../../services/WorkoutService';
 import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../lib/supabase'; // STANDARD ES6 IMPORT
 
 export const ActiveWorkoutBubble = () => {
     const { user } = useAuth();
@@ -67,7 +68,7 @@ export const ActiveWorkoutBubble = () => {
     useEffect(() => {
         if (!sessionId) return;
 
-        const { supabase } = require('../../lib/supabase'); // Import locally to avoid top-level issues if not imported
+        // Use top-level imported supabase
         
         const channel = supabase.channel(`bubble_${sessionId}`)
             .on(

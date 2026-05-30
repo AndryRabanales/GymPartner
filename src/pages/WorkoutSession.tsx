@@ -2977,6 +2977,13 @@ export const WorkoutSession = () => {
                                 <p className="text-neutral-500 font-bold mb-8 max-w-xs mx-auto text-sm">
                                     Esperando a que <span className="text-yellow-500">{partnerName}</span> configure la misión y seleccione los ejercicios...
                                 </p>
+                                <button
+                                    onClick={handleCancelSession}
+                                    className="px-6 py-3.5 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-700 text-neutral-400 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2"
+                                >
+                                    <X size={14} strokeWidth={3.5} />
+                                    CANCELAR Y SALIR
+                                </button>
                             </>
                         ) : (
                             <>
@@ -3984,12 +3991,14 @@ export const WorkoutSession = () => {
                                         setActiveExercises([]);
                                         if (sessionId) {
                                             setLoading(true);
-                                            // Broadcast destruction signal to all connected clients
-                                            channelRef.current?.send({
-                                                type: 'broadcast',
-                                                event: 'session_terminated',
-                                                payload: { sender: user.id }
-                                            }).catch(e => console.error(e));
+                                            // Broadcast destruction signal only if host (isInviter) to avoid kicking the host
+                                            if (isInviter) {
+                                                channelRef.current?.send({
+                                                    type: 'broadcast',
+                                                    event: 'session_terminated',
+                                                    payload: { sender: user.id }
+                                                }).catch(e => console.error(e));
+                                            }
                                             
                                             await workoutService.deleteSession(sessionId);
                                             setLoading(false);
@@ -4000,7 +4009,7 @@ export const WorkoutSession = () => {
                                 className="w-full bg-neutral-900 border border-red-500/30 hover:bg-red-500/10 text-red-500 font-black uppercase text-xs tracking-wider py-4 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2"
                             >
                                 <X size={14} strokeWidth={3} />
-                                Destruir Misión (Eliminar)
+                                {isInviter ? 'Destruir Misión (Eliminar)' : 'Cancelar Entrenamiento (Eliminar)'}
                             </button>
                             
                             <button
