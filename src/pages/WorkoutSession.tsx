@@ -591,33 +591,37 @@ export const WorkoutSession = () => {
                                 const localEx = prev[eIdx];
                                 if (!localEx) return inEx;
                                 
-                                const mergedSets = inEx.sets.map((inSet, sIdx) => {
+                                const maxSets = Math.max(localEx.sets.length, inEx.sets.length);
+                                const mergedSets = [];
+                                
+                                for (let sIdx = 0; sIdx < maxSets; sIdx++) {
+                                    const inSet = inEx.sets[sIdx];
                                     const loc = localEx.sets[sIdx];
-                                    if (!loc) return inSet;
+                                    
+                                    if (!loc) {
+                                        mergedSets.push(inSet);
+                                        continue;
+                                    }
+                                    if (!inSet) {
+                                        mergedSets.push(loc);
+                                        continue;
+                                    }
 
                                     const locTime = loc.lastUpdatedAt || 0;
                                     const inTime = inSet.lastUpdatedAt || 0;
                                     const useLoc = locTime >= inTime && locTime > 0;
 
-                                    const mergeMap = (locMap: Record<string, any> = {}, inMap: Record<string, any> = {}, preferTrue = false) => {
+                                    const mergeMap = (locMap: Record<string, any> = {}, inMap: Record<string, any> = {}) => {
                                         const res = { ...locMap };
                                         for (const key of Object.keys(inMap || {})) {
                                             const inVal = inMap[key];
                                             const locVal = locMap[key];
                                             
-                                            if (preferTrue) {
-                                                if (inVal === true && !locVal) res[key] = true;
-                                                else if (locVal === true && !inVal) res[key] = true;
-                                                else res[key] = useLoc ? locVal : inVal;
-                                            } else {
-                                                const hasLoc = locVal !== undefined && locVal !== null && locVal !== 0 && locVal !== '';
-                                                const hasIn = inVal !== undefined && inVal !== null && inVal !== 0 && inVal !== '';
-                                                
-                                                if (hasLoc && hasIn) res[key] = useLoc ? locVal : inVal;
-                                                else if (hasIn) res[key] = inVal;
-                                                else if (hasLoc) res[key] = locVal;
-                                                else res[key] = useLoc ? locVal : inVal;
-                                            }
+                                            const hasLoc = locVal !== undefined;
+                                            const hasIn = inVal !== undefined;
+                                            
+                                            if (hasLoc && hasIn) res[key] = useLoc ? locVal : inVal;
+                                            else if (hasIn) res[key] = inVal;
                                         }
                                         return res;
                                     };
@@ -627,15 +631,15 @@ export const WorkoutSession = () => {
                                     const t = mergeMap(loc.playerTimes, inSet.playerTimes);
                                     const d = mergeMap(loc.playerDistances, inSet.playerDistances);
                                     const rpe = mergeMap(loc.playerRpes, inSet.playerRpes);
-                                    const comp = mergeMap(loc.playerCompleted, inSet.playerCompleted, true);
-                                    const lock = mergeMap(loc.playerLocked, inSet.playerLocked, true);
+                                    const comp = mergeMap(loc.playerCompleted, inSet.playerCompleted);
+                                    const lock = mergeMap(loc.playerLocked, inSet.playerLocked);
                                     const compAt = mergeMap(loc.playerCompletedAt, inSet.playerCompletedAt);
 
                                     const rStatus = mergeMap(loc.playerRestStatus, inSet.playerRestStatus);
                                     const rAcc = mergeMap(loc.playerRestAccumulated, inSet.playerRestAccumulated);
                                     const rLst = mergeMap(loc.playerRestLastStartTime, inSet.playerRestLastStartTime);
 
-                                    return {
+                                    mergedSets.push({
                                         ...inSet,
                                         lastUpdatedAt: useLoc ? locTime : inTime,
                                         playerWeights: w,
@@ -667,8 +671,8 @@ export const WorkoutSession = () => {
                                         p2_restStatus: useLoc ? loc.p2_restStatus : inSet.p2_restStatus,
                                         p2_restAccumulated: useLoc ? loc.p2_restAccumulated : inSet.p2_restAccumulated,
                                         p2_restLastStartTime: useLoc ? loc.p2_restLastStartTime : inSet.p2_restLastStartTime
-                                    };
-                                });
+                                    });
+                                }
                                 
                                 return {
                                     ...inEx,
