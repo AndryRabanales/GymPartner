@@ -4433,22 +4433,18 @@ export const WorkoutSession = () => {
                         compLevel = 1; // Medium Compaction
                     }
 
-                    const cardSpacing = compLevel === 2 ? 'gap-1' : compLevel === 1 ? 'gap-1.5' : 'gap-2';
-                    const cardStyle = compLevel === 2 
-                        ? 'bg-[#141310] rounded-md overflow-hidden border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]' 
-                        : compLevel === 1 
-                            ? 'bg-[#141310] rounded-lg overflow-hidden border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' 
-                            : 'bg-[#141310] rounded-xl overflow-hidden border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]';
+                    const cardSpacing = 'gap-1';
+                    const cardStyle = 'bg-[#141310] rounded-md overflow-hidden border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]';
                     
-                    const headerPadding = compLevel === 2 ? 'px-2 py-0.5' : compLevel === 1 ? 'px-2.5 py-0.5' : 'px-3 py-1';
-                    const headerTextSize = compLevel === 2 ? 'text-[8px]' : compLevel === 1 ? 'text-[9px]' : 'text-[10px]';
-                    const colHeaderPadding = compLevel === 2 ? 'px-2 py-px' : compLevel === 1 ? 'px-2 py-0.5' : 'px-2.5 py-0.5';
-                    const colHeaderTextSize = compLevel === 2 ? 'text-[7px]' : 'text-[7.5px]';
-                    const rowPadding = compLevel === 2 ? 'px-2 py-[2px]' : compLevel === 1 ? 'px-2 py-0.5' : 'px-2.5 py-1';
-                    const rowTextSize = compLevel === 2 ? 'text-[7.5px]' : 'text-[8px]';
-                    const wTextSize = compLevel === 2 ? 'text-[9px]' : compLevel === 1 ? 'text-[10px]' : 'text-[11px]';
-                    const wUnitSize = compLevel === 2 ? 'text-[5px]' : compLevel === 1 ? 'text-[5.5px]' : 'text-[6px]';
-                    const detailTextSize = compLevel === 2 ? 'text-[7px]' : 'text-[7.5px]';
+                    const headerPadding = 'px-1.5 py-0.5';
+                    const headerTextSize = 'text-[8px]';
+                    const colHeaderPadding = 'px-1.5 py-px';
+                    const colHeaderTextSize = 'text-[6.5px]';
+                    const rowPadding = 'px-1.5 py-[1px]';
+                    const rowTextSize = 'text-[7px]';
+                    const wTextSize = 'text-[8.5px]';
+                    const wUnitSize = 'text-[4.5px]';
+                    const detailTextSize = 'text-[6.5px]';
 
                     return (
                         <div className="fixed inset-0 z-[180] flex flex-col bg-[#0c0b09] bg-[radial-gradient(circle_at_center,_#1d1a14_0%,_#0a0907_100%)] overflow-hidden">
@@ -4496,8 +4492,8 @@ export const WorkoutSession = () => {
                                 </div>
                             </div>
 
-                            {/* SCROLLABLE VINTAGE CONTENT GRID (Super Compacted to 90% Width) */}
-                            <div className="flex-1 overflow-y-auto px-1 pt-2 pb-20 w-[90%] max-w-xl mx-auto flex flex-col justify-start">
+                            {/* SCROLLABLE VINTAGE CONTENT GRID (Super Compacted to 75% Width) */}
+                            <div className="flex-1 overflow-y-auto px-1 pt-2 pb-20 w-[75%] max-w-md mx-auto flex flex-col justify-start">
 
                                 {/* ====== TAB: GRUPAL ====== */}
                                 {(summaryTab === 'grupal' && isGroupMode) && (
@@ -4591,6 +4587,13 @@ export const WorkoutSession = () => {
                                                 Number(s.playerDistances?.[myId]) > 0
                                             );
                                             if (mySets.length === 0) return null;
+
+                                            // Check if this exercise has time or distance data recorded
+                                            const hasTimeOrDistance = mySets.some(s =>
+                                                Number(s.playerTimes?.[myId]) > 0 ||
+                                                Number(s.playerDistances?.[myId]) > 0
+                                            );
+
                                             return (
                                                 <div key={exIdx} className={`${cardStyle} transform hover:-translate-y-0.5 transition-transform duration-200`}>
                                                     <div className={`${headerPadding} bg-gradient-to-r from-yellow-500/15 via-yellow-500/5 to-transparent border-b border-black flex justify-between items-center`}>
@@ -4600,12 +4603,12 @@ export const WorkoutSession = () => {
                                                         <span className="text-[7px] font-black text-yellow-500/40 uppercase">EX-{exIdx + 1}</span>
                                                     </div>
                                                     
-                                                    {/* Header row */}
-                                                    <div className={`grid grid-cols-4 ${colHeaderPadding} bg-black/50 border-b border-black text-[8px] font-bold text-neutral-400 uppercase tracking-wider`}>
-                                                        <div className="text-yellow-500/80 font-black">SET</div>
-                                                        <div className="text-center font-black">PESO</div>
-                                                        <div className="text-center font-black">REPS</div>
-                                                        <div className="text-center font-black">TIEMPO/DIST</div>
+                                                    {/* Header row - dynamically adjusts grid layout */}
+                                                    <div className={`grid ${hasTimeOrDistance ? 'grid-cols-4' : 'grid-cols-3'} ${colHeaderPadding} bg-black/50 border-b border-black text-[8px] font-bold text-neutral-400 uppercase tracking-wider`}>
+                                                        <div className="text-yellow-500/80 font-black leading-none">SET</div>
+                                                        <div className="text-center font-black leading-none">PESO</div>
+                                                        <div className="text-center font-black leading-none">REPS</div>
+                                                        {hasTimeOrDistance && <div className="text-center font-black leading-none">TIEMPO/DIST</div>}
                                                     </div>
                                                     {mySets.map(s => {
                                                         const w = Number(s.playerWeights?.[myId]) || 0;
@@ -4613,17 +4616,19 @@ export const WorkoutSession = () => {
                                                         const t = Number(s.playerTimes?.[myId]) || 0;
                                                         const d = Number(s.playerDistances?.[myId]) || 0;
                                                         return (
-                                                            <div key={s.id} className={`grid grid-cols-4 ${rowPadding} border-b border-black/20 last:border-0 items-center bg-black/10 hover:bg-black/20 transition-colors`}>
-                                                                <div className={`${rowTextSize} text-yellow-500/40 font-black italic`}>#{s.idx + 1}</div>
-                                                                <div className="text-center">
-                                                                    {w > 0 ? <span className={`${wTextSize} font-black text-yellow-400`}>{w}<span className={`${wUnitSize} font-bold text-neutral-400 ml-0.5`}>{ex.weightUnit || 'kg'}</span></span> : <span className={`text-neutral-700 ${rowTextSize} font-bold`}>—</span>}
+                                                            <div key={s.id} className={`grid ${hasTimeOrDistance ? 'grid-cols-4' : 'grid-cols-3'} ${rowPadding} border-b border-black/20 last:border-0 items-center bg-black/10 hover:bg-black/20 transition-colors`}>
+                                                                <div className={`${rowTextSize} text-yellow-500/40 font-black italic leading-none`}>#{s.idx + 1}</div>
+                                                                <div className="text-center leading-none">
+                                                                    {w > 0 ? <span className={`${wTextSize} font-black text-yellow-400 leading-none`}>{w}<span className={`${wUnitSize} font-bold text-neutral-400 ml-0.5`}>{ex.weightUnit || 'kg'}</span></span> : <span className={`text-neutral-700 ${rowTextSize} font-bold leading-none`}>—</span>}
                                                                 </div>
-                                                                <div className="text-center">
-                                                                    {r > 0 ? <span className={`${wTextSize} font-black text-white`}>{r}</span> : <span className={`text-neutral-700 ${rowTextSize} font-bold`}>—</span>}
+                                                                <div className="text-center leading-none">
+                                                                    {r > 0 ? <span className={`${wTextSize} font-black text-white leading-none`}>{r}</span> : <span className={`text-neutral-700 ${rowTextSize} font-bold leading-none`}>—</span>}
                                                                 </div>
-                                                                <div className="text-center">
-                                                                    {t > 0 ? <span className={`${detailTextSize} font-bold text-neutral-300`}>{t}s</span> : d > 0 ? <span className={`${detailTextSize} font-bold text-neutral-300`}>{d}{ex.distanceUnit || 'm'}</span> : <span className={`text-neutral-700 ${rowTextSize} font-bold`}>—</span>}
-                                                                </div>
+                                                                {hasTimeOrDistance && (
+                                                                    <div className="text-center leading-none">
+                                                                        {t > 0 ? <span className={`${detailTextSize} font-bold text-neutral-300 leading-none`}>{t}s</span> : d > 0 ? <span className={`${detailTextSize} font-bold text-neutral-300 leading-none`}>{d}{ex.distanceUnit || 'm'}</span> : <span className={`text-neutral-700 ${rowTextSize} font-bold leading-none`}>—</span>}
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         );
                                                     })}
