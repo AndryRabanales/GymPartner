@@ -847,6 +847,7 @@ export const WorkoutSession = () => {
                     await workoutService.deleteSession(sessionIdRef.current);
                 }
                 
+                isLeavingPageRef.current = true;
                 // Eject user
                 navigate('/');
             })
@@ -3212,6 +3213,7 @@ export const WorkoutSession = () => {
                     setIsFinished(true);
                     setLoading(false);
                     setIsFinalizing(false);
+                    isLeavingPageRef.current = true;
                     navigate('/');
                     return;
                 }
@@ -3219,6 +3221,7 @@ export const WorkoutSession = () => {
                 console.error('❌ Error critico en sesion de emergencia:', err);
                 alert("⚠️ ERROR CRÍTICO AL CONTACTAR SERVIDOR:\n" + String(err));
                 setIsFinished(true);
+                isLeavingPageRef.current = true;
                 navigate('/');
                 return;
             }
@@ -4050,6 +4053,7 @@ export const WorkoutSession = () => {
                                     else {
                                         // If closing "Armería" with 0 exercises, go back to Profile (Cancel Session)
                                         if (activeExercises.length === 0) {
+                                            isLeavingPageRef.current = true;
                                             navigate('/');
                                         } else {
                                             setShowAddModal(false);
@@ -4418,7 +4422,10 @@ export const WorkoutSession = () => {
 
                             <div className="w-full space-y-3">
                                 <button
-                                    onClick={() => navigate('/')}
+                                    onClick={() => {
+                                        isLeavingPageRef.current = true;
+                                        navigate('/');
+                                    }}
                                     className="w-full bg-gym-primary hover:bg-yellow-400 text-black font-black uppercase py-4 rounded-xl shadow-[0_0_30px_rgba(250,204,21,0.3)] transition-all hover:scale-105 flex items-center justify-center gap-2"
                                 >
                                     <ArrowLeft size={24} />
@@ -4476,6 +4483,7 @@ export const WorkoutSession = () => {
                         <div className="flex flex-col gap-3">
                             <button
                                 onClick={() => {
+                                    isLeavingPageRef.current = true;
                                     setShowCoopExitModal(false);
                                     setShowExitMenu(false);
                                     // Exit temporarily: keep everything
@@ -4489,6 +4497,7 @@ export const WorkoutSession = () => {
                             
                             <button
                                 onClick={async () => {
+                                    isLeavingPageRef.current = true;
                                     setShowCoopExitModal(false);
                                     setShowExitMenu(false);
                                     // Finalize permanently: save and exit
@@ -4504,6 +4513,7 @@ export const WorkoutSession = () => {
                             <button
                                 onClick={async () => {
                                     if (window.confirm("¿Seguro que quieres cancelar y eliminar esta sesión? A tus amigos les aparecerás como inactivo de inmediato.")) {
+                                        isLeavingPageRef.current = true;
                                         setShowCoopExitModal(false);
                                         setShowExitMenu(false);
                                         localStorage.removeItem(`workout_draft_${sessionId}`);
@@ -4609,6 +4619,7 @@ export const WorkoutSession = () => {
                                         setLoading(false);
                                     }
                                     // Navigate back after cleanup — guard entry consumed, safe to go
+                                    isLeavingPageRef.current = true;
                                     navigate(-1);
                                 } else {
                                     setShowForceExitModal(false);
