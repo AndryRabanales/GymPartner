@@ -276,7 +276,9 @@ export const WorkoutSession = () => {
     useEffect(() => {
         sessionIdRef.current = sessionId;
     }, [sessionId]);
-    const syncRoomId = isInviter ? sessionId : (partnerSessionId || chatId);
+    // Lock the room ID for guests on mount to prevent dynamic channel-hopping when receiving other players' session IDs
+    const [initialGuestRoomId] = useState(() => !isInviter ? (navState.partnerSessionId || cachedCoop.partnerSessionId || navState.chatId || cachedCoop.chatId) : null);
+    const syncRoomId = isInviter ? sessionId : (initialGuestRoomId || partnerSessionId || chatId);
 
     useEffect(() => {
         if (!isMultiplayer || !partnerId || !syncRoomId || !user) return;
