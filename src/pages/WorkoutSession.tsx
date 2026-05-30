@@ -632,9 +632,9 @@ export const WorkoutSession = () => {
                         payload: { exercises: activeExercises, sender: user.id }
                     }).catch(e => console.error(e));
 
-                    // Guest requests hydration explicitly
-                    if (isMultiplayer && !isInviterRef.current) {
-                        console.log('🔄 Guest requesting hydration from host...');
+                    // ANY participant requests hydration explicitly upon reconnecting to guarantee no missed events
+                    if (isMultiplayer) {
+                        console.log('🔄 Requesting hydration from partner to catch up on missed events...');
                         channel.send({
                             type: 'broadcast',
                             event: 'request_hydration',
@@ -706,6 +706,21 @@ export const WorkoutSession = () => {
             payload: { sessionId: sessionId, startTime: startTime?.toISOString(), sender: user.id }
         }).catch(e => console.error('Error sending sessionId broadcast:', e));
     }, [sessionId, startTime, isMultiplayer, user]);
+    // Ensure absolute consistency when waking from background/sleep
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && isMultiplayer && channelRef.current && user) {
+                console.log('📱 App became visible. Requesting emergency hydration to catch up on missed events...');
+                channelRef.current.send({
+                    type: 'broadcast',
+                    event: 'request_hydration',
+                    payload: { sender: user.id }
+                }).catch(e => console.error('Error sending emergency hydration request:', e));
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }, [isMultiplayer, user]);
     // --- End Multiplayer Sync Hooks ---
 
     // NEW: Start Options Modal
