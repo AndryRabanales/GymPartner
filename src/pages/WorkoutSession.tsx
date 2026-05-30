@@ -2316,7 +2316,16 @@ export const WorkoutSession = () => {
     const handlePlayerInputBlur = (exerciseIndex: number, setIndex: number, targetUserId: string, e: React.FocusEvent<HTMLInputElement>) => {
         const relatedTarget = e.relatedTarget as HTMLElement;
         if (relatedTarget && relatedTarget.tagName === 'INPUT') {
-            return;
+            const nextPlayerId = relatedTarget.getAttribute('data-player-id');
+            const nextSetIdx = relatedTarget.getAttribute('data-set-index');
+            const nextExIdx = relatedTarget.getAttribute('data-exercise-index');
+
+            // Prevent auto-completion ONLY if the user is clicking another input in the SAME player's row, SAME set, and SAME exercise
+            if (nextPlayerId === targetUserId &&
+                nextSetIdx !== null && Number(nextSetIdx) === setIndex &&
+                nextExIdx !== null && Number(nextExIdx) === exerciseIndex) {
+                return;
+            }
         }
 
         setTimeout(() => {
@@ -3184,6 +3193,9 @@ export const WorkoutSession = () => {
                                                                                         type="number"
                                                                                         inputMode="decimal"
                                                                                         disabled={rowLocked || rowReadOnly}
+                                                                                        data-player-id={p.id}
+                                                                                        data-set-index={setIndex}
+                                                                                        data-exercise-index={mapIndex}
                                                                                         value={rowWeight === 0 ? '' : toDisplayWeight(rowWeight, exercise.weightUnit || 'kg')}
                                                                                         onChange={(e) => updatePlayerSet(mapIndex, setIndex, p.id, 'weight', toInternalWeight(e.target.value, exercise.weightUnit || 'kg'))}
                                                                                         onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
@@ -3199,6 +3211,9 @@ export const WorkoutSession = () => {
                                                                                         type="number"
                                                                                         inputMode="numeric"
                                                                                         disabled={rowLocked || rowReadOnly}
+                                                                                        data-player-id={p.id}
+                                                                                        data-set-index={setIndex}
+                                                                                        data-exercise-index={mapIndex}
                                                                                         value={rowReps === 0 ? '' : rowReps}
                                                                                         onChange={(e) => updatePlayerSet(mapIndex, setIndex, p.id, 'reps', e.target.value)}
                                                                                         onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
@@ -3214,6 +3229,9 @@ export const WorkoutSession = () => {
                                                                                         type="number"
                                                                                         inputMode="numeric"
                                                                                         disabled={rowLocked || rowReadOnly}
+                                                                                        data-player-id={p.id}
+                                                                                        data-set-index={setIndex}
+                                                                                        data-exercise-index={mapIndex}
                                                                                         value={rowTime || ''}
                                                                                         onChange={(e) => updatePlayerSet(mapIndex, setIndex, p.id, 'time', e.target.value)}
                                                                                         onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
@@ -3229,6 +3247,9 @@ export const WorkoutSession = () => {
                                                                                         type="number"
                                                                                         inputMode="decimal"
                                                                                         disabled={rowLocked || rowReadOnly}
+                                                                                        data-player-id={p.id}
+                                                                                        data-set-index={setIndex}
+                                                                                        data-exercise-index={mapIndex}
                                                                                         value={rowDistance === 0 ? '' : rowDistance}
                                                                                         onChange={(e) => updatePlayerSet(mapIndex, setIndex, p.id, 'distance', e.target.value)}
                                                                                         onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
@@ -3245,6 +3266,9 @@ export const WorkoutSession = () => {
                                                                                         inputMode="numeric"
                                                                                         max={10}
                                                                                         disabled={rowLocked || rowReadOnly}
+                                                                                        data-player-id={p.id}
+                                                                                        data-set-index={setIndex}
+                                                                                        data-exercise-index={mapIndex}
                                                                                         value={rowRpe || ''}
                                                                                         onChange={(e) => updatePlayerSet(mapIndex, setIndex, p.id, 'rpe', e.target.value)}
                                                                                         onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
@@ -3263,6 +3287,9 @@ export const WorkoutSession = () => {
                                                                                             type="number"
                                                                                             inputMode="decimal"
                                                                                             disabled={rowLocked || rowReadOnly}
+                                                                                            data-player-id={p.id}
+                                                                                            data-set-index={setIndex}
+                                                                                            data-exercise-index={mapIndex}
                                                                                             value={set.custom?.[key] || ''}
                                                                                             onChange={(e) => updateSet(mapIndex, setIndex, key, e.target.value, true)} // isCustom=true
                                                                                             onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
