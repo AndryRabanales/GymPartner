@@ -5,6 +5,7 @@ import { chatService, type ChatPreview } from '../services/ChatService';
 import { FadeInImage } from '../components/ui/FadeInImage';
 import { BottomNav } from '../components/navigation/BottomNav';
 import { notificationService } from '../services/NotificationService';
+import { toast } from 'react-hot-toast';
 
 export const FriendsPage = () => {
     const [friends, setFriends] = useState<any[]>([]);
@@ -121,7 +122,7 @@ export const FriendsPage = () => {
 
         const hasRecent = recentInvites?.some(invite => invite.data?.sender_id === user.id);
         if (hasRecent) {
-            alert(`⚠️ Ya has enviado una invitación recientemente. Debes esperar 2 minutos antes de enviar otra a este guerrero.`);
+            toast.error("⚠️ Ya has enviado una invitación recientemente. Espera 2 minutos antes de enviar otra.");
             return;
         }
 
@@ -148,7 +149,7 @@ export const FriendsPage = () => {
             }
         });
 
-        alert(`Invitación de Entrenamiento ${modeLabel} enviada a ${friend.other_user.username}.`);
+        toast.success(`🔥 Invitación ${modeLabel} enviada a @${friend.other_user.username}!`);
     };
 
     const handleJoinWorkout = async (friend: any) => {
@@ -190,7 +191,7 @@ export const FriendsPage = () => {
             }
         });
 
-        alert(`Solicitud para unirse al entrenamiento enviada a @${hostName}.`);
+        toast.success(`⚡ Solicitud enviada a @${hostName}. ¡Espera en esta pantalla a que la acepte!`);
     };
 
     return (
