@@ -188,6 +188,16 @@ export const WorkoutSession = () => {
                 isInviterRef.current = state.isInviter;
             }
 
+            // Dynamically update the sync room ID when new location state is explicitly pushed!
+            const nextIsInv = state.isInviter !== undefined ? state.isInviter : isInviter;
+            if (!nextIsInv) {
+                const nextRoomId = state.partnerSessionId || state.chatId;
+                if (nextRoomId) {
+                    console.log('🔑 Sincronizando syncRoomId para el invitado:', nextRoomId);
+                    setSyncRoomId(nextRoomId);
+                }
+            }
+
             // Enrich host's exercises for multiplayer maps!
             setActiveExercises(prev => {
                 if (!prev || prev.length === 0) return prev;
@@ -276,9 +286,33 @@ export const WorkoutSession = () => {
     useEffect(() => {
         sessionIdRef.current = sessionId;
     }, [sessionId]);
+    // Cleanup empty sessions upon unmounting the page
+    // If the user leaves the page and has no exercises (e.g. clicked back, closed, went to another tab)
+    // we delete the session from the DB to prevent stale session deadlocks!
+    useEffect(() => {
+        return () => {
+            const sessId = sessionIdRef.current;
+            const exercisesCount = activeExercisesRef.current.length;
+            if (sessId && exercisesCount === 0) {
+                console.log("🧹 Unmount: Deleting empty/unstarted workout session:", sessId);
+                supabase.from('workout_sessions').delete().eq('id', sessId).then(() => {
+                    localStorage.removeItem(`workout_draft_${sessId}`);
+                });
+            }
+        };
+    }, []);
+
     // Lock the room ID for guests on mount to prevent dynamic channel-hopping when receiving other players' session IDs
     const [initialGuestRoomId] = useState(() => !isInviter ? (navState.partnerSessionId || cachedCoop.partnerSessionId || navState.chatId || cachedCoop.chatId) : null);
-    const syncRoomId = isInviter ? sessionId : (initialGuestRoomId || partnerSessionId || chatId);
+    const [syncRoomId, setSyncRoomId] = useState<string | null>(() => {
+        return isInviter ? sessionId : (initialGuestRoomId || partnerSessionId || chatId);
+    });
+
+    useEffect(() => {
+        if (isInviter && sessionId) {
+            setSyncRoomId(sessionId);
+        }
+    }, [isInviter, sessionId]);
 
     useEffect(() => {
         if (!isMultiplayer || !partnerId || !syncRoomId || !user) return;
@@ -1107,21 +1141,29 @@ export const WorkoutSession = () => {
             // Normalize "personal" string to null to prevent database casting errors
             const targetGymId = (routeGymId && routeGymId !== 'personal') ? routeGymId : null;
 
-            // Set initial name only if we have a specific route ID (excluding "personal"), otherwise "Buscando ubicación..."
-            if (routeGymId && routeGymId !== 'personal') {
-                const routeGym = gyms.find(g => g.gym_id === routeGymId);
-                if (routeGym) setDetectedGymName(routeGym.gym_name || '');
+            // Check if the user has a preselected home base (default gym) in their passport!
+            const homeGym = gyms.find(g => g.is_home_base);
+            const resolvedInitialGymId = targetGymId || (homeGym ? homeGym.gym_id : null);
+
+            // Set initial name immediately if resolved, otherwise "Buscando ubicación..."
+            if (resolvedInitialGymId) {
+                if (resolvedInitialGymId === targetGymId) {
+                    const routeGym = gyms.find(g => g.gym_id === targetGymId);
+                    setDetectedGymName(routeGym ? (routeGym.gym_name || '') : 'Mi Gimnasio');
+                } else {
+                    setDetectedGymName(homeGym?.gym_name || 'Gimnasio Predeterminado');
+                }
             } else {
                 setDetectedGymName('Buscando ubicación...');
             }
 
-            setResolvedGymId(targetGymId);
+            setResolvedGymId(resolvedInitialGymId);
             setUserSettings(settings);
 
             // 2. PHASE 2: Fetch Inventory and Routines using predicted gym
             const [items, localRoutines, activeResult, personalItems, partnerActiveResult] = await Promise.all([
-                equipmentService.getInventory(targetGymId || ''),
-                workoutService.getUserRoutines(userId, targetGymId),
+                equipmentService.getInventory(resolvedInitialGymId || ''),
+                workoutService.getUserRoutines(userId, resolvedInitialGymId),
                 workoutService.getActiveSession(userId),
                 equipmentService.getPersonalInventory(userId),
                 (currentIsMultiplayer && currentPartnerId) ? workoutService.getActiveSession(currentPartnerId) : Promise.resolve({ data: null, error: null })
@@ -1132,14 +1174,16 @@ export const WorkoutSession = () => {
             setArsenal(mergedInventory);
 
             // 3. PHASE 3: High-Precision Background GPS Resolution
+            // We only prompt or auto-resolve if no target gym is set via route and no default/home gym exists in passport!
             (async () => {
                 try {
+                    // Always query GPS position to keep tracking active in the background as requested
                     const gpsPosition = await getCurrentPosition({ enableHighAccuracy: true, timeout: 3500 })
                         .catch(async () => {
                             return await getCurrentPosition({ enableHighAccuracy: false, timeout: 2000 });
                         });
 
-                    if (gpsPosition && !targetGymId) {
+                    if (gpsPosition && !resolvedInitialGymId) {
                         const userLat = gpsPosition.lat;
                         const userLng = gpsPosition.lng;
 
@@ -1166,15 +1210,17 @@ export const WorkoutSession = () => {
                             setDetectedGymName("Entrenamiento Libre");
                             setResolvedGymId(null);
                         }
-                    } else if (!gpsPosition && !targetGymId) {
+                    } else if (!gpsPosition && !resolvedInitialGymId) {
                         console.log("📍 GPS failed or disabled. Training Libre.");
                         setDetectedGymName("Entrenamiento Libre");
                         setResolvedGymId(null);
                     }
                 } catch (err) {
                     console.warn("Precision GPS failed:", err);
-                    setDetectedGymName("Entrenamiento Libre");
-                    setResolvedGymId(null);
+                    if (!resolvedInitialGymId) {
+                        setDetectedGymName("Entrenamiento Libre");
+                        setResolvedGymId(null);
+                    }
                 }
             })();
 
@@ -1300,11 +1346,7 @@ export const WorkoutSession = () => {
                         });
                         setActiveExercises(restoredExercises);
                     } else {
-                        if (currentIsMultiplayer && currentMultiplayerMode === 'conjunto' && !currentIsInviter) {
-                            // Do nothing, P2 must wait!
-                        } else {
-                            setShowAddModal(true);
-                        }
+                        setShowAddModal(true);
                     }
                 }
             } else {
@@ -1350,12 +1392,8 @@ export const WorkoutSession = () => {
                             setStartTime(new Date(partnerActive.started_at));
                         }
                     } else {
-                        if (currentIsMultiplayer && currentMultiplayerMode === 'conjunto' && !currentIsInviter) {
-                            // Do nothing, P2 must wait for the inviter to pick a routine!
-                        } else {
-                            if (localRoutines.length === 0) setShowAddModal(true);
-                            else setShowStartOptionsModal(true);
-                        }
+                        if (localRoutines.length === 0) setShowAddModal(true);
+                        else setShowStartOptionsModal(true);
                     }
                 }
             }
@@ -2488,6 +2526,18 @@ export const WorkoutSession = () => {
             navigate(-1);
             return;
         }
+        if (activeExercises.length === 0) {
+            // If the workout hasn't started yet (no exercises), just exit immediately without asking complex coop questions!
+            localStorage.removeItem(`workout_draft_${sessionId}`);
+            localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem('ginx_coop_state');
+            setActiveExercises([]);
+            setLoading(true);
+            await workoutService.deleteSession(sessionId);
+            setLoading(false);
+            navigate(-1);
+            return;
+        }
         if (isMultiplayer && multiplayerMode === 'conjunto') {
             setShowCoopExitModal(true);
         } else {
@@ -2963,41 +3013,21 @@ export const WorkoutSession = () => {
                 {/* Empty State / Fallback if Modal is Closed */}
                 {activeExercises.length === 0 && !showAddModal && !loading && (
                     <div className="h-[80vh] flex flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in duration-300">
-                        {(isMultiplayer && multiplayerMode === 'conjunto' && !isInviter) ? (
-                            <>
-                                <div className="bg-neutral-900/50 p-8 rounded-full border border-neutral-800 mb-8 shadow-[0_0_50px_rgba(250,204,21,0.1)] relative">
-                                    <div className="absolute inset-0 border-2 border-yellow-500/30 border-t-yellow-500 rounded-full animate-spin"></div>
-                                    <Swords size={60} className="text-yellow-500 animate-pulse" strokeWidth={1.5} />
-                                </div>
-                                <h2 className="text-3xl font-black italic uppercase text-white mb-4 tracking-tighter">Esperando Aliado</h2>
-                                <p className="text-neutral-500 font-bold mb-8 max-w-xs mx-auto text-sm">
-                                    Esperando a que <span className="text-yellow-500">{partnerName}</span> configure la misión y seleccione los ejercicios...
-                                </p>
-                                <button
-                                    onClick={handleCancelSession}
-                                    className="px-6 py-3.5 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-700 text-neutral-400 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2"
-                                >
-                                    <X size={14} strokeWidth={3.5} />
-                                    CANCELAR Y SALIR
-                                </button>
-                            </>
-                        ) : (
-                            <>
-                                <div className="bg-neutral-900/50 p-8 rounded-full border border-neutral-800 mb-8 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
-                                    <Swords size={80} className="text-neutral-600" strokeWidth={1} />
-                                </div>
-                                <h2 className="text-3xl font-black italic uppercase text-white mb-4 tracking-tighter">¿Listo para entrenar?</h2>
-                                <p className="text-neutral-500 font-bold mb-8 max-w-xs mx-auto">Selecciona tus ejercicios para comenzar la batalla.</p>
+                        <div className="bg-neutral-900/50 p-8 rounded-full border border-neutral-800 mb-8 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+                            <Swords size={80} className="text-neutral-600" strokeWidth={1} />
+                        </div>
+                        <h2 className="text-3xl font-black italic uppercase text-white mb-4 tracking-tighter">¿Listo para entrenar?</h2>
+                        <p className="text-neutral-500 font-bold mb-8 max-w-xs mx-auto text-sm">
+                            {isMultiplayer ? "Cualquier aliado puede seleccionar los ejercicios o abrir el catálogo para comenzar la batalla." : "Selecciona tus ejercicios para comenzar la batalla."}
+                        </p>
 
-                                <button
-                                    onClick={() => setShowAddModal(true)}
-                                    className="w-full max-w-xs bg-gym-primary hover:bg-yellow-400 text-black font-black uppercase tracking-widest py-5 rounded-2xl shadow-[0_0_30px_rgba(250,204,21,0.3)] hover:scale-105 transition-all text-xl flex items-center justify-center gap-3"
-                                >
-                                    <Plus size={24} strokeWidth={3} />
-                                    ABRIR CATÁLOGO
-                                </button>
-                            </>
-                        )}
+                        <button
+                            onClick={() => setShowAddModal(true)}
+                            className="w-full max-w-xs bg-gym-primary hover:bg-yellow-400 text-black font-black uppercase tracking-widest py-5 rounded-2xl shadow-[0_0_30px_rgba(250,204,21,0.3)] hover:scale-105 transition-all text-xl flex items-center justify-center gap-3"
+                        >
+                            <Plus size={24} strokeWidth={3} />
+                            ABRIR CATÁLOGO
+                        </button>
                     </div>
                 )}
 
