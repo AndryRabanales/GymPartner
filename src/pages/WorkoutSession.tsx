@@ -99,6 +99,12 @@ const parseTimestamp = (val: any): number => {
     return 0;
 };
 
+const safeNum = (val: any, fallback = 0): number => {
+    if (val === undefined || val === null) return fallback;
+    const num = typeof val === 'number' ? val : parseFloat(val);
+    return isNaN(num) || !isFinite(num) ? fallback : num;
+};
+
 // ─── Sanitize ghost rest timers from localStorage/DB ───────────────────────
 // If a set was completed in a previous session that was never properly closed,
 // its restLastStartTime is a stale timestamp from hours ago. This function
@@ -219,6 +225,7 @@ const RestTimerDisplay = ({ status, accumulated, lastStartTime, isGold }: { stat
 };
 export const WorkoutSession = () => {
     const { user } = useAuth();
+    const isLeavingPageRef = useRef(false);
     const navigate = useNavigate();
     const { gymId: routeGymId } = useParams<{ gymId: string }>();
     const [searchParams] = useSearchParams();
@@ -2240,7 +2247,7 @@ export const WorkoutSession = () => {
         const isFirstGuest = targetUserId === firstGuestId;
 
         const status = set.playerRestStatus?.[targetUserId] ?? (isHost ? set.restStatus : (isFirstGuest ? set.p2_restStatus : undefined));
-        const accumulated = set.playerRestAccumulated?.[targetUserId] ?? (isHost ? set.restAccumulated : (isFirstGuest ? set.p2_restAccumulated : 0));
+        const accumulated = safeNum(set.playerRestAccumulated?.[targetUserId] ?? (isHost ? set.restAccumulated : (isFirstGuest ? set.p2_restAccumulated : 0)), 0);
         const lastStartTime = set.playerRestLastStartTime?.[targetUserId] ?? (isHost ? set.restLastStartTime : (isFirstGuest ? set.p2_restLastStartTime : undefined));
 
         return { status, accumulated, lastStartTime };
@@ -2528,6 +2535,54 @@ export const WorkoutSession = () => {
         });
     };
 
+    const togglePlayerLock = (exerciseIndex: number, setIndex: number, targetUserId: string) => {
+        setActiveExercises(prev => {
+            const next = prev.map(ex => ({
+                ...ex,
+                sets: ex.sets.map(s => ({ ...s }))
+            }));
+            const ex = next[exerciseIndex];
+            if (!ex) return prev;
+            const set = ex.sets[setIndex];
+            if (!set) return prev;
+
+            if (!set.playerLocked) set.playerLocked = {};
+            
+            const isHost = targetUserId === (isInviter ? user?.id : partnerId);
+            const isFirstGuest = targetUserId === firstGuestId;
+
+            const currentLocked = set.playerLocked[targetUserId] ?? (
+                isHost ? set.locked : (isFirstGuest ? (set.p2_locked || false) : false)
+            );
+            const nextLocked = !currentLocked;
+
+            set.playerLocked[targetUserId] = nextLocked;
+
+            if (isHost) {
+                set.locked = nextLocked;
+            } else if (isFirstGuest) {
+                set.p2_locked = nextLocked;
+            }
+
+            // CRDT: Update modification timestamp
+            set.lastUpdatedAt = Date.now();
+
+            setTimeout(() => {
+                if (isMultiplayer && channelRef.current && user) {
+                    const stateStr = JSON.stringify(next);
+                    lastIncomingState.current = stateStr;
+                    channelRef.current.send({
+                        type: 'broadcast',
+                        event: 'sync_state',
+                        payload: { exercises: next, sender: user.id }
+                    }).catch(e => console.error(e));
+                }
+            }, 0);
+
+            return next;
+        });
+    };
+
     const handlePlayerInputBlur = (exerciseIndex: number, setIndex: number, targetUserId: string, e: React.FocusEvent<HTMLInputElement>) => {
         const relatedTarget = e.relatedTarget as HTMLElement;
         if (relatedTarget && relatedTarget.tagName === 'INPUT') {
@@ -2706,7 +2761,7 @@ export const WorkoutSession = () => {
         window.history.pushState({ workoutGuard: true }, '');
 
         const handlePopState = (e: PopStateEvent) => {
-            if (!sessionId || isFinished) return;
+            if (isLeavingPageRef.current || !sessionId || isFinished) return;
             // Re-push the sentinel immediately to neutralise the navigation
             window.history.pushState({ workoutGuard: true }, '');
             // Show our premium modal instead
@@ -2735,11 +2790,13 @@ export const WorkoutSession = () => {
     // NEW: Handle Cancel
     const handleCancelSession = async () => {
         if (!sessionId) {
+            isLeavingPageRef.current = true;
             navigate(-1);
             return;
         }
         if (activeExercises.length === 0) {
             // If the workout hasn't started yet (no exercises), just exit immediately without asking complex coop questions!
+            isLeavingPageRef.current = true;
             localStorage.removeItem(`workout_draft_${sessionId}`);
             localStorage.removeItem(STORAGE_KEY);
             localStorage.removeItem('ginx_coop_state');
@@ -2758,6 +2815,7 @@ export const WorkoutSession = () => {
         } else {
             // SOLO cancel: confirm then wipe everything
             if (window.confirm("¿Seguro que quieres cancelar? Se perderá todo el progreso de esta sesión.")) {
+                isLeavingPageRef.current = true;
                 localStorage.removeItem(`workout_draft_${sessionId}`);
                 localStorage.removeItem(STORAGE_KEY);
                 localStorage.removeItem('ginx_coop_state');
@@ -3135,6 +3193,7 @@ export const WorkoutSession = () => {
 
                 setTimeout(() => {
                     setLoading(false);
+                    isLeavingPageRef.current = true;
                     setShowSummary(true);
                 }, 1500); // 1.5s delay to admire the frozen timer and "Saving" state
             } else {
@@ -3440,7 +3499,7 @@ export const WorkoutSession = () => {
                                                                     {exercise.metrics.distance && (
                                                                         <div className="min-w-[70px] w-[70px] text-center">DIST</div>
                                                                     )}
-                                                                    {exercise.metrics.rpe && (
+                                                                                                                                        {exercise.metrics.rpe && (
                                                                         <div className="min-w-[60px] w-[60px] text-center">RPE</div>
                                                                     )}
                                                                     {Object.keys(exercise.metrics).map(key => {
@@ -3448,7 +3507,7 @@ export const WorkoutSession = () => {
                                                                         if (!exercise.metrics[key as keyof typeof exercise.metrics]) return null;
                                                                         return (
                                                                             <div key={key} className="min-w-[70px] w-[70px] text-center truncate">{key.toUpperCase()}</div>
-                                                                        )
+                                                                        );
                                                                     })}
                                                                     <div className="flex-1 text-right">LISTO</div>
                                                                 </div>
@@ -3464,15 +3523,18 @@ export const WorkoutSession = () => {
                                                                     const isHost = p.id === (isInviter ? user?.id : partnerId);
                                                                     const isFirstGuest = p.id === firstGuestId;
 
-                                                                    const rowWeight = set.playerWeights?.[p.id] ?? (isHost ? set.weight : (isFirstGuest ? (set.p2_weight || 0) : 0));
-                                                                    const rowReps = set.playerReps?.[p.id] ?? (isHost ? set.reps : (isFirstGuest ? (set.p2_reps || 0) : 0));
-                                                                    const rowTime = set.playerTimes?.[p.id] ?? (isHost ? set.time : (isFirstGuest ? (set.p2_time || 0) : 0));
-                                                                    const rowDistance = set.playerDistances?.[p.id] ?? (isHost ? set.distance : (isFirstGuest ? (set.p2_distance || 0) : 0));
-                                                                    const rowRpe = set.playerRpes?.[p.id] ?? (isHost ? set.rpe : (isFirstGuest ? (set.p2_rpe || 0) : 0));
+                                                                    const rowWeight = safeNum(set.playerWeights?.[p.id] ?? (isHost ? set.weight : (isFirstGuest ? (set.p2_weight || 0) : 0)), 0);
+                                                                    const rowReps = safeNum(set.playerReps?.[p.id] ?? (isHost ? set.reps : (isFirstGuest ? (set.p2_reps || 0) : 0)), 0);
+                                                                    const rowTime = safeNum(set.playerTimes?.[p.id] ?? (isHost ? set.time : (isFirstGuest ? (set.p2_time || 0) : 0)), 0);
+                                                                    const rowDistance = safeNum(set.playerDistances?.[p.id] ?? (isHost ? set.distance : (isFirstGuest ? (set.p2_distance || 0) : 0)), 0);
+                                                                    const rowRpe = safeNum(set.playerRpes?.[p.id] ?? (isHost ? set.rpe : (isFirstGuest ? (set.p2_rpe || 0) : 0)), 0);
                                                                     const rowCompleted = set.playerCompleted?.[p.id] ?? (isHost ? set.completed : (isFirstGuest ? (set.p2_completed || false) : false));
                                                                     const rowLocked = set.playerLocked?.[p.id] ?? (isHost ? set.locked : (isFirstGuest ? (set.p2_locked || false) : false));
                                                                     const rowCompletedAt = set.playerCompletedAt?.[p.id] ?? (isHost ? set.completedAt : (isFirstGuest ? set.p2_completedAt : undefined));
                                                                     
+                                                                    const inputDisabled = rowLocked || rowReadOnly || (isMultiplayer && multiplayerMode === 'conjunto' && !isMyRow);
+                                                                    const lockToggleDisabled = rowReadOnly || (isMultiplayer && multiplayerMode === 'conjunto' && !isMyRow);
+
                                                                     return (
                                                                         <div key={p.id} className={`flex items-center gap-1 w-full flex-nowrap ${pIdx > 0 ? 'mt-1 pt-2 border-t border-white/5' : ''}`}>
                                                                             {/* Premium Name Tag column on the left of each row */}
@@ -3494,7 +3556,7 @@ export const WorkoutSession = () => {
                                                                                     <input
                                                                                         type="number"
                                                                                         inputMode="decimal"
-                                                                                        disabled={rowLocked || rowReadOnly}
+                                                                                        disabled={inputDisabled}
                                                                                         data-player-id={p.id}
                                                                                         data-set-index={setIndex}
                                                                                         data-exercise-index={mapIndex}
@@ -3512,7 +3574,7 @@ export const WorkoutSession = () => {
                                                                                     <input
                                                                                         type="number"
                                                                                         inputMode="numeric"
-                                                                                        disabled={rowLocked || rowReadOnly}
+                                                                                        disabled={inputDisabled}
                                                                                         data-player-id={p.id}
                                                                                         data-set-index={setIndex}
                                                                                         data-exercise-index={mapIndex}
@@ -3530,11 +3592,11 @@ export const WorkoutSession = () => {
                                                                                     <input
                                                                                         type="number"
                                                                                         inputMode="numeric"
-                                                                                        disabled={rowLocked || rowReadOnly}
+                                                                                        disabled={inputDisabled}
                                                                                         data-player-id={p.id}
                                                                                         data-set-index={setIndex}
                                                                                         data-exercise-index={mapIndex}
-                                                                                        value={rowTime || ''}
+                                                                                        value={rowTime === 0 ? '' : rowTime}
                                                                                         onChange={(e) => updatePlayerSet(mapIndex, setIndex, p.id, 'time', e.target.value)}
                                                                                         onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
                                                                                         onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
@@ -3548,7 +3610,7 @@ export const WorkoutSession = () => {
                                                                                     <input
                                                                                         type="number"
                                                                                         inputMode="decimal"
-                                                                                        disabled={rowLocked || rowReadOnly}
+                                                                                        disabled={inputDisabled}
                                                                                         data-player-id={p.id}
                                                                                         data-set-index={setIndex}
                                                                                         data-exercise-index={mapIndex}
@@ -3567,11 +3629,11 @@ export const WorkoutSession = () => {
                                                                                         type="number"
                                                                                         inputMode="numeric"
                                                                                         max={10}
-                                                                                        disabled={rowLocked || rowReadOnly}
+                                                                                        disabled={inputDisabled}
                                                                                         data-player-id={p.id}
                                                                                         data-set-index={setIndex}
                                                                                         data-exercise-index={mapIndex}
-                                                                                        value={rowRpe || ''}
+                                                                                        value={rowRpe === 0 ? '' : rowRpe}
                                                                                         onChange={(e) => updatePlayerSet(mapIndex, setIndex, p.id, 'rpe', e.target.value)}
                                                                                         onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
                                                                                         onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
@@ -3588,7 +3650,7 @@ export const WorkoutSession = () => {
                                                                                         <input
                                                                                             type="number"
                                                                                             inputMode="decimal"
-                                                                                            disabled={rowLocked || rowReadOnly}
+                                                                                            disabled={inputDisabled}
                                                                                             data-player-id={p.id}
                                                                                             data-set-index={setIndex}
                                                                                             data-exercise-index={mapIndex}
@@ -3606,7 +3668,7 @@ export const WorkoutSession = () => {
                                                                             <div className="flex-1 flex items-center justify-end gap-1.5 min-w-[60px] pl-1">
                                                                                 <button
                                                                                     onClick={() => togglePlayerSetComplete(mapIndex, setIndex, p.id)}
-                                                                                    disabled={rowLocked || rowReadOnly}
+                                                                                    disabled={inputDisabled}
                                                                                     className={`p-1.5 rounded-full border-2 transition-all shrink-0 ${rowCompleted
                                                                                         ? rowLocked
                                                                                             ? 'bg-neutral-800 border-neutral-700 text-neutral-500 cursor-not-allowed opacity-80'
@@ -3620,20 +3682,9 @@ export const WorkoutSession = () => {
 
                                                                                 {(rowCompleted && !rowReadOnly) && (
                                                                                     <button
-                                                                                        onClick={() => {
-                                                                                            setActiveExercises(prev => {
-                                                                                                const next = prev.map(ex => ({ ...ex, sets: ex.sets.map(s => ({ ...s })) }));
-                                                                                                const s = next[mapIndex]?.sets[setIndex];
-                                                                                                if (s) {
-                                                                                                    if (!s.playerLocked) s.playerLocked = {};
-                                                                                                    s.playerLocked[p.id] = !s.playerLocked[p.id];
-                                                                                                    if (isHost) s.locked = !s.locked;
-                                                                                                    else if (isFirstGuest) s.p2_locked = !s.p2_locked;
-                                                                                                }
-                                                                                                return next;
-                                                                                            });
-                                                                                        }}
-                                                                                        className={`p-1 rounded-full transition-colors shrink-0 ${rowLocked ? 'text-red-500 bg-red-500/10' : 'text-neutral-500 hover:text-white'}`}
+                                                                                        onClick={() => togglePlayerLock(mapIndex, setIndex, p.id)}
+                                                                                        disabled={lockToggleDisabled}
+                                                                                        className={`p-1 rounded-full transition-colors shrink-0 ${rowLocked ? 'text-red-500 bg-red-500/10' : 'text-neutral-500 hover:text-white'} ${lockToggleDisabled ? 'opacity-30 cursor-not-allowed' : ''}`}
                                                                                         title={rowLocked ? "Desbloquear para editar" : "Bloquear"}
                                                                                     >
                                                                                         {rowLocked ? <Lock size={12} /> : <LockOpen size={12} />}

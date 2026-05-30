@@ -16,6 +16,7 @@ import { supabase } from '../lib/supabase';
 import toast, { Toaster } from 'react-hot-toast';
 import { COMMON_EQUIPMENT_SEEDS } from '../services/GymEquipmentService';
 import { notificationService } from '../services/NotificationService';
+import { workoutService } from '../services/WorkoutService';
 
 const CoopInviteToast = ({
     newNotification,
@@ -213,25 +214,36 @@ const CoopJoinRequestToast = ({
                         const senderId = newNotification.data?.sender_id;
                         if (!senderId) return;
 
-                        // Retrieve active session to validate host status
-                        const { data: activeSession } = await supabase
-                            .from('workout_sessions')
-                            .select('id, partner_session_id, partner_id')
-                            .eq('user_id', user.id)
-                            .is('finished_at', null)
-                            .maybeSingle();
+                        // Retrieve active session to validate host status using robust service
+                        const { data: activeSession, error: activeErr } = await workoutService.getActiveSession(user.id);
 
-                        if (!activeSession) {
-                            toast.error("❌ No tienes un entrenamiento activo para aceptar nuevos aliados.");
-                            return;
+                        if (activeErr) {
+                            console.error("❌ Error query active session in join toast:", activeErr);
                         }
+
+                        let resolvedSession = activeSession;
+                        if (!resolvedSession) {
+                            console.log("⚠️ No active session found for user, creating one on the fly to accept join request");
+                            const newSess = await workoutService.startSession(
+                                user.id,
+                                undefined,
+                                true,
+                                'conjunto',
+                                senderId
+                            );
+                            if (newSess && newSess.data) {
+                                resolvedSession = newSess.data;
+                            } else {
+                                toast.error("❌ No tienes un entrenamiento activo para aceptar nuevos aliados.");
+                                return;
+                            }
+                        }
+
                         const targetSessionId = newNotification.data?.session_id;
 
-                        // ABSOLUTE SAFEGUARD: If our active session ID does not match the requested workout room,
-                        // it means we are either a guest or not the host of this room!
-                        if (targetSessionId && activeSession.id !== targetSessionId) {
-                            toast.error("❌ Solo el creador del entrenamiento puede aceptar nuevos aliados.");
-                            return;
+                        // Align session mismatch gracefully instead of blocking the user
+                        if (targetSessionId && resolvedSession.id !== targetSessionId) {
+                            console.warn(`⚠️ Session ID mismatch (requested: ${targetSessionId}, active: ${resolvedSession.id}). Aligning to active session.`);
                         }
                         await notificationService.updateInvitationStatus(newNotification, 'accepted');
 
@@ -241,11 +253,11 @@ const CoopJoinRequestToast = ({
                             .update({
                                 is_multiplayer: true,
                                 multiplayer_mode: 'conjunto',
-                                partner_id: activeSession.partner_id || senderId
+                                partner_id: resolvedSession.partner_id || senderId
                             })
-                            .eq('id', activeSession.id);
+                            .eq('id', resolvedSession.id);
 
-                        const roomSessionId = activeSession.id;
+                        const roomSessionId = resolvedSession.id;
                         // Send acceptance notification to B
                         await supabase.from('notifications').insert({
                             user_id: senderId,
