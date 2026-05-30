@@ -21,7 +21,7 @@ import { Loader2, ArrowLeft, Image as ImageIcon, MapPin, Search, Plus, Save, Act
 import { getCurrentPosition } from '../utils/geolocationUtils';
 import type { GymPlace, Database } from '../types/database';
 import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
-import { Link, useNavigate, useParams, useSearchParams, useLocation, useBlocker } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams, useLocation } from 'react-router-dom';
 
 interface WorkoutSet {
     id: string; // Temporary ID for UI
@@ -2673,20 +2673,29 @@ export const WorkoutSession = () => {
         return () => window.removeEventListener('beforeunload', handler);
     }, [sessionId, isFinished]);
 
-    // 2. Block in-app navigation (React Router) while session is active
-    const blocker = useBlocker(
-        ({ currentLocation, nextLocation }) =>
-            !!sessionId &&
-            !isFinished &&
-            currentLocation.pathname !== nextLocation.pathname
-    );
-
+    // 2. Block browser back button (popstate) while session is active.
+    // Works with BrowserRouter (no Data Router needed).
+    // Strategy: push a "guard" entry when session starts so back button hits it;
+    // on popstate re-push the guard and show the force exit modal.
     useEffect(() => {
-        if (blocker.state === 'blocked') {
-            // Instead of a browser confirm, show our premium modal
+        if (!sessionId || isFinished) return;
+
+        // Push a sentinel so the very first back-press hits our handler
+        window.history.pushState({ workoutGuard: true }, '');
+
+        const handlePopState = (e: PopStateEvent) => {
+            if (!sessionId || isFinished) return;
+            // Re-push the sentinel immediately to neutralise the navigation
+            window.history.pushState({ workoutGuard: true }, '');
+            // Show our premium modal instead
             setShowForceExitModal(true);
-        }
-    }, [blocker.state]);
+        };
+
+        window.addEventListener('popstate', handlePopState);
+        return () => {
+            window.removeEventListener('popstate', handlePopState);
+        };
+    }, [sessionId, isFinished]);
 
     // NEW: Persist Active Exercises to LocalStorage
     useEffect(() => {
@@ -4302,7 +4311,6 @@ export const WorkoutSession = () => {
                             onClick={async () => {
                                 setShowForceExitModal(false);
                                 await handleFinishRequest();
-                                blocker.proceed?.();
                             }}
                             className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-black uppercase text-sm tracking-wider py-4 rounded-2xl shadow-[0_4px_20px_rgba(34,197,94,0.2)] transition-all active:scale-95 flex items-center justify-center gap-2"
                         >
@@ -4331,10 +4339,9 @@ export const WorkoutSession = () => {
                                         await workoutService.deleteSession(sessionId);
                                         setLoading(false);
                                     }
-                                    blocker.proceed?.();
+                                    // Navigate back after cleanup — guard entry consumed, safe to go
+                                    navigate(-1);
                                 } else {
-                                    // User changed their mind — cancel the navigation
-                                    blocker.reset?.();
                                     setShowForceExitModal(false);
                                 }
                             }}
@@ -4346,10 +4353,7 @@ export const WorkoutSession = () => {
 
                         {/* Option 3: Go back to workout */}
                         <button
-                            onClick={() => {
-                                blocker.reset?.();
-                                setShowForceExitModal(false);
-                            }}
+                            onClick={() => setShowForceExitModal(false)}
                             className="w-full bg-transparent text-neutral-500 font-bold uppercase text-xs py-3 rounded-xl hover:text-white transition-colors border border-neutral-800"
                         >
                             Continuar Entrenando
