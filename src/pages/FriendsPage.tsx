@@ -155,30 +155,46 @@ export const FriendsPage = () => {
             toast.error(`❌ Error al enviar invitación. Verifica políticas RLS de la tabla notifications.`);
         }
     };
- 
-    const handleJoinWorkout = async (friend: any) => {
+     const handleJoinWorkout = async (friend: any) => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user || !friend.other_user || !friend.activeSession) return;
 
-        // Obtain the main/room session ID that the friend is in
-        const roomSessionId = friend.activeSession.partner_session_id || friend.activeSession.id;
-
-        // ABSOLUTE BLINDAGE: Query the creator of that main session directly from Supabase.
-        // This is 100% accurate. If friend is User 2 (Guest), roomSessionId points to User 1's (Host) session.
-        // Querying this session will return User 1's id as the owner of that session!
         toast.loading("🔍 Validando anfitrión de la sesión...", { id: "join-req" });
-        const { data: mainSession, error: mainSessionErr } = await supabase
-            .from('workout_sessions')
-            .select('user_id')
-            .eq('id', roomSessionId)
-            .maybeSingle();
 
-        if (mainSessionErr || !mainSession) {
-            toast.error("❌ No se pudo encontrar la sesión del anfitrión o ya no está activa.", { id: "join-req" });
-            return;
+        const friendUserId = friend.other_user.id;
+        const activeSess = friend.activeSession;
+
+        // DUAL-LAYER RESOLUTION:
+        // 1. Local resolution (works immediately, 100% immune to database latency/RLS)
+        let roomSessionId = activeSess.partner_session_id || activeSess.id;
+        let localHostId = activeSess.user_id;
+
+        // If the active session is a guest session (it belongs to the friend but points to a partner session)
+        if (activeSess.user_id === friendUserId && activeSess.partner_session_id) {
+            roomSessionId = activeSess.partner_session_id;
+            localHostId = activeSess.partner_id;
+        } 
+        // If the active session belongs to someone else (the host) but our friend is the partner in it
+        else if (activeSess.user_id !== friendUserId) {
+            roomSessionId = activeSess.id;
+            localHostId = activeSess.user_id;
         }
 
-        const hostId = mainSession.user_id;
+        // 2. Database verification layer (as an extra check, falling back to localHostId on error or RLS block)
+        let hostId = localHostId;
+        try {
+            const { data: mainSession } = await supabase
+                .from('workout_sessions')
+                .select('user_id')
+                .eq('id', roomSessionId)
+                .maybeSingle();
+            
+            if (mainSession && mainSession.user_id) {
+                hostId = mainSession.user_id;
+            }
+        } catch (e) {
+            console.warn("Failed to query main session host, falling back to local host ID:", e);
+        }
 
         if (hostId === user.id) {
             toast.error("❌ Ya eres el anfitrión o estás dentro de esta sesión.", { id: "join-req" });
@@ -222,9 +238,6 @@ export const FriendsPage = () => {
             toast.error(`❌ Error al enviar solicitud. Asegúrate de que las políticas RLS de Supabase lo permitan.`, { id: "join-req" });
         }
     };
-
-
-
     return (
         <div className="min-h-screen bg-black text-white pb-24">
             {/* HEADER */}
