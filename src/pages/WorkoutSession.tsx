@@ -2375,6 +2375,54 @@ export const WorkoutSession = () => {
         return { status, accumulated, lastStartTime };
     };
 
+    const stopAllRestTimersForUser = (nextExercises: any[], targetUserId: string, excludeExerciseIdx?: number, excludeSetIdx?: number) => {
+        const isHost = targetUserId === (isInviter ? user?.id : partnerId);
+        const isFirstGuest = targetUserId === firstGuestId;
+
+        for (let i = 0; i < nextExercises.length; i++) {
+            const ex = nextExercises[i];
+            for (let j = 0; j < ex.sets.length; j++) {
+                if (excludeExerciseIdx !== undefined && excludeSetIdx !== undefined && i === excludeExerciseIdx && j === excludeSetIdx) {
+                    continue;
+                }
+                const s = ex.sets[j];
+                const status = s.playerRestStatus?.[targetUserId] ?? (isHost ? s.restStatus : (isFirstGuest ? s.p2_restStatus : undefined));
+                
+                if (status === 'running' || status === 'paused') {
+                    if (!s.playerRestStatus) s.playerRestStatus = {};
+                    if (!s.playerRestAccumulated) s.playerRestAccumulated = {};
+                    if (!s.playerRestLastStartTime) s.playerRestLastStartTime = {};
+
+                    const accumulated = s.playerRestAccumulated[targetUserId] ?? (isHost ? s.restAccumulated : (isFirstGuest ? s.p2_restAccumulated : 0));
+                    const lastStartTime = s.playerRestLastStartTime[targetUserId] ?? (isHost ? s.restLastStartTime : (isFirstGuest ? s.p2_restLastStartTime : undefined));
+                    
+                    const now = Date.now();
+                    const nextAcc = status === 'running'
+                        ? (accumulated || 0) + (now - (lastStartTime || now))
+                        : (accumulated || 0);
+
+                    s.playerRestStatus[targetUserId] = 'completed';
+                    s.playerRestAccumulated[targetUserId] = nextAcc;
+                    delete s.playerRestLastStartTime[targetUserId];
+
+                    if (isHost) {
+                        s.restStatus = 'completed';
+                        s.restAccumulated = nextAcc;
+                        s.restLastStartTime = undefined;
+                    } else if (isFirstGuest) {
+                        s.p2_restStatus = 'completed';
+                        s.p2_restAccumulated = nextAcc;
+                        s.p2_restLastStartTime = undefined;
+                    }
+
+                    if (!s.playerLastUpdated) s.playerLastUpdated = {};
+                    s.playerLastUpdated[targetUserId] = Date.now();
+                    s.lastUpdatedAt = Date.now();
+                }
+            }
+        }
+    };
+
     const updatePlayerSet = (
         exerciseIndex: number,
         setIndex: number,
@@ -2413,6 +2461,11 @@ export const WorkoutSession = () => {
 
             if (!set.playerLastUpdated) set.playerLastUpdated = {};
             set.playerLastUpdated[targetUserId] = Date.now();
+
+            // If they are entering metrics, stop all other active rest timers for this user!
+            if (fieldKey === 'weight' || fieldKey === 'reps' || fieldKey === 'time' || fieldKey === 'distance' || fieldKey === 'rpe') {
+                stopAllRestTimersForUser(next, targetUserId);
+            }
 
             // CRDT: Update modification timestamp
             set.lastUpdatedAt = Date.now();
@@ -2523,43 +2576,8 @@ export const WorkoutSession = () => {
                     s.p2_restAccumulated = 0;
                 }
 
-                // Freeze previous timer for target user
-                let prevFound = false;
-                for (let i = exerciseIndex; i >= 0; i--) {
-                    const startJ = i === exerciseIndex ? setIndex - 1 : next[i].sets.length - 1;
-                    for (let j = startJ; j >= 0; j--) {
-                        const prevSet = next[i].sets[j];
-                        if (!prevSet.playerRestStatus) prevSet.playerRestStatus = {};
-                        if (!prevSet.playerRestAccumulated) prevSet.playerRestAccumulated = {};
-                        if (!prevSet.playerRestLastStartTime) prevSet.playerRestLastStartTime = {};
-
-                        const prevStatus = prevSet.playerRestStatus[targetUserId] ?? (isHost ? prevSet.restStatus : (isFirstGuest ? prevSet.p2_restStatus : undefined));
-                        if (prevStatus === 'running') {
-                            const now = Date.now();
-                            const prevLastStart = prevSet.playerRestLastStartTime[targetUserId] ?? (isHost ? prevSet.restLastStartTime : (isFirstGuest ? prevSet.p2_restLastStartTime : undefined));
-                            const prevAcc = prevSet.playerRestAccumulated[targetUserId] ?? (isHost ? prevSet.restAccumulated : (isFirstGuest ? prevSet.p2_restAccumulated : 0));
-                            const newAcc = (prevAcc || 0) + (now - (prevLastStart || now));
-
-                            prevSet.playerRestAccumulated[targetUserId] = newAcc;
-                            prevSet.playerRestStatus[targetUserId] = 'completed';
-                            delete prevSet.playerRestLastStartTime[targetUserId];
-
-                            if (isHost) {
-                                prevSet.restAccumulated = newAcc;
-                                prevSet.restStatus = 'completed';
-                                prevSet.restLastStartTime = undefined;
-                            } else if (isFirstGuest) {
-                                prevSet.p2_restAccumulated = newAcc;
-                                prevSet.p2_restStatus = 'completed';
-                                prevSet.p2_restLastStartTime = undefined;
-                            }
-
-                            prevFound = true;
-                            break;
-                        }
-                    }
-                    if (prevFound) break;
-                }
+                // Freeze all other timers for target user in the entire session!
+                stopAllRestTimersForUser(next, targetUserId, exerciseIndex, setIndex);
             } else {
                 // UNMARKING
                 delete s.playerCompletedAt[targetUserId];
