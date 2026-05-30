@@ -483,9 +483,8 @@ export const WorkoutSession = () => {
                         });
                     }
 
-                    // Stable ordering: Host first, first guest second, others after
+                    // Deterministic ordering: Host first, then all other participants sorted alphabetically by UUID to guarantee identical row slots on every single device!
                     const hostId = isInviter ? user.id : partnerId;
-                    const firstGuestId = isInviter ? partnerId : user.id;
 
                     const orderedList: any[] = [];
                     const addedIds = new Set<string>();
@@ -496,17 +495,14 @@ export const WorkoutSession = () => {
                         addedIds.add(hostId);
                     }
 
-                    const guestItem = uniqueList.find(p => p.id === firstGuestId);
-                    if (guestItem) {
-                        orderedList.push(guestItem);
-                        addedIds.add(firstGuestId);
-                    }
+                    // Sort other guests lexicographically by their stable UUID (id)
+                    const sortedGuests = uniqueList
+                        .filter(p => p.id && !addedIds.has(p.id))
+                        .sort((a, b) => a.id.localeCompare(b.id));
 
-                    uniqueList.forEach(p => {
-                        if (p.id && !addedIds.has(p.id)) {
-                            orderedList.push(p);
-                            addedIds.add(p.id);
-                        }
+                    sortedGuests.forEach(p => {
+                        orderedList.push(p);
+                        addedIds.add(p.id);
                     });
 
                     return orderedList.slice(0, 8); // Limit to maximum 8 players!
