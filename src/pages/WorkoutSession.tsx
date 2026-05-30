@@ -21,7 +21,7 @@ import { Loader2, ArrowLeft, Image as ImageIcon, MapPin, Search, Plus, Save, Act
 import { getCurrentPosition } from '../utils/geolocationUtils';
 import type { GymPlace, Database } from '../types/database';
 import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
-import { Link, useNavigate, useParams, useSearchParams, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams, useLocation, useBlocker } from 'react-router-dom';
 
 interface WorkoutSet {
     id: string; // Temporary ID for UI
@@ -295,6 +295,7 @@ export const WorkoutSession = () => {
     const [resolvedGymId, setResolvedGymId] = useState<string | null>(null);
     const [showExitMenu, setShowExitMenu] = useState(false);
     const [showCoopExitModal, setShowCoopExitModal] = useState(false);
+    const [showForceExitModal, setShowForceExitModal] = useState(false);
     const [showSummary, setShowSummary] = useState(false);
     // NEW: Track Routine Name for AI Diagnosis
     const [currentRoutineName, setCurrentRoutineName] = useState<string | undefined>(undefined);
@@ -1521,7 +1522,8 @@ export const WorkoutSession = () => {
                             await startNewSession(partnerActive.gym_id || undefined, partnerActive.id, currentIsMultiplayer, currentMultiplayerMode, currentPartnerId);
                             setStartTime(new Date(partnerActive.started_at));
                         }
-                    } else {
+                    // Only prompt for routine/exercises if no exercises were already restored
+                    } else if (activeExercisesRef.current.length === 0) {
                         if (localRoutines.length === 0) setShowAddModal(true);
                         else setShowStartOptionsModal(true);
                     }
@@ -2658,6 +2660,33 @@ export const WorkoutSession = () => {
 
 
 
+
+    // ─── Navigation Lock ────────────────────────────────────────────────
+    // 1. Block tab/window close while session is active
+    useEffect(() => {
+        if (!sessionId || isFinished) return;
+        const handler = (e: BeforeUnloadEvent) => {
+            e.preventDefault();
+            e.returnValue = '¿Seguro que quieres salir? Tu entrenamiento sigue en curso y los datos podría perderse.';
+        };
+        window.addEventListener('beforeunload', handler);
+        return () => window.removeEventListener('beforeunload', handler);
+    }, [sessionId, isFinished]);
+
+    // 2. Block in-app navigation (React Router) while session is active
+    const blocker = useBlocker(
+        ({ currentLocation, nextLocation }) =>
+            !!sessionId &&
+            !isFinished &&
+            currentLocation.pathname !== nextLocation.pathname
+    );
+
+    useEffect(() => {
+        if (blocker.state === 'blocked') {
+            // Instead of a browser confirm, show our premium modal
+            setShowForceExitModal(true);
+        }
+    }, [blocker.state]);
 
     // NEW: Persist Active Exercises to LocalStorage
     useEffect(() => {
@@ -4032,7 +4061,7 @@ export const WorkoutSession = () => {
 
                             {/* Back Button */}
                             <button
-                                onClick={() => navigate(-1)}
+                                onClick={handleCancelSession}
                                 className="absolute top-6 left-6 text-neutral-400 hover:text-white transition-colors p-2 hover:bg-white/5 rounded-full"
                             >
                                 <ArrowLeft size={20} />
@@ -4239,6 +4268,92 @@ export const WorkoutSession = () => {
                                 Volver al Entrenamiento
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+            {/* ═══════════════════════════════════════════════════════════════
+                FORCE EXIT MODAL — triggered by any navigation attempt while
+                a session is active (back button, links, useBlocker, etc.)
+                The user CANNOT leave without explicitly finishing or deleting.
+            ══════════════════════════════════════════════════════════════════ */}
+            {showForceExitModal && (
+                <div className="fixed inset-0 z-[200] flex items-end justify-center bg-black/90 backdrop-blur-md animate-in fade-in duration-200 p-4 pb-8">
+                    <div className="w-full max-w-md bg-neutral-950 border border-red-500/30 rounded-3xl p-6 flex flex-col gap-4 shadow-[0_0_60px_rgba(239,68,68,0.15)] animate-in slide-in-from-bottom-4 duration-300">
+                        {/* Icon + Title */}
+                        <div className="flex flex-col items-center text-center gap-3 pt-2">
+                            <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center">
+                                <Activity size={28} className="text-red-400" />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-black uppercase tracking-tight text-white">
+                                    ¡Entrenamiento en Curso!
+                                </h2>
+                                <p className="text-neutral-400 text-sm mt-1 font-medium">
+                                    Debes finalizar o eliminar tu sesión antes de salir.<br />
+                                    <span className="text-red-400 font-bold">No puedes abandonar sin cerrarla.</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="h-px bg-neutral-800" />
+
+                        {/* Option 1: Finish & Save */}
+                        <button
+                            onClick={async () => {
+                                setShowForceExitModal(false);
+                                await handleFinishRequest();
+                                blocker.proceed?.();
+                            }}
+                            className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-black uppercase text-sm tracking-wider py-4 rounded-2xl shadow-[0_4px_20px_rgba(34,197,94,0.2)] transition-all active:scale-95 flex items-center justify-center gap-2"
+                        >
+                            <Save size={16} strokeWidth={3} />
+                            Guardar y Finalizar
+                        </button>
+
+                        {/* Option 2: Delete session */}
+                        <button
+                            onClick={async () => {
+                                if (window.confirm('¿Eliminar toda la sesión? Los datos no guardados se perderán permanentemente.')) {
+                                    setShowForceExitModal(false);
+                                    localStorage.removeItem(`workout_draft_${sessionId}`);
+                                    localStorage.removeItem(STORAGE_KEY);
+                                    localStorage.removeItem('ginx_coop_state');
+                                    setActiveExercises([]);
+                                    if (sessionId) {
+                                        setLoading(true);
+                                        if (isInviter && channelRef.current) {
+                                            channelRef.current.send({
+                                                type: 'broadcast',
+                                                event: 'session_terminated',
+                                                payload: { sender: user?.id }
+                                            }).catch(() => {});
+                                        }
+                                        await workoutService.deleteSession(sessionId);
+                                        setLoading(false);
+                                    }
+                                    blocker.proceed?.();
+                                } else {
+                                    // User changed their mind — cancel the navigation
+                                    blocker.reset?.();
+                                    setShowForceExitModal(false);
+                                }
+                            }}
+                            className="w-full bg-neutral-900 border border-red-500/30 hover:bg-red-500/10 text-red-400 font-black uppercase text-sm tracking-wider py-4 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2"
+                        >
+                            <Trash2 size={16} strokeWidth={3} />
+                            Eliminar Sesión (Sin Guardar)
+                        </button>
+
+                        {/* Option 3: Go back to workout */}
+                        <button
+                            onClick={() => {
+                                blocker.reset?.();
+                                setShowForceExitModal(false);
+                            }}
+                            className="w-full bg-transparent text-neutral-500 font-bold uppercase text-xs py-3 rounded-xl hover:text-white transition-colors border border-neutral-800"
+                        >
+                            Continuar Entrenando
+                        </button>
                     </div>
                 </div>
             )}
