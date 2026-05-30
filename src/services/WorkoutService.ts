@@ -308,42 +308,55 @@ class WorkoutService {
     }
 
     // Failsafe Cleanup for Orphaned/Ghost Sessions
-    async cleanOrphanSessions(userId: string): Promise<void> {
+    // Returns the list of session IDs that were closed/deleted so callers can
+    // purge the matching localStorage draft keys.
+    async cleanOrphanSessions(userId: string): Promise<string[]> {
+        const closedIds: string[] = [];
         try {
             console.log('🧹 [Cleanup] Escaneando sesiones huérfanas para el usuario:', userId);
-            
-            // 1. Get all active sessions for this user
+
+            // Fetch ALL unfinished sessions regardless of age
             const { data: activeSessions } = await supabase
                 .from('workout_sessions')
                 .select('id, started_at')
                 .eq('user_id', userId)
                 .is('finished_at', null);
 
-            if (!activeSessions || activeSessions.length === 0) return;
+            if (!activeSessions || activeSessions.length === 0) return closedIds;
+
+            // Sort newest first so we can keep only the most recent one if needed
+            activeSessions.sort((a, b) =>
+                new Date(b.started_at).getTime() - new Date(a.started_at).getTime()
+            );
 
             for (const session of activeSessions) {
-                // Check if this session has any logged sets
                 const { count } = await supabase
                     .from('workout_logs')
                     .select('*', { count: 'exact', head: true })
                     .eq('session_id', session.id);
 
                 const hasLogs = (count || 0) > 0;
-                const hoursSinceStart = (Date.now() - new Date(session.started_at).getTime()) / (1000 * 60 * 60);
+                const minutesSinceStart =
+                    (Date.now() - new Date(session.started_at).getTime()) / (1000 * 60);
 
                 if (!hasLogs) {
-                    // Empty session -> Delete completely!
-                    console.log(`🧹 [Cleanup] Eliminando sesión vacía fantasma: ${session.id}`);
+                    // Empty session → delete completely (no data to preserve)
+                    console.log(`🧹 [Cleanup] Eliminando sesión vacía fantasma: ${session.id} (${minutesSinceStart.toFixed(0)} min)`);
                     await this.deleteSession(session.id);
-                } else if (hoursSinceStart > 3) {
-                    // Session with logs but older than 3 hours -> Auto-close!
-                    console.log(`🧹 [Cleanup] Cerrando sesión huérfana de larga duración: ${session.id}`);
+                    closedIds.push(session.id);
+                } else if (minutesSinceStart > 60) {
+                    // Session with logs but idle for more than 60 minutes → auto-close
+                    console.log(`🧹 [Cleanup] Cerrando sesión huérfana con datos (${minutesSinceStart.toFixed(0)} min): ${session.id}`);
                     await this.finishSession(session.id, 'Cierre automático por inactividad');
+                    closedIds.push(session.id);
+                } else {
+                    console.log(`ℹ️ [Cleanup] Sesión reciente con datos (${minutesSinceStart.toFixed(0)} min) — se preserva: ${session.id}`);
                 }
             }
         } catch (err) {
             console.error('Error in cleanOrphanSessions:', err);
         }
+        return closedIds;
     }
 
     // Log a single set (The "Hit")
@@ -380,14 +393,16 @@ class WorkoutService {
 
     // Get incomplete session if app crashed or user left
     async getActiveSession(userId: string): Promise<{ data: WorkoutSession | null; error: any }> {
-        const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
-        
+        // Only consider sessions started within the last 4 hours as truly "active".
+        // Anything older is treated as a ghost and will be swept by cleanOrphanSessions.
+        const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString();
+
         const { data, error } = await supabase
             .from('workout_sessions')
             .select('*')
             .eq('user_id', userId)
             .is('finished_at', null)
-            .gt('started_at', twelveHoursAgo) // Only sessions from the last 12 hours
+            .gt('started_at', fourHoursAgo) // ← tightened from 12h to 4h
             .order('started_at', { ascending: false })
             .limit(1)
             .maybeSingle();

@@ -1205,6 +1205,31 @@ export const WorkoutSession = () => {
             // Start 1s timer for animation immediately
             setTimeout(() => setShowIntroAnim(false), 1200);
 
+            // 🛡️ PHASE 0: Aggressively clean orphan sessions BEFORE fetching the active session.
+            // This ensures getActiveSession never returns a ghost with stale timer data.
+            // We also purge the matching localStorage draft keys so they can't be restored.
+            try {
+                const closedIds = await workoutService.cleanOrphanSessions(userId);
+                if (closedIds.length > 0) {
+                    console.log(`🧹 Purgando ${closedIds.length} draft(s) de localStorage de sesiones cerradas:`, closedIds);
+                    closedIds.forEach(id => {
+                        localStorage.removeItem(`workout_draft_${id}`);
+                    });
+                    // Also purge the generic key in case it maps to one of the closed sessions
+                    const genericDraft = localStorage.getItem(STORAGE_KEY);
+                    if (genericDraft) {
+                        try {
+                            const gd = JSON.parse(genericDraft);
+                            if (gd?.sessionId && closedIds.includes(gd.sessionId)) {
+                                localStorage.removeItem(STORAGE_KEY);
+                            }
+                        } catch { localStorage.removeItem(STORAGE_KEY); }
+                    }
+                }
+            } catch (cleanupErr) {
+                console.warn('⚠️ cleanOrphanSessions falló pero continuamos:', cleanupErr);
+            }
+
             // 1. PHASE 1: Instant Data Fetch (Settings & Gyms)
             const [gyms, settings, allGyms] = await Promise.all([
                 userService.getUserGyms(userId),
@@ -1337,7 +1362,21 @@ export const WorkoutSession = () => {
 
             // 3. Restore or Start Logic
             const active = activeResult.data;
-            const shouldRestore = active && !(currentIsMultiplayer && !currentIsInviter);
+
+            // 🛡️ Age guard: never restore a session started more than 4 hours ago;
+            // it should have been closed by cleanOrphanSessions above, but
+            // network failures or race conditions could sneak one through.
+            const SESSION_MAX_RESTORE_MS = 4 * 60 * 60 * 1000; // 4 hours
+            const activeAge = active ? Date.now() - new Date(active.started_at).getTime() : Infinity;
+            const isTooOldToRestore = activeAge > SESSION_MAX_RESTORE_MS;
+
+            if (active && isTooOldToRestore) {
+                console.warn(`⚠️ Sesión activa demasiado antigua (${(activeAge / 60000).toFixed(0)} min) — cerrando y descartando.`);
+                localStorage.removeItem(`workout_draft_${active.id}`);
+                await workoutService.finishSession(active.id, 'Cierre automático: sesión demasiado antigua');
+            }
+
+            const shouldRestore = active && !isTooOldToRestore && !(currentIsMultiplayer && !currentIsInviter);
 
             if (shouldRestore) {
                 setSessionId(active.id);
@@ -1592,8 +1631,10 @@ export const WorkoutSession = () => {
                 finalPartnerSessionId: forcePartnerSessionId || partnerSessionId || undefined
             });
 
-            // 🧹 Automatic prevention: Clean any ghost sessions before starting
-            await workoutService.cleanOrphanSessions(user.id);
+            // 🧹 Automatic prevention: Clean any ghost sessions before starting, then
+            // purge their localStorage draft keys so stale data can't leak back in.
+            const orphanIds = await workoutService.cleanOrphanSessions(user.id);
+            orphanIds.forEach(id => localStorage.removeItem(`workout_draft_${id}`));
 
             const { data: newSession, error: startError } = await workoutService.startSession(
                 user.id, 
