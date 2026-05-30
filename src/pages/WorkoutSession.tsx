@@ -4433,22 +4433,22 @@ export const WorkoutSession = () => {
                         compLevel = 1; // Medium Compaction
                     }
 
-                    const cardSpacing = compLevel === 2 ? 'gap-1.5' : compLevel === 1 ? 'gap-2.5' : 'gap-4';
+                    const cardSpacing = compLevel === 2 ? 'gap-1' : compLevel === 1 ? 'gap-1.5' : 'gap-2';
                     const cardStyle = compLevel === 2 
-                        ? 'bg-[#141310] rounded-lg overflow-hidden border-2 border-black shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)]' 
+                        ? 'bg-[#141310] rounded-md overflow-hidden border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]' 
                         : compLevel === 1 
-                            ? 'bg-[#141310] rounded-xl overflow-hidden border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]' 
-                            : 'bg-[#141310] rounded-2xl overflow-hidden border-3 border-black shadow-[5px_5px_0px_0px_rgba(0,0,0,1)]';
+                            ? 'bg-[#141310] rounded-lg overflow-hidden border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' 
+                            : 'bg-[#141310] rounded-xl overflow-hidden border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]';
                     
-                    const headerPadding = compLevel === 2 ? 'px-2 py-0.5' : compLevel === 1 ? 'px-3 py-1' : 'px-4 py-2';
-                    const headerTextSize = compLevel === 2 ? 'text-[9px]' : compLevel === 1 ? 'text-[10px]' : 'text-[11px]';
-                    const colHeaderPadding = compLevel === 2 ? 'px-2 py-0.5' : compLevel === 1 ? 'px-2.5 py-1' : 'px-3.5 py-1.5';
-                    const colHeaderTextSize = compLevel === 2 ? 'text-[7.5px]' : 'text-[8.5px]';
-                    const rowPadding = compLevel === 2 ? 'px-2 py-0.5' : compLevel === 1 ? 'px-2.5 py-1' : 'px-3.5 py-1.5';
-                    const rowTextSize = compLevel === 2 ? 'text-[8px]' : 'text-[9px]';
-                    const wTextSize = compLevel === 2 ? 'text-[10px]' : compLevel === 1 ? 'text-[11px]' : 'text-[12px]';
-                    const wUnitSize = compLevel === 2 ? 'text-[5.5px]' : compLevel === 1 ? 'text-[6px]' : 'text-[7px]';
-                    const detailTextSize = compLevel === 2 ? 'text-[7.5px]' : 'text-[8.5px]';
+                    const headerPadding = compLevel === 2 ? 'px-2 py-0.5' : compLevel === 1 ? 'px-2.5 py-0.5' : 'px-3 py-1';
+                    const headerTextSize = compLevel === 2 ? 'text-[8px]' : compLevel === 1 ? 'text-[9px]' : 'text-[10px]';
+                    const colHeaderPadding = compLevel === 2 ? 'px-2 py-px' : compLevel === 1 ? 'px-2 py-0.5' : 'px-2.5 py-0.5';
+                    const colHeaderTextSize = compLevel === 2 ? 'text-[7px]' : 'text-[7.5px]';
+                    const rowPadding = compLevel === 2 ? 'px-2 py-[2px]' : compLevel === 1 ? 'px-2 py-0.5' : 'px-2.5 py-1';
+                    const rowTextSize = compLevel === 2 ? 'text-[7.5px]' : 'text-[8px]';
+                    const wTextSize = compLevel === 2 ? 'text-[9px]' : compLevel === 1 ? 'text-[10px]' : 'text-[11px]';
+                    const wUnitSize = compLevel === 2 ? 'text-[5px]' : compLevel === 1 ? 'text-[5.5px]' : 'text-[6px]';
+                    const detailTextSize = compLevel === 2 ? 'text-[7px]' : 'text-[7.5px]';
 
                     return (
                         <div className="fixed inset-0 z-[180] flex flex-col bg-[#0c0b09] bg-[radial-gradient(circle_at_center,_#1d1a14_0%,_#0a0907_100%)] overflow-hidden">
@@ -4496,8 +4496,8 @@ export const WorkoutSession = () => {
                                 </div>
                             </div>
 
-                            {/* SCROLLABLE VINTAGE CONTENT GRID (Super Compacted) */}
-                            <div className="flex-1 overflow-y-auto px-3 pt-2 pb-24 max-w-3xl w-full mx-auto flex flex-col justify-start">
+                            {/* SCROLLABLE VINTAGE CONTENT GRID (Super Compacted to 90% Width) */}
+                            <div className="flex-1 overflow-y-auto px-1 pt-2 pb-20 w-[90%] max-w-xl mx-auto flex flex-col justify-start">
 
                                 {/* ====== TAB: GRUPAL ====== */}
                                 {(summaryTab === 'grupal' && isGroupMode) && (
@@ -4634,15 +4634,15 @@ export const WorkoutSession = () => {
                                 )}
                             </div>
 
-                            {/* MEGA RETRO ARCADE BUTTON */}
-                            <div className="flex-shrink-0 p-4 bg-gradient-to-t from-[#0c0b09] via-[#0c0b09]/95 to-transparent border-t border-black/25">
+                            {/* MEGA RETRO ARCADE BUTTON (Highly Compacted Footer) */}
+                            <div className="flex-shrink-0 py-2 px-4 bg-gradient-to-t from-[#0c0b09] via-[#0c0b09]/95 to-transparent border-t border-black/25">
                                 <div className="w-full max-w-md mx-auto px-2">
                                     <button
                                         onClick={() => {
                                             isLeavingPageRef.current = true;
                                             navigate('/');
                                         }}
-                                        className="w-full bg-[#f43f5e] hover:bg-[#e11d48] border-3 border-black text-white font-black uppercase py-4 rounded-2xl text-[13px] tracking-widest shadow-[0_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[0_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] active:translate-y-[6px] active:shadow-none transition-all duration-150"
+                                        className="w-full bg-[#f43f5e] hover:bg-[#e11d48] border-2 border-black text-white font-black uppercase py-2.5 rounded-xl text-[11px] tracking-widest shadow-[0_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[0_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] active:translate-y-[3px] active:shadow-none transition-all duration-150"
                                     >
                                         ¡VOLVER AL INICIO!
                                     </button>
