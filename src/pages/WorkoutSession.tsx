@@ -2975,11 +2975,39 @@ export const WorkoutSession = () => {
         if (isFinalizing) return;
         setIsFinalizing(true);
         // setIsFinished(true); // Already stopped
-        if (!sessionId) {
-            console.error('❌ No sessionId found!');
-            setIsFinished(false);
-            setIsFinalizing(false);
-            return;
+        let finalSessionId = sessionId;
+
+        if (!finalSessionId) {
+            console.warn('⚠️ No sessionId found at finalize! Intentando crear sesión de emergencia...');
+            try {
+                const newSession = await workoutService.startSession(
+                    user!.id,
+                    resolvedGymId,
+                    isMultiplayer,
+                    multiplayerMode || undefined,
+                    partnerId || undefined,
+                    partnerSessionId || undefined
+                );
+                if (newSession && newSession.data) {
+                    finalSessionId = newSession.data.id;
+                    setSessionId(finalSessionId);
+                    console.log('✅ Sesión de emergencia creada:', finalSessionId);
+                } else {
+                    console.error('❌ Failed to create emergency session!', newSession.error);
+                    // Emergency escape: don't trap the user
+                    localStorage.removeItem('ginx_coop_state');
+                    setIsFinished(true);
+                    setLoading(false);
+                    setIsFinalizing(false);
+                    navigate('/');
+                    return;
+                }
+            } catch (err) {
+                console.error('❌ Error critico en sesion de emergencia:', err);
+                setIsFinished(true);
+                navigate('/');
+                return;
+            }
         }
 
         setLoading(true);
@@ -3042,7 +3070,7 @@ export const WorkoutSession = () => {
                         } as any;
 
                         savePromises.push(workoutService.logSet({
-                            session_id: sessionId,
+                            session_id: finalSessionId,
                             exercise_id: targetId, // Use the resolved ID
                             set_number: j + 1,
                             sets: 1,
@@ -3074,10 +3102,10 @@ export const WorkoutSession = () => {
             await Promise.all(savePromises);
         }
 
-        console.log('🏁 Terminando sesión en DB:', sessionId);
+        console.log('🏁 Terminando sesión en DB:', finalSessionId);
 
         try {
-            const result = await workoutService.finishSession(sessionId, "Battle Finished", currentRoutineName);
+            const result = await workoutService.finishSession(finalSessionId, "Battle Finished", currentRoutineName);
 
             if (result.success) {
                 console.log('✅ Sesión terminada exitosamente');
@@ -3092,7 +3120,7 @@ export const WorkoutSession = () => {
                     }).catch(e => console.error('Error broadcasting session_terminated:', e));
                 }
 
-                localStorage.removeItem(`workout_draft_${sessionId}`);
+                localStorage.removeItem(`workout_draft_${finalSessionId}`);
                 localStorage.removeItem(STORAGE_KEY); // Also clear global key
                 localStorage.removeItem('ginx_coop_state'); // Clear multiplayer state!
                 // Removed blocking alert. 
