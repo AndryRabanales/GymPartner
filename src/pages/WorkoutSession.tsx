@@ -4412,7 +4412,7 @@ export const WorkoutSession = () => {
                 )
             }
 
-            {/* 4. SUMMARY SCREEN - Two-tab compact full-screen */}
+            {/* 4. SUMMARY SCREEN - Cuphead Videogame Retro Arcade Style */}
             {
                 showSummary && (() => {
                     const myId = user?.id || '';
@@ -4423,43 +4423,58 @@ export const WorkoutSession = () => {
                     const isGroupMode = allPlayers.length > 1;
 
                     return (
-                        <div className="fixed inset-0 z-[180] flex flex-col bg-neutral-950">
-                            {/* STICKY HEADER + TABS */}
-                            <div className="flex-shrink-0 bg-neutral-950 border-b border-white/5 pt-10 px-3 pb-0">
-                                <div className="flex gap-2 w-full">
+                        <div className="fixed inset-0 z-[180] flex flex-col bg-[#0c0b09] bg-[radial-gradient(circle_at_center,_#1d1a14_0%,_#0a0907_100%)] overflow-hidden">
+                            
+                            {/* Vintage Film Overlay effect */}
+                            <div className="absolute inset-0 bg-white/[0.01] pointer-events-none mix-blend-overlay z-10" />
+
+                            {/* STICKY HEADER with Animated Comic Logo */}
+                            <div className="flex-shrink-0 bg-black/40 border-b-3 border-black pt-8 px-4 pb-4 relative">
+                                <div className="text-center flex flex-col items-center mb-4">
+                                    <h1 
+                                        className="text-4xl md:text-5xl font-black italic uppercase tracking-tighter text-yellow-400 drop-shadow-[0_4px_0_#000] border-y-3 border-yellow-400/20 px-6 py-1 select-none animate-pulse"
+                                        style={{ fontFamily: "'Impact', 'Arial Black', sans-serif" }}
+                                    >
+                                        ¡RESULTADOS!
+                                    </h1>
+                                    <p className="text-[8px] font-black tracking-[0.2em] text-yellow-500/50 uppercase mt-1">
+                                        STUDIO GYMPARTNER ENTERTAINMENT INC.
+                                    </p>
+                                </div>
+
+                                <div className="flex gap-3 w-full max-w-md mx-auto">
                                     {isGroupMode && (
                                         <button
                                             onClick={() => setSummaryTab('grupal')}
-                                            className={`flex-1 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${
+                                            className={`flex-1 py-3 px-4 rounded-xl text-[12px] font-black uppercase tracking-widest border-2 transition-all transform hover:scale-[1.03] active:scale-95 duration-100 ${
                                                 summaryTab === 'grupal'
-                                                    ? 'bg-gym-primary text-black shadow-[0_0_14px_rgba(250,204,21,0.3)]'
-                                                    : 'bg-neutral-800 text-neutral-400'
+                                                    ? 'bg-yellow-400 border-black text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
+                                                    : 'bg-neutral-900 border-neutral-800 text-neutral-400'
                                             }`}
                                         >
-                                            Grupal
+                                            GRUPAL
                                         </button>
                                     )}
                                     <button
                                         onClick={() => setSummaryTab('individual')}
-                                        className={`flex-1 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${
+                                        className={`flex-1 py-3 px-4 rounded-xl text-[12px] font-black uppercase tracking-widest border-2 transition-all transform hover:scale-[1.03] active:scale-95 duration-100 ${
                                             summaryTab === 'individual' || !isGroupMode
-                                                ? 'bg-gym-primary text-black shadow-[0_0_14px_rgba(250,204,21,0.3)]'
-                                                : 'bg-neutral-800 text-neutral-400'
+                                                ? 'bg-yellow-400 border-black text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
+                                                : 'bg-neutral-900 border-neutral-800 text-neutral-400'
                                         }`}
                                     >
-                                        Individual
+                                        INDIVIDUAL
                                     </button>
                                 </div>
                             </div>
 
-                            {/* SCROLLABLE CONTENT */}
-                            <div className="flex-1 overflow-y-auto px-3 pt-3 pb-20">
+                            {/* SCROLLABLE VINTAGE CONTENT GRID */}
+                            <div className="flex-1 overflow-y-auto px-4 pt-4 pb-24 space-y-4 max-w-3xl w-full mx-auto">
 
                                 {/* ====== TAB: GRUPAL ====== */}
                                 {(summaryTab === 'grupal' && isGroupMode) && (
-                                    <div className="flex flex-col gap-2">
+                                    <div className="flex flex-col gap-3">
                                         {activeExercises.map((ex, exIdx) => {
-                                            // Determine all player IDs that have ANY data in this exercise
                                             const activePlayers = allPlayers.filter(p =>
                                                 ex.sets.some(s =>
                                                     Number(s.playerWeights?.[p.id]) > 0 ||
@@ -4471,20 +4486,25 @@ export const WorkoutSession = () => {
                                             if (activePlayers.length === 0) return null;
 
                                             return (
-                                                <div key={exIdx} className="bg-neutral-900 rounded-xl overflow-hidden border border-white/5">
-                                                    {/* Exercise name header */}
-                                                    <div className="px-3 py-1.5 bg-neutral-800/60">
-                                                        <span className="text-[10px] font-black uppercase tracking-widest text-neutral-300">{ex.equipmentName}</span>
+                                                <div key={exIdx} className="bg-[#141310] rounded-2xl overflow-hidden border-3 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transform hover:-translate-y-0.5 transition-transform duration-200">
+                                                    {/* Chalkboard header with classic double-outline separator */}
+                                                    <div className="px-4 py-2.5 bg-gradient-to-r from-yellow-500/20 via-yellow-500/5 to-transparent border-b-2 border-black flex justify-between items-center">
+                                                        <span className="text-[11px] font-black uppercase tracking-widest text-yellow-400 italic">
+                                                            ★ {ex.equipmentName}
+                                                        </span>
+                                                        <span className="text-[8px] font-black text-yellow-500/40 uppercase">EX-{exIdx + 1}</span>
                                                     </div>
 
                                                     {/* Column headers: Serie + one col per player */}
-                                                    <div className="grid px-2 py-1 border-b border-white/5" style={{ gridTemplateColumns: `28px repeat(${activePlayers.length}, 1fr)` }}>
-                                                        <div className="text-[8px] text-neutral-600 font-bold uppercase">#</div>
+                                                    <div className="grid px-3 py-2 bg-black/40 border-b border-black text-[9px] font-bold text-neutral-400 uppercase tracking-widest" style={{ gridTemplateColumns: `32px repeat(${activePlayers.length}, 1fr)` }}>
+                                                        <div className="text-yellow-500/80 font-black">SET</div>
                                                         {activePlayers.map(p => {
                                                             const nm = (p.username || 'U').split(' ')[0].substring(0, 7);
                                                             const isMe = p.id === myId;
                                                             return (
-                                                                <div key={p.id} className={`text-[8px] font-black uppercase text-center truncate ${isMe ? 'text-gym-primary' : 'text-neutral-400'}`}>{nm}</div>
+                                                                <div key={p.id} className={`text-center font-black truncate ${isMe ? 'text-yellow-400 italic underline decoration-yellow-400/40' : 'text-neutral-300'}`}>
+                                                                    {nm}
+                                                                </div>
                                                             );
                                                         })}
                                                     </div>
@@ -4499,8 +4519,8 @@ export const WorkoutSession = () => {
                                                         );
                                                         if (!hasAny) return null;
                                                         return (
-                                                            <div key={s.id} className="grid px-2 py-1.5 border-b border-white/5 last:border-0 items-center" style={{ gridTemplateColumns: `28px repeat(${activePlayers.length}, 1fr)` }}>
-                                                                <div className="text-[8px] text-neutral-600 font-bold">{sIdx + 1}</div>
+                                                            <div key={s.id} className="grid px-3 py-2 border-b border-black/40 last:border-0 items-center bg-black/10 hover:bg-black/20 transition-colors" style={{ gridTemplateColumns: `32px repeat(${activePlayers.length}, 1fr)` }}>
+                                                                <div className="text-[10px] text-yellow-500/40 font-black italic">#{sIdx + 1}</div>
                                                                 {activePlayers.map(p => {
                                                                     const w = Number(s.playerWeights?.[p.id]) || 0;
                                                                     const r = Number(s.playerReps?.[p.id]) || 0;
@@ -4509,16 +4529,16 @@ export const WorkoutSession = () => {
                                                                     const hasVal = w > 0 || r > 0 || t > 0 || d > 0;
                                                                     const isMe = p.id === myId;
                                                                     return (
-                                                                        <div key={p.id} className="flex flex-col items-center gap-0">
+                                                                        <div key={p.id} className="flex flex-col items-center justify-center py-0.5">
                                                                             {hasVal ? (
-                                                                                <>
-                                                                                    {w > 0 && <span className={`text-[10px] font-black leading-tight ${isMe ? 'text-gym-primary' : 'text-white'}`}>{w}<span className="text-[7px] font-normal ml-0.5">{ex.weightUnit || 'kg'}</span></span>}
-                                                                                    {r > 0 && <span className="text-[9px] text-neutral-400 leading-tight">{r}r</span>}
-                                                                                    {t > 0 && <span className="text-[9px] text-neutral-400 leading-tight">{t}s</span>}
-                                                                                    {d > 0 && <span className="text-[9px] text-neutral-400 leading-tight">{d}{ex.distanceUnit || 'm'}</span>}
-                                                                                </>
+                                                                                <div className="flex flex-col items-center">
+                                                                                    {w > 0 && <span className={`text-[12px] font-black leading-none tracking-tight ${isMe ? 'text-yellow-400' : 'text-white'}`}>{w}<span className="text-[7px] font-bold text-neutral-400 ml-0.5">{ex.weightUnit || 'kg'}</span></span>}
+                                                                                    {r > 0 && <span className="text-[9px] text-neutral-400 leading-none font-bold mt-0.5">{r} reps</span>}
+                                                                                    {t > 0 && <span className="text-[9px] text-neutral-400 leading-none font-bold mt-0.5">{t}s</span>}
+                                                                                    {d > 0 && <span className="text-[9px] text-neutral-400 leading-none font-bold mt-0.5">{d}{ex.distanceUnit || 'm'}</span>}
+                                                                                </div>
                                                                             ) : (
-                                                                                <span className="text-[8px] text-neutral-700">—</span>
+                                                                                <span className="text-[10px] text-neutral-700 font-bold">—</span>
                                                                             )}
                                                                         </div>
                                                                     );
@@ -4534,7 +4554,7 @@ export const WorkoutSession = () => {
 
                                 {/* ====== TAB: INDIVIDUAL ====== */}
                                 {(summaryTab === 'individual' || !isGroupMode) && (
-                                    <div className="flex flex-col gap-2">
+                                    <div className="flex flex-col gap-3">
                                         {activeExercises.map((ex, exIdx) => {
                                             const mySets = ex.sets.map((s, i) => ({ ...s, idx: i })).filter(s =>
                                                 Number(s.playerWeights?.[myId]) > 0 ||
@@ -4544,16 +4564,20 @@ export const WorkoutSession = () => {
                                             );
                                             if (mySets.length === 0) return null;
                                             return (
-                                                <div key={exIdx} className="bg-neutral-900 rounded-xl overflow-hidden border border-white/5">
-                                                    <div className="px-3 py-1.5 bg-neutral-800/60">
-                                                        <span className="text-[10px] font-black uppercase tracking-widest text-neutral-300">{ex.equipmentName}</span>
+                                                <div key={exIdx} className="bg-[#141310] rounded-2xl overflow-hidden border-3 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transform hover:-translate-y-0.5 transition-transform duration-200">
+                                                    <div className="px-4 py-2.5 bg-gradient-to-r from-yellow-500/20 via-yellow-500/5 to-transparent border-b-2 border-black flex justify-between items-center">
+                                                        <span className="text-[11px] font-black uppercase tracking-widest text-yellow-400 italic">
+                                                            ★ {ex.equipmentName}
+                                                        </span>
+                                                        <span className="text-[8px] font-black text-yellow-500/40 uppercase">EX-{exIdx + 1}</span>
                                                     </div>
+                                                    
                                                     {/* Header row */}
-                                                    <div className="grid grid-cols-4 px-2 py-1 border-b border-white/5">
-                                                        <div className="text-[8px] text-neutral-600 font-bold uppercase">#</div>
-                                                        <div className="text-[8px] text-neutral-600 font-bold uppercase text-center">Peso</div>
-                                                        <div className="text-[8px] text-neutral-600 font-bold uppercase text-center">Reps</div>
-                                                        <div className="text-[8px] text-neutral-600 font-bold uppercase text-center">Seg/Dist</div>
+                                                    <div className="grid grid-cols-4 px-3 py-2 bg-black/40 border-b border-black text-[9px] font-bold text-neutral-400 uppercase tracking-widest">
+                                                        <div className="text-yellow-500/80 font-black">SET</div>
+                                                        <div className="text-center font-black">PESO</div>
+                                                        <div className="text-center font-black">REPS</div>
+                                                        <div className="text-center font-black">TIEMPO/DIST</div>
                                                     </div>
                                                     {mySets.map(s => {
                                                         const w = Number(s.playerWeights?.[myId]) || 0;
@@ -4561,16 +4585,16 @@ export const WorkoutSession = () => {
                                                         const t = Number(s.playerTimes?.[myId]) || 0;
                                                         const d = Number(s.playerDistances?.[myId]) || 0;
                                                         return (
-                                                            <div key={s.id} className="grid grid-cols-4 px-2 py-1.5 border-b border-white/5 last:border-0 items-center">
-                                                                <div className="text-[8px] text-neutral-600">{s.idx + 1}</div>
+                                                            <div key={s.id} className="grid grid-cols-4 px-3 py-2.5 border-b border-black/40 last:border-0 items-center bg-black/10 hover:bg-black/20 transition-colors">
+                                                                <div className="text-[10px] text-yellow-500/40 font-black italic">#{s.idx + 1}</div>
                                                                 <div className="text-center">
-                                                                    {w > 0 ? <span className="text-[11px] font-black text-gym-primary">{w}<span className="text-[7px] font-normal ml-0.5">{ex.weightUnit || 'kg'}</span></span> : <span className="text-neutral-700 text-[8px]">—</span>}
+                                                                    {w > 0 ? <span className="text-[12px] font-black text-yellow-400">{w}<span className="text-[7px] font-bold text-neutral-400 ml-0.5">{ex.weightUnit || 'kg'}</span></span> : <span className="text-neutral-700 text-[10px] font-bold">—</span>}
                                                                 </div>
                                                                 <div className="text-center">
-                                                                    {r > 0 ? <span className="text-[11px] font-black text-white">{r}</span> : <span className="text-neutral-700 text-[8px]">—</span>}
+                                                                    {r > 0 ? <span className="text-[12px] font-black text-white">{r}</span> : <span className="text-neutral-700 text-[10px] font-bold">—</span>}
                                                                 </div>
                                                                 <div className="text-center">
-                                                                    {t > 0 ? <span className="text-[10px] font-bold text-neutral-300">{t}s</span> : d > 0 ? <span className="text-[10px] font-bold text-neutral-300">{d}{ex.distanceUnit || 'm'}</span> : <span className="text-neutral-700 text-[8px]">—</span>}
+                                                                    {t > 0 ? <span className="text-[11px] font-bold text-neutral-300">{t}s</span> : d > 0 ? <span className="text-[11px] font-bold text-neutral-300">{d}{ex.distanceUnit || 'm'}</span> : <span className="text-neutral-700 text-[10px] font-bold">—</span>}
                                                                 </div>
                                                             </div>
                                                         );
@@ -4582,17 +4606,19 @@ export const WorkoutSession = () => {
                                 )}
                             </div>
 
-                            {/* STICKY BOTTOM BUTTON */}
-                            <div className="flex-shrink-0 p-3 bg-gradient-to-t from-neutral-950 via-neutral-950/95 to-transparent">
-                                <button
-                                    onClick={() => {
-                                        isLeavingPageRef.current = true;
-                                        navigate('/');
-                                    }}
-                                    className="w-full bg-gym-primary hover:bg-yellow-400 text-black font-black uppercase py-3.5 rounded-2xl text-sm tracking-wider transition-all"
-                                >
-                                    Volver al Inicio
-                                </button>
+                            {/* MEGA RETRO ARCADE BUTTON */}
+                            <div className="flex-shrink-0 p-4 bg-gradient-to-t from-[#0c0b09] via-[#0c0b09]/95 to-transparent border-t border-black/25">
+                                <div className="w-full max-w-md mx-auto px-2">
+                                    <button
+                                        onClick={() => {
+                                            isLeavingPageRef.current = true;
+                                            navigate('/');
+                                        }}
+                                        className="w-full bg-[#f43f5e] hover:bg-[#e11d48] border-3 border-black text-white font-black uppercase py-4 rounded-2xl text-[13px] tracking-widest shadow-[0_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[0_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] active:translate-y-[6px] active:shadow-none transition-all duration-150"
+                                    >
+                                        ¡VOLVER AL INICIO!
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     );
