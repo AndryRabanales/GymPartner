@@ -340,6 +340,7 @@ export const WorkoutSession = () => {
     const [showCoopExitModal, setShowCoopExitModal] = useState(false);
     const [showForceExitModal, setShowForceExitModal] = useState(false);
     const [showSummary, setShowSummary] = useState(false);
+    const [summaryTab, setSummaryTab] = useState<'grupal' | 'individual'>('grupal');
     const [exerciseFillFlow, setExerciseFillFlow] = useState<{ exerciseName: string; timestamp: number }[]>([]);
 
     const recordExerciseInteraction = (exerciseName: string) => {
@@ -4411,93 +4412,191 @@ export const WorkoutSession = () => {
                 )
             }
 
-            {/* 4. NEW: SUMMARY / MISSION COMPLETE MODAL (Correct Position) */}
+            {/* 4. SUMMARY SCREEN - Two-tab compact full-screen */}
             {
-                showSummary && (
-                    <div className="fixed inset-0 z-[180] flex flex-col bg-black overflow-y-auto animate-in fade-in duration-300">
-                        <div className="flex-1 w-full max-w-3xl mx-auto flex flex-col gap-4 p-4 pb-24">
-                            {((isMultiplayer && multiplayerMode === 'conjunto' && participants.length > 0) ? participants : [{ id: user?.id || 'single-user', username: user?.user_metadata?.full_name || user?.user_metadata?.username || 'Yo', avatar_url: user?.user_metadata?.avatar_url }])
-                                .map((p) => {
-                                    const displayName = p.username ? p.username.split(' ')[0] : 'Jugador';
-                                    const isMe = p.id === user?.id;
-                                    
-                                    // Comprobar si el jugador tiene algún dato en algún ejercicio
-                                    const hasData = activeExercises.some(ex => ex.sets.some(s => s.playerCompleted?.[p.id] || Number(s.playerWeights?.[p.id]) > 0 || Number(s.playerReps?.[p.id]) > 0 || Number(s.playerTimes?.[p.id]) > 0 || Number(s.playerDistances?.[p.id]) > 0));
-                                    
-                                    if (!hasData) return null; // No mostrar jugadores sin datos
+                showSummary && (() => {
+                    const myId = user?.id || '';
+                    const myName = (user?.user_metadata?.full_name || user?.user_metadata?.username || 'Yo').split(' ')[0];
+                    const allPlayers = (isMultiplayer && multiplayerMode === 'conjunto' && participants.length > 0)
+                        ? participants
+                        : [{ id: myId, username: myName, avatar_url: user?.user_metadata?.avatar_url }];
+                    const isGroupMode = allPlayers.length > 1;
 
-                                    return (
-                                        <div key={p.id} className={`bg-neutral-900 border \${isMe ? 'border-gym-primary/50' : 'border-white/10'} rounded-2xl p-4 flex flex-col gap-3`}>
-                                            <div className="flex items-center gap-3 border-b border-white/5 pb-3">
-                                                {p.avatar_url ? (
-                                                    <img src={p.avatar_url} alt="avatar" className="w-10 h-10 rounded-full border-2 border-neutral-800 object-cover" />
-                                                ) : (
-                                                    <div className="w-10 h-10 rounded-full bg-neutral-800 flex items-center justify-center border-2 border-neutral-700">
-                                                        <span className="text-xs font-bold text-white uppercase">{displayName.charAt(0)}</span>
+                    return (
+                        <div className="fixed inset-0 z-[180] flex flex-col bg-neutral-950">
+                            {/* STICKY HEADER + TABS */}
+                            <div className="flex-shrink-0 bg-neutral-950 border-b border-white/5 pt-10 px-3 pb-0">
+                                <div className="flex gap-2 w-full">
+                                    {isGroupMode && (
+                                        <button
+                                            onClick={() => setSummaryTab('grupal')}
+                                            className={`flex-1 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${
+                                                summaryTab === 'grupal'
+                                                    ? 'bg-gym-primary text-black shadow-[0_0_14px_rgba(250,204,21,0.3)]'
+                                                    : 'bg-neutral-800 text-neutral-400'
+                                            }`}
+                                        >
+                                            Grupal
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={() => setSummaryTab('individual')}
+                                        className={`flex-1 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${
+                                            summaryTab === 'individual' || !isGroupMode
+                                                ? 'bg-gym-primary text-black shadow-[0_0_14px_rgba(250,204,21,0.3)]'
+                                                : 'bg-neutral-800 text-neutral-400'
+                                        }`}
+                                    >
+                                        Individual
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* SCROLLABLE CONTENT */}
+                            <div className="flex-1 overflow-y-auto px-3 pt-3 pb-20">
+
+                                {/* ====== TAB: GRUPAL ====== */}
+                                {(summaryTab === 'grupal' && isGroupMode) && (
+                                    <div className="flex flex-col gap-2">
+                                        {activeExercises.map((ex, exIdx) => {
+                                            // Determine all player IDs that have ANY data in this exercise
+                                            const activePlayers = allPlayers.filter(p =>
+                                                ex.sets.some(s =>
+                                                    Number(s.playerWeights?.[p.id]) > 0 ||
+                                                    Number(s.playerReps?.[p.id]) > 0 ||
+                                                    Number(s.playerTimes?.[p.id]) > 0 ||
+                                                    Number(s.playerDistances?.[p.id]) > 0
+                                                )
+                                            );
+                                            if (activePlayers.length === 0) return null;
+
+                                            return (
+                                                <div key={exIdx} className="bg-neutral-900 rounded-xl overflow-hidden border border-white/5">
+                                                    {/* Exercise name header */}
+                                                    <div className="px-3 py-1.5 bg-neutral-800/60">
+                                                        <span className="text-[10px] font-black uppercase tracking-widest text-neutral-300">{ex.equipmentName}</span>
                                                     </div>
-                                                )}
-                                                <h2 className={`text-lg font-black uppercase tracking-wide \${isMe ? 'text-gym-primary' : 'text-white'}`}>
-                                                    {displayName}
-                                                </h2>
-                                            </div>
 
-                                            <div className="flex flex-col gap-3">
-                                                {activeExercises.map((ex, exIdx) => {
-                                                    const playerSets = ex.sets.map((s, idx) => ({ ...s, originalIndex: idx }))
-                                                        .filter(s => s.playerCompleted?.[p.id] || Number(s.playerWeights?.[p.id]) > 0 || Number(s.playerReps?.[p.id]) > 0 || Number(s.playerTimes?.[p.id]) > 0 || Number(s.playerDistances?.[p.id]) > 0);
+                                                    {/* Column headers: Serie + one col per player */}
+                                                    <div className="grid px-2 py-1 border-b border-white/5" style={{ gridTemplateColumns: `28px repeat(${activePlayers.length}, 1fr)` }}>
+                                                        <div className="text-[8px] text-neutral-600 font-bold uppercase">#</div>
+                                                        {activePlayers.map(p => {
+                                                            const nm = (p.username || 'U').split(' ')[0].substring(0, 7);
+                                                            const isMe = p.id === myId;
+                                                            return (
+                                                                <div key={p.id} className={`text-[8px] font-black uppercase text-center truncate ${isMe ? 'text-gym-primary' : 'text-neutral-400'}`}>{nm}</div>
+                                                            );
+                                                        })}
+                                                    </div>
 
-                                                    if (playerSets.length === 0) return null;
-
-                                                    return (
-                                                        <div key={exIdx} className="bg-neutral-950/50 rounded-xl p-3">
-                                                            <h3 className="text-[11px] font-black uppercase tracking-wide text-neutral-300 mb-2">{ex.equipmentName}</h3>
-                                                            <div className="flex flex-col gap-1">
-                                                                {playerSets.map((s) => {
-                                                                    const weight = Number(s.playerWeights?.[p.id]) || 0;
-                                                                    const reps = Number(s.playerReps?.[p.id]) || 0;
-                                                                    const time = Number(s.playerTimes?.[p.id]) || 0;
-                                                                    const distance = Number(s.playerDistances?.[p.id]) || 0;
-                                                                    const rpe = Number(s.playerRpes?.[p.id]) || 0;
-                                                                    
+                                                    {/* Set rows */}
+                                                    {ex.sets.map((s, sIdx) => {
+                                                        const hasAny = activePlayers.some(p =>
+                                                            Number(s.playerWeights?.[p.id]) > 0 ||
+                                                            Number(s.playerReps?.[p.id]) > 0 ||
+                                                            Number(s.playerTimes?.[p.id]) > 0 ||
+                                                            Number(s.playerDistances?.[p.id]) > 0
+                                                        );
+                                                        if (!hasAny) return null;
+                                                        return (
+                                                            <div key={s.id} className="grid px-2 py-1.5 border-b border-white/5 last:border-0 items-center" style={{ gridTemplateColumns: `28px repeat(${activePlayers.length}, 1fr)` }}>
+                                                                <div className="text-[8px] text-neutral-600 font-bold">{sIdx + 1}</div>
+                                                                {activePlayers.map(p => {
+                                                                    const w = Number(s.playerWeights?.[p.id]) || 0;
+                                                                    const r = Number(s.playerReps?.[p.id]) || 0;
+                                                                    const t = Number(s.playerTimes?.[p.id]) || 0;
+                                                                    const d = Number(s.playerDistances?.[p.id]) || 0;
+                                                                    const hasVal = w > 0 || r > 0 || t > 0 || d > 0;
+                                                                    const isMe = p.id === myId;
                                                                     return (
-                                                                        <div key={s.id} className="flex items-center text-[10px] text-neutral-400 font-medium py-1 border-b border-white/5 last:border-0 gap-2">
-                                                                            <div className="w-8 text-neutral-500">#{s.originalIndex + 1}</div>
-                                                                            <div className="flex-1 flex justify-end gap-3">
-                                                                                {weight > 0 && <div><span className="text-white font-bold">{weight}</span> <span className="text-[8px] uppercase">{ex.weightUnit || 'kg'}</span></div>}
-                                                                                {reps > 0 && <div><span className="text-white font-bold">{reps}</span> <span className="text-[8px] uppercase">reps</span></div>}
-                                                                                {time > 0 && <div><span className="text-white font-bold">{time}</span> <span className="text-[8px] uppercase">s</span></div>}
-                                                                                {distance > 0 && <div><span className="text-white font-bold">{distance}</span> <span className="text-[8px] uppercase">{ex.distanceUnit || 'm'}</span></div>}
-                                                                                {rpe > 0 && <div><span className="text-[8px] uppercase">RPE</span> <span className="text-white font-bold">{rpe}</span></div>}
-                                                                            </div>
+                                                                        <div key={p.id} className="flex flex-col items-center gap-0">
+                                                                            {hasVal ? (
+                                                                                <>
+                                                                                    {w > 0 && <span className={`text-[10px] font-black leading-tight ${isMe ? 'text-gym-primary' : 'text-white'}`}>{w}<span className="text-[7px] font-normal ml-0.5">{ex.weightUnit || 'kg'}</span></span>}
+                                                                                    {r > 0 && <span className="text-[9px] text-neutral-400 leading-tight">{r}r</span>}
+                                                                                    {t > 0 && <span className="text-[9px] text-neutral-400 leading-tight">{t}s</span>}
+                                                                                    {d > 0 && <span className="text-[9px] text-neutral-400 leading-tight">{d}{ex.distanceUnit || 'm'}</span>}
+                                                                                </>
+                                                                            ) : (
+                                                                                <span className="text-[8px] text-neutral-700">—</span>
+                                                                            )}
                                                                         </div>
                                                                     );
                                                                 })}
                                                             </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                        </div>
-                        
-                        {/* Sticky Botón Volver */}
-                        <div className="fixed bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black via-black/95 to-transparent">
-                            <div className="w-full max-w-3xl mx-auto">
+                                                        );
+                                                    })}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+
+                                {/* ====== TAB: INDIVIDUAL ====== */}
+                                {(summaryTab === 'individual' || !isGroupMode) && (
+                                    <div className="flex flex-col gap-2">
+                                        {activeExercises.map((ex, exIdx) => {
+                                            const mySets = ex.sets.map((s, i) => ({ ...s, idx: i })).filter(s =>
+                                                Number(s.playerWeights?.[myId]) > 0 ||
+                                                Number(s.playerReps?.[myId]) > 0 ||
+                                                Number(s.playerTimes?.[myId]) > 0 ||
+                                                Number(s.playerDistances?.[myId]) > 0
+                                            );
+                                            if (mySets.length === 0) return null;
+                                            return (
+                                                <div key={exIdx} className="bg-neutral-900 rounded-xl overflow-hidden border border-white/5">
+                                                    <div className="px-3 py-1.5 bg-neutral-800/60">
+                                                        <span className="text-[10px] font-black uppercase tracking-widest text-neutral-300">{ex.equipmentName}</span>
+                                                    </div>
+                                                    {/* Header row */}
+                                                    <div className="grid grid-cols-4 px-2 py-1 border-b border-white/5">
+                                                        <div className="text-[8px] text-neutral-600 font-bold uppercase">#</div>
+                                                        <div className="text-[8px] text-neutral-600 font-bold uppercase text-center">Peso</div>
+                                                        <div className="text-[8px] text-neutral-600 font-bold uppercase text-center">Reps</div>
+                                                        <div className="text-[8px] text-neutral-600 font-bold uppercase text-center">Seg/Dist</div>
+                                                    </div>
+                                                    {mySets.map(s => {
+                                                        const w = Number(s.playerWeights?.[myId]) || 0;
+                                                        const r = Number(s.playerReps?.[myId]) || 0;
+                                                        const t = Number(s.playerTimes?.[myId]) || 0;
+                                                        const d = Number(s.playerDistances?.[myId]) || 0;
+                                                        return (
+                                                            <div key={s.id} className="grid grid-cols-4 px-2 py-1.5 border-b border-white/5 last:border-0 items-center">
+                                                                <div className="text-[8px] text-neutral-600">{s.idx + 1}</div>
+                                                                <div className="text-center">
+                                                                    {w > 0 ? <span className="text-[11px] font-black text-gym-primary">{w}<span className="text-[7px] font-normal ml-0.5">{ex.weightUnit || 'kg'}</span></span> : <span className="text-neutral-700 text-[8px]">—</span>}
+                                                                </div>
+                                                                <div className="text-center">
+                                                                    {r > 0 ? <span className="text-[11px] font-black text-white">{r}</span> : <span className="text-neutral-700 text-[8px]">—</span>}
+                                                                </div>
+                                                                <div className="text-center">
+                                                                    {t > 0 ? <span className="text-[10px] font-bold text-neutral-300">{t}s</span> : d > 0 ? <span className="text-[10px] font-bold text-neutral-300">{d}{ex.distanceUnit || 'm'}</span> : <span className="text-neutral-700 text-[8px]">—</span>}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* STICKY BOTTOM BUTTON */}
+                            <div className="flex-shrink-0 p-3 bg-gradient-to-t from-neutral-950 via-neutral-950/95 to-transparent">
                                 <button
                                     onClick={() => {
                                         isLeavingPageRef.current = true;
                                         navigate('/');
                                     }}
-                                    className="w-full bg-gym-primary hover:bg-yellow-400 text-black font-black uppercase py-3.5 rounded-2xl shadow-[0_4px_25px_rgba(250,204,21,0.2)] transition-all text-sm tracking-wider"
+                                    className="w-full bg-gym-primary hover:bg-yellow-400 text-black font-black uppercase py-3.5 rounded-2xl text-sm tracking-wider transition-all"
                                 >
                                     Volver al Inicio
                                 </button>
                             </div>
                         </div>
-                    </div>
-                )
+                    );
+                })()
             }
         </div >
     );
