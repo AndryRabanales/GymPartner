@@ -685,70 +685,105 @@ export const WorkoutSession = () => {
                                     }
 
                                     const locTime = loc.lastUpdatedAt || 0;
-                                    const inTime = inSet.lastUpdatedAt || 0;
-                                    const useLoc = locTime >= inTime && locTime > 0;
+                                     const inTime = inSet.lastUpdatedAt || 0;
+                                     const useLoc = locTime >= inTime && locTime > 0;
 
-                                    const mergeMap = (locMap: Record<string, any> = {}, inMap: Record<string, any> = {}) => {
-                                        const res = { ...locMap };
-                                        for (const key of Object.keys(inMap || {})) {
-                                            const inVal = inMap[key];
-                                            const locVal = locMap[key];
-                                            
-                                            const hasLoc = locVal !== undefined;
-                                            const hasIn = inVal !== undefined;
-                                            
-                                            if (hasLoc && hasIn) res[key] = useLoc ? locVal : inVal;
-                                            else if (hasIn) res[key] = inVal;
-                                        }
-                                        return res;
-                                    };
+                                     const lastUpd = { ...(loc.playerLastUpdated || {}) };
+                                     for (const pid of Object.keys(inSet.playerLastUpdated || {})) {
+                                         const locT = loc.playerLastUpdated?.[pid] || 0;
+                                         const inT = inSet.playerLastUpdated?.[pid] || 0;
+                                         lastUpd[pid] = Math.max(locT, inT);
+                                     }
 
-                                    const w = mergeMap(loc.playerWeights, inSet.playerWeights);
-                                    const r = mergeMap(loc.playerReps, inSet.playerReps);
-                                    const t = mergeMap(loc.playerTimes, inSet.playerTimes);
-                                    const d = mergeMap(loc.playerDistances, inSet.playerDistances);
-                                    const rpe = mergeMap(loc.playerRpes, inSet.playerRpes);
-                                    const comp = mergeMap(loc.playerCompleted, inSet.playerCompleted);
-                                    const lock = mergeMap(loc.playerLocked, inSet.playerLocked);
-                                    const compAt = mergeMap(loc.playerCompletedAt, inSet.playerCompletedAt);
+                                     const mergeMap = (locMap: Record<string, any> = {}, inMap: Record<string, any> = {}) => {
+                                         const res = { ...locMap };
+                                         for (const key of Object.keys(inMap || {})) {
+                                             const inVal = inMap[key];
+                                             const locVal = locMap[key];
+                                             
+                                             const hasLoc = locVal !== undefined;
+                                             const hasIn = inVal !== undefined;
+                                             
+                                             if (hasLoc && hasIn) {
+                                                 const locPTime = loc.playerLastUpdated?.[key] || 0;
+                                                 const inPTime = inSet.playerLastUpdated?.[key] || 0;
+                                                 res[key] = locPTime >= inPTime ? locVal : inVal;
+                                             } else if (hasIn) {
+                                                 res[key] = inVal;
+                                             }
+                                         }
+                                         return res;
+                                     };
 
-                                    const rStatus = mergeMap(loc.playerRestStatus, inSet.playerRestStatus);
-                                    const rAcc = mergeMap(loc.playerRestAccumulated, inSet.playerRestAccumulated);
-                                    const rLst = mergeMap(loc.playerRestLastStartTime, inSet.playerRestLastStartTime);
+                                     const w = mergeMap(loc.playerWeights, inSet.playerWeights);
+                                     const r = mergeMap(loc.playerReps, inSet.playerReps);
+                                     const t = mergeMap(loc.playerTimes, inSet.playerTimes);
+                                     const d = mergeMap(loc.playerDistances, inSet.playerDistances);
+                                     const rpe = mergeMap(loc.playerRpes, inSet.playerRpes);
+                                     const comp = mergeMap(loc.playerCompleted, inSet.playerCompleted);
+                                     const lock = mergeMap(loc.playerLocked, inSet.playerLocked);
+                                     const compAt = mergeMap(loc.playerCompletedAt, inSet.playerCompletedAt);
 
-                                    mergedSets.push({
-                                        ...inSet,
-                                        lastUpdatedAt: useLoc ? locTime : inTime,
-                                        playerWeights: w,
-                                        playerReps: r,
-                                        playerTimes: t,
-                                        playerDistances: d,
-                                        playerRpes: rpe,
-                                        playerCompleted: comp,
-                                        playerLocked: lock,
-                                        playerCompletedAt: compAt,
-                                        playerRestStatus: rStatus,
-                                        playerRestAccumulated: rAcc,
-                                        playerRestLastStartTime: rLst,
+                                     const rStatus = mergeMap(loc.playerRestStatus, inSet.playerRestStatus);
+                                     const rAcc = mergeMap(loc.playerRestAccumulated, inSet.playerRestAccumulated);
+                                     const rLst = mergeMap(loc.playerRestLastStartTime, inSet.playerRestLastStartTime);
 
-                                        weight: useLoc ? loc.weight : inSet.weight,
-                                        reps: useLoc ? loc.reps : inSet.reps,
-                                        completed: useLoc ? loc.completed : inSet.completed,
-                                        locked: useLoc ? loc.locked : inSet.locked,
-                                        completedAt: useLoc ? loc.completedAt : inSet.completedAt,
-                                        restStatus: useLoc ? loc.restStatus : inSet.restStatus,
-                                        restAccumulated: useLoc ? loc.restAccumulated : inSet.restAccumulated,
-                                        restLastStartTime: useLoc ? loc.restLastStartTime : inSet.restLastStartTime,
+                                     // Sync legacy properties to their dictionary counterparts for Host & First Guest
+                                     const hostId = isInviter ? user?.id : partnerId;
+                                     const fgId = firstGuestId;
 
-                                        p2_weight: useLoc ? loc.p2_weight : inSet.p2_weight,
-                                        p2_reps: useLoc ? loc.p2_reps : inSet.p2_reps,
-                                        p2_completed: useLoc ? loc.p2_completed : inSet.p2_completed,
-                                        p2_locked: useLoc ? loc.p2_locked : inSet.p2_locked,
-                                        p2_completedAt: useLoc ? loc.p2_completedAt : inSet.p2_completedAt,
-                                        p2_restStatus: useLoc ? loc.p2_restStatus : inSet.p2_restStatus,
-                                        p2_restAccumulated: useLoc ? loc.p2_restAccumulated : inSet.p2_restAccumulated,
-                                        p2_restLastStartTime: useLoc ? loc.p2_restLastStartTime : inSet.p2_restLastStartTime
-                                    });
+                                     const hostWeight = hostId && w[hostId] !== undefined ? w[hostId] : (useLoc ? loc.weight : inSet.weight);
+                                     const hostReps = hostId && r[hostId] !== undefined ? r[hostId] : (useLoc ? loc.reps : inSet.reps);
+                                     const hostCompleted = hostId && comp[hostId] !== undefined ? comp[hostId] : (useLoc ? loc.completed : inSet.completed);
+                                     const hostLocked = hostId && lock[hostId] !== undefined ? lock[hostId] : (useLoc ? loc.locked : inSet.locked);
+                                     const hostCompletedAt = hostId && compAt[hostId] !== undefined ? compAt[hostId] : (useLoc ? loc.completedAt : inSet.completedAt);
+                                     const hostRestStatus = hostId && rStatus[hostId] !== undefined ? rStatus[hostId] : (useLoc ? loc.restStatus : inSet.restStatus);
+                                     const hostRestAccumulated = hostId && rAcc[hostId] !== undefined ? rAcc[hostId] : (useLoc ? loc.restAccumulated : inSet.restAccumulated);
+                                     const hostRestLastStartTime = hostId && rLst[hostId] !== undefined ? rLst[hostId] : (useLoc ? loc.restLastStartTime : inSet.restLastStartTime);
+
+                                     const p2Weight = fgId && w[fgId] !== undefined ? w[fgId] : (useLoc ? loc.p2_weight : inSet.p2_weight);
+                                     const p2Reps = fgId && r[fgId] !== undefined ? r[fgId] : (useLoc ? loc.p2_reps : inSet.p2_reps);
+                                     const p2Completed = fgId && comp[fgId] !== undefined ? comp[fgId] : (useLoc ? loc.p2_completed : inSet.p2_completed);
+                                     const p2Locked = fgId && lock[fgId] !== undefined ? lock[fgId] : (useLoc ? loc.p2_locked : inSet.p2_locked);
+                                     const p2CompletedAt = fgId && compAt[fgId] !== undefined ? compAt[fgId] : (useLoc ? loc.p2_completedAt : inSet.p2_completedAt);
+                                     const p2RestStatus = fgId && rStatus[fgId] !== undefined ? rStatus[fgId] : (useLoc ? loc.p2_restStatus : inSet.p2_restStatus);
+                                     const p2RestAccumulated = fgId && rAcc[fgId] !== undefined ? rAcc[fgId] : (useLoc ? loc.p2_restAccumulated : inSet.p2_restAccumulated);
+                                     const p2RestLastStartTime = fgId && rLst[fgId] !== undefined ? rLst[fgId] : (useLoc ? loc.p2_restLastStartTime : inSet.p2_restLastStartTime);
+
+                                     mergedSets.push({
+                                         ...inSet,
+                                         lastUpdatedAt: useLoc ? locTime : inTime,
+                                         playerLastUpdated: lastUpd,
+                                         playerWeights: w,
+                                         playerReps: r,
+                                         playerTimes: t,
+                                         playerDistances: d,
+                                         playerRpes: rpe,
+                                         playerCompleted: comp,
+                                         playerLocked: lock,
+                                         playerCompletedAt: compAt,
+                                         playerRestStatus: rStatus,
+                                         playerRestAccumulated: rAcc,
+                                         playerRestLastStartTime: rLst,
+
+                                         weight: hostWeight,
+                                         reps: hostReps,
+                                         completed: hostCompleted,
+                                         locked: hostLocked,
+                                         completedAt: hostCompletedAt,
+                                         restStatus: hostRestStatus,
+                                         restAccumulated: hostRestAccumulated,
+                                         restLastStartTime: hostRestLastStartTime,
+
+                                         p2_weight: p2Weight,
+                                         p2_reps: p2Reps,
+                                         p2_completed: p2Completed,
+                                         p2_locked: p2Locked,
+                                         p2_completedAt: p2CompletedAt,
+                                         p2_restStatus: p2RestStatus,
+                                         p2_restAccumulated: p2RestAccumulated,
+                                         p2_restLastStartTime: p2RestLastStartTime
+                                     });
                                 }
                                 
                                 return {
@@ -2376,6 +2411,9 @@ export const WorkoutSession = () => {
             if (fieldKey === 'completed') set.playerCompleted[targetUserId] = Boolean(value);
             if (fieldKey === 'locked') set.playerLocked[targetUserId] = Boolean(value);
 
+            if (!set.playerLastUpdated) set.playerLastUpdated = {};
+            set.playerLastUpdated[targetUserId] = Date.now();
+
             // CRDT: Update modification timestamp
             set.lastUpdatedAt = Date.now();
 
@@ -2453,6 +2491,10 @@ export const WorkoutSession = () => {
             // 1. Set completion & lock states
             s.playerCompleted[targetUserId] = nextCompleted;
             s.playerLocked[targetUserId] = nextCompleted;
+
+            if (!s.playerLastUpdated) s.playerLastUpdated = {};
+            s.playerLastUpdated[targetUserId] = Date.now();
+            s.lastUpdatedAt = Date.now();
 
             if (isHost) {
                 s.completed = nextCompleted;
@@ -2606,6 +2648,10 @@ export const WorkoutSession = () => {
                 }
             }
 
+            if (!set.playerLastUpdated) set.playerLastUpdated = {};
+            set.playerLastUpdated[targetUserId] = Date.now();
+            set.lastUpdatedAt = Date.now();
+
             setTimeout(() => {
                 if (isMultiplayer && channelRef.current && user) {
                     const stateStr = JSON.stringify(next);
@@ -2650,6 +2696,9 @@ export const WorkoutSession = () => {
             } else if (isFirstGuest) {
                 set.p2_locked = nextLocked;
             }
+
+            if (!set.playerLastUpdated) set.playerLastUpdated = {};
+            set.playerLastUpdated[targetUserId] = Date.now();
 
             // CRDT: Update modification timestamp
             set.lastUpdatedAt = Date.now();
