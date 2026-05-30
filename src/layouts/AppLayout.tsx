@@ -225,13 +225,14 @@ const CoopJoinRequestToast = ({
                             toast.error("❌ No tienes un entrenamiento activo para aceptar nuevos aliados.");
                             return;
                         }
+                        const targetSessionId = newNotification.data?.session_id;
 
-                        // ABSOLUTE SAFEGUARD: If we are not the creator (partner_session_id is not null), we CANNOT accept!
-                        if (activeSession.partner_session_id) {
+                        // ABSOLUTE SAFEGUARD: If our active session ID does not match the requested workout room,
+                        // it means we are either a guest or not the host of this room!
+                        if (targetSessionId && activeSession.id !== targetSessionId) {
                             toast.error("❌ Solo el creador del entrenamiento puede aceptar nuevos aliados.");
                             return;
                         }
-
                         await notificationService.updateInvitationStatus(newNotification, 'accepted');
 
                         // Update our own active session to multiplayer in the DB!
