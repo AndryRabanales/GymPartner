@@ -340,6 +340,17 @@ export const WorkoutSession = () => {
     const [showCoopExitModal, setShowCoopExitModal] = useState(false);
     const [showForceExitModal, setShowForceExitModal] = useState(false);
     const [showSummary, setShowSummary] = useState(false);
+    const [exerciseFillFlow, setExerciseFillFlow] = useState<{ exerciseName: string; timestamp: number }[]>([]);
+
+    const recordExerciseInteraction = (exerciseName: string) => {
+        setExerciseFillFlow(prev => {
+            const now = Date.now();
+            if (prev.length > 0 && prev[prev.length - 1].exerciseName === exerciseName) {
+                return prev.map((item, idx) => idx === prev.length - 1 ? { ...item, timestamp: now } : item);
+            }
+            return [...prev, { exerciseName, timestamp: now }];
+        });
+    };
     // NEW: Track Routine Name for AI Diagnosis
     const [currentRoutineName, setCurrentRoutineName] = useState<string | undefined>(undefined);
     const [originalExerciseIds, setOriginalExerciseIds] = useState<string[]>([]); // To detect changes
@@ -2463,9 +2474,40 @@ export const WorkoutSession = () => {
             if (!set.playerLastUpdated) set.playerLastUpdated = {};
             set.playerLastUpdated[targetUserId] = Date.now();
 
-            // If they are entering metrics, stop all other active rest timers for this user!
+            // Sincronizar descansos dinámicos LWW por usuario
             if (fieldKey === 'weight' || fieldKey === 'reps' || fieldKey === 'time' || fieldKey === 'distance' || fieldKey === 'rpe') {
-                stopAllRestTimersForUser(next, targetUserId);
+                const isHost = targetUserId === (isInviter ? user?.id : partnerId);
+                const isFirstGuest = targetUserId === firstGuestId;
+                const currentStatus = set.playerRestStatus?.[targetUserId] ?? (isHost ? set.restStatus : (isFirstGuest ? set.p2_restStatus : undefined));
+
+                if (currentStatus !== 'running') {
+                    // 1. Detener todos los demás descansos activos de este usuario
+                    stopAllRestTimersForUser(next, targetUserId, exerciseIndex, setIndex);
+
+                    // 2. Iniciar el temporizador para la serie actual que acaba de ser llenada
+                    if (!set.playerRestStatus) set.playerRestStatus = {};
+                    if (!set.playerRestLastStartTime) set.playerRestLastStartTime = {};
+                    if (!set.playerRestAccumulated) set.playerRestAccumulated = {};
+
+                    set.playerRestStatus[targetUserId] = 'running';
+                    set.playerRestLastStartTime[targetUserId] = Date.now();
+                    set.playerRestAccumulated[targetUserId] = 0;
+
+                    if (isHost) {
+                        set.restStatus = 'running';
+                        set.restLastStartTime = Date.now();
+                        set.restAccumulated = 0;
+                    } else if (isFirstGuest) {
+                        set.p2_restStatus = 'running';
+                        set.p2_restLastStartTime = Date.now();
+                        set.p2_restAccumulated = 0;
+                    }
+                }
+
+                // Registrar interacción con el ejercicio para el flujo cronológico
+                if (targetUserId === user?.id) {
+                    recordExerciseInteraction(ex.equipmentName);
+                }
             }
 
             // CRDT: Update modification timestamp
@@ -2556,6 +2598,11 @@ export const WorkoutSession = () => {
             } else if (isFirstGuest) {
                 s.p2_completed = nextCompleted;
                 s.p2_locked = nextCompleted;
+            }
+
+            // Registrar interacción con el ejercicio para el flujo cronológico
+            if (targetUserId === user?.id) {
+                recordExerciseInteraction(next[exerciseIndex].equipmentName);
             }
 
             // 2. Timer transitions
@@ -2808,45 +2855,6 @@ export const WorkoutSession = () => {
         }));
 
         const previousSet = updated[exerciseIndex].sets[updated[exerciseIndex].sets.length - 1];
-
-        // [NEW] Stop the timer of the previous set when adding a new one
-        if (previousSet) {
-            if (previousSet.completed && previousSet.restStatus === 'running') {
-                const now = Date.now();
-                previousSet.restAccumulated = (previousSet.restAccumulated || 0) + (now - (previousSet.restLastStartTime || now));
-                previousSet.restStatus = 'completed';
-                previousSet.restLastStartTime = undefined;
-            }
-            if (previousSet.p2_completed && previousSet.p2_restStatus === 'running') {
-                const now = Date.now();
-                previousSet.p2_restAccumulated = (previousSet.p2_restAccumulated || 0) + (now - (previousSet.p2_restLastStartTime || now));
-                previousSet.p2_restStatus = 'completed';
-                previousSet.p2_restLastStartTime = undefined;
-            }
-
-            if (previousSet.playerRestStatus) {
-                Object.keys(previousSet.playerRestStatus).forEach(pid => {
-                    if (previousSet.playerCompleted?.[pid] && previousSet.playerRestStatus?.[pid] === 'running') {
-                        const now = Date.now();
-                        const accumulated = previousSet.playerRestAccumulated?.[pid] || 0;
-                        const lastStartTime = previousSet.playerRestLastStartTime?.[pid] || now;
-                        
-                        previousSet.playerRestAccumulated = {
-                            ...previousSet.playerRestAccumulated,
-                            [pid]: accumulated + (now - lastStartTime)
-                        };
-                        previousSet.playerRestStatus = {
-                            ...previousSet.playerRestStatus,
-                            [pid]: 'completed'
-                        };
-                        previousSet.playerRestLastStartTime = {
-                            ...previousSet.playerRestLastStartTime,
-                            [pid]: undefined
-                        };
-                    }
-                });
-            }
-        }
 
         // Initialize custom metrics based on what's active in the settings
         const customMetrics: Record<string, number> = {};
@@ -3322,7 +3330,9 @@ export const WorkoutSession = () => {
         console.log('🏁 Terminando sesión en DB:', finalSessionId);
 
         try {
-            const result = await workoutService.finishSession(finalSessionId, "Battle Finished", currentRoutineName);
+            const flowNotes = `Flujo de Llenado: ${exerciseFillFlow.map(f => f.exerciseName).join(' ➔ ')}`;
+            const result = await workoutService.finishSession(finalSessionId, flowNotes, currentRoutineName);
+            localStorage.setItem(`exercise_fill_flow_${finalSessionId}`, JSON.stringify(exerciseFillFlow));
 
             if (result.success) {
                 console.log('✅ Sesión terminada exitosamente');
@@ -4404,243 +4414,96 @@ export const WorkoutSession = () => {
             {/* 4. NEW: SUMMARY / MISSION COMPLETE MODAL (Correct Position) */}
             {
                 showSummary && (
-                    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/95 backdrop-blur-md animate-in fade-in duration-500 p-4">
-                        <div className="w-full max-w-sm flex flex-col items-center text-center space-y-8 relative">
-                            {/* Confetti/Success FX */}
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gym-primary/10 rounded-full blur-3xl pointer-events-none animate-pulse"></div>
-
-                            <div className="relative">
-                                <Check size={64} className="text-gym-primary animate-bounce" strokeWidth={4} />
-                            </div>
-
-                            <div className="space-y-2">
-                                <h2 className="text-4xl font-black italic uppercase text-white tracking-tighter">
-                                    SESIÓN<br />FINALIZADA
+                    <div className="fixed inset-0 z-[180] flex items-center justify-center bg-black/98 backdrop-blur-lg overflow-y-auto p-4 md:p-8 animate-in fade-in duration-300">
+                        <div className="w-full max-w-lg bg-neutral-900 border border-white/10 rounded-[2.5rem] p-6 md:p-8 flex flex-col gap-6 shadow-[0_0_60px_rgba(250,204,21,0.15)] relative overflow-hidden my-8 animate-in zoom-in-95 duration-500">
+                            {/* Confetti Ambient Light */}
+                            <div className="absolute -top-40 -left-40 w-96 h-96 bg-gym-primary/10 rounded-full blur-[100px] pointer-events-none animate-pulse"></div>
+                            
+                            <div className="text-center relative space-y-2">
+                                <div className="w-16 h-16 bg-gym-primary/10 border border-gym-primary/30 rounded-full flex items-center justify-center mx-auto animate-bounce mb-3 shadow-[0_0_20px_rgba(250,204,21,0.2)]">
+                                    <Check size={32} className="text-gym-primary" strokeWidth={4} />
+                                </div>
+                                <h2 className="text-3xl md:text-4xl font-black italic uppercase tracking-tighter text-white">
+                                    Misión<br />Completada
                                 </h2>
-                                <p className="text-neutral-400 font-bold">Sesión registrada exitosamente.</p>
+                                <p className="text-neutral-400 font-medium text-sm">Tu entrenamiento fue registrado exitosamente.</p>
                             </div>
 
-                            <div className="w-full space-y-3">
-                                <button
-                                    onClick={() => {
-                                        isLeavingPageRef.current = true;
-                                        navigate('/');
-                                    }}
-                                    className="w-full bg-gym-primary hover:bg-yellow-400 text-black font-black uppercase py-4 rounded-xl shadow-[0_0_30px_rgba(250,204,21,0.3)] transition-all hover:scale-105 flex items-center justify-center gap-2"
-                                >
-                                    <ArrowLeft size={24} />
-                                    VOLVER AL INICIO
-                                </button>
-
-
+                            {/* Chronological Exercise Fill Flow */}
+                            <div className="space-y-3 bg-neutral-950/50 border border-white/5 rounded-3xl p-4 md:p-5">
+                                <h3 className="text-xs font-black uppercase tracking-widest text-gym-primary flex items-center gap-1.5">
+                                    <Activity size={14} /> Flujo Cronológico de Entrenamiento
+                                </h3>
+                                <div className="relative pl-4 border-l border-white/10 space-y-3.5 mt-2.5">
+                                    {((exerciseFillFlow.length > 0 ? exerciseFillFlow : activeExercises.map(ex => ({ exerciseName: ex.equipmentName })))).map((flow, idx) => (
+                                        <div key={idx} className="relative flex items-center gap-3">
+                                            {/* Dot */}
+                                            <div className="absolute -left-[21px] w-2.5 h-2.5 rounded-full bg-gym-primary border-2 border-neutral-900"></div>
+                                            <div className="flex flex-col text-left">
+                                                <span className="text-white text-xs font-bold uppercase tracking-wide">
+                                                    {idx + 1}. {flow.exerciseName}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                )
-            }
-            {/* FULL-SCREEN PREMIUM FINALIZING OVERLAY */}
-            {isFinalizing && !showSummary && (
-                <div className="fixed inset-0 z-[300] bg-black/85 backdrop-blur-md flex flex-col items-center justify-center p-6 animate-in fade-in duration-300">
-                    <div className="flex flex-col items-center gap-6 text-center max-w-xs relative">
-                        {/* Pulse Ambient Effect */}
-                        <div className="absolute inset-0 bg-gym-primary/10 blur-3xl rounded-full scale-150 animate-pulse pointer-events-none" />
 
-                        {/* Custom Rotating Loader with Swords / Activity Icons */}
-                        <div className="relative flex items-center justify-center w-24 h-24">
-                            <Loader2 className="text-gym-primary animate-spin w-20 h-20" strokeWidth={1.5} />
-                            <div className="absolute flex items-center justify-center w-12 h-12 bg-neutral-900 border border-white/10 rounded-full shadow-lg">
-                                <Activity className="text-gym-primary w-6 h-6 animate-pulse" />
+                            {/* Exercises Stats Summary Table */}
+                            <div className="space-y-3">
+                                <h3 className="text-xs font-black uppercase tracking-widest text-neutral-400 flex items-center gap-1.5">
+                                    <Award size={14} /> Resumen de Tus Ejercicios
+                                </h3>
+                                <div className="space-y-2.5 max-h-48 overflow-y-auto pr-1">
+                                    {activeExercises.map((ex, idx) => {
+                                        const myId = user?.id || '';
+                                        const completedSets = ex.sets.filter(s => s.playerCompleted?.[myId]).length;
+                                        const maxWeight = Math.max(...ex.sets.map(s => Number(s.playerWeights?.[myId]) || 0), 0);
+                                        const totalReps = ex.sets.reduce((sum, s) => sum + (Number(s.playerReps?.[myId]) || 0), 0);
+                                        
+                                        return (
+                                            <div key={idx} className="flex justify-between items-center bg-neutral-950/40 border border-white/5 rounded-2xl p-3 hover:border-white/10 transition-colors">
+                                                <div className="text-left space-y-0.5">
+                                                    <h4 className="text-white text-xs font-black uppercase tracking-wide truncate max-w-[200px]">
+                                                        {ex.equipmentName}
+                                                    </h4>
+                                                    <p className="text-neutral-500 font-bold text-[10px]">
+                                                        {completedSets} / {ex.sets.length} Series Completadas
+                                                    </p>
+                                                </div>
+                                                <div className="flex gap-4 items-center">
+                                                    {maxWeight > 0 && (
+                                                        <div className="text-right">
+                                                            <span className="text-[10px] font-black uppercase tracking-wider text-gym-primary block">Max</span>
+                                                            <span className="text-white font-black text-xs">{maxWeight} {ex.weightUnit || 'kg'}</span>
+                                                        </div>
+                                                    )}
+                                                    {totalReps > 0 && (
+                                                        <div className="text-right">
+                                                            <span className="text-[10px] font-black uppercase tracking-wider text-neutral-500 block">Reps</span>
+                                                            <span className="text-neutral-300 font-bold text-xs">{totalReps}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
-                        </div>
 
-                        {/* Title and Progress message */}
-                        <div className="space-y-2 mt-4 relative z-10">
-                            <h2 className="text-2xl font-black italic uppercase tracking-tighter text-white">
-                                GUARDANDO BATALLA
-                            </h2>
-                            <p className="text-neutral-400 font-medium text-sm animate-pulse">
-                                Persistiendo tus récords y notificando a tus aliados...
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* COOP EXIT OPTIONS MODAL */}
-            {showCoopExitModal && (
-                <div className="fixed inset-0 z-[250] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-4 animate-in fade-in zoom-in duration-300">
-                    <div className="bg-neutral-900 border border-white/10 p-6 md:p-8 rounded-[2rem] w-full max-w-sm text-center shadow-2xl relative overflow-hidden flex flex-col gap-6">
-                        <div className="absolute -top-20 -right-20 w-64 h-64 bg-red-500/5 rounded-full blur-3xl pointer-events-none"></div>
-                        
-                        <div>
-                            <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-500/20">
-                                <LogOut className="text-red-500 w-8 h-8" />
-                            </div>
-                            <h2 className="text-2xl font-black text-white italic uppercase tracking-tighter mb-2">Salir del Entrenamiento</h2>
-                            <p className="text-neutral-400 text-sm">Elige cómo deseas proceder con tu sesión multijugador.</p>
-                        </div>
-                        
-                        <div className="flex flex-col gap-3">
                             <button
                                 onClick={() => {
                                     isLeavingPageRef.current = true;
-                                    setShowCoopExitModal(false);
-                                    setShowExitMenu(false);
-                                    // Exit temporarily: keep everything
                                     navigate('/');
                                 }}
-                                className="w-full bg-neutral-800 hover:bg-neutral-700 border border-white/5 rounded-xl py-4 font-black uppercase text-xs tracking-wider text-white transition-all active:scale-95 flex items-center justify-center gap-2"
+                                className="w-full bg-gym-primary hover:bg-yellow-400 text-black font-black uppercase py-4 rounded-2xl shadow-[0_4px_25px_rgba(250,204,21,0.25)] transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 mt-2 text-xs tracking-wider"
                             >
-                                <Play size={14} className="fill-white" />
-                                Salir Temporalmente (Pausar)
-                            </button>
-                            
-                            <button
-                                onClick={async () => {
-                                    isLeavingPageRef.current = true;
-                                    setShowCoopExitModal(false);
-                                    setShowExitMenu(false);
-                                    // Finalize permanently: save and exit
-                                    await handleFinalizeSession();
-                                    navigate('/');
-                                }}
-                                className="w-full bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white font-black uppercase text-xs tracking-wider py-4 rounded-xl shadow-[0_4px_15px_rgba(239,68,68,0.2)] transition-all active:scale-95 flex items-center justify-center gap-2"
-                            >
-                                <Check size={14} strokeWidth={3} />
-                                Finalizar / Abandonar (Guardar)
-                            </button>
-
-                            <button
-                                onClick={async () => {
-                                    if (window.confirm("¿Seguro que quieres cancelar y eliminar esta sesión? A tus amigos les aparecerás como inactivo de inmediato.")) {
-                                        isLeavingPageRef.current = true;
-                                        setShowCoopExitModal(false);
-                                        setShowExitMenu(false);
-                                        localStorage.removeItem(`workout_draft_${sessionId}`);
-                                        localStorage.removeItem(STORAGE_KEY);
-                                        localStorage.removeItem('ginx_coop_state');
-                                        setActiveExercises([]);
-                                        if (sessionId) {
-                                            setIsFinished(true); // Disable history guard before navigating
-                                            const oldSessionId = sessionId;
-                                            setSessionId(null);  // Disable history guard before navigating
-                                            setLoading(true);
-                                            // Broadcast destruction signal only if host (isInviter) to avoid kicking the host
-                                            if (isInviter) {
-                                                channelRef.current?.send({
-                                                    type: 'broadcast',
-                                                    event: 'session_terminated',
-                                                    payload: { sender: user.id }
-                                                }).catch(e => console.error(e));
-                                            }
-                                            
-                                            await workoutService.deleteSession(oldSessionId);
-                                            setLoading(false);
-                                        }
-                                        navigate('/');
-                                    }
-                                }}
-                                className="w-full bg-neutral-900 border border-red-500/30 hover:bg-red-500/10 text-red-500 font-black uppercase text-xs tracking-wider py-4 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2"
-                            >
-                                <X size={14} strokeWidth={3} />
-                                {isInviter ? 'Destruir Misión (Eliminar)' : 'Cancelar Entrenamiento (Eliminar)'}
-                            </button>
-                            
-                            <button
-                                onClick={() => setShowCoopExitModal(false)}
-                                className="w-full bg-transparent border border-neutral-800 text-neutral-500 font-bold uppercase text-xs py-3 rounded-xl hover:text-white transition-colors"
-                            >
-                                Volver al Entrenamiento
+                                <ArrowLeft size={16} strokeWidth={3} />
+                                Volver al Inicio
                             </button>
                         </div>
                     </div>
-                </div>
-            )}
-            {/* ═══════════════════════════════════════════════════════════════
-                FORCE EXIT MODAL — triggered by any navigation attempt while
-                a session is active (back button, links, useBlocker, etc.)
-                The user CANNOT leave without explicitly finishing or deleting.
-            ══════════════════════════════════════════════════════════════════ */}
-            {showForceExitModal && (
-                <div className="fixed inset-0 z-[200] flex items-end justify-center bg-black/90 backdrop-blur-md animate-in fade-in duration-200 p-4 pb-8">
-                    <div className="w-full max-w-md bg-neutral-950 border border-red-500/30 rounded-3xl p-6 flex flex-col gap-4 shadow-[0_0_60px_rgba(239,68,68,0.15)] animate-in slide-in-from-bottom-4 duration-300">
-                        {/* Icon + Title */}
-                        <div className="flex flex-col items-center text-center gap-3 pt-2">
-                            <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center">
-                                <Activity size={28} className="text-red-400" />
-                            </div>
-                            <div>
-                                <h2 className="text-xl font-black uppercase tracking-tight text-white">
-                                    ¡Entrenamiento en Curso!
-                                </h2>
-                                <p className="text-neutral-400 text-sm mt-1 font-medium">
-                                    Debes finalizar o eliminar tu sesión antes de salir.<br />
-                                    <span className="text-red-400 font-bold">No puedes abandonar sin cerrarla.</span>
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="h-px bg-neutral-800" />
-
-                        {/* Option 1: Finish & Save */}
-                        <button
-                            onClick={async () => {
-                                setShowForceExitModal(false);
-                                await handleFinishRequest();
-                            }}
-                            className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-black uppercase text-sm tracking-wider py-4 rounded-2xl shadow-[0_4px_20px_rgba(34,197,94,0.2)] transition-all active:scale-95 flex items-center justify-center gap-2"
-                        >
-                            <Save size={16} strokeWidth={3} />
-                            Guardar y Finalizar
-                        </button>
-
-                        {/* Option 2: Delete session */}
-                        <button
-                            onClick={async () => {
-                                if (window.confirm('¿Eliminar toda la sesión? Los datos no guardados se perderán permanentemente.')) {
-                                    setShowForceExitModal(false);
-                                    localStorage.removeItem(`workout_draft_${sessionId}`);
-                                    localStorage.removeItem(STORAGE_KEY);
-                                    localStorage.removeItem('ginx_coop_state');
-                                    setActiveExercises([]);
-                                    if (sessionId) {
-                                        setIsFinished(true); // Disable history guard before navigating
-                                        const oldSessionId = sessionId;
-                                        setSessionId(null);  // Disable history guard before navigating
-                                        setLoading(true);
-                                        if (isInviter && channelRef.current) {
-                                            channelRef.current.send({
-                                                type: 'broadcast',
-                                                event: 'session_terminated',
-                                                payload: { sender: user?.id }
-                                            }).catch(() => {});
-                                        }
-                                        await workoutService.deleteSession(oldSessionId);
-                                        setLoading(false);
-                                    }
-                                    // Navigate back after cleanup — guard entry consumed, safe to go
-                                    isLeavingPageRef.current = true;
-                                    navigate(-1);
-                                } else {
-                                    setShowForceExitModal(false);
-                                }
-                            }}
-                            className="w-full bg-neutral-900 border border-red-500/30 hover:bg-red-500/10 text-red-400 font-black uppercase text-sm tracking-wider py-4 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2"
-                        >
-                            <Trash2 size={16} strokeWidth={3} />
-                            Eliminar Sesión (Sin Guardar)
-                        </button>
-
-                        {/* Option 3: Go back to workout */}
-                        <button
-                            onClick={() => setShowForceExitModal(false)}
-                            className="w-full bg-transparent text-neutral-500 font-bold uppercase text-xs py-3 rounded-xl hover:text-white transition-colors border border-neutral-800"
-                        >
-                            Continuar Entrenando
-                        </button>
-                    </div>
-                </div>
-            )}
+                )}
         </div >
     );
 }
