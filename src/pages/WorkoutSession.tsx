@@ -600,16 +600,28 @@ export const WorkoutSession = () => {
 
                 if (knownParticipants && Array.isArray(knownParticipants)) {
                     setParticipants(prev => {
-                        let updated = false;
-                        const next = [...prev];
-                        for (const kp of knownParticipants) {
-                            if (!next.find(p => p.id === kp.id)) {
-                                console.log('🎉 [Dynamic Discovery] Nuevo jugador detectado en la sala:', kp.username);
-                                next.push(kp);
-                                updated = true;
+                        if (!isInviter) {
+                            // Guests exactly mirror the Host's sorted participant list to stay aligned on the exact same row slots!
+                            return knownParticipants.map(kp => {
+                                const local = prev.find(p => p.id === kp.id);
+                                return {
+                                    ...kp,
+                                    isOnline: local ? local.isOnline : (kp.isOnline ?? false)
+                                };
+                            });
+                        } else {
+                            // Host dynamically discovers and appends new guests
+                            let updated = false;
+                            const next = [...prev];
+                            for (const kp of knownParticipants) {
+                                if (!next.find(p => p.id === kp.id)) {
+                                    console.log('🎉 [Dynamic Discovery] Nuevo jugador detectado en la sala:', kp.username);
+                                    next.push(kp);
+                                    updated = true;
+                                }
                             }
+                            return updated ? next : prev;
                         }
-                        return updated ? next : prev;
                     });
                 }
 
@@ -3560,8 +3572,8 @@ export const WorkoutSession = () => {
                                                                     const rowLocked = set.playerLocked?.[p.id] ?? (isHost ? set.locked : (isFirstGuest ? (set.p2_locked || false) : false));
                                                                     const rowCompletedAt = set.playerCompletedAt?.[p.id] ?? (isHost ? set.completedAt : (isFirstGuest ? set.p2_completedAt : undefined));
                                                                     
-                                                                    const inputDisabled = rowLocked || rowReadOnly || (isMultiplayer && multiplayerMode === 'conjunto' && !isMyRow);
-                                                                    const lockToggleDisabled = rowReadOnly || (isMultiplayer && multiplayerMode === 'conjunto' && !isMyRow);
+                                                                    const inputDisabled = rowLocked || rowReadOnly;
+                                                                    const lockToggleDisabled = rowReadOnly;
 
                                                                     return (
                                                                         <div key={p.id} className={`flex items-center gap-1 w-full flex-nowrap ${pIdx > 0 ? 'mt-1 pt-2 border-t border-white/5' : ''}`}>
