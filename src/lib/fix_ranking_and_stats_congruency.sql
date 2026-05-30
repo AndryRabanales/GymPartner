@@ -53,8 +53,8 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 
--- 2. UPDATE GYM LEADERBOARD RPC TO EXCLUDE DELETED PROFILES
--- Ensures the leaderboard counts match get_profile_stats exactly.
+-- 2. UPDATE GYM LEADERBOARD RPC TO EXCLUDE DELETED PROFILES AND KEEP ALL 10 COUMNS FOR THE UI
+-- Ensures the leaderboard counts match get_profile_stats exactly and doesn't break the UI.
 DROP FUNCTION IF EXISTS public.get_gym_followers_leaderboard(UUID);
 CREATE OR REPLACE FUNCTION get_gym_followers_leaderboard(gym_id_param UUID)
 RETURNS TABLE (
@@ -64,6 +64,8 @@ RETURNS TABLE (
     gym_name TEXT,
     banner_url TEXT,
     followers_count BIGINT,
+    gx_points INTEGER,
+    current_streak INTEGER,
     is_boosted BOOLEAN,
     rank BIGINT
 ) AS $$
@@ -80,16 +82,30 @@ BEGIN
             public.profiles p_follower ON f.follower_id = p_follower.id
         GROUP BY 
             f.following_id
+    ),
+    user_streak_info AS (
+        SELECT 
+            us.user_id,
+            COALESCE(us.current_streak, 0) AS streak
+        FROM 
+            public.user_streaks us
     )
     SELECT 
         p.id,
-        p.username,
-        p.avatar_url,
-        g.name AS gym_name,
+        p.username::text,
+        p.avatar_url::text,
+        g.name::text AS gym_name,
         p.custom_settings->>'banner_url' AS banner_url,
-        COALESCE(uf.count, 0) AS followers_count,
+        COALESCE(uf.count, 0)::bigint AS followers_count,
+        (COALESCE(p.gx_points, 0) * (CASE WHEN COALESCE(usi.streak, 0) >= 10 THEN 2 ELSE 1 END))::int AS gx_points,
+        COALESCE(usi.streak, 0)::int AS current_streak,
         (p.boost_until IS NOT NULL AND p.boost_until > NOW()) AS is_boosted,
-        RANK() OVER (ORDER BY (p.boost_until IS NOT NULL AND p.boost_until > NOW()) DESC, COALESCE(uf.count, 0) DESC, p.created_at ASC) AS rank
+        RANK() OVER (
+            ORDER BY 
+                (p.boost_until IS NOT NULL AND p.boost_until > NOW()) DESC, 
+                (COALESCE(p.gx_points, 0) * (CASE WHEN COALESCE(usi.streak, 0) >= 10 THEN 2 ELSE 1 END)) DESC,
+                p.created_at ASC
+        ) AS rank
     FROM 
         public.user_gyms ug
     JOIN 
@@ -98,11 +114,13 @@ BEGIN
         public.gyms g ON ug.gym_id = g.id
     LEFT JOIN 
         user_followers uf ON p.id = uf.user_id
+    LEFT JOIN 
+        user_streak_info usi ON p.id = usi.user_id
     WHERE 
         ug.gym_id = gym_id_param
     ORDER BY 
-        (p.boost_until IS NOT NULL AND p.boost_until > NOW()) DESC,
-        followers_count DESC,
+        (p.boost_until IS NOT NULL AND p.boost_until > now()) DESC,
+        gx_points DESC,
         p.created_at ASC
     LIMIT 100;
 END;
