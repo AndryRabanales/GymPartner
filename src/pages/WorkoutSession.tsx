@@ -2722,8 +2722,11 @@ export const WorkoutSession = () => {
             localStorage.removeItem(STORAGE_KEY);
             localStorage.removeItem('ginx_coop_state');
             setActiveExercises([]);
+            setIsFinished(true); // Disable history guard before navigating
+            const oldSessionId = sessionId;
+            setSessionId(null);  // Disable history guard before navigating
             setLoading(true);
-            await workoutService.deleteSession(sessionId);
+            await workoutService.deleteSession(oldSessionId);
             setLoading(false);
             navigate(-1);
             return;
@@ -2737,8 +2740,11 @@ export const WorkoutSession = () => {
                 localStorage.removeItem(STORAGE_KEY);
                 localStorage.removeItem('ginx_coop_state');
                 setActiveExercises([]);
+                setIsFinished(true); // Disable history guard before navigating
+                const oldSessionId = sessionId;
+                setSessionId(null);  // Disable history guard before navigating
                 setLoading(true);
-                await workoutService.deleteSession(sessionId);
+                await workoutService.deleteSession(oldSessionId);
                 setLoading(false);
                 navigate(-1);
             }
@@ -4248,6 +4254,9 @@ export const WorkoutSession = () => {
                                         localStorage.removeItem('ginx_coop_state');
                                         setActiveExercises([]);
                                         if (sessionId) {
+                                            setIsFinished(true); // Disable history guard before navigating
+                                            const oldSessionId = sessionId;
+                                            setSessionId(null);  // Disable history guard before navigating
                                             setLoading(true);
                                             // Broadcast destruction signal only if host (isInviter) to avoid kicking the host
                                             if (isInviter) {
@@ -4258,7 +4267,7 @@ export const WorkoutSession = () => {
                                                 }).catch(e => console.error(e));
                                             }
                                             
-                                            await workoutService.deleteSession(sessionId);
+                                            await workoutService.deleteSession(oldSessionId);
                                             setLoading(false);
                                         }
                                         navigate('/');
@@ -4328,6 +4337,9 @@ export const WorkoutSession = () => {
                                     localStorage.removeItem('ginx_coop_state');
                                     setActiveExercises([]);
                                     if (sessionId) {
+                                        setIsFinished(true); // Disable history guard before navigating
+                                        const oldSessionId = sessionId;
+                                        setSessionId(null);  // Disable history guard before navigating
                                         setLoading(true);
                                         if (isInviter && channelRef.current) {
                                             channelRef.current.send({
@@ -4336,7 +4348,7 @@ export const WorkoutSession = () => {
                                                 payload: { sender: user?.id }
                                             }).catch(() => {});
                                         }
-                                        await workoutService.deleteSession(sessionId);
+                                        await workoutService.deleteSession(oldSessionId);
                                         setLoading(false);
                                     }
                                     // Navigate back after cleanup — guard entry consumed, safe to go
