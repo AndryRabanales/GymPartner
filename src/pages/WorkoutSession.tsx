@@ -17,7 +17,7 @@ import { normalizeText, getMuscleGroup } from '../utils/inventoryUtils';
 
 // Interface NumpadTarget removed
 // BattleTimer removed
-import { Loader2, ArrowLeft, Image as ImageIcon, MapPin, Search, Plus, Save, Activity, Layers, Tag, Battery, MapIcon, Check, Settings as SettingsIcon, Swords, Trash2, X, RotateCcw, Lock, Play, Loader, MoreVertical, Pause, LockOpen, LogOut } from 'lucide-react';
+import { Loader2, ArrowLeft, Image as ImageIcon, MapPin, Search, Plus, Save, Activity, Layers, Tag, Battery, MapIcon, Check, Settings as SettingsIcon, Swords, Trash2, X, RotateCcw, Lock, Play, Loader, MoreVertical, Pause, LockOpen, LogOut, Award } from 'lucide-react';
 import { getCurrentPosition } from '../utils/geolocationUtils';
 import type { GymPlace, Database } from '../types/database';
 import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
@@ -4456,10 +4456,27 @@ export const WorkoutSession = () => {
                                 </h3>
                                 <div className="space-y-2.5 max-h-48 overflow-y-auto pr-1">
                                     {activeExercises.map((ex, idx) => {
-                                        const myId = user?.id || '';
-                                        const completedSets = ex.sets.filter(s => s.playerCompleted?.[myId]).length;
-                                        const maxWeight = Math.max(...ex.sets.map(s => Number(s.playerWeights?.[myId]) || 0), 0);
-                                        const totalReps = ex.sets.reduce((sum, s) => sum + (Number(s.playerReps?.[myId]) || 0), 0);
+                                        // Calcular estadísticas de todo el equipo en conjunto
+                                        let teamCompletedSets = 0;
+                                        let teamMaxWeight = 0;
+                                        let teamTotalReps = 0;
+
+                                        ex.sets.forEach(s => {
+                                            // Sets completados en esta fila por cualquier jugador
+                                            const completedCount = Object.values(s.playerCompleted || {}).filter(Boolean).length;
+                                            teamCompletedSets += completedCount;
+
+                                            // Peso máximo tirado en esta fila por cualquier jugador
+                                            const weights = Object.values(s.playerWeights || {}).map(w => Number(w) || 0);
+                                            if (weights.length > 0) {
+                                                const maxW = Math.max(...weights);
+                                                if (maxW > teamMaxWeight) teamMaxWeight = maxW;
+                                            }
+
+                                            // Reps totales en esta fila por todos los jugadores
+                                            const reps = Object.values(s.playerReps || {}).map(r => Number(r) || 0);
+                                            teamTotalReps += reps.reduce((a, b) => a + b, 0);
+                                        });
                                         
                                         return (
                                             <div key={idx} className="flex justify-between items-center bg-neutral-950/40 border border-white/5 rounded-2xl p-3 hover:border-white/10 transition-colors">
@@ -4468,20 +4485,20 @@ export const WorkoutSession = () => {
                                                         {ex.equipmentName}
                                                     </h4>
                                                     <p className="text-neutral-500 font-bold text-[10px]">
-                                                        {completedSets} / {ex.sets.length} Series Completadas
+                                                        {teamCompletedSets} Series Completadas (Equipo)
                                                     </p>
                                                 </div>
                                                 <div className="flex gap-4 items-center">
-                                                    {maxWeight > 0 && (
+                                                    {teamMaxWeight > 0 && (
                                                         <div className="text-right">
                                                             <span className="text-[10px] font-black uppercase tracking-wider text-gym-primary block">Max</span>
-                                                            <span className="text-white font-black text-xs">{maxWeight} {ex.weightUnit || 'kg'}</span>
+                                                            <span className="text-white font-black text-xs">{teamMaxWeight} {ex.weightUnit || 'kg'}</span>
                                                         </div>
                                                     )}
-                                                    {totalReps > 0 && (
+                                                    {teamTotalReps > 0 && (
                                                         <div className="text-right">
                                                             <span className="text-[10px] font-black uppercase tracking-wider text-neutral-500 block">Reps</span>
-                                                            <span className="text-neutral-300 font-bold text-xs">{totalReps}</span>
+                                                            <span className="text-neutral-300 font-bold text-xs">{teamTotalReps}</span>
                                                         </div>
                                                     )}
                                                 </div>
