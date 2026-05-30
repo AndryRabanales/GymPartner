@@ -4452,27 +4452,27 @@ export const WorkoutSession = () => {
                             {/* Vintage Film Overlay effect */}
                             <div className="absolute inset-0 bg-white/[0.01] pointer-events-none mix-blend-overlay z-10" />
 
-                            {/* STICKY HEADER with Animated Comic Logo (Highly Compacted) */}
-                            <div className="flex-shrink-0 bg-black/40 border-b-2 border-black pt-3 px-3 pb-2 relative">
-                                <div className="text-center flex flex-col items-center mb-2">
+                            {/* STICKY HEADER with Animated Comic Logo (Ultra Compacted) */}
+                            <div className="flex-shrink-0 bg-black/40 border-b border-black pt-1.5 px-2 pb-1.5 relative">
+                                <div className="text-center flex flex-col items-center mb-1">
                                     <h1 
-                                        className="text-2xl md:text-3xl font-black italic uppercase tracking-tighter text-yellow-400 drop-shadow-[0_2px_0_#000] border-y-2 border-yellow-400/20 px-4 py-0.5 select-none animate-pulse"
+                                        className="text-lg md:text-xl font-black italic uppercase tracking-tighter text-yellow-400 drop-shadow-[0_1.5px_0_#000] border-y border-yellow-400/20 px-2 py-0 select-none animate-pulse"
                                         style={{ fontFamily: "'Impact', 'Arial Black', sans-serif" }}
                                     >
                                         ¡RESULTADOS!
                                     </h1>
-                                    <p className="text-[7px] font-black tracking-[0.2em] text-yellow-500/50 uppercase mt-0.5">
+                                    <p className="text-[6px] font-black tracking-[0.2em] text-yellow-500/50 uppercase mt-0">
                                         STUDIO GYNX ENTERTAINMENT INC.
                                     </p>
                                 </div>
 
-                                <div className="flex gap-2 w-full max-w-xs mx-auto">
+                                <div className="flex gap-1.5 w-full max-w-[200px] mx-auto">
                                     {isGroupMode && (
                                         <button
                                             onClick={() => setSummaryTab('grupal')}
-                                            className={`flex-1 py-1.5 px-3 rounded-lg text-[10px] font-black uppercase tracking-wider border-2 transition-all transform hover:scale-[1.03] active:scale-95 duration-100 ${
+                                            className={`flex-1 py-1 px-2 rounded-md text-[9px] font-black uppercase tracking-wider border-2 transition-all transform hover:scale-[1.03] active:scale-95 duration-100 ${
                                                 summaryTab === 'grupal'
-                                                    ? 'bg-yellow-400 border-black text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+                                                    ? 'bg-yellow-400 border-black text-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]'
                                                     : 'bg-neutral-900 border-neutral-800 text-neutral-400'
                                             }`}
                                         >
@@ -4481,9 +4481,9 @@ export const WorkoutSession = () => {
                                     )}
                                     <button
                                         onClick={() => setSummaryTab('individual')}
-                                        className={`flex-1 py-1.5 px-3 rounded-lg text-[10px] font-black uppercase tracking-wider border-2 transition-all transform hover:scale-[1.03] active:scale-95 duration-100 ${
+                                        className={`flex-1 py-1 px-2 rounded-md text-[9px] font-black uppercase tracking-wider border-2 transition-all transform hover:scale-[1.03] active:scale-95 duration-100 ${
                                             summaryTab === 'individual' || !isGroupMode
-                                                ? 'bg-yellow-400 border-black text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+                                                ? 'bg-yellow-400 border-black text-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]'
                                                 : 'bg-neutral-900 border-neutral-800 text-neutral-400'
                                         }`}
                                     >
@@ -4492,8 +4492,8 @@ export const WorkoutSession = () => {
                                 </div>
                             </div>
 
-                            {/* SCROLLABLE VINTAGE CONTENT GRID (Super Compacted to 75% Width) */}
-                            <div className="flex-1 overflow-y-auto px-1 pt-2 pb-20 w-[75%] max-w-md mx-auto flex flex-col justify-start">
+                            {/* SCROLLABLE VINTAGE CONTENT GRID (Super Compacted to 65% Width) */}
+                            <div className="flex-1 overflow-y-auto px-1 pt-2 pb-20 w-[65%] max-w-sm mx-auto flex flex-col justify-start">
 
                                 {/* ====== TAB: GRUPAL ====== */}
                                 {(summaryTab === 'grupal' && isGroupMode) && (
