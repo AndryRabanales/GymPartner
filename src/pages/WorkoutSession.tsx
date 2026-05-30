@@ -4449,62 +4449,82 @@ export const WorkoutSession = () => {
                                 </div>
                             </div>
 
-                            {/* Exercises Stats Summary Table */}
+                            {/* Video-Game Style Player Leaderboard */}
                             <div className="space-y-3">
                                 <h3 className="text-xs font-black uppercase tracking-widest text-neutral-400 flex items-center gap-1.5">
-                                    <Award size={14} /> Resumen de Tus Ejercicios
+                                    <Swords size={14} /> Clasificación del Escuadrón
                                 </h3>
-                                <div className="space-y-2.5 max-h-48 overflow-y-auto pr-1">
-                                    {activeExercises.map((ex, idx) => {
-                                        // Calcular estadísticas de todo el equipo en conjunto
-                                        let teamCompletedSets = 0;
-                                        let teamMaxWeight = 0;
-                                        let teamTotalReps = 0;
+                                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                                    {((isMultiplayer && multiplayerMode === 'conjunto' && participants.length > 0) ? participants : [{ id: user?.id || 'single-user', username: user?.user_metadata?.full_name || user?.user_metadata?.username || 'Yo', avatar_url: user?.user_metadata?.avatar_url }])
+                                        .map(p => {
+                                            let totalSets = 0;
+                                            let totalReps = 0;
+                                            let maxWeight = 0;
 
-                                        ex.sets.forEach(s => {
-                                            // Sets completados en esta fila por cualquier jugador
-                                            const completedCount = Object.values(s.playerCompleted || {}).filter(Boolean).length;
-                                            teamCompletedSets += completedCount;
+                                            activeExercises.forEach(ex => {
+                                                ex.sets.forEach(s => {
+                                                    if (s.playerCompleted?.[p.id]) totalSets++;
+                                                    const reps = Number(s.playerReps?.[p.id]) || 0;
+                                                    totalReps += reps;
+                                                    const weight = Number(s.playerWeights?.[p.id]) || 0;
+                                                    if (weight > maxWeight) maxWeight = weight;
+                                                });
+                                            });
 
-                                            // Peso máximo tirado en esta fila por cualquier jugador
-                                            const weights = Object.values(s.playerWeights || {}).map(w => Number(w) || 0);
-                                            if (weights.length > 0) {
-                                                const maxW = Math.max(...weights);
-                                                if (maxW > teamMaxWeight) teamMaxWeight = maxW;
-                                            }
-
-                                            // Reps totales en esta fila por todos los jugadores
-                                            const reps = Object.values(s.playerReps || {}).map(r => Number(r) || 0);
-                                            teamTotalReps += reps.reduce((a, b) => a + b, 0);
-                                        });
-                                        
-                                        return (
-                                            <div key={idx} className="flex justify-between items-center bg-neutral-950/40 border border-white/5 rounded-2xl p-3 hover:border-white/10 transition-colors">
-                                                <div className="text-left space-y-0.5">
-                                                    <h4 className="text-white text-xs font-black uppercase tracking-wide truncate max-w-[200px]">
-                                                        {ex.equipmentName}
-                                                    </h4>
-                                                    <p className="text-neutral-500 font-bold text-[10px]">
-                                                        {teamCompletedSets} Series Completadas (Equipo)
-                                                    </p>
-                                                </div>
-                                                <div className="flex gap-4 items-center">
-                                                    {teamMaxWeight > 0 && (
-                                                        <div className="text-right">
-                                                            <span className="text-[10px] font-black uppercase tracking-wider text-gym-primary block">Max</span>
-                                                            <span className="text-white font-black text-xs">{teamMaxWeight} {ex.weightUnit || 'kg'}</span>
+                                            return { ...p, totalSets, totalReps, maxWeight };
+                                        })
+                                        .sort((a, b) => b.totalReps - a.totalReps)
+                                        .map((p, idx) => {
+                                            const isMe = p.id === user?.id;
+                                            const isWinner = idx === 0;
+                                            const displayName = p.username ? p.username.split(' ')[0].substring(0, 10) : 'Jugador';
+                                            
+                                            return (
+                                                <div key={p.id} className={`flex justify-between items-center bg-neutral-950/40 border \${isMe ? 'border-gym-primary/50' : 'border-white/5'} rounded-2xl p-3 relative overflow-hidden transition-all`}>
+                                                    {isWinner && <div className="absolute top-0 left-0 w-1 h-full bg-yellow-400"></div>}
+                                                    
+                                                    <div className="flex items-center gap-3 pl-1">
+                                                        <div className="relative">
+                                                            {p.avatar_url ? (
+                                                                <img src={p.avatar_url} alt="avatar" className="w-8 h-8 rounded-full border-2 border-neutral-800 object-cover" />
+                                                            ) : (
+                                                                <div className="w-8 h-8 rounded-full bg-neutral-800 flex items-center justify-center border-2 border-neutral-700">
+                                                                    <span className="text-[10px] font-bold text-white uppercase">{displayName.charAt(0)}</span>
+                                                                </div>
+                                                            )}
+                                                            {isWinner && (
+                                                                <div className="absolute -top-2 -right-2 bg-yellow-400 rounded-full p-0.5">
+                                                                    <Award size={10} className="text-black" />
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                    )}
-                                                    {teamTotalReps > 0 && (
-                                                        <div className="text-right">
-                                                            <span className="text-[10px] font-black uppercase tracking-wider text-neutral-500 block">Reps</span>
-                                                            <span className="text-neutral-300 font-bold text-xs">{teamTotalReps}</span>
+                                                        <div className="text-left space-y-0.5">
+                                                            <h4 className={`text-xs font-black uppercase tracking-wide truncate max-w-[120px] \${isMe ? 'text-gym-primary' : 'text-white'}`}>
+                                                                {displayName}
+                                                            </h4>
+                                                            <p className="text-neutral-500 font-bold text-[10px]">
+                                                                {p.totalSets} Series
+                                                            </p>
                                                         </div>
-                                                    )}
+                                                    </div>
+                                                    
+                                                    <div className="flex gap-4 items-center">
+                                                        {p.maxWeight > 0 && (
+                                                            <div className="text-right">
+                                                                <span className="text-[9px] font-black uppercase tracking-wider text-neutral-500 block">Max</span>
+                                                                <span className="text-white font-black text-xs">{p.maxWeight} <span className="text-[10px]">kg</span></span>
+                                                            </div>
+                                                        )}
+                                                        {p.totalReps > 0 && (
+                                                            <div className="text-right">
+                                                                <span className="text-[9px] font-black uppercase tracking-wider text-neutral-500 block">Reps</span>
+                                                                <span className="text-gym-primary font-black text-sm">{p.totalReps}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        );
-                                    })}
+                                            );
+                                        })}
                                 </div>
                             </div>
 
