@@ -4436,45 +4436,45 @@ export const WorkoutSession = () => {
                     const columnCount = (summaryTab === 'grupal' && isGroupMode) ? allPlayers.length : 1;
                     
                     let gridWidthClass = 'w-[50%] max-w-sm';
-                    let headerTextSize = 'text-[9.5px]';
-                    let colHeaderTextSize = 'text-[8px]';
-                    let rowTextSize = 'text-[8.5px]';
-                    let wTextSize = 'text-[11px]';
-                    let wUnitSize = 'text-[6px]';
-                    let detailTextSize = 'text-[8.5px]';
+                    let headerTextSize = 'text-[11.5px]';
+                    let colHeaderTextSize = 'text-[9.5px]';
+                    let rowTextSize = 'text-[9.5px]';
+                    let wTextSize = 'text-[12.5px]';
+                    let wUnitSize = 'text-[7px]';
+                    let detailTextSize = 'text-[10px]';
 
                     if (columnCount === 2) {
                         gridWidthClass = 'w-[50%] max-w-sm';
+                        headerTextSize = 'text-[11px]';
+                        colHeaderTextSize = 'text-[9px]';
+                        rowTextSize = 'text-[9px]';
+                        wTextSize = 'text-[11.5px]';
+                        wUnitSize = 'text-[6px]';
+                        detailTextSize = 'text-[9.5px]';
+                    } else if (columnCount === 3) {
+                        gridWidthClass = 'w-[65%] max-w-md';
                         headerTextSize = 'text-[9.5px]';
                         colHeaderTextSize = 'text-[8px]';
                         rowTextSize = 'text-[8px]';
-                        wTextSize = 'text-[10px]';
+                        wTextSize = 'text-[9.5px]';
                         wUnitSize = 'text-[5.5px]';
-                        detailTextSize = 'text-[8px]';
-                    } else if (columnCount === 3) {
-                        gridWidthClass = 'w-[65%] max-w-md';
+                        detailTextSize = 'text-[8.5px]';
+                    } else if (columnCount === 4) {
+                        gridWidthClass = 'w-[75%] max-w-lg';
                         headerTextSize = 'text-[9px]';
                         colHeaderTextSize = 'text-[7.5px]';
                         rowTextSize = 'text-[7.5px]';
                         wTextSize = 'text-[9px]';
                         wUnitSize = 'text-[5px]';
                         detailTextSize = 'text-[7.5px]';
-                    } else if (columnCount === 4) {
-                        gridWidthClass = 'w-[75%] max-w-lg';
+                    } else if (columnCount > 4) {
+                        gridWidthClass = 'w-[90%] max-w-4xl';
                         headerTextSize = 'text-[8.5px]';
                         colHeaderTextSize = 'text-[7px]';
                         rowTextSize = 'text-[7px]';
                         wTextSize = 'text-[8.5px]';
                         wUnitSize = 'text-[4.5px]';
                         detailTextSize = 'text-[7px]';
-                    } else if (columnCount > 4) {
-                        gridWidthClass = 'w-[90%] max-w-4xl';
-                        headerTextSize = 'text-[8px]';
-                        colHeaderTextSize = 'text-[6.5px]';
-                        rowTextSize = 'text-[6.5px]';
-                        wTextSize = 'text-[8px]';
-                        wUnitSize = 'text-[4px]';
-                        detailTextSize = 'text-[6.5px]';
                     }
 
                     const cardSpacing = 'gap-1';
@@ -4494,21 +4494,21 @@ export const WorkoutSession = () => {
                             <div className="flex-shrink-0 bg-black/40 border-b border-black pt-1.5 px-2 pb-1.5 relative">
                                 <div className="text-center flex flex-col items-center mb-1">
                                     <h1 
-                                        className="text-lg md:text-xl font-black italic uppercase tracking-tighter text-yellow-400 drop-shadow-[0_1.5px_0_#000] border-y border-yellow-400/20 px-2 py-0 select-none animate-pulse"
+                                        className="text-xl md:text-2xl font-black italic uppercase tracking-tighter text-yellow-400 drop-shadow-[0_1.5px_0_#000] border-y border-yellow-400/20 px-3 py-0 select-none animate-pulse"
                                         style={{ fontFamily: "'Impact', 'Arial Black', sans-serif" }}
                                     >
                                         ¡RESULTADOS!
                                     </h1>
-                                    <p className="text-[6px] font-black tracking-[0.2em] text-yellow-500/50 uppercase mt-0">
+                                    <p className="text-[7.5px] font-black tracking-[0.2em] text-yellow-500/50 uppercase mt-0">
                                         STUDIO GYNX ENTERTAINMENT INC.
                                     </p>
                                 </div>
 
-                                <div className="flex gap-1.5 w-full max-w-[200px] mx-auto">
+                                <div className="flex gap-1.5 w-[90%] max-w-sm mx-auto">
                                     {isGroupMode && (
                                         <button
                                             onClick={() => setSummaryTab('grupal')}
-                                            className={`flex-1 py-1 px-2 rounded-md text-[9px] font-black uppercase tracking-wider border-2 transition-all transform hover:scale-[1.03] active:scale-95 duration-100 ${
+                                            className={`flex-1 py-1 px-2 rounded-md text-[9.5px] font-black uppercase tracking-wider border-2 transition-all transform hover:scale-[1.03] active:scale-95 duration-100 ${
                                                 summaryTab === 'grupal'
                                                     ? 'bg-yellow-400 border-black text-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]'
                                                     : 'bg-neutral-900 border-neutral-800 text-neutral-400'
@@ -4519,7 +4519,7 @@ export const WorkoutSession = () => {
                                     )}
                                     <button
                                         onClick={() => setSummaryTab('individual')}
-                                        className={`flex-1 py-1 px-2 rounded-md text-[9px] font-black uppercase tracking-wider border-2 transition-all transform hover:scale-[1.03] active:scale-95 duration-100 ${
+                                        className={`flex-1 py-1 px-2 rounded-md text-[9.5px] font-black uppercase tracking-wider border-2 transition-all transform hover:scale-[1.03] active:scale-95 duration-100 ${
                                             summaryTab === 'individual' || !isGroupMode
                                                 ? 'bg-yellow-400 border-black text-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]'
                                                 : 'bg-neutral-900 border-neutral-800 text-neutral-400'
