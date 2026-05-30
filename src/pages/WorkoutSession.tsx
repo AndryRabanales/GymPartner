@@ -4414,133 +4414,91 @@ export const WorkoutSession = () => {
             {/* 4. NEW: SUMMARY / MISSION COMPLETE MODAL (Correct Position) */}
             {
                 showSummary && (
-                    <div className="fixed inset-0 z-[180] flex items-center justify-center bg-black/98 backdrop-blur-lg overflow-y-auto p-4 md:p-8 animate-in fade-in duration-300">
-                        <div className="w-full max-w-lg bg-neutral-900 border border-white/10 rounded-[2.5rem] p-6 md:p-8 flex flex-col gap-6 shadow-[0_0_60px_rgba(250,204,21,0.15)] relative overflow-hidden my-8 animate-in zoom-in-95 duration-500">
-                            {/* Confetti Ambient Light */}
-                            <div className="absolute -top-40 -left-40 w-96 h-96 bg-gym-primary/10 rounded-full blur-[100px] pointer-events-none animate-pulse"></div>
-                            
-                            <div className="text-center relative space-y-2">
-                                <div className="w-16 h-16 bg-gym-primary/10 border border-gym-primary/30 rounded-full flex items-center justify-center mx-auto animate-bounce mb-3 shadow-[0_0_20px_rgba(250,204,21,0.2)]">
-                                    <Check size={32} className="text-gym-primary" strokeWidth={4} />
-                                </div>
-                                <h2 className="text-3xl md:text-4xl font-black italic uppercase tracking-tighter text-white">
-                                    Misión<br />Completada
-                                </h2>
-                                <p className="text-neutral-400 font-medium text-sm">Tu entrenamiento fue registrado exitosamente.</p>
-                            </div>
+                    <div className="fixed inset-0 z-[180] flex flex-col bg-black overflow-y-auto animate-in fade-in duration-300">
+                        <div className="flex-1 w-full max-w-3xl mx-auto flex flex-col gap-4 p-4 pb-24">
+                            {((isMultiplayer && multiplayerMode === 'conjunto' && participants.length > 0) ? participants : [{ id: user?.id || 'single-user', username: user?.user_metadata?.full_name || user?.user_metadata?.username || 'Yo', avatar_url: user?.user_metadata?.avatar_url }])
+                                .map((p) => {
+                                    const displayName = p.username ? p.username.split(' ')[0] : 'Jugador';
+                                    const isMe = p.id === user?.id;
+                                    
+                                    // Comprobar si el jugador tiene algún dato en algún ejercicio
+                                    const hasData = activeExercises.some(ex => ex.sets.some(s => s.playerCompleted?.[p.id] || Number(s.playerWeights?.[p.id]) > 0 || Number(s.playerReps?.[p.id]) > 0 || Number(s.playerTimes?.[p.id]) > 0 || Number(s.playerDistances?.[p.id]) > 0));
+                                    
+                                    if (!hasData) return null; // No mostrar jugadores sin datos
 
-                            {/* Chronological Exercise Fill Flow */}
-                            <div className="space-y-3 bg-neutral-950/50 border border-white/5 rounded-3xl p-4 md:p-5">
-                                <h3 className="text-xs font-black uppercase tracking-widest text-gym-primary flex items-center gap-1.5">
-                                    <Activity size={14} /> Flujo Cronológico de Entrenamiento
-                                </h3>
-                                <div className="relative pl-4 border-l border-white/10 space-y-3.5 mt-2.5">
-                                    {((exerciseFillFlow.length > 0 ? exerciseFillFlow : activeExercises.map(ex => ({ exerciseName: ex.equipmentName })))).map((flow, idx) => (
-                                        <div key={idx} className="relative flex items-center gap-3">
-                                            {/* Dot */}
-                                            <div className="absolute -left-[21px] w-2.5 h-2.5 rounded-full bg-gym-primary border-2 border-neutral-900"></div>
-                                            <div className="flex flex-col text-left">
-                                                <span className="text-white text-xs font-bold uppercase tracking-wide">
-                                                    {idx + 1}. {flow.exerciseName}
-                                                </span>
+                                    return (
+                                        <div key={p.id} className={`bg-neutral-900 border \${isMe ? 'border-gym-primary/50' : 'border-white/10'} rounded-2xl p-4 flex flex-col gap-3`}>
+                                            <div className="flex items-center gap-3 border-b border-white/5 pb-3">
+                                                {p.avatar_url ? (
+                                                    <img src={p.avatar_url} alt="avatar" className="w-10 h-10 rounded-full border-2 border-neutral-800 object-cover" />
+                                                ) : (
+                                                    <div className="w-10 h-10 rounded-full bg-neutral-800 flex items-center justify-center border-2 border-neutral-700">
+                                                        <span className="text-xs font-bold text-white uppercase">{displayName.charAt(0)}</span>
+                                                    </div>
+                                                )}
+                                                <h2 className={`text-lg font-black uppercase tracking-wide \${isMe ? 'text-gym-primary' : 'text-white'}`}>
+                                                    {displayName}
+                                                </h2>
+                                            </div>
+
+                                            <div className="flex flex-col gap-3">
+                                                {activeExercises.map((ex, exIdx) => {
+                                                    const playerSets = ex.sets.map((s, idx) => ({ ...s, originalIndex: idx }))
+                                                        .filter(s => s.playerCompleted?.[p.id] || Number(s.playerWeights?.[p.id]) > 0 || Number(s.playerReps?.[p.id]) > 0 || Number(s.playerTimes?.[p.id]) > 0 || Number(s.playerDistances?.[p.id]) > 0);
+
+                                                    if (playerSets.length === 0) return null;
+
+                                                    return (
+                                                        <div key={exIdx} className="bg-neutral-950/50 rounded-xl p-3">
+                                                            <h3 className="text-[11px] font-black uppercase tracking-wide text-neutral-300 mb-2">{ex.equipmentName}</h3>
+                                                            <div className="flex flex-col gap-1">
+                                                                {playerSets.map((s) => {
+                                                                    const weight = Number(s.playerWeights?.[p.id]) || 0;
+                                                                    const reps = Number(s.playerReps?.[p.id]) || 0;
+                                                                    const time = Number(s.playerTimes?.[p.id]) || 0;
+                                                                    const distance = Number(s.playerDistances?.[p.id]) || 0;
+                                                                    const rpe = Number(s.playerRpes?.[p.id]) || 0;
+                                                                    
+                                                                    return (
+                                                                        <div key={s.id} className="flex items-center text-[10px] text-neutral-400 font-medium py-1 border-b border-white/5 last:border-0 gap-2">
+                                                                            <div className="w-8 text-neutral-500">#{s.originalIndex + 1}</div>
+                                                                            <div className="flex-1 flex justify-end gap-3">
+                                                                                {weight > 0 && <div><span className="text-white font-bold">{weight}</span> <span className="text-[8px] uppercase">{ex.weightUnit || 'kg'}</span></div>}
+                                                                                {reps > 0 && <div><span className="text-white font-bold">{reps}</span> <span className="text-[8px] uppercase">reps</span></div>}
+                                                                                {time > 0 && <div><span className="text-white font-bold">{time}</span> <span className="text-[8px] uppercase">s</span></div>}
+                                                                                {distance > 0 && <div><span className="text-white font-bold">{distance}</span> <span className="text-[8px] uppercase">{ex.distanceUnit || 'm'}</span></div>}
+                                                                                {rpe > 0 && <div><span className="text-[8px] uppercase">RPE</span> <span className="text-white font-bold">{rpe}</span></div>}
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
+                                    );
+                                })}
+                        </div>
+                        
+                        {/* Sticky Botón Volver */}
+                        <div className="fixed bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black via-black/95 to-transparent">
+                            <div className="w-full max-w-3xl mx-auto">
+                                <button
+                                    onClick={() => {
+                                        isLeavingPageRef.current = true;
+                                        navigate('/');
+                                    }}
+                                    className="w-full bg-gym-primary hover:bg-yellow-400 text-black font-black uppercase py-3.5 rounded-2xl shadow-[0_4px_25px_rgba(250,204,21,0.2)] transition-all text-sm tracking-wider"
+                                >
+                                    Volver al Inicio
+                                </button>
                             </div>
-
-                            {/* Video-Game Style Player Leaderboard */}
-                            <div className="space-y-3">
-                                <h3 className="text-xs font-black uppercase tracking-widest text-neutral-400 flex items-center gap-1.5">
-                                    <Swords size={14} /> Clasificación del Escuadrón
-                                </h3>
-                                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                                    {((isMultiplayer && multiplayerMode === 'conjunto' && participants.length > 0) ? participants : [{ id: user?.id || 'single-user', username: user?.user_metadata?.full_name || user?.user_metadata?.username || 'Yo', avatar_url: user?.user_metadata?.avatar_url }])
-                                        .map(p => {
-                                            let totalSets = 0;
-                                            let totalReps = 0;
-                                            let maxWeight = 0;
-
-                                            activeExercises.forEach(ex => {
-                                                ex.sets.forEach(s => {
-                                                    if (s.playerCompleted?.[p.id]) totalSets++;
-                                                    const reps = Number(s.playerReps?.[p.id]) || 0;
-                                                    totalReps += reps;
-                                                    const weight = Number(s.playerWeights?.[p.id]) || 0;
-                                                    if (weight > maxWeight) maxWeight = weight;
-                                                });
-                                            });
-
-                                            return { ...p, totalSets, totalReps, maxWeight };
-                                        })
-                                        .sort((a, b) => b.totalReps - a.totalReps)
-                                        .map((p, idx) => {
-                                            const isMe = p.id === user?.id;
-                                            const isWinner = idx === 0;
-                                            const displayName = p.username ? p.username.split(' ')[0].substring(0, 10) : 'Jugador';
-                                            
-                                            return (
-                                                <div key={p.id} className={`flex justify-between items-center bg-neutral-950/40 border \${isMe ? 'border-gym-primary/50' : 'border-white/5'} rounded-2xl p-3 relative overflow-hidden transition-all`}>
-                                                    {isWinner && <div className="absolute top-0 left-0 w-1 h-full bg-yellow-400"></div>}
-                                                    
-                                                    <div className="flex items-center gap-3 pl-1">
-                                                        <div className="relative">
-                                                            {p.avatar_url ? (
-                                                                <img src={p.avatar_url} alt="avatar" className="w-8 h-8 rounded-full border-2 border-neutral-800 object-cover" />
-                                                            ) : (
-                                                                <div className="w-8 h-8 rounded-full bg-neutral-800 flex items-center justify-center border-2 border-neutral-700">
-                                                                    <span className="text-[10px] font-bold text-white uppercase">{displayName.charAt(0)}</span>
-                                                                </div>
-                                                            )}
-                                                            {isWinner && (
-                                                                <div className="absolute -top-2 -right-2 bg-yellow-400 rounded-full p-0.5">
-                                                                    <Award size={10} className="text-black" />
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                        <div className="text-left space-y-0.5">
-                                                            <h4 className={`text-xs font-black uppercase tracking-wide truncate max-w-[120px] \${isMe ? 'text-gym-primary' : 'text-white'}`}>
-                                                                {displayName}
-                                                            </h4>
-                                                            <p className="text-neutral-500 font-bold text-[10px]">
-                                                                {p.totalSets} Series
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    <div className="flex gap-4 items-center">
-                                                        {p.maxWeight > 0 && (
-                                                            <div className="text-right">
-                                                                <span className="text-[9px] font-black uppercase tracking-wider text-neutral-500 block">Max</span>
-                                                                <span className="text-white font-black text-xs">{p.maxWeight} <span className="text-[10px]">kg</span></span>
-                                                            </div>
-                                                        )}
-                                                        {p.totalReps > 0 && (
-                                                            <div className="text-right">
-                                                                <span className="text-[9px] font-black uppercase tracking-wider text-neutral-500 block">Reps</span>
-                                                                <span className="text-gym-primary font-black text-sm">{p.totalReps}</span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                </div>
-                            </div>
-
-                            <button
-                                onClick={() => {
-                                    isLeavingPageRef.current = true;
-                                    navigate('/');
-                                }}
-                                className="w-full bg-gym-primary hover:bg-yellow-400 text-black font-black uppercase py-4 rounded-2xl shadow-[0_4px_25px_rgba(250,204,21,0.25)] transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 mt-2 text-xs tracking-wider"
-                            >
-                                <ArrowLeft size={16} strokeWidth={3} />
-                                Volver al Inicio
-                            </button>
                         </div>
                     </div>
-                )}
+                )
+            }
         </div >
     );
 }
