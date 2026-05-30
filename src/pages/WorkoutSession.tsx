@@ -4433,18 +4433,56 @@ export const WorkoutSession = () => {
                         compLevel = 1; // Medium Compaction
                     }
 
+                    const columnCount = (summaryTab === 'grupal' && isGroupMode) ? allPlayers.length : 1;
+                    
+                    let gridWidthClass = 'w-[50%] max-w-sm';
+                    let headerTextSize = 'text-[9.5px]';
+                    let colHeaderTextSize = 'text-[8px]';
+                    let rowTextSize = 'text-[8.5px]';
+                    let wTextSize = 'text-[11px]';
+                    let wUnitSize = 'text-[6px]';
+                    let detailTextSize = 'text-[8.5px]';
+
+                    if (columnCount === 2) {
+                        gridWidthClass = 'w-[50%] max-w-sm';
+                        headerTextSize = 'text-[9.5px]';
+                        colHeaderTextSize = 'text-[8px]';
+                        rowTextSize = 'text-[8px]';
+                        wTextSize = 'text-[10px]';
+                        wUnitSize = 'text-[5.5px]';
+                        detailTextSize = 'text-[8px]';
+                    } else if (columnCount === 3) {
+                        gridWidthClass = 'w-[65%] max-w-md';
+                        headerTextSize = 'text-[9px]';
+                        colHeaderTextSize = 'text-[7.5px]';
+                        rowTextSize = 'text-[7.5px]';
+                        wTextSize = 'text-[9px]';
+                        wUnitSize = 'text-[5px]';
+                        detailTextSize = 'text-[7.5px]';
+                    } else if (columnCount === 4) {
+                        gridWidthClass = 'w-[75%] max-w-lg';
+                        headerTextSize = 'text-[8.5px]';
+                        colHeaderTextSize = 'text-[7px]';
+                        rowTextSize = 'text-[7px]';
+                        wTextSize = 'text-[8.5px]';
+                        wUnitSize = 'text-[4.5px]';
+                        detailTextSize = 'text-[7px]';
+                    } else if (columnCount > 4) {
+                        gridWidthClass = 'w-[90%] max-w-4xl';
+                        headerTextSize = 'text-[8px]';
+                        colHeaderTextSize = 'text-[6.5px]';
+                        rowTextSize = 'text-[6.5px]';
+                        wTextSize = 'text-[8px]';
+                        wUnitSize = 'text-[4px]';
+                        detailTextSize = 'text-[6.5px]';
+                    }
+
                     const cardSpacing = 'gap-1';
                     const cardStyle = 'bg-[#141310] rounded-md overflow-hidden border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]';
                     
                     const headerPadding = 'px-1.5 py-0.5';
-                    const headerTextSize = 'text-[8px]';
                     const colHeaderPadding = 'px-1.5 py-px';
-                    const colHeaderTextSize = 'text-[6.5px]';
                     const rowPadding = 'px-1.5 py-[1px]';
-                    const rowTextSize = 'text-[7px]';
-                    const wTextSize = 'text-[8.5px]';
-                    const wUnitSize = 'text-[4.5px]';
-                    const detailTextSize = 'text-[6.5px]';
 
                     return (
                         <div className="fixed inset-0 z-[180] flex flex-col bg-[#0c0b09] bg-[radial-gradient(circle_at_center,_#1d1a14_0%,_#0a0907_100%)] overflow-hidden">
@@ -4492,8 +4530,8 @@ export const WorkoutSession = () => {
                                 </div>
                             </div>
 
-                            {/* SCROLLABLE VINTAGE CONTENT GRID (Super Compacted to 65% Width) */}
-                            <div className="flex-1 overflow-y-auto px-1 pt-2 pb-20 w-[65%] max-w-sm mx-auto flex flex-col justify-start">
+                            {/* SCROLLABLE VINTAGE CONTENT GRID (Compacted Dynamically by Columns) */}
+                            <div className={`flex-1 overflow-y-auto px-1 pt-2 pb-20 mx-auto flex flex-col justify-start ${gridWidthClass}`}>
 
                                 {/* ====== TAB: GRUPAL ====== */}
                                 {(summaryTab === 'grupal' && isGroupMode) && (
