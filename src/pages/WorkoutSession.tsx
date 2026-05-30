@@ -2994,6 +2994,7 @@ export const WorkoutSession = () => {
                     console.log('✅ Sesión de emergencia creada:', finalSessionId);
                 } else {
                     console.error('❌ Failed to create emergency session!', newSession.error);
+                    alert("⚠️ FALLA DE BASE DE DATOS AL INICIAR SESIÓN:\n" + JSON.stringify(newSession.error, null, 2));
                     // Emergency escape: don't trap the user
                     localStorage.removeItem('ginx_coop_state');
                     setIsFinished(true);
@@ -3004,6 +3005,7 @@ export const WorkoutSession = () => {
                 }
             } catch (err) {
                 console.error('❌ Error critico en sesion de emergencia:', err);
+                alert("⚠️ ERROR CRÍTICO AL CONTACTAR SERVIDOR:\n" + String(err));
                 setIsFinished(true);
                 navigate('/');
                 return;
