@@ -88,6 +88,67 @@ interface WorkoutExercise {
     category?: string; // SNAPSHOT: For history persistence
 }
 
+// ─── Sanitize ghost rest timers from localStorage/DB ───────────────────────
+// If a set was completed in a previous session that was never properly closed,
+// its restLastStartTime is a stale timestamp from hours ago. This function
+// detects those and freezes the timer at the accumulated value, preventing
+// the display from showing "66 minutes" on a brand-new session.
+const sanitizeRestTimers = (exercises: any[]): any[] => {
+    const MAX_REST_AGE_MS = 2 * 60 * 60 * 1000; // 2 hours — if older, it's a ghost
+    const now = Date.now();
+    return exercises.map(ex => ({
+        ...ex,
+        sets: ex.sets.map((s: any) => {
+            const clean = { ...s };
+
+            // ── Legacy scalar fields ──────────────────────────────────────────
+            if (clean.restStatus === 'running' && clean.restLastStartTime) {
+                const age = now - Number(clean.restLastStartTime);
+                if (isNaN(age) || age > MAX_REST_AGE_MS) {
+                    clean.restAccumulated = (clean.restAccumulated || 0) + Math.min(age, MAX_REST_AGE_MS);
+                    clean.restStatus = 'completed';
+                    clean.restLastStartTime = undefined;
+                }
+            }
+
+            // ── P2 scalar fields ─────────────────────────────────────────────
+            if (clean.p2_restStatus === 'running' && clean.p2_restLastStartTime) {
+                const age = now - Number(clean.p2_restLastStartTime);
+                if (isNaN(age) || age > MAX_REST_AGE_MS) {
+                    clean.p2_restAccumulated = (clean.p2_restAccumulated || 0) + Math.min(age, MAX_REST_AGE_MS);
+                    clean.p2_restStatus = 'completed';
+                    clean.p2_restLastStartTime = undefined;
+                }
+            }
+
+            // ── Per-player maps ───────────────────────────────────────────────
+            if (clean.playerRestStatus && clean.playerRestLastStartTime) {
+                const newStatus = { ...(clean.playerRestStatus || {}) };
+                const newAcc = { ...(clean.playerRestAccumulated || {}) };
+                const newLst = { ...(clean.playerRestLastStartTime || {}) };
+
+                Object.keys(newLst).forEach(pid => {
+                    const lst = Number(newLst[pid]);
+                    if (newStatus[pid] === 'running') {
+                        const age = now - lst;
+                        if (isNaN(age) || age > MAX_REST_AGE_MS) {
+                            newAcc[pid] = (newAcc[pid] || 0) + Math.min(age, MAX_REST_AGE_MS);
+                            newStatus[pid] = 'completed';
+                            delete newLst[pid];
+                        }
+                    }
+                });
+
+                clean.playerRestStatus = newStatus;
+                clean.playerRestAccumulated = newAcc;
+                clean.playerRestLastStartTime = newLst;
+            }
+
+            return clean;
+        })
+    }));
+};
+
 // Helper Component for Rest Timer
 const RestTimerDisplay = ({ status, accumulated, lastStartTime, isGold }: { status: 'running' | 'paused' | 'completed', accumulated: number, lastStartTime?: number, isGold?: boolean }) => {
     const [elapsed, setElapsed] = useState(0);
@@ -1313,12 +1374,13 @@ export const WorkoutSession = () => {
                 if (savedDraft) {
                     const parsed = JSON.parse(savedDraft);
                     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-                        setActiveExercises(parsed.exercises || []);
+                        // 🛡️ Sanitize ghost rest timers BEFORE hydrating state
+                        setActiveExercises(sanitizeRestTimers(parsed.exercises || []));
                         if (parsed.routineName) setCurrentRoutineName(parsed.routineName);
                         if (parsed.originalIds) setOriginalExerciseIds(parsed.originalIds);
                         if (parsed.isRoutineModified !== undefined) setIsRoutineModified(parsed.isRoutineModified);
                     } else {
-                        setActiveExercises(Array.isArray(parsed) ? parsed : []);
+                        setActiveExercises(sanitizeRestTimers(Array.isArray(parsed) ? parsed : []));
                     }
                     setLoading(false);
                 } else {
@@ -1355,7 +1417,18 @@ export const WorkoutSession = () => {
                                 distance: log.distance || 0,
                                 rpe: log.rpe || 0,
                                 custom: log.metrics_data || {},
-                                completed: true
+                                completed: true,
+                                // 🛡️ Reset ALL rest timer fields — the session was already saved;
+                                // never show running timers from a prior session.
+                                restStatus: 'completed',
+                                restAccumulated: 0,
+                                restLastStartTime: undefined,
+                                p2_restStatus: 'completed',
+                                p2_restAccumulated: 0,
+                                p2_restLastStartTime: undefined,
+                                playerRestStatus: {},
+                                playerRestAccumulated: {},
+                                playerRestLastStartTime: {}
                             });
                         });
                         setActiveExercises(restoredExercises);
