@@ -27,6 +27,7 @@ export interface WorkoutSetData {
     metrics_data?: Record<string, number>; // Flexible JSONB storage
     is_pr?: boolean;
     category_snapshot?: string; // HISTORICAL: Preserves category at time of log
+    owner_id?: string; // NEW: Explicitly track who performed this set
 }
 
 class WorkoutService {
@@ -304,6 +305,45 @@ class WorkoutService {
             return { success: false, error };
         }
         return { success: true };
+    }
+
+    // Failsafe Cleanup for Orphaned/Ghost Sessions
+    async cleanOrphanSessions(userId: string): Promise<void> {
+        try {
+            console.log('🧹 [Cleanup] Escaneando sesiones huérfanas para el usuario:', userId);
+            
+            // 1. Get all active sessions for this user
+            const { data: activeSessions } = await supabase
+                .from('workout_sessions')
+                .select('id, started_at')
+                .eq('user_id', userId)
+                .is('finished_at', null);
+
+            if (!activeSessions || activeSessions.length === 0) return;
+
+            for (const session of activeSessions) {
+                // Check if this session has any logged sets
+                const { count } = await supabase
+                    .from('workout_logs')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('session_id', session.id);
+
+                const hasLogs = (count || 0) > 0;
+                const hoursSinceStart = (Date.now() - new Date(session.started_at).getTime()) / (1000 * 60 * 60);
+
+                if (!hasLogs) {
+                    // Empty session -> Delete completely!
+                    console.log(`🧹 [Cleanup] Eliminando sesión vacía fantasma: ${session.id}`);
+                    await this.deleteSession(session.id);
+                } else if (hoursSinceStart > 3) {
+                    // Session with logs but older than 3 hours -> Auto-close!
+                    console.log(`🧹 [Cleanup] Cerrando sesión huérfana de larga duración: ${session.id}`);
+                    await this.finishSession(session.id, 'Cierre automático por inactividad');
+                }
+            }
+        } catch (err) {
+            console.error('Error in cleanOrphanSessions:', err);
+        }
     }
 
     // Log a single set (The "Hit")

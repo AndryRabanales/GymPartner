@@ -38,7 +38,8 @@ interface WorkoutSet {
     restStatus?: 'running' | 'paused' | 'completed';
     restAccumulated?: number; // ms stored
     restLastStartTime?: number; // ms timestamp of current run start
-    db_id?: string;
+    // CRDT Conflict Resolution
+    lastUpdatedAt?: number;
 
     // dynamic player performance maps
     playerWeights?: Record<string, number>;
@@ -227,6 +228,8 @@ export const WorkoutSession = () => {
     const [partnerName, setPartnerName] = useState<string>('Compañero');
     const [partnerAvatar, setPartnerAvatar] = useState<string | null>(null);
     const [participants, setParticipants] = useState<any[]>([]);
+    const participantsRef = useRef<any[]>([]);
+    useEffect(() => { participantsRef.current = participants; }, [participants]);
 
     useEffect(() => {
         if (!isMultiplayer || multiplayerMode !== 'conjunto' || !user) {
@@ -378,7 +381,11 @@ export const WorkoutSession = () => {
                     channel.send({
                         type: 'broadcast',
                         event: 'sync_state',
-                        payload: { exercises: activeExercisesRef.current, sender: user.id }
+                        payload: { 
+                            exercises: activeExercisesRef.current, 
+                            sender: user.id,
+                            knownParticipants: participantsRef.current
+                        }
                     }).catch(e => console.error(e));
                     
                     if (sessionIdRef.current) {
@@ -403,7 +410,11 @@ export const WorkoutSession = () => {
                     channel.send({
                         type: 'broadcast',
                         event: 'sync_state',
-                        payload: { exercises: activeExercisesRef.current, sender: user.id }
+                        payload: { 
+                            exercises: activeExercisesRef.current, 
+                            sender: user.id,
+                            knownParticipants: participantsRef.current
+                        }
                     }).catch(e => console.error(e));
                     
                     if (sessionIdRef.current) {
@@ -420,8 +431,23 @@ export const WorkoutSession = () => {
                 }
             })
             .on('broadcast', { event: 'sync_state' }, (payload) => {
-                const { exercises, sender } = payload.payload;
+                const { exercises, sender, knownParticipants } = payload.payload;
                 if (sender === user.id) return; // Ignore echoes
+
+                if (knownParticipants && Array.isArray(knownParticipants)) {
+                    setParticipants(prev => {
+                        let updated = false;
+                        const next = [...prev];
+                        for (const kp of knownParticipants) {
+                            if (!next.find(p => p.id === kp.id)) {
+                                console.log('🎉 [Dynamic Discovery] Nuevo jugador detectado en la sala:', kp.username);
+                                next.push(kp);
+                                updated = true;
+                            }
+                        }
+                        return updated ? next : prev;
+                    });
+                }
 
                 if (exercises && exercises.length > 0) {
                     const incomingStr = JSON.stringify(exercises);
@@ -452,62 +478,49 @@ export const WorkoutSession = () => {
                                     if (!loc) { mergedSets.push(inSet); continue; }
                                     if (!inSet) { mergedSets.push(loc); continue; }
 
-                                    // Initialize / merge dynamic maps
-                                    const w = { ...loc.playerWeights, ...inSet.playerWeights };
-                                    const r = { ...loc.playerReps, ...inSet.playerReps };
-                                    const t = { ...loc.playerTimes, ...inSet.playerTimes };
-                                    const d = { ...loc.playerDistances, ...inSet.playerDistances };
-                                    const rpe = { ...loc.playerRpes, ...inSet.playerRpes };
-                                    const comp = { ...loc.playerCompleted, ...inSet.playerCompleted };
-                                    const lock = { ...loc.playerLocked, ...inSet.playerLocked };
-                                    const compAt = { ...loc.playerCompletedAt, ...inSet.playerCompletedAt };
+                                    const locTime = loc.lastUpdatedAt || 0;
+                                    const inTime = inSet.lastUpdatedAt || 0;
+                                    const useLoc = locTime >= inTime && locTime > 0;
 
-                                    // Rest timers dynamic merge
-                                    const rStatus = { ...loc.playerRestStatus, ...inSet.playerRestStatus };
-                                    const rAcc = { ...loc.playerRestAccumulated, ...inSet.playerRestAccumulated };
-                                    const rLst = { ...loc.playerRestLastStartTime, ...inSet.playerRestLastStartTime };
+                                    const mergeMap = (locMap: Record<string, any> = {}, inMap: Record<string, any> = {}, preferTrue = false) => {
+                                        const res = { ...locMap };
+                                        for (const key of Object.keys(inMap || {})) {
+                                            const inVal = inMap[key];
+                                            const locVal = locMap[key];
+                                            
+                                            if (preferTrue) {
+                                                if (inVal === true && !locVal) res[key] = true;
+                                                else if (locVal === true && !inVal) res[key] = true;
+                                                else res[key] = useLoc ? locVal : inVal;
+                                            } else {
+                                                const hasLoc = locVal !== undefined && locVal !== null && locVal !== 0 && locVal !== '';
+                                                const hasIn = inVal !== undefined && inVal !== null && inVal !== 0 && inVal !== '';
+                                                
+                                                if (hasLoc && hasIn) res[key] = useLoc ? locVal : inVal;
+                                                else if (hasIn) res[key] = inVal;
+                                                else if (hasLoc) res[key] = locVal;
+                                                else res[key] = useLoc ? locVal : inVal;
+                                            }
+                                        }
+                                        return res;
+                                    };
 
-                                    // Isolate legacy fields to prevent overwrite
-                                    let finalWeight = inSet.weight;
-                                    let finalReps = inSet.reps;
-                                    let finalCompleted = inSet.completed;
-                                    let finalLocked = inSet.locked;
-                                    let finalCompletedAt = inSet.completedAt;
-                                    let finalRestStatus = inSet.restStatus;
-                                    let finalRestAccumulated = inSet.restAccumulated;
-                                    let finalRestLastStartTime = inSet.restLastStartTime;
+                                    const w = mergeMap(loc.playerWeights, inSet.playerWeights);
+                                    const r = mergeMap(loc.playerReps, inSet.playerReps);
+                                    const t = mergeMap(loc.playerTimes, inSet.playerTimes);
+                                    const d = mergeMap(loc.playerDistances, inSet.playerDistances);
+                                    const rpe = mergeMap(loc.playerRpes, inSet.playerRpes);
+                                    const comp = mergeMap(loc.playerCompleted, inSet.playerCompleted, true);
+                                    const lock = mergeMap(loc.playerLocked, inSet.playerLocked, true);
+                                    const compAt = mergeMap(loc.playerCompletedAt, inSet.playerCompletedAt);
 
-                                    let finalP2Weight = inSet.p2_weight;
-                                    let finalP2Reps = inSet.p2_reps;
-                                    let finalP2Completed = inSet.p2_completed;
-                                    let finalP2Locked = inSet.p2_locked;
-                                    let finalP2CompletedAt = inSet.p2_completedAt;
-                                    let finalP2RestStatus = inSet.p2_restStatus;
-                                    let finalP2RestAccumulated = inSet.p2_restAccumulated;
-                                    let finalP2RestLastStartTime = inSet.p2_restLastStartTime;
-
-                                    if (false) {
-                                        finalWeight = loc.weight;
-                                        finalReps = loc.reps;
-                                        finalCompleted = loc.completed;
-                                        finalLocked = loc.locked;
-                                        finalCompletedAt = loc.completedAt;
-                                        finalRestStatus = loc.restStatus;
-                                        finalRestAccumulated = loc.restAccumulated;
-                                        finalRestLastStartTime = loc.restLastStartTime;
-                                    } else if (false) {
-                                        finalP2Weight = loc.p2_weight;
-                                        finalP2Reps = loc.p2_reps;
-                                        finalP2Completed = loc.p2_completed;
-                                        finalP2Locked = loc.p2_locked;
-                                        finalP2CompletedAt = loc.p2_completedAt;
-                                        finalP2RestStatus = loc.p2_restStatus;
-                                        finalP2RestAccumulated = loc.p2_restAccumulated;
-                                        finalP2RestLastStartTime = loc.p2_restLastStartTime;
-                                    }
+                                    const rStatus = mergeMap(loc.playerRestStatus, inSet.playerRestStatus);
+                                    const rAcc = mergeMap(loc.playerRestAccumulated, inSet.playerRestAccumulated);
+                                    const rLst = mergeMap(loc.playerRestLastStartTime, inSet.playerRestLastStartTime);
 
                                     mergedSets.push({
                                         ...inSet,
+                                        lastUpdatedAt: useLoc ? locTime : inTime,
                                         playerWeights: w,
                                         playerReps: r,
                                         playerTimes: t,
@@ -520,23 +533,23 @@ export const WorkoutSession = () => {
                                         playerRestAccumulated: rAcc,
                                         playerRestLastStartTime: rLst,
 
-                                        weight: finalWeight,
-                                        reps: finalReps,
-                                        completed: finalCompleted,
-                                        locked: finalLocked,
-                                        completedAt: finalCompletedAt,
-                                        restStatus: finalRestStatus,
-                                        restAccumulated: finalRestAccumulated,
-                                        restLastStartTime: finalRestLastStartTime,
+                                        weight: useLoc ? loc.weight : inSet.weight,
+                                        reps: useLoc ? loc.reps : inSet.reps,
+                                        completed: useLoc ? loc.completed : inSet.completed,
+                                        locked: useLoc ? loc.locked : inSet.locked,
+                                        completedAt: useLoc ? loc.completedAt : inSet.completedAt,
+                                        restStatus: useLoc ? loc.restStatus : inSet.restStatus,
+                                        restAccumulated: useLoc ? loc.restAccumulated : inSet.restAccumulated,
+                                        restLastStartTime: useLoc ? loc.restLastStartTime : inSet.restLastStartTime,
 
-                                        p2_weight: finalP2Weight,
-                                        p2_reps: finalP2Reps,
-                                        p2_completed: finalP2Completed,
-                                        p2_locked: finalP2Locked,
-                                        p2_completedAt: finalP2CompletedAt,
-                                        p2_restStatus: finalP2RestStatus,
-                                        p2_restAccumulated: finalP2RestAccumulated,
-                                        p2_restLastStartTime: finalP2RestLastStartTime
+                                        p2_weight: useLoc ? loc.p2_weight : inSet.p2_weight,
+                                        p2_reps: useLoc ? loc.p2_reps : inSet.p2_reps,
+                                        p2_completed: useLoc ? loc.p2_completed : inSet.p2_completed,
+                                        p2_locked: useLoc ? loc.p2_locked : inSet.p2_locked,
+                                        p2_completedAt: useLoc ? loc.p2_completedAt : inSet.p2_completedAt,
+                                        p2_restStatus: useLoc ? loc.p2_restStatus : inSet.p2_restStatus,
+                                        p2_restAccumulated: useLoc ? loc.p2_restAccumulated : inSet.p2_restAccumulated,
+                                        p2_restLastStartTime: useLoc ? loc.p2_restLastStartTime : inSet.p2_restLastStartTime
                                     });
                                 }
                                 
@@ -563,7 +576,8 @@ export const WorkoutSession = () => {
                         event: 'sync_state',
                         payload: { 
                             exercises: activeExercisesRef.current, 
-                            sender: user.id 
+                            sender: user.id,
+                            knownParticipants: participantsRef.current
                         }
                     }).catch(e => console.error('Error broadcasting hydration state:', e));
                 }
@@ -583,6 +597,26 @@ export const WorkoutSession = () => {
                         }
                     }).catch(e => console.error('Error broadcasting session sync for hydration:', e));
                 }
+            })
+            .on('broadcast', { event: 'session_terminated' }, async (payload) => {
+                const { sender } = payload.payload;
+                if (sender === user.id) return; // Ignore echoes
+                
+                console.warn('⚠️ [Destruction Protocol] Received session_terminated signal from host');
+                toast.error("Misión abortada por el anfitrión.");
+                
+                // Clear local cache immediately
+                localStorage.removeItem(`workout_draft_${sessionIdRef.current}`);
+                localStorage.removeItem('workout_session_state');
+                localStorage.removeItem('ginx_coop_state');
+                
+                // Delete the orphaned linked session from the database
+                if (sessionIdRef.current) {
+                    await workoutService.deleteSession(sessionIdRef.current);
+                }
+                
+                // Eject user
+                navigate('/');
             })
             .on('broadcast', { event: 'sync_session_id' }, (payload) => {
                 const { sessionId: partnerSessionId, startTime: partnerStartTime, sender } = payload.payload;
@@ -629,7 +663,11 @@ export const WorkoutSession = () => {
                     channel.send({
                         type: 'broadcast',
                         event: 'sync_state',
-                        payload: { exercises: activeExercises, sender: user.id }
+                        payload: { 
+                            exercises: activeExercises, 
+                            sender: user.id,
+                            knownParticipants: participantsRef.current
+                        }
                     }).catch(e => console.error(e));
 
                     // ANY participant requests hydration explicitly upon reconnecting to guarantee no missed events
@@ -1437,6 +1475,9 @@ export const WorkoutSession = () => {
                 finalPartnerSessionId: forcePartnerSessionId || partnerSessionId || undefined
             });
 
+            // 🧹 Automatic prevention: Clean any ghost sessions before starting
+            await workoutService.cleanOrphanSessions(user.id);
+
             const { data: newSession, error: startError } = await workoutService.startSession(
                 user.id, 
                 finalGymId || undefined,
@@ -1728,6 +1769,9 @@ export const WorkoutSession = () => {
             // @ts-expect-error - ignore typing
             updated[exerciseIndex].sets[setIndex][field] = isNaN(val) ? 0 : val;
         }
+
+        // CRDT: Update modification timestamp
+        updated[exerciseIndex].sets[setIndex].lastUpdatedAt = Date.now();
 
         setActiveExercises(updated);
     };
@@ -2055,6 +2099,9 @@ export const WorkoutSession = () => {
             if (fieldKey === 'rpe') set.playerRpes[targetUserId] = isNaN(numVal) ? 0 : numVal;
             if (fieldKey === 'completed') set.playerCompleted[targetUserId] = Boolean(value);
             if (fieldKey === 'locked') set.playerLocked[targetUserId] = Boolean(value);
+
+            // CRDT: Update modification timestamp
+            set.lastUpdatedAt = Date.now();
 
             const userIdx = participants.findIndex(p => p.id === targetUserId);
             const isHost = userIdx === 0 || (userIdx === -1 && targetUserId === (isInviter ? user?.id : partnerId));
@@ -2679,15 +2726,18 @@ export const WorkoutSession = () => {
             for (let j = 0; j < exercise.sets.length; j++) {
                 const set = exercise.sets[j];
 
-                // SAVE LOGIC:
+                const myId = user?.id;
+                if (!myId) continue;
+
+                // SAVE LOGIC (DYNAMIC N-PLAYER):
                 // 1. If it has no DB ID (not saved yet)
-                // 2. AND (It is completed OR has some data)
-                const isCompletedToSave = isInviter ? set.completed : (set.p2_completed || false);
-                const weightToSave = Number(isInviter ? set.weight : (set.p2_weight || 0)) || 0;
-                const repsToSave = Number(isInviter ? set.reps : (set.p2_reps || 0)) || 0;
-                const timeToSave = Number(isInviter ? set.time : (set.p2_time || 0)) || 0;
-                const distanceToSave = Number(isInviter ? set.distance : (set.p2_distance || 0)) || 0;
-                const rpeToSave = Number(isInviter ? set.rpe : (set.p2_rpe || 0)) || undefined;
+                // 2. AND (It is completed OR has some data FOR THIS USER)
+                const isCompletedToSave = set.playerCompleted?.[myId] || false;
+                const weightToSave = Number(set.playerWeights?.[myId]) || 0;
+                const repsToSave = Number(set.playerReps?.[myId]) || 0;
+                const timeToSave = Number(set.playerTimes?.[myId]) || 0;
+                const distanceToSave = Number(set.playerDistances?.[myId]) || 0;
+                const rpeToSave = Number(set.playerRpes?.[myId]) || undefined;
 
                 if (!set.db_id && (isCompletedToSave || weightToSave > 0 || repsToSave > 0 || timeToSave > 0 || distanceToSave > 0)) {
                     // We need the ID now
@@ -2696,9 +2746,9 @@ export const WorkoutSession = () => {
                     if (targetId) {
                         console.log(`💾 Saving set ${j + 1} for ${exercise.equipmentName}...`);
                         
-                        let finalRestDuration = (isInviter ? set.restAccumulated : set.p2_restAccumulated) || 0;
-                        const activeRestStatus = isInviter ? set.restStatus : set.p2_restStatus;
-                        const activeRestLastStartTime = isInviter ? set.restLastStartTime : set.p2_restLastStartTime;
+                        let finalRestDuration = (set.playerRestAccumulated?.[myId]) || 0;
+                        const activeRestStatus = set.playerRestStatus?.[myId];
+                        const activeRestLastStartTime = set.playerRestLastStartTime?.[myId];
 
                         if (activeRestStatus === 'running' && activeRestLastStartTime) {
                             finalRestDuration += (Date.now() - activeRestLastStartTime);
@@ -2706,7 +2756,7 @@ export const WorkoutSession = () => {
 
                         const extendedMetrics = {
                             ...(set.custom || {}),
-                            ...(isCompletedToSave ? { _checklist_timestamp: (isInviter ? set.completedAt : set.p2_completedAt) || Date.now() } : {}),
+                            ...(isCompletedToSave ? { _checklist_timestamp: (set.playerCompletedAt?.[myId]) || Date.now() } : {}),
                             ...(exercise.weightUnit === 'lb' ? { _weight_unit: 'lb' } : {}),
                             _rest_duration_ms: finalRestDuration,
                             _rest_status: activeRestStatus === 'running' ? 'completed' : activeRestStatus
@@ -2724,7 +2774,8 @@ export const WorkoutSession = () => {
                             rpe: rpeToSave,
                             metrics_data: extendedMetrics, // Save custom metrics + timestamps
                             category_snapshot: exercise.category || 'Custom', // SNAPSHOT: Current Category
-                            is_pr: false
+                            is_pr: false,
+                            owner_id: myId // NEW: Explicitly link set to the user who performed it
                         }).then(res => {
                             if (res.data) {
                                 // Mark as saved in local state to avoid dupes if we were to stay on screen
@@ -3918,6 +3969,36 @@ export const WorkoutSession = () => {
                             >
                                 <Check size={14} strokeWidth={3} />
                                 Finalizar / Abandonar (Guardar)
+                            </button>
+
+                            <button
+                                onClick={async () => {
+                                    if (window.confirm("¿Seguro que quieres cancelar y eliminar esta sesión? A tus amigos les aparecerás como inactivo de inmediato.")) {
+                                        setShowCoopExitModal(false);
+                                        setShowExitMenu(false);
+                                        localStorage.removeItem(`workout_draft_${sessionId}`);
+                                        localStorage.removeItem(STORAGE_KEY);
+                                        localStorage.removeItem('ginx_coop_state');
+                                        setActiveExercises([]);
+                                        if (sessionId) {
+                                            setLoading(true);
+                                            // Broadcast destruction signal to all connected clients
+                                            channelRef.current?.send({
+                                                type: 'broadcast',
+                                                event: 'session_terminated',
+                                                payload: { sender: user.id }
+                                            }).catch(e => console.error(e));
+                                            
+                                            await workoutService.deleteSession(sessionId);
+                                            setLoading(false);
+                                        }
+                                        navigate('/');
+                                    }
+                                }}
+                                className="w-full bg-neutral-900 border border-red-500/30 hover:bg-red-500/10 text-red-500 font-black uppercase text-xs tracking-wider py-4 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2"
+                            >
+                                <X size={14} strokeWidth={3} />
+                                Destruir Misión (Eliminar)
                             </button>
                             
                             <button

@@ -63,6 +63,40 @@ export const ActiveWorkoutBubble = () => {
         }
     };
 
+    // Real-time listener for the active session
+    useEffect(() => {
+        if (!sessionId) return;
+
+        const { supabase } = require('../../lib/supabase'); // Import locally to avoid top-level issues if not imported
+        
+        const channel = supabase.channel(`bubble_${sessionId}`)
+            .on(
+                'postgres_changes',
+                { event: 'DELETE', schema: 'public', table: 'workout_sessions', filter: `id=eq.${sessionId}` },
+                () => {
+                    console.log("🫧 [Bubble] Session deleted remotely, hiding bubble.");
+                    setIsVisible(false);
+                    setSessionId(null);
+                }
+            )
+            .on(
+                'postgres_changes',
+                { event: 'UPDATE', schema: 'public', table: 'workout_sessions', filter: `id=eq.${sessionId}` },
+                (payload: any) => {
+                    if (payload.new.finished_at || payload.new.end_time) {
+                        console.log("🫧 [Bubble] Session finished remotely, hiding bubble.");
+                        setIsVisible(false);
+                        setSessionId(null);
+                    }
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [sessionId]);
+
     const handleCancel = async () => {
         if (!sessionId) return;
         if (window.confirm("¿Seguro que quieres cancelar el entrenamiento en progreso?")) {
