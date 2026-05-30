@@ -205,7 +205,6 @@ export const notificationService = {
 
             if (!chatError && existingChat) {
                 toast.error("¡Ya estás conectado con este guerrero!");
-                alert("⚠️ Ya estás conectado con este guerrero en la sección de chats.");
                 return false;
             }
         } catch (chatErr) {
@@ -230,7 +229,6 @@ export const notificationService = {
 
                 if (hasPendingSent) {
                     toast.error("¡Desafío pendiente! Ya enviaste una invitación.");
-                    alert("⚠️ Ya has enviado un desafío a este guerrero y se encuentra pendiente.");
                     return false;
                 }
             }
@@ -251,7 +249,6 @@ export const notificationService = {
 
                 if (hasPendingReceived) {
                     toast.error("¡Desafío recibido! Tienes una invitación pendiente.");
-                    alert("⚠️ Este guerrero ya te ha enviado un desafío. Revisa tu bandeja de entrada.");
                     return false;
                 }
             }

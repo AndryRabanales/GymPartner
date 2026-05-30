@@ -137,7 +137,7 @@ export const FriendsPage = () => {
         const modeLabel = mode === 'conjunto' ? 'CONJUNTO' : 'SEPARADO';
 
         // Send a custom notification to start a Co-op Workout
-        await notificationService.createNotification(friend.other_user.id, {
+        const success = await notificationService.createNotification(friend.other_user.id, {
             type: 'coop_invite',
             title: `🔥 Invitación de Entrenamiento ${modeLabel}`,
             content: `¡${displayName} te ha invitado a entrenar en modo ${modeLabel}!`,
@@ -149,7 +149,11 @@ export const FriendsPage = () => {
             }
         });
 
-        toast.success(`🔥 Invitación ${modeLabel} enviada a @${friend.other_user.username}!`);
+        if (success) {
+            toast.success(`🔥 Invitación ${modeLabel} enviada a @${friend.other_user.username}!`);
+        } else {
+            toast.error(`❌ Error al enviar invitación. Verifica políticas RLS de la tabla notifications.`);
+        }
     };
 
     const handleJoinWorkout = async (friend: any) => {
@@ -179,7 +183,7 @@ export const FriendsPage = () => {
         const displayName = profile?.username || 'Un amigo';
 
         // Send a coop_join_request notification ALWAYS to the host of the workout session
-        await notificationService.createNotification(hostId, {
+        const joinSuccess = await notificationService.createNotification(hostId, {
             type: 'coop_join_request',
             title: `🔥 Solicitud de Unión`,
             content: `¡${displayName} quiere unirse a tu entrenamiento!`,
@@ -191,7 +195,11 @@ export const FriendsPage = () => {
             }
         });
 
-        toast.success(`⚡ Solicitud enviada a @${hostName}. ¡Espera en esta pantalla a que la acepte!`);
+        if (joinSuccess) {
+            toast.success(`⚡ Solicitud enviada a @${hostName}. ¡Espera en esta pantalla a que la acepte!`);
+        } else {
+            toast.error(`❌ Error al enviar solicitud. Asegúrate de que las políticas RLS permitan la inserción.`);
+        }
     };
 
     return (

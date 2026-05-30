@@ -456,29 +456,16 @@ export const WorkoutSession = () => {
                     lastIncomingState.current = incomingStr;
 
                     if (multiplayerMode === 'conjunto') {
-                        // Merge rule: Own-Data Isolation merge strategy for up to 8 players!
                         setActiveExercises(prev => {
                             if (!prev || prev.length === 0) return exercises;
                             
-                            const maxEx = Math.max(prev.length, exercises.length);
-                            const mergedEx = [];
-                            
-                            for (let eIdx = 0; eIdx < maxEx; eIdx++) {
+                            return exercises.map((inEx, eIdx) => {
                                 const localEx = prev[eIdx];
-                                const inEx = exercises[eIdx];
+                                if (!localEx) return inEx;
                                 
-                                if (!localEx) { mergedEx.push(inEx); continue; }
-                                if (!inEx) { mergedEx.push(localEx); continue; }
-                                
-                                const maxSets = Math.max(localEx.sets.length, inEx.sets.length);
-                                const mergedSets = [];
-                                
-                                for (let sIdx = 0; sIdx < maxSets; sIdx++) {
+                                const mergedSets = inEx.sets.map((inSet, sIdx) => {
                                     const loc = localEx.sets[sIdx];
-                                    const inSet = inEx.sets[sIdx];
-                                    
-                                    if (!loc) { mergedSets.push(inSet); continue; }
-                                    if (!inSet) { mergedSets.push(loc); continue; }
+                                    if (!loc) return inSet;
 
                                     const locTime = loc.lastUpdatedAt || 0;
                                     const inTime = inSet.lastUpdatedAt || 0;
@@ -520,7 +507,7 @@ export const WorkoutSession = () => {
                                     const rAcc = mergeMap(loc.playerRestAccumulated, inSet.playerRestAccumulated);
                                     const rLst = mergeMap(loc.playerRestLastStartTime, inSet.playerRestLastStartTime);
 
-                                    mergedSets.push({
+                                    return {
                                         ...inSet,
                                         lastUpdatedAt: useLoc ? locTime : inTime,
                                         playerWeights: w,
@@ -552,15 +539,14 @@ export const WorkoutSession = () => {
                                         p2_restStatus: useLoc ? loc.p2_restStatus : inSet.p2_restStatus,
                                         p2_restAccumulated: useLoc ? loc.p2_restAccumulated : inSet.p2_restAccumulated,
                                         p2_restLastStartTime: useLoc ? loc.p2_restLastStartTime : inSet.p2_restLastStartTime
-                                    });
-                                }
+                                    };
+                                });
                                 
-                                mergedEx.push({
+                                return {
                                     ...inEx,
                                     sets: mergedSets
-                                });
-                            }
-                            return mergedEx;
+                                };
+                            });
                         });
                     } else if (multiplayerMode === 'separado') {
                         setPartnerExercises(exercises); // Store for viewing
@@ -2448,6 +2434,7 @@ export const WorkoutSession = () => {
 
         updated[exerciseIndex].sets.push({
             id: Math.random().toString(),
+            lastUpdatedAt: Date.now(), // CRDT: Initialize timestamp for real-time synchronization
             weight: previousSet ? previousSet.weight : 0,
             reps: previousSet ? previousSet.reps : 0,
             time: previousSet?.time || 0,
