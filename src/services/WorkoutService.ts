@@ -340,13 +340,17 @@ class WorkoutService {
                     (Date.now() - new Date(session.started_at).getTime()) / (1000 * 60);
 
                 if (!hasLogs) {
-                    // Empty session → delete completely (no data to preserve)
-                    console.log(`🧹 [Cleanup] Eliminando sesión vacía fantasma: ${session.id} (${minutesSinceStart.toFixed(0)} min)`);
-                    await this.deleteSession(session.id);
-                    closedIds.push(session.id);
-                } else if (minutesSinceStart > 60) {
-                    // Session with logs but idle for more than 60 minutes → auto-close
-                    console.log(`🧹 [Cleanup] Cerrando sesión huérfana con datos (${minutesSinceStart.toFixed(0)} min): ${session.id}`);
+                    // Only delete empty sessions if they are older than 30 minutes (prevent deleting active setups)
+                    if (minutesSinceStart > 30) {
+                        console.log(`🧹 [Cleanup] Eliminando sesión vacía fantasma antigua: ${session.id} (${minutesSinceStart.toFixed(0)} min)`);
+                        await this.deleteSession(session.id);
+                        closedIds.push(session.id);
+                    } else {
+                        console.log(`ℹ️ [Cleanup] Sesión vacía reciente (${minutesSinceStart.toFixed(0)} min) — se preserva: ${session.id}`);
+                    }
+                } else if (minutesSinceStart > 240) { // 4 hours matching getActiveSession
+                    // Session with logs but idle for more than 4 hours → auto-close
+                    console.log(`🧹 [Cleanup] Cerrando sesión huérfana antigua con datos (${minutesSinceStart.toFixed(0)} min): ${session.id}`);
                     await this.finishSession(session.id, 'Cierre automático por inactividad');
                     closedIds.push(session.id);
                 } else {
