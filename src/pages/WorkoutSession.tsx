@@ -174,6 +174,12 @@ const sanitizeRestTimers = (exercises: any[]): any[] => {
 // Helper Component for Rest Timer
 const RestTimerDisplay = ({ status, accumulated, lastStartTime, isGold }: { status: 'running' | 'paused' | 'completed', accumulated: number, lastStartTime?: number | string, isGold?: boolean }) => {
     const [elapsed, setElapsed] = useState(0);
+    const receivedAtRef = useRef<number>(Date.now());
+
+    // Reset receivedAtRef whenever status or lastStartTime changes
+    useEffect(() => {
+        receivedAtRef.current = Date.now();
+    }, [status, lastStartTime]);
 
     useEffect(() => {
         const safeAccumulated = Number(accumulated) || 0;
@@ -182,7 +188,12 @@ const RestTimerDisplay = ({ status, accumulated, lastStartTime, isGold }: { stat
                 const parsedTime = parseTimestamp(lastStartTime);
                 if (parsedTime <= 0) return Math.floor(safeAccumulated / 1000);
                 const diff = Date.now() - parsedTime;
-                if (diff < 0 || diff > 86400000) return Math.floor(safeAccumulated / 1000);
+                
+                // If diff is negative or invalid, fall back to relative elapsed time since received
+                if (diff < 0 || diff > 86400000) {
+                    const localDiff = Date.now() - receivedAtRef.current;
+                    return Math.floor((safeAccumulated + localDiff) / 1000);
+                }
                 return Math.floor((safeAccumulated + diff) / 1000);
             }
             return Math.floor(safeAccumulated / 1000);
@@ -198,12 +209,19 @@ const RestTimerDisplay = ({ status, accumulated, lastStartTime, isGold }: { stat
                     const parsedTime = parseTimestamp(lastStartTime);
                     if (parsedTime > 0) {
                         const diff = Date.now() - parsedTime;
-                        setElapsed(Math.max(0, Math.floor((safeAcc + diff) / 1000)));
+                        if (diff < 0 || diff > 86400000) {
+                            const localDiff = Date.now() - receivedAtRef.current;
+                            setElapsed(Math.max(0, Math.floor((safeAcc + localDiff) / 1000)));
+                        } else {
+                            setElapsed(Math.max(0, Math.floor((safeAcc + diff) / 1000)));
+                        }
                     } else {
-                        setElapsed(prev => isNaN(prev) ? 0 : prev + 1);
+                        const localDiff = Date.now() - receivedAtRef.current;
+                        setElapsed(Math.max(0, Math.floor((safeAcc + localDiff) / 1000)));
                     }
                 } else {
-                    setElapsed(prev => isNaN(prev) ? 0 : prev + 1);
+                    const localDiff = Date.now() - receivedAtRef.current;
+                    setElapsed(Math.max(0, Math.floor((safeAcc + localDiff) / 1000)));
                 }
             }, 200);
             return () => clearInterval(interval);
@@ -336,11 +354,15 @@ export const WorkoutSession = () => {
     const participantsRef = useRef<any[]>([]);
     useEffect(() => { participantsRef.current = participants; }, [participants]);
 
+    // Unify firstGuestId deterministically across all devices (Guest 1 is the first participant who is not the Host)
     useEffect(() => {
-        if (isInviter && partnerId) {
-            setFirstGuestId(partnerId);
+        const hostId = isInviter ? user?.id : partnerId;
+        const fgId = participants.find(p => p.id !== hostId)?.id || partnerId || null;
+        if (fgId !== firstGuestId) {
+            console.log('🎯 Updating firstGuestId deterministically to:', fgId);
+            setFirstGuestId(fgId);
         }
-    }, [isInviter, partnerId]);
+    }, [participants, isInviter, user?.id, partnerId, firstGuestId]);
 
     useEffect(() => {
         if (!isMultiplayer || multiplayerMode !== 'conjunto' || !user) {
