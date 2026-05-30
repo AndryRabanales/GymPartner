@@ -155,14 +155,35 @@ export const FriendsPage = () => {
             toast.error(`❌ Error al enviar invitación. Verifica políticas RLS de la tabla notifications.`);
         }
     };
-
+ 
     const handleJoinWorkout = async (friend: any) => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user || !friend.other_user || !friend.activeSession) return;
 
-        const isGuest = !!friend.activeSession.partner_session_id;
+        // Obtain the main/room session ID that the friend is in
         const roomSessionId = friend.activeSession.partner_session_id || friend.activeSession.id;
-        const hostId = isGuest ? friend.activeSession.partner_id : friend.activeSession.user_id;
+
+        // ABSOLUTE BLINDAGE: Query the creator of that main session directly from Supabase.
+        // This is 100% accurate. If friend is User 2 (Guest), roomSessionId points to User 1's (Host) session.
+        // Querying this session will return User 1's id as the owner of that session!
+        toast.loading("🔍 Validando anfitrión de la sesión...", { id: "join-req" });
+        const { data: mainSession, error: mainSessionErr } = await supabase
+            .from('workout_sessions')
+            .select('user_id')
+            .eq('id', roomSessionId)
+            .maybeSingle();
+
+        if (mainSessionErr || !mainSession) {
+            toast.error("❌ No se pudo encontrar la sesión del anfitrión o ya no está activa.", { id: "join-req" });
+            return;
+        }
+
+        const hostId = mainSession.user_id;
+
+        if (hostId === user.id) {
+            toast.error("❌ Ya eres el anfitrión o estás dentro de esta sesión.", { id: "join-req" });
+            return;
+        }
 
         // Obtain host's username to display to the user
         const { data: hostProfile } = await supabase
@@ -196,11 +217,13 @@ export const FriendsPage = () => {
         });
 
         if (joinSuccess) {
-            toast.success(`⚡ Solicitud enviada a @${hostName}. ¡Espera en esta pantalla a que la acepte!`);
+            toast.success(`⚡ Solicitud enviada a @${hostName}. ¡Espera en esta pantalla a que la acepte!`, { id: "join-req" });
         } else {
-            toast.error(`❌ Error al enviar solicitud. Asegúrate de que las políticas RLS permitan la inserción.`);
+            toast.error(`❌ Error al enviar solicitud. Asegúrate de que las políticas RLS de Supabase lo permitan.`, { id: "join-req" });
         }
     };
+
+
 
     return (
         <div className="min-h-screen bg-black text-white pb-24">

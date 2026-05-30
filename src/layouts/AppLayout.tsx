@@ -213,9 +213,7 @@ const CoopJoinRequestToast = ({
                         const senderId = newNotification.data?.sender_id;
                         if (!senderId) return;
 
-                        await notificationService.updateInvitationStatus(newNotification, 'accepted');
-
-                        // Update our own active session to multiplayer in the DB!
+                        // Retrieve active session to validate host status
                         const { data: activeSession } = await supabase
                             .from('workout_sessions')
                             .select('id, partner_session_id, partner_id')
@@ -223,19 +221,30 @@ const CoopJoinRequestToast = ({
                             .is('finished_at', null)
                             .maybeSingle();
 
-                        if (activeSession) {
-                            await supabase
-                                .from('workout_sessions')
-                                .update({
-                                    is_multiplayer: true,
-                                    multiplayer_mode: 'conjunto',
-                                    partner_id: activeSession.partner_id || senderId
-                                })
-                                .eq('id', activeSession.id);
+                        if (!activeSession) {
+                            toast.error("❌ No tienes un entrenamiento activo para aceptar nuevos aliados.");
+                            return;
                         }
 
-                        const roomSessionId = activeSession ? (activeSession.partner_session_id || activeSession.id) : newNotification.data?.session_id;
+                        // ABSOLUTE SAFEGUARD: If we are not the creator (partner_session_id is not null), we CANNOT accept!
+                        if (activeSession.partner_session_id) {
+                            toast.error("❌ Solo el creador del entrenamiento puede aceptar nuevos aliados.");
+                            return;
+                        }
 
+                        await notificationService.updateInvitationStatus(newNotification, 'accepted');
+
+                        // Update our own active session to multiplayer in the DB!
+                        await supabase
+                            .from('workout_sessions')
+                            .update({
+                                is_multiplayer: true,
+                                multiplayer_mode: 'conjunto',
+                                partner_id: activeSession.partner_id || senderId
+                            })
+                            .eq('id', activeSession.id);
+
+                        const roomSessionId = activeSession.id;
                         // Send acceptance notification to B
                         await supabase.from('notifications').insert({
                             user_id: senderId,
