@@ -519,6 +519,15 @@ export const WorkoutSession = () => {
                         addedIds.add(hostId);
                     }
 
+                    // Assign a stable chronological fallback if joined_at is undefined, using local discovery time
+                    const now = Date.now();
+                    uniqueList.forEach(p => {
+                        if (p.id !== hostId && p.joined_at === undefined) {
+                            const prevItem = prev.find(x => x.id === p.id);
+                            p.joined_at = prevItem?.joined_at ?? now;
+                        }
+                    });
+
                     // Sort other guests chronologically by their stable arrival time (joined_at)
                     const sortedGuests = uniqueList
                         .filter(p => p.id && !addedIds.has(p.id))
@@ -886,6 +895,22 @@ export const WorkoutSession = () => {
 
         return () => clearTimeout(handler);
     }, [activeExercises, isMultiplayer, user]);
+
+    // Broadcast updated participant list whenever it changes on the Host's device to keep row slot alignment
+    useEffect(() => {
+        if (isMultiplayer && isInviter && channelRef.current && user && participants.length > 0) {
+            console.log('📢 Host broadcasting updated participant list to all devices:', participants.map(p => p.username));
+            channelRef.current.send({
+                type: 'broadcast',
+                event: 'sync_state',
+                payload: {
+                    exercises: activeExercisesRef.current,
+                    sender: user.id,
+                    knownParticipants: participants
+                }
+            }).catch(e => console.error(e));
+        }
+    }, [participants, isMultiplayer, isInviter, user]);
 
     // Delay link of partner session ID if it arrived before our sessionId was created
     useEffect(() => {
