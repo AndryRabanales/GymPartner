@@ -415,6 +415,16 @@ export const WorkoutSession = () => {
         }
     }, [isInviter, sessionId]);
 
+    const [joinTimestamp] = useState<number>(() => {
+        const room = isInviter ? sessionId : (initialGuestRoomId || partnerSessionId || chatId);
+        const key = `ginx_join_time_${room || 'default'}`;
+        const cached = localStorage.getItem(key);
+        if (cached) return parseInt(cached, 10);
+        const now = Date.now();
+        localStorage.setItem(key, now.toString());
+        return now;
+    });
+
     useEffect(() => {
         if (!isMultiplayer || !partnerId || !syncRoomId || !user) return;
 
@@ -445,6 +455,7 @@ export const WorkoutSession = () => {
                         id: p.user_id,
                         username: p.username,
                         avatarUrl: p.avatar_url,
+                        joined_at: p.joined_at ? Number(p.joined_at) : undefined,
                         isOnline: true
                     }));
                 
@@ -456,7 +467,12 @@ export const WorkoutSession = () => {
                         if (p.id) {
                             const existingIdx = uniqueList.findIndex(x => x.id === p.id);
                             if (existingIdx >= 0) {
-                                uniqueList[existingIdx] = p; // update with fresh presence
+                                // Preserve local joined_at if incoming is missing
+                                const existingTime = uniqueList[existingIdx].joined_at;
+                                uniqueList[existingIdx] = {
+                                    ...p,
+                                    joined_at: p.joined_at !== undefined ? p.joined_at : existingTime
+                                };
                             } else {
                                 uniqueList.push(p);
                             }
@@ -469,8 +485,15 @@ export const WorkoutSession = () => {
                             id: user.id,
                             username: user.user_metadata?.username || user.user_metadata?.full_name || 'Yo',
                             avatarUrl: user.user_metadata?.avatar_url || '',
+                            joined_at: joinTimestamp,
                             isOnline: true
                         });
+                    } else {
+                        // Ensure current user's local timestamp is set
+                        const myIdx = uniqueList.findIndex(p => p.id === user.id);
+                        if (myIdx >= 0 && uniqueList[myIdx].joined_at === undefined) {
+                            uniqueList[myIdx].joined_at = joinTimestamp;
+                        }
                     }
 
                     // Ensure partner fallback
@@ -479,11 +502,12 @@ export const WorkoutSession = () => {
                             id: partnerId,
                             username: partnerName !== 'Compañero' ? partnerName : 'Compañero',
                             avatarUrl: partnerAvatar || '',
+                            joined_at: isInviter ? undefined : 0, // Make host 0 to sort first
                             isOnline: false
                         });
                     }
 
-                    // Deterministic ordering: Host first, then all other participants sorted alphabetically by UUID to guarantee identical row slots on every single device!
+                    // Deterministic ordering: Host first, then other guests sorted chronologically by stable arrival timestamp (joined_at)
                     const hostId = isInviter ? user.id : partnerId;
 
                     const orderedList: any[] = [];
@@ -495,10 +519,17 @@ export const WorkoutSession = () => {
                         addedIds.add(hostId);
                     }
 
-                    // Sort other guests lexicographically by their stable UUID (id)
+                    // Sort other guests chronologically by their stable arrival time (joined_at)
                     const sortedGuests = uniqueList
                         .filter(p => p.id && !addedIds.has(p.id))
-                        .sort((a, b) => a.id.localeCompare(b.id));
+                        .sort((a, b) => {
+                            const aTime = a.joined_at !== undefined ? Number(a.joined_at) : 9999999999999;
+                            const bTime = b.joined_at !== undefined ? Number(b.joined_at) : 9999999999999;
+                            if (aTime !== bTime) {
+                                return aTime - bTime;
+                            }
+                            return a.id.localeCompare(b.id);
+                        });
 
                     sortedGuests.forEach(p => {
                         orderedList.push(p);
@@ -779,7 +810,8 @@ export const WorkoutSession = () => {
                     await channel.track({
                         user_id: user.id,
                         username: user.user_metadata?.username || user.user_metadata?.full_name || 'Yo',
-                        avatar_url: user.user_metadata?.avatar_url || ''
+                        avatar_url: user.user_metadata?.avatar_url || '',
+                        joined_at: joinTimestamp
                     });
 
                     // Send initial state immediately
