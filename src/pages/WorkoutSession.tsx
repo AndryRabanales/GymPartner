@@ -95,7 +95,9 @@ const RestTimerDisplay = ({ status, accumulated, lastStartTime, isGold }: { stat
     useEffect(() => {
         const getInitial = () => {
             if (status === 'running' && lastStartTime) {
-                const diff = Date.now() - Number(lastStartTime);
+                const numTime = Number(lastStartTime);
+                if (isNaN(numTime) || numTime <= 0) return Math.floor(accumulated / 1000);
+                const diff = Date.now() - numTime;
                 if (diff < 0 || diff > 86400000) return Math.floor(accumulated / 1000);
                 return Math.floor((accumulated + diff) / 1000);
             }
@@ -108,8 +110,13 @@ const RestTimerDisplay = ({ status, accumulated, lastStartTime, isGold }: { stat
         if (status === 'running') {
             const interval = setInterval(() => {
                 if (lastStartTime) {
-                    const diff = Date.now() - Number(lastStartTime);
-                    setElapsed(Math.max(0, Math.floor((accumulated + diff) / 1000)));
+                    const numTime = Number(lastStartTime);
+                    if (!isNaN(numTime) && numTime > 0) {
+                        const diff = Date.now() - numTime;
+                        setElapsed(Math.max(0, Math.floor((accumulated + diff) / 1000)));
+                    } else {
+                        setElapsed(prev => prev + 1);
+                    }
                 } else {
                     setElapsed(prev => prev + 1);
                 }
@@ -238,8 +245,15 @@ export const WorkoutSession = () => {
     const [partnerName, setPartnerName] = useState<string>('Compañero');
     const [partnerAvatar, setPartnerAvatar] = useState<string | null>(null);
     const [participants, setParticipants] = useState<any[]>([]);
+    const [firstGuestId, setFirstGuestId] = useState<string | null>(null);
     const participantsRef = useRef<any[]>([]);
     useEffect(() => { participantsRef.current = participants; }, [participants]);
+
+    useEffect(() => {
+        if (isInviter && partnerId) {
+            setFirstGuestId(partnerId);
+        }
+    }, [isInviter, partnerId]);
 
     useEffect(() => {
         if (!isMultiplayer || multiplayerMode !== 'conjunto' || !user) {
@@ -1385,6 +1399,10 @@ export const WorkoutSession = () => {
                         partnerSessionIdRef.current = partnerActive.id;
                         setPartnerSessionId(partnerActive.id);
                         
+                        if (partnerActive.partner_id) {
+                            setFirstGuestId(partnerActive.partner_id);
+                        }
+                        
                         if (currentIsMultiplayer && currentMultiplayerMode === 'conjunto' && !currentIsInviter) {
                             console.log('🚀 Guest auto-starting session because partner has active session...');
                             // Wait for guest session to start so we have a sessionId and startTime
@@ -2080,12 +2098,12 @@ export const WorkoutSession = () => {
 
     // [NEW LOBBY SYSTEM] Scalable 8-Player Helper Methods
     const getPlayerRestTimer = (set: any, targetUserId: string, pIdx: number) => {
-        const isHost = pIdx === 0 || (pIdx === -1 && targetUserId === (isInviter ? user?.id : partnerId));
-        const isFirstGuest = pIdx === 1 || (pIdx === -1 && targetUserId === (isInviter ? partnerId : user?.id));
+        const isHost = targetUserId === (isInviter ? user?.id : partnerId);
+        const isFirstGuest = targetUserId === firstGuestId;
 
         const status = set.playerRestStatus?.[targetUserId] ?? (isHost ? set.restStatus : (isFirstGuest ? set.p2_restStatus : undefined));
         const accumulated = set.playerRestAccumulated?.[targetUserId] ?? (isHost ? set.restAccumulated : (isFirstGuest ? set.p2_restAccumulated : 0));
-        const lastStartTime = set.playerRestLastStartTime?.[targetUserId] ?? (isHost ? set.restLastStartTime : (isFirstGuest ? set.playerRestLastStartTime : undefined));
+        const lastStartTime = set.playerRestLastStartTime?.[targetUserId] ?? (isHost ? set.restLastStartTime : (isFirstGuest ? set.p2_restLastStartTime : undefined));
 
         return { status, accumulated, lastStartTime };
     };
@@ -2129,9 +2147,8 @@ export const WorkoutSession = () => {
             // CRDT: Update modification timestamp
             set.lastUpdatedAt = Date.now();
 
-            const userIdx = participants.findIndex(p => p.id === targetUserId);
-            const isHost = userIdx === 0 || (userIdx === -1 && targetUserId === (isInviter ? user?.id : partnerId));
-            const isFirstGuest = userIdx === 1 || (userIdx === -1 && targetUserId === (isInviter ? partnerId : user?.id));
+            const isHost = targetUserId === (isInviter ? user?.id : partnerId);
+            const isFirstGuest = targetUserId === firstGuestId;
 
             if (isHost) {
                 if (fieldKey === 'weight') set.weight = isNaN(numVal) ? 0 : numVal;
@@ -2161,9 +2178,8 @@ export const WorkoutSession = () => {
         const set = ex.sets[setIndex];
         if (!set) return;
 
-        const userIdx = participants.findIndex(p => p.id === targetUserId);
-        const isHost = userIdx === 0 || (userIdx === -1 && targetUserId === (isInviter ? user?.id : partnerId));
-        const isFirstGuest = userIdx === 1 || (userIdx === -1 && targetUserId === (isInviter ? partnerId : user?.id));
+        const isHost = targetUserId === (isInviter ? user?.id : partnerId);
+        const isFirstGuest = targetUserId === firstGuestId;
 
         const currentCompleted = set.playerCompleted?.[targetUserId] ?? (
             isHost ? set.completed : (isFirstGuest ? (set.p2_completed || false) : false)
@@ -2290,6 +2306,18 @@ export const WorkoutSession = () => {
                 }
             }
 
+            setTimeout(() => {
+                if (isMultiplayer && channelRef.current && user) {
+                    const stateStr = JSON.stringify(next);
+                    lastIncomingState.current = stateStr;
+                    channelRef.current.send({
+                        type: 'broadcast',
+                        event: 'sync_state',
+                        payload: { exercises: next, sender: user.id }
+                    }).catch(e => console.error(e));
+                }
+            }, 0);
+
             return next;
         });
     };
@@ -2309,9 +2337,8 @@ export const WorkoutSession = () => {
             if (!set.playerRestAccumulated) set.playerRestAccumulated = {};
             if (!set.playerRestLastStartTime) set.playerRestLastStartTime = {};
 
-            const userIdx = participants.findIndex(p => p.id === targetUserId);
-            const isHost = userIdx === 0 || (userIdx === -1 && targetUserId === (isInviter ? user?.id : partnerId));
-            const isFirstGuest = userIdx === 1 || (userIdx === -1 && targetUserId === (isInviter ? partnerId : user?.id));
+            const isHost = targetUserId === (isInviter ? user?.id : partnerId);
+            const isFirstGuest = targetUserId === firstGuestId;
 
             const currentStatus = set.playerRestStatus[targetUserId] ?? (isHost ? set.restStatus : (isFirstGuest ? set.p2_restStatus : undefined));
             const currentAccumulated = set.playerRestAccumulated[targetUserId] ?? (isHost ? set.restAccumulated : (isFirstGuest ? set.p2_restAccumulated : 0));
@@ -2347,6 +2374,18 @@ export const WorkoutSession = () => {
                 }
             }
 
+            setTimeout(() => {
+                if (isMultiplayer && channelRef.current && user) {
+                    const stateStr = JSON.stringify(next);
+                    lastIncomingState.current = stateStr;
+                    channelRef.current.send({
+                        type: 'broadcast',
+                        event: 'sync_state',
+                        payload: { exercises: next, sender: user.id }
+                    }).catch(e => console.error(e));
+                }
+            }, 0);
+
             return next;
         });
     };
@@ -2372,9 +2411,8 @@ export const WorkoutSession = () => {
             const set = exercise.sets[setIndex];
             if (!set) return;
 
-            const userIdx = participants.findIndex(p => p.id === targetUserId);
-            const isHost = userIdx === 0 || (userIdx === -1 && targetUserId === (isInviter ? user?.id : partnerId));
-            const isFirstGuest = userIdx === 1 || (userIdx === -1 && targetUserId === (isInviter ? partnerId : user?.id));
+            const isHost = targetUserId === (isInviter ? user?.id : partnerId);
+            const isFirstGuest = targetUserId === firstGuestId;
 
             const isCompleted = set.playerCompleted?.[targetUserId] ?? (isHost ? set.completed : (isFirstGuest ? (set.p2_completed || false) : false));
             if (isCompleted) return;
@@ -2581,7 +2619,20 @@ export const WorkoutSession = () => {
                     distance: 0,
                     rpe: 0,
                     custom: {},
-                    completed: false
+                    completed: false,
+                    restStatus: undefined,
+                    restAccumulated: undefined,
+                    restLastStartTime: undefined,
+                    playerRestStatus: {},
+                    playerRestAccumulated: {},
+                    playerRestLastStartTime: {},
+                    playerCompleted: {},
+                    playerCompletedAt: {},
+                    p2_completed: false,
+                    p2_completedAt: undefined,
+                    p2_restStatus: undefined,
+                    p2_restAccumulated: undefined,
+                    p2_restLastStartTime: undefined
                 }))
             })));
 
@@ -2850,6 +2901,17 @@ export const WorkoutSession = () => {
 
             if (result.success) {
                 console.log('✅ Sesión terminada exitosamente');
+                
+                // NEW: Broadcast session_terminated to let all guests know!
+                if (isInviter && channelRef.current) {
+                    console.log('📢 Host broadcasting session_terminated to guests...');
+                    channelRef.current.send({
+                        type: 'broadcast',
+                        event: 'session_terminated',
+                        payload: { sender: user.id }
+                    }).catch(e => console.error('Error broadcasting session_terminated:', e));
+                }
+
                 localStorage.removeItem(`workout_draft_${sessionId}`);
                 localStorage.removeItem(STORAGE_KEY); // Also clear global key
                 localStorage.removeItem('ginx_coop_state'); // Clear multiplayer state!
@@ -3189,8 +3251,8 @@ export const WorkoutSession = () => {
                                                                     const isMyRow = p.id === user?.id;
                                                                     const rowReadOnly = isReadOnly;
 
-                                                                    const isHost = pIdx === 0 || (pIdx === -1 && p.id === (isInviter ? user?.id : partnerId));
-                                                                    const isFirstGuest = pIdx === 1 || (pIdx === -1 && p.id === (isInviter ? partnerId : user?.id));
+                                                                    const isHost = p.id === (isInviter ? user?.id : partnerId);
+                                                                    const isFirstGuest = p.id === firstGuestId;
 
                                                                     const rowWeight = set.playerWeights?.[p.id] ?? (isHost ? set.weight : (isFirstGuest ? (set.p2_weight || 0) : 0));
                                                                     const rowReps = set.playerReps?.[p.id] ?? (isHost ? set.reps : (isFirstGuest ? (set.p2_reps || 0) : 0));
@@ -3391,7 +3453,7 @@ export const WorkoutSession = () => {
                                                                 const activeParticipants = (isMultiplayer && multiplayerMode === 'conjunto') ? participants : [{ id: user?.id || 'single-user', username: 'Yo' }];
                                                             const timersCount = activeParticipants.filter(p => {
                                                                 const isHost = p.id === (isInviter ? user?.id : partnerId);
-                                                                const isFirstGuest = p.id === (isInviter ? partnerId : user?.id);
+                                                                const isFirstGuest = p.id === firstGuestId;
                                                                 const pCompleted = set.playerCompleted?.[p.id] ?? (isHost ? set.completed : (isFirstGuest ? (set.p2_completed || false) : false));
                                                                 const pRestStatus = set.playerRestStatus?.[p.id] ?? (isHost ? set.restStatus : (isFirstGuest ? (set.p2_restStatus || 'idle') : 'idle'));
                                                                 return pCompleted && (pRestStatus === 'running' || pRestStatus === 'paused' || pRestStatus === 'completed');
@@ -3405,8 +3467,8 @@ export const WorkoutSession = () => {
                                                                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full items-center">
                                                                             {activeParticipants.map((p, pIdx) => {
                                                                                 const isMyTimer = p.id === user?.id;
-                                                                                const isHost = pIdx === 0 || (pIdx === -1 && p.id === (isInviter ? user?.id : partnerId));
-                                                                                const isFirstGuest = pIdx === 1 || (pIdx === -1 && p.id === (isInviter ? partnerId : user?.id));
+                                                                                const isHost = p.id === (isInviter ? user?.id : partnerId);
+                                                                                const isFirstGuest = p.id === firstGuestId;
 
                                                                                 const pRestStatus = set.playerRestStatus?.[p.id] ?? (isHost ? set.restStatus : (isFirstGuest ? (set.p2_restStatus || 'idle') : 'idle'));
                                                                                 const pRestAccumulated = set.playerRestAccumulated?.[p.id] ?? (isHost ? set.restAccumulated : (isFirstGuest ? (set.p2_restAccumulated || 0) : 0));
