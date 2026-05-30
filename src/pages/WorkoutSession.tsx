@@ -88,6 +88,17 @@ interface WorkoutExercise {
     category?: string; // SNAPSHOT: For history persistence
 }
 
+// Smart timestamp parser that safely resolves ISO strings, Unix strings, and numbers
+const parseTimestamp = (val: any): number => {
+    if (!val) return 0;
+    if (typeof val === 'number') return val;
+    const num = Number(val);
+    if (!isNaN(num) && num > 0) return num;
+    const dt = new Date(val).getTime();
+    if (!isNaN(dt) && dt > 0) return dt;
+    return 0;
+};
+
 // ─── Sanitize ghost rest timers from localStorage/DB ───────────────────────
 // If a set was completed in a previous session that was never properly closed,
 // its restLastStartTime is a stale timestamp from hours ago. This function
@@ -103,9 +114,11 @@ const sanitizeRestTimers = (exercises: any[]): any[] => {
 
             // ── Legacy scalar fields ──────────────────────────────────────────
             if (clean.restStatus === 'running' && clean.restLastStartTime) {
-                const age = now - Number(clean.restLastStartTime);
+                const parsedTime = parseTimestamp(clean.restLastStartTime);
+                const age = parsedTime > 0 ? now - parsedTime : MAX_REST_AGE_MS + 100;
                 if (isNaN(age) || age > MAX_REST_AGE_MS) {
-                    clean.restAccumulated = (clean.restAccumulated || 0) + Math.min(age, MAX_REST_AGE_MS);
+                    const safeAge = isNaN(age) ? MAX_REST_AGE_MS : age;
+                    clean.restAccumulated = (Number(clean.restAccumulated) || 0) + Math.min(safeAge, MAX_REST_AGE_MS);
                     clean.restStatus = 'completed';
                     clean.restLastStartTime = undefined;
                 }
@@ -113,9 +126,11 @@ const sanitizeRestTimers = (exercises: any[]): any[] => {
 
             // ── P2 scalar fields ─────────────────────────────────────────────
             if (clean.p2_restStatus === 'running' && clean.p2_restLastStartTime) {
-                const age = now - Number(clean.p2_restLastStartTime);
+                const parsedTime = parseTimestamp(clean.p2_restLastStartTime);
+                const age = parsedTime > 0 ? now - parsedTime : MAX_REST_AGE_MS + 100;
                 if (isNaN(age) || age > MAX_REST_AGE_MS) {
-                    clean.p2_restAccumulated = (clean.p2_restAccumulated || 0) + Math.min(age, MAX_REST_AGE_MS);
+                    const safeAge = isNaN(age) ? MAX_REST_AGE_MS : age;
+                    clean.p2_restAccumulated = (Number(clean.p2_restAccumulated) || 0) + Math.min(safeAge, MAX_REST_AGE_MS);
                     clean.p2_restStatus = 'completed';
                     clean.p2_restLastStartTime = undefined;
                 }
@@ -128,11 +143,12 @@ const sanitizeRestTimers = (exercises: any[]): any[] => {
                 const newLst = { ...(clean.playerRestLastStartTime || {}) };
 
                 Object.keys(newLst).forEach(pid => {
-                    const lst = Number(newLst[pid]);
+                    const parsedTime = parseTimestamp(newLst[pid]);
                     if (newStatus[pid] === 'running') {
-                        const age = now - lst;
+                        const age = parsedTime > 0 ? now - parsedTime : MAX_REST_AGE_MS + 100;
                         if (isNaN(age) || age > MAX_REST_AGE_MS) {
-                            newAcc[pid] = (newAcc[pid] || 0) + Math.min(age, MAX_REST_AGE_MS);
+                            const safeAge = isNaN(age) ? MAX_REST_AGE_MS : age;
+                            newAcc[pid] = (Number(newAcc[pid]) || 0) + Math.min(safeAge, MAX_REST_AGE_MS);
                             newStatus[pid] = 'completed';
                             delete newLst[pid];
                         }
@@ -150,19 +166,20 @@ const sanitizeRestTimers = (exercises: any[]): any[] => {
 };
 
 // Helper Component for Rest Timer
-const RestTimerDisplay = ({ status, accumulated, lastStartTime, isGold }: { status: 'running' | 'paused' | 'completed', accumulated: number, lastStartTime?: number, isGold?: boolean }) => {
+const RestTimerDisplay = ({ status, accumulated, lastStartTime, isGold }: { status: 'running' | 'paused' | 'completed', accumulated: number, lastStartTime?: number | string, isGold?: boolean }) => {
     const [elapsed, setElapsed] = useState(0);
 
     useEffect(() => {
+        const safeAccumulated = Number(accumulated) || 0;
         const getInitial = () => {
             if (status === 'running' && lastStartTime) {
-                const numTime = Number(lastStartTime);
-                if (isNaN(numTime) || numTime <= 0) return Math.floor(accumulated / 1000);
-                const diff = Date.now() - numTime;
-                if (diff < 0 || diff > 86400000) return Math.floor(accumulated / 1000);
-                return Math.floor((accumulated + diff) / 1000);
+                const parsedTime = parseTimestamp(lastStartTime);
+                if (parsedTime <= 0) return Math.floor(safeAccumulated / 1000);
+                const diff = Date.now() - parsedTime;
+                if (diff < 0 || diff > 86400000) return Math.floor(safeAccumulated / 1000);
+                return Math.floor((safeAccumulated + diff) / 1000);
             }
-            return Math.floor(accumulated / 1000);
+            return Math.floor(safeAccumulated / 1000);
         };
 
         // Set immediately (no 1-sec lag) then tick locally every second
@@ -170,16 +187,17 @@ const RestTimerDisplay = ({ status, accumulated, lastStartTime, isGold }: { stat
 
         if (status === 'running') {
             const interval = setInterval(() => {
+                const safeAcc = Number(accumulated) || 0;
                 if (lastStartTime) {
-                    const numTime = Number(lastStartTime);
-                    if (!isNaN(numTime) && numTime > 0) {
-                        const diff = Date.now() - numTime;
-                        setElapsed(Math.max(0, Math.floor((accumulated + diff) / 1000)));
+                    const parsedTime = parseTimestamp(lastStartTime);
+                    if (parsedTime > 0) {
+                        const diff = Date.now() - parsedTime;
+                        setElapsed(Math.max(0, Math.floor((safeAcc + diff) / 1000)));
                     } else {
-                        setElapsed(prev => prev + 1);
+                        setElapsed(prev => isNaN(prev) ? 0 : prev + 1);
                     }
                 } else {
-                    setElapsed(prev => prev + 1);
+                    setElapsed(prev => isNaN(prev) ? 0 : prev + 1);
                 }
             }, 200);
             return () => clearInterval(interval);
@@ -187,9 +205,9 @@ const RestTimerDisplay = ({ status, accumulated, lastStartTime, isGold }: { stat
     }, [status, accumulated, lastStartTime]);
 
     const formatTime = (secs: number) => {
-        const s = Math.max(0, secs);
-        const m = Math.floor(s / 60);
-        const sec = s % 60;
+        const safeSecs = isNaN(secs) || !isFinite(secs) ? 0 : Math.max(0, secs);
+        const m = Math.floor(safeSecs / 60);
+        const sec = safeSecs % 60;
         return String(m) + ':' + String(sec).padStart(2, '0');
     };
 
@@ -3591,8 +3609,8 @@ export const WorkoutSession = () => {
                                                                                 {rowCompleted && rowCompletedAt && (
                                                                                     <span className="text-[8px] font-black text-green-500 tabular-nums tracking-tighter shrink-0 bg-green-500/10 px-1 py-0.5 rounded">
                                                                                         {(() => {
-                                                                                            const completedTime = Number(rowCompletedAt);
-                                                                                            if (isNaN(completedTime)) return '';
+                                                                                            const completedTime = parseTimestamp(rowCompletedAt);
+                                                                                            if (completedTime <= 0) return '00:00';
                                                                                             const start = startTime?.getTime() || Date.now();
                                                                                             const diff = completedTime - start;
                                                                                             if (diff < 0) return '00:00';
