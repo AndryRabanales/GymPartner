@@ -2974,24 +2974,34 @@ export const WorkoutSession = () => {
             navigate(-1);
             return;
         }
-        if (isMultiplayer && multiplayerMode === 'conjunto') {
-            setShowCoopExitModal(true);
-        } else {
-            // SOLO cancel: confirm then wipe everything
-            if (window.confirm("¿Seguro que quieres cancelar? Se perderá todo el progreso de esta sesión.")) {
-                isLeavingPageRef.current = true;
-                localStorage.removeItem(`workout_draft_${sessionId}`);
-                localStorage.removeItem(STORAGE_KEY);
-                localStorage.removeItem('ginx_coop_state');
-                setActiveExercises([]);
-                setIsFinished(true); // Disable history guard before navigating
-                const oldSessionId = sessionId;
-                setSessionId(null);  // Disable history guard before navigating
-                setLoading(true);
-                await workoutService.deleteSession(oldSessionId);
-                setLoading(false);
-                navigate(-1);
+
+        const msg = isMultiplayer
+            ? "¿Seguro que quieres cancelar este entrenamiento cooperativo? Se perderá todo el progreso registrado."
+            : "¿Seguro que quieres cancelar? Se perderá todo el progreso de esta sesión.";
+
+        if (window.confirm(msg)) {
+            isLeavingPageRef.current = true;
+            // Host broadcasts session_terminated to guests so they are safely clean-booted
+            if (isMultiplayer && isInviter && channelRef.current && user) {
+                console.log('📢 Host broadcasting session_terminated to guests during cancellation...');
+                channelRef.current.send({
+                    type: 'broadcast',
+                    event: 'session_terminated',
+                    payload: { sender: user.id }
+                }).catch(e => console.error('Error broadcasting session_terminated:', e));
             }
+
+            localStorage.removeItem(`workout_draft_${sessionId}`);
+            localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem('ginx_coop_state');
+            setActiveExercises([]);
+            setIsFinished(true); // Disable history guard before navigating
+            const oldSessionId = sessionId;
+            setSessionId(null);  // Disable history guard before navigating
+            setLoading(true);
+            await workoutService.deleteSession(oldSessionId);
+            setLoading(false);
+            navigate(-1);
         }
     };
 
@@ -3337,16 +3347,6 @@ export const WorkoutSession = () => {
 
             if (result.success) {
                 console.log('✅ Sesión terminada exitosamente');
-                
-                // NEW: Broadcast session_terminated to let all guests know!
-                if (isInviter && channelRef.current) {
-                    console.log('📢 Host broadcasting session_terminated to guests...');
-                    channelRef.current.send({
-                        type: 'broadcast',
-                        event: 'session_terminated',
-                        payload: { sender: user.id }
-                    }).catch(e => console.error('Error broadcasting session_terminated:', e));
-                }
 
                 localStorage.removeItem(`workout_draft_${finalSessionId}`);
                 localStorage.removeItem(STORAGE_KEY); // Also clear global key
@@ -4422,6 +4422,34 @@ export const WorkoutSession = () => {
                         : [{ id: myId, username: myName, avatar_url: user?.user_metadata?.avatar_url }];
                     const isGroupMode = allPlayers.length > 1;
 
+                    // Compaction Formula based on exercise volume
+                    const totalSets = activeExercises.reduce((sum, ex) => sum + (ex.sets?.length || 0), 0);
+                    const totalExs = activeExercises.length;
+                    
+                    let compLevel = 0;
+                    if (totalExs > 5 || totalSets > 15) {
+                        compLevel = 2; // High Density (Tiny gaps, tiny text)
+                    } else if (totalExs > 3 || totalSets > 8) {
+                        compLevel = 1; // Medium Compaction
+                    }
+
+                    const cardSpacing = compLevel === 2 ? 'gap-1.5' : compLevel === 1 ? 'gap-2.5' : 'gap-4';
+                    const cardStyle = compLevel === 2 
+                        ? 'bg-[#141310] rounded-lg overflow-hidden border-2 border-black shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)]' 
+                        : compLevel === 1 
+                            ? 'bg-[#141310] rounded-xl overflow-hidden border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]' 
+                            : 'bg-[#141310] rounded-2xl overflow-hidden border-3 border-black shadow-[5px_5px_0px_0px_rgba(0,0,0,1)]';
+                    
+                    const headerPadding = compLevel === 2 ? 'px-2 py-0.5' : compLevel === 1 ? 'px-3 py-1' : 'px-4 py-2';
+                    const headerTextSize = compLevel === 2 ? 'text-[9px]' : compLevel === 1 ? 'text-[10px]' : 'text-[11px]';
+                    const colHeaderPadding = compLevel === 2 ? 'px-2 py-0.5' : compLevel === 1 ? 'px-2.5 py-1' : 'px-3.5 py-1.5';
+                    const colHeaderTextSize = compLevel === 2 ? 'text-[7.5px]' : 'text-[8.5px]';
+                    const rowPadding = compLevel === 2 ? 'px-2 py-0.5' : compLevel === 1 ? 'px-2.5 py-1' : 'px-3.5 py-1.5';
+                    const rowTextSize = compLevel === 2 ? 'text-[8px]' : 'text-[9px]';
+                    const wTextSize = compLevel === 2 ? 'text-[10px]' : compLevel === 1 ? 'text-[11px]' : 'text-[12px]';
+                    const wUnitSize = compLevel === 2 ? 'text-[5.5px]' : compLevel === 1 ? 'text-[6px]' : 'text-[7px]';
+                    const detailTextSize = compLevel === 2 ? 'text-[7.5px]' : 'text-[8.5px]';
+
                     return (
                         <div className="fixed inset-0 z-[180] flex flex-col bg-[#0c0b09] bg-[radial-gradient(circle_at_center,_#1d1a14_0%,_#0a0907_100%)] overflow-hidden">
                             
@@ -4469,11 +4497,11 @@ export const WorkoutSession = () => {
                             </div>
 
                             {/* SCROLLABLE VINTAGE CONTENT GRID (Super Compacted) */}
-                            <div className="flex-1 overflow-y-auto px-3 pt-2 pb-24 space-y-2 max-w-3xl w-full mx-auto flex flex-col justify-start">
+                            <div className="flex-1 overflow-y-auto px-3 pt-2 pb-24 max-w-3xl w-full mx-auto flex flex-col justify-start">
 
                                 {/* ====== TAB: GRUPAL ====== */}
                                 {(summaryTab === 'grupal' && isGroupMode) && (
-                                    <div className="flex flex-col gap-2">
+                                    <div className={`flex flex-col ${cardSpacing}`}>
                                         {activeExercises.map((ex, exIdx) => {
                                             const activePlayers = allPlayers.filter(p =>
                                                 ex.sets.some(s =>
@@ -4486,23 +4514,23 @@ export const WorkoutSession = () => {
                                             if (activePlayers.length === 0) return null;
 
                                             return (
-                                                <div key={exIdx} className="bg-[#141310] rounded-xl overflow-hidden border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] transform hover:-translate-y-0.5 transition-transform duration-200">
+                                                <div key={exIdx} className={`${cardStyle} transform hover:-translate-y-0.5 transition-transform duration-200`}>
                                                     {/* Chalkboard header with classic outline separator */}
-                                                    <div className="px-2.5 py-1 bg-gradient-to-r from-yellow-500/15 via-yellow-500/5 to-transparent border-b border-black flex justify-between items-center">
-                                                        <span className="text-[10px] font-black uppercase tracking-widest text-yellow-400 italic">
+                                                    <div className={`${headerPadding} bg-gradient-to-r from-yellow-500/15 via-yellow-500/5 to-transparent border-b border-black flex justify-between items-center`}>
+                                                        <span className={`${headerTextSize} font-black uppercase tracking-widest text-yellow-400 italic`}>
                                                             ★ {ex.equipmentName}
                                                         </span>
                                                         <span className="text-[7px] font-black text-yellow-500/40 uppercase">EX-{exIdx + 1}</span>
                                                     </div>
 
                                                     {/* Column headers: Serie + one col per player */}
-                                                    <div className="grid px-2.5 py-0.5 bg-black/50 border-b border-black text-[8px] font-bold text-neutral-400 uppercase tracking-wider" style={{ gridTemplateColumns: `32px repeat(${activePlayers.length}, 1fr)` }}>
+                                                    <div className={`grid ${colHeaderPadding} bg-black/50 border-b border-black text-[8px] font-bold text-neutral-400 uppercase tracking-wider`} style={{ gridTemplateColumns: `32px repeat(${activePlayers.length}, 1fr)` }}>
                                                         <div className="text-yellow-500/80 font-black">SET</div>
                                                         {activePlayers.map(p => {
                                                             const nm = (p.username || 'U').split(' ')[0].substring(0, 7);
                                                             const isMe = p.id === myId;
                                                             return (
-                                                                <div key={p.id} className={`text-center font-black truncate ${isMe ? 'text-yellow-400 italic underline decoration-yellow-400/40' : 'text-neutral-300'}`}>
+                                                                <div key={p.id} className={`text-center font-black truncate ${colHeaderTextSize} ${isMe ? 'text-yellow-400 italic underline decoration-yellow-400/40' : 'text-neutral-300'}`}>
                                                                     {nm}
                                                                 </div>
                                                             );
@@ -4519,8 +4547,8 @@ export const WorkoutSession = () => {
                                                         );
                                                         if (!hasAny) return null;
                                                         return (
-                                                            <div key={s.id} className="grid px-2.5 py-1 border-b border-black/20 last:border-0 items-center bg-black/10 hover:bg-black/20 transition-colors" style={{ gridTemplateColumns: `32px repeat(${activePlayers.length}, 1fr)` }}>
-                                                                <div className="text-[9px] text-yellow-500/40 font-black italic">#{sIdx + 1}</div>
+                                                            <div key={s.id} className={`grid ${rowPadding} border-b border-black/20 last:border-0 items-center bg-black/10 hover:bg-black/20 transition-colors`} style={{ gridTemplateColumns: `32px repeat(${activePlayers.length}, 1fr)` }}>
+                                                                <div className={`${rowTextSize} text-yellow-500/40 font-black italic`}>#{sIdx + 1}</div>
                                                                 {activePlayers.map(p => {
                                                                     const w = Number(s.playerWeights?.[p.id]) || 0;
                                                                     const r = Number(s.playerReps?.[p.id]) || 0;
@@ -4532,13 +4560,13 @@ export const WorkoutSession = () => {
                                                                         <div key={p.id} className="flex flex-col items-center justify-center py-0.5">
                                                                             {hasVal ? (
                                                                                 <div className="flex flex-col items-center">
-                                                                                    {w > 0 && <span className={`text-[11px] font-black leading-none tracking-tight ${isMe ? 'text-yellow-400' : 'text-white'}`}>{w}<span className="text-[6px] font-bold text-neutral-400 ml-0.5">{ex.weightUnit || 'kg'}</span></span>}
-                                                                                    {r > 0 && <span className="text-[8px] text-neutral-400 leading-none font-bold mt-0.5">{r}r</span>}
-                                                                                    {t > 0 && <span className="text-[8px] text-neutral-400 leading-none font-bold mt-0.5">{t}s</span>}
-                                                                                    {d > 0 && <span className="text-[8px] text-neutral-400 leading-none font-bold mt-0.5">{d}{ex.distanceUnit || 'm'}</span>}
+                                                                                    {w > 0 && <span className={`${wTextSize} font-black leading-none tracking-tight ${isMe ? 'text-yellow-400' : 'text-white'}`}>{w}<span className={`${wUnitSize} font-bold text-neutral-400 ml-0.5`}>{ex.weightUnit || 'kg'}</span></span>}
+                                                                                    {r > 0 && <span className={`${detailTextSize} text-neutral-400 leading-none font-bold mt-0.5`}>{r}r</span>}
+                                                                                    {t > 0 && <span className={`${detailTextSize} text-neutral-400 leading-none font-bold mt-0.5`}>{t}s</span>}
+                                                                                    {d > 0 && <span className={`${detailTextSize} text-neutral-400 leading-none font-bold mt-0.5`}>{d}{ex.distanceUnit || 'm'}</span>}
                                                                                 </div>
                                                                             ) : (
-                                                                                <span className="text-[9px] text-neutral-700 font-bold">—</span>
+                                                                                <span className={`${rowTextSize} text-neutral-700 font-bold`}>—</span>
                                                                             )}
                                                                         </div>
                                                                     );
@@ -4554,7 +4582,7 @@ export const WorkoutSession = () => {
 
                                 {/* ====== TAB: INDIVIDUAL ====== */}
                                 {(summaryTab === 'individual' || !isGroupMode) && (
-                                    <div className="flex flex-col gap-2">
+                                    <div className={`flex flex-col ${cardSpacing}`}>
                                         {activeExercises.map((ex, exIdx) => {
                                             const mySets = ex.sets.map((s, i) => ({ ...s, idx: i })).filter(s =>
                                                 Number(s.playerWeights?.[myId]) > 0 ||
@@ -4564,16 +4592,16 @@ export const WorkoutSession = () => {
                                             );
                                             if (mySets.length === 0) return null;
                                             return (
-                                                <div key={exIdx} className="bg-[#141310] rounded-xl overflow-hidden border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] transform hover:-translate-y-0.5 transition-transform duration-200">
-                                                    <div className="px-2.5 py-1 bg-gradient-to-r from-yellow-500/15 via-yellow-500/5 to-transparent border-b border-black flex justify-between items-center">
-                                                        <span className="text-[10px] font-black uppercase tracking-widest text-yellow-400 italic">
+                                                <div key={exIdx} className={`${cardStyle} transform hover:-translate-y-0.5 transition-transform duration-200`}>
+                                                    <div className={`${headerPadding} bg-gradient-to-r from-yellow-500/15 via-yellow-500/5 to-transparent border-b border-black flex justify-between items-center`}>
+                                                        <span className={`${headerTextSize} font-black uppercase tracking-widest text-yellow-400 italic`}>
                                                             ★ {ex.equipmentName}
                                                         </span>
                                                         <span className="text-[7px] font-black text-yellow-500/40 uppercase">EX-{exIdx + 1}</span>
                                                     </div>
                                                     
                                                     {/* Header row */}
-                                                    <div className="grid grid-cols-4 px-2.5 py-1 bg-black/50 border-b border-black text-[8px] font-bold text-neutral-400 uppercase tracking-wider">
+                                                    <div className={`grid grid-cols-4 ${colHeaderPadding} bg-black/50 border-b border-black text-[8px] font-bold text-neutral-400 uppercase tracking-wider`}>
                                                         <div className="text-yellow-500/80 font-black">SET</div>
                                                         <div className="text-center font-black">PESO</div>
                                                         <div className="text-center font-black">REPS</div>
@@ -4585,16 +4613,16 @@ export const WorkoutSession = () => {
                                                         const t = Number(s.playerTimes?.[myId]) || 0;
                                                         const d = Number(s.playerDistances?.[myId]) || 0;
                                                         return (
-                                                            <div key={s.id} className="grid grid-cols-4 px-2.5 py-1 border-b border-black/20 last:border-0 items-center bg-black/10 hover:bg-black/20 transition-colors">
-                                                                <div className="text-[9px] text-yellow-500/40 font-black italic">#{s.idx + 1}</div>
+                                                            <div key={s.id} className={`grid grid-cols-4 ${rowPadding} border-b border-black/20 last:border-0 items-center bg-black/10 hover:bg-black/20 transition-colors`}>
+                                                                <div className={`${rowTextSize} text-yellow-500/40 font-black italic`}>#{s.idx + 1}</div>
                                                                 <div className="text-center">
-                                                                    {w > 0 ? <span className="text-[11px] font-black text-yellow-400">{w}<span className="text-[6px] font-bold text-neutral-400 ml-0.5">{ex.weightUnit || 'kg'}</span></span> : <span className="text-neutral-700 text-[9px] font-bold">—</span>}
+                                                                    {w > 0 ? <span className={`${wTextSize} font-black text-yellow-400`}>{w}<span className={`${wUnitSize} font-bold text-neutral-400 ml-0.5`}>{ex.weightUnit || 'kg'}</span></span> : <span className={`text-neutral-700 ${rowTextSize} font-bold`}>—</span>}
                                                                 </div>
                                                                 <div className="text-center">
-                                                                    {r > 0 ? <span className="text-[11px] font-black text-white">{r}</span> : <span className="text-neutral-700 text-[9px] font-bold">—</span>}
+                                                                    {r > 0 ? <span className={`${wTextSize} font-black text-white`}>{r}</span> : <span className={`text-neutral-700 ${rowTextSize} font-bold`}>—</span>}
                                                                 </div>
                                                                 <div className="text-center">
-                                                                    {t > 0 ? <span className="text-[10px] font-bold text-neutral-300">{t}s</span> : d > 0 ? <span className="text-[10px] font-bold text-neutral-300">{d}{ex.distanceUnit || 'm'}</span> : <span className="text-neutral-700 text-[9px] font-bold">—</span>}
+                                                                    {t > 0 ? <span className={`${detailTextSize} font-bold text-neutral-300`}>{t}s</span> : d > 0 ? <span className={`${detailTextSize} font-bold text-neutral-300`}>{d}{ex.distanceUnit || 'm'}</span> : <span className={`text-neutral-700 ${rowTextSize} font-bold`}>—</span>}
                                                                 </div>
                                                             </div>
                                                         );
