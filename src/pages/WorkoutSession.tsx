@@ -4435,22 +4435,22 @@ export const WorkoutSession = () => {
 
                     const columnCount = (summaryTab === 'grupal' && isGroupMode) ? allPlayers.length : 1;
                     
-                    let gridWidthClass = 'w-[50%] max-w-sm';
-                    let headerTextSize = 'text-[11.5px]';
-                    let colHeaderTextSize = 'text-[9.5px]';
-                    let rowTextSize = 'text-[9.5px]';
-                    let wTextSize = 'text-[12.5px]';
-                    let wUnitSize = 'text-[7px]';
-                    let detailTextSize = 'text-[10px]';
+                    let gridWidthClass = 'w-[60%] max-w-md';
+                    let headerTextSize = 'text-[9px]';
+                    let colHeaderTextSize = 'text-[8px]';
+                    let rowTextSize = 'text-[8px]';
+                    let wTextSize = 'text-[9.5px]';
+                    let wUnitSize = 'text-[5.5px]';
+                    let detailTextSize = 'text-[8.5px]';
 
                     if (columnCount === 2) {
-                        gridWidthClass = 'w-[50%] max-w-sm';
-                        headerTextSize = 'text-[11px]';
-                        colHeaderTextSize = 'text-[9px]';
-                        rowTextSize = 'text-[9px]';
-                        wTextSize = 'text-[11.5px]';
-                        wUnitSize = 'text-[6px]';
-                        detailTextSize = 'text-[9.5px]';
+                        gridWidthClass = 'w-[65%] max-w-md';
+                        headerTextSize = 'text-[8.5px]';
+                        colHeaderTextSize = 'text-[7.5px]';
+                        rowTextSize = 'text-[7.5px]';
+                        wTextSize = 'text-[9px]';
+                        wUnitSize = 'text-[5px]';
+                        detailTextSize = 'text-[8px]';
                     } else if (columnCount === 3) {
                         gridWidthClass = 'w-[65%] max-w-md';
                         headerTextSize = 'text-[9.5px]';
@@ -4522,37 +4522,61 @@ export const WorkoutSession = () => {
                                 }
                             `}} />
 
-                            {/* Spectacular Celebratory Golden Confetti Storm (Starts from below, shoots upwards in 3.2s loops) */}
+                            {/* Spectacular Celebratory Golden Confetti Storm (Starts from below, shoots upwards once) */}
                             <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-                                {/* Left Burst */}
-                                <div className="confetti-gold bg-yellow-400 w-1.5 h-3" style={{ left: '15%', animation: 'confettiBurstLeft 3.2s infinite ease-out', animationDelay: '0s' }} />
-                                <div className="confetti-gold bg-yellow-300 w-2 h-2" style={{ left: '25%', animation: 'confettiBurstLeft 3.2s infinite ease-out', animationDelay: '0.5s' }} />
-                                <div className="confetti-gold bg-amber-400 w-3 h-1.5" style={{ left: '35%', animation: 'confettiBurstLeft 3.2s infinite ease-out', animationDelay: '1.0s' }} />
-                                <div className="confetti-gold bg-yellow-500 w-2 h-3.5" style={{ left: '45%', animation: 'confettiBurstLeft 3.2s infinite ease-out', animationDelay: '1.5s' }} />
-                                <div className="confetti-gold bg-yellow-200 w-1.5 h-2.5" style={{ left: '18%', animation: 'confettiBurstLeft 3.2s infinite ease-out', animationDelay: '2.0s' }} />
-                                <div className="confetti-gold bg-amber-300 w-2.5 h-3" style={{ left: '28%', animation: 'confettiBurstLeft 3.2s infinite ease-out', animationDelay: '2.5s' }} />
-                                <div className="confetti-gold bg-yellow-400 w-2 h-2" style={{ left: '38%', animation: 'confettiBurstLeft 3.2s infinite ease-out', animationDelay: '0.8s' }} />
-                                <div className="confetti-gold bg-yellow-500 w-3 h-2" style={{ left: '48%', animation: 'confettiBurstLeft 3.2s infinite ease-out', animationDelay: '1.3s' }} />
-                                
-                                {/* Center Burst */}
-                                <div className="confetti-gold bg-amber-400 w-1.5 h-3.5" style={{ left: '48%', animation: 'confettiBurstCenter 3.2s infinite ease-out', animationDelay: '0.2s' }} />
-                                <div className="confetti-gold bg-yellow-300 w-2.5 h-2" style={{ left: '50%', animation: 'confettiBurstCenter 3.2s infinite ease-out', animationDelay: '0.7s' }} />
-                                <div className="confetti-gold bg-yellow-400 w-2 h-3" style={{ left: '52%', animation: 'confettiBurstCenter 3.2s infinite ease-out', animationDelay: '1.2s' }} />
-                                <div className="confetti-gold bg-amber-500 w-1.5 h-2.5" style={{ left: '49%', animation: 'confettiBurstCenter 3.2s infinite ease-out', animationDelay: '1.7s' }} />
-                                <div className="confetti-gold bg-yellow-300 w-3 h-1.5" style={{ left: '51%', animation: 'confettiBurstCenter 3.2s infinite ease-out', animationDelay: '2.2s' }} />
-                                <div className="confetti-gold bg-yellow-400 w-2 h-3.5" style={{ left: '53%', animation: 'confettiBurstCenter 3.2s infinite ease-out', animationDelay: '2.7s' }} />
-                                <div className="confetti-gold bg-amber-300 w-2 h-2" style={{ left: '47%', animation: 'confettiBurstCenter 3.2s infinite ease-out', animationDelay: '0.9s' }} />
-                                <div className="confetti-gold bg-yellow-500 w-1.5 h-3" style={{ left: '55%', animation: 'confettiBurstCenter 3.2s infinite ease-out', animationDelay: '1.9s' }} />
+                                {/* Left Burst (16 elements) */}
+                                <div className="confetti-gold bg-yellow-400 w-1.5 h-3" style={{ left: '10%', animation: 'confettiBurstLeft 1.8s ease-out both', animationDelay: '0s' }} />
+                                <div className="confetti-gold bg-yellow-300 w-2 h-2" style={{ left: '15%', animation: 'confettiBurstLeft 1.8s ease-out both', animationDelay: '0.1s' }} />
+                                <div className="confetti-gold bg-amber-400 w-3 h-1.5" style={{ left: '20%', animation: 'confettiBurstLeft 1.8s ease-out both', animationDelay: '0.2s' }} />
+                                <div className="confetti-gold bg-yellow-500 w-2 h-3.5" style={{ left: '25%', animation: 'confettiBurstLeft 1.8s ease-out both', animationDelay: '0.3s' }} />
+                                <div className="confetti-gold bg-yellow-200 w-1.5 h-2.5" style={{ left: '12%', animation: 'confettiBurstLeft 1.8s ease-out both', animationDelay: '0.15s' }} />
+                                <div className="confetti-gold bg-amber-300 w-2.5 h-3" style={{ left: '18%', animation: 'confettiBurstLeft 1.8s ease-out both', animationDelay: '0.25s' }} />
+                                <div className="confetti-gold bg-yellow-400 w-2 h-2" style={{ left: '22%', animation: 'confettiBurstLeft 1.8s ease-out both', animationDelay: '0.05s' }} />
+                                <div className="confetti-gold bg-yellow-500 w-3 h-2" style={{ left: '28%', animation: 'confettiBurstLeft 1.8s ease-out both', animationDelay: '0.35s' }} />
+                                <div className="confetti-gold bg-amber-500 w-1.5 h-3" style={{ left: '14%', animation: 'confettiBurstLeft 1.8s ease-out both', animationDelay: '0.4s' }} />
+                                <div className="confetti-gold bg-yellow-300 w-2.5 h-2" style={{ left: '24%', animation: 'confettiBurstLeft 1.8s ease-out both', animationDelay: '0.45s' }} />
+                                <div className="confetti-gold bg-yellow-400 w-2 h-3.5" style={{ left: '30%', animation: 'confettiBurstLeft 1.8s ease-out both', animationDelay: '0.5s' }} />
+                                <div className="confetti-gold bg-amber-300 w-2 h-2" style={{ left: '16%', animation: 'confettiBurstLeft 1.8s ease-out both', animationDelay: '0.12s' }} />
+                                <div className="confetti-gold bg-yellow-500 w-1.5 h-3" style={{ left: '26%', animation: 'confettiBurstLeft 1.8s ease-out both', animationDelay: '0.22s' }} />
+                                <div className="confetti-gold bg-yellow-200 w-2 h-2" style={{ left: '32%', animation: 'confettiBurstLeft 1.8s ease-out both', animationDelay: '0.32s' }} />
+                                <div className="confetti-gold bg-amber-400 w-3 h-1.5" style={{ left: '35%', animation: 'confettiBurstLeft 1.8s ease-out both', animationDelay: '0.28s' }} />
+                                <div className="confetti-gold bg-yellow-400 w-2.5 h-3" style={{ left: '38%', animation: 'confettiBurstLeft 1.8s ease-out both', animationDelay: '0.38s' }} />
 
-                                {/* Right Burst */}
-                                <div className="confetti-gold bg-yellow-400 w-2.5 h-2.5" style={{ left: '65%', animation: 'confettiBurstRight 3.2s infinite ease-out', animationDelay: '0.1s' }} />
-                                <div className="confetti-gold bg-amber-400 w-2 h-3" style={{ left: '75%', animation: 'confettiBurstRight 3.2s infinite ease-out', animationDelay: '0.6s' }} />
-                                <div className="confetti-gold bg-yellow-300 w-3 h-2" style={{ left: '85%', animation: 'confettiBurstRight 3.2s infinite ease-out', animationDelay: '1.1s' }} />
-                                <div className="confetti-gold bg-yellow-500 w-1.5 h-2.5" style={{ left: '68%', animation: 'confettiBurstRight 3.2s infinite ease-out', animationDelay: '1.6s' }} />
-                                <div className="confetti-gold bg-amber-300 w-2 h-3.5" style={{ left: '78%', animation: 'confettiBurstRight 3.2s infinite ease-out', animationDelay: '2.1s' }} />
-                                <div className="confetti-gold bg-yellow-400 w-3 h-1.5" style={{ left: '88%', animation: 'confettiBurstRight 3.2s infinite ease-out', animationDelay: '2.6s' }} />
-                                <div className="confetti-gold bg-yellow-200 w-2 h-2" style={{ left: '72%', animation: 'confettiBurstRight 3.2s infinite ease-out', animationDelay: '1.0s' }} />
-                                <div className="confetti-gold bg-amber-500 w-2 h-3" style={{ left: '82%', animation: 'confettiBurstRight 3.2s infinite ease-out', animationDelay: '1.8s' }} />
+                                {/* Center Burst (16 elements) */}
+                                <div className="confetti-gold bg-amber-400 w-1.5 h-3.5" style={{ left: '44%', animation: 'confettiBurstCenter 1.8s ease-out both', animationDelay: '0.05s' }} />
+                                <div className="confetti-gold bg-yellow-300 w-2.5 h-2" style={{ left: '46%', animation: 'confettiBurstCenter 1.8s ease-out both', animationDelay: '0.15s' }} />
+                                <div className="confetti-gold bg-yellow-400 w-2 h-3" style={{ left: '48%', animation: 'confettiBurstCenter 1.8s ease-out both', animationDelay: '0.25s' }} />
+                                <div className="confetti-gold bg-amber-500 w-1.5 h-2.5" style={{ left: '50%', animation: 'confettiBurstCenter 1.8s ease-out both', animationDelay: '0.35s' }} />
+                                <div className="confetti-gold bg-yellow-300 w-3 h-1.5" style={{ left: '52%', animation: 'confettiBurstCenter 1.8s ease-out both', animationDelay: '0.12s' }} />
+                                <div className="confetti-gold bg-yellow-400 w-2 h-3.5" style={{ left: '54%', animation: 'confettiBurstCenter 1.8s ease-out both', animationDelay: '0.22s' }} />
+                                <div className="confetti-gold bg-amber-300 w-2 h-2" style={{ left: '45%', animation: 'confettiBurstCenter 1.8s ease-out both', animationDelay: '0.08s' }} />
+                                <div className="confetti-gold bg-yellow-500 w-1.5 h-3" style={{ left: '55%', animation: 'confettiBurstCenter 1.8s ease-out both', animationDelay: '0.18s' }} />
+                                <div className="confetti-gold bg-yellow-400 w-2 h-2" style={{ left: '47%', animation: 'confettiBurstCenter 1.8s ease-out both', animationDelay: '0.28s' }} />
+                                <div className="confetti-gold bg-amber-400 w-3 h-1.5" style={{ left: '53%', animation: 'confettiBurstCenter 1.8s ease-out both', animationDelay: '0.38s' }} />
+                                <div className="confetti-gold bg-yellow-200 w-1.5 h-2.5" style={{ left: '49%', animation: 'confettiBurstCenter 1.8s ease-out both', animationDelay: '0.4s' }} />
+                                <div className="confetti-gold bg-amber-300 w-2.5 h-3" style={{ left: '51%', animation: 'confettiBurstCenter 1.8s ease-out both', animationDelay: '0.45s' }} />
+                                <div className="confetti-gold bg-yellow-500 w-2 h-3.5" style={{ left: '43%', animation: 'confettiBurstCenter 1.8s ease-out both', animationDelay: '0.3s' }} />
+                                <div className="confetti-gold bg-yellow-300 w-2.5 h-2" style={{ left: '57%', animation: 'confettiBurstCenter 1.8s ease-out both', animationDelay: '0.5s' }} />
+                                <div className="confetti-gold bg-amber-500 w-1.5 h-3" style={{ left: '41%', animation: 'confettiBurstCenter 1.8s ease-out both', animationDelay: '0.2s' }} />
+                                <div className="confetti-gold bg-yellow-400 w-2 h-3" style={{ left: '59%', animation: 'confettiBurstCenter 1.8s ease-out both', animationDelay: '0.1s' }} />
+
+                                {/* Right Burst (16 elements) */}
+                                <div className="confetti-gold bg-yellow-400 w-2.5 h-2.5" style={{ left: '65%', animation: 'confettiBurstRight 1.8s ease-out both', animationDelay: '0s' }} />
+                                <div className="confetti-gold bg-amber-400 w-2 h-3" style={{ left: '70%', animation: 'confettiBurstRight 1.8s ease-out both', animationDelay: '0.1s' }} />
+                                <div className="confetti-gold bg-yellow-300 w-3 h-2" style={{ left: '75%', animation: 'confettiBurstRight 1.8s ease-out both', animationDelay: '0.2s' }} />
+                                <div className="confetti-gold bg-yellow-500 w-1.5 h-2.5" style={{ left: '80%', animation: 'confettiBurstRight 1.8s ease-out both', animationDelay: '0.3s' }} />
+                                <div className="confetti-gold bg-amber-300 w-2 h-3.5" style={{ left: '85%', animation: 'confettiBurstRight 1.8s ease-out both', animationDelay: '0.15s' }} />
+                                <div className="confetti-gold bg-yellow-400 w-3 h-1.5" style={{ left: '90%', animation: 'confettiBurstRight 1.8s ease-out both', animationDelay: '0.25s' }} />
+                                <div className="confetti-gold bg-yellow-200 w-2 h-2" style={{ left: '68%', animation: 'confettiBurstRight 1.8s ease-out both', animationDelay: '0.05s' }} />
+                                <div className="confetti-gold bg-amber-500 w-2 h-3" style={{ left: '72%', animation: 'confettiBurstRight 1.8s ease-out both', animationDelay: '0.35s' }} />
+                                <div className="confetti-gold bg-yellow-400 w-1.5 h-3" style={{ left: '78%', animation: 'confettiBurstRight 1.8s ease-out both', animationDelay: '0.4s' }} />
+                                <div className="confetti-gold bg-yellow-300 w-2.5 h-2.5" style={{ left: '83%', animation: 'confettiBurstRight 1.8s ease-out both', animationDelay: '0.45s' }} />
+                                <div className="confetti-gold bg-amber-400 w-2 h-3.5" style={{ left: '88%', animation: 'confettiBurstRight 1.8s ease-out both', animationDelay: '0.5s' }} />
+                                <div className="confetti-gold bg-yellow-500 w-3 h-2" style={{ left: '67%', animation: 'confettiBurstRight 1.8s ease-out both', animationDelay: '0.12s' }} />
+                                <div className="confetti-gold bg-yellow-200 w-2 h-2" style={{ left: '73%', animation: 'confettiBurstRight 1.8s ease-out both', animationDelay: '0.22s' }} />
+                                <div className="confetti-gold bg-amber-300 w-1.5 h-3" style={{ left: '77%', animation: 'confettiBurstRight 1.8s ease-out both', animationDelay: '0.32s' }} />
+                                <div className="confetti-gold bg-yellow-400 w-2.5 h-2.5" style={{ left: '82%', animation: 'confettiBurstRight 1.8s ease-out both', animationDelay: '0.28s' }} />
+                                <div className="confetti-gold bg-yellow-500 w-2 h-3" style={{ left: '87%', animation: 'confettiBurstRight 1.8s ease-out both', animationDelay: '0.38s' }} />
                             </div>
 
                             {/* STICKY HEADER with Animated Comic Logo (Ultra Compacted) */}
