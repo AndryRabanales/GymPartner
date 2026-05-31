@@ -460,7 +460,7 @@ export const WorkoutSession = () => {
     });
 
     useEffect(() => {
-        if (!isMultiplayer || !partnerId || !syncRoomId || !user) return;
+        if (!isMultiplayer || !partnerId || !syncRoomId || !user || showSummary) return;
 
         // Fetch partner info
         const fetchPartner = async () => {
@@ -941,7 +941,7 @@ export const WorkoutSession = () => {
             supabase.removeChannel(channel);
             channelRef.current = null;
         };
-    }, [isMultiplayer, partnerId, syncRoomId, user, multiplayerMode]);
+    }, [isMultiplayer, partnerId, syncRoomId, user, multiplayerMode, showSummary]);
 
     // Send local updates (Debounced to prevent network spam and echo loops while typing)
     useEffect(() => {
@@ -2443,6 +2443,10 @@ export const WorkoutSession = () => {
         fieldKey: 'weight' | 'reps' | 'time' | 'distance' | 'rpe' | 'completed' | 'locked',
         value: any
     ) => {
+        const pObj = participantsRef.current.find(p => p.id === targetUserId);
+        const isAbandoned = isMultiplayer && pObj && !pObj.isOnline && targetUserId !== user?.id;
+        if (isAbandoned) return;
+
         setActiveExercises(prev => {
             const next = prev.map(ex => ({
                 ...ex,
@@ -2540,6 +2544,10 @@ export const WorkoutSession = () => {
     };
 
     const togglePlayerSetComplete = (exerciseIndex: number, setIndex: number, targetUserId: string) => {
+        const pObj = participantsRef.current.find(p => p.id === targetUserId);
+        const isAbandoned = isMultiplayer && pObj && !pObj.isOnline && targetUserId !== user?.id;
+        if (isAbandoned) return;
+
         const ex = activeExercises[exerciseIndex];
         if (!ex) return;
         const set = ex.sets[setIndex];
@@ -3691,17 +3699,19 @@ export const WorkoutSession = () => {
                                                                     const isHost = p.id === (isInviter ? user?.id : partnerId);
                                                                     const isFirstGuest = p.id === firstGuestId;
 
-                                                                    const rowWeight = safeNum(set.playerWeights?.[p.id] ?? (isHost ? set.weight : (isFirstGuest ? (set.p2_weight || 0) : 0)), 0);
-                                                                    const rowReps = safeNum(set.playerReps?.[p.id] ?? (isHost ? set.reps : (isFirstGuest ? (set.p2_reps || 0) : 0)), 0);
-                                                                    const rowTime = safeNum(set.playerTimes?.[p.id] ?? (isHost ? set.time : (isFirstGuest ? (set.p2_time || 0) : 0)), 0);
-                                                                    const rowDistance = safeNum(set.playerDistances?.[p.id] ?? (isHost ? set.distance : (isFirstGuest ? (set.p2_distance || 0) : 0)), 0);
-                                                                    const rowRpe = safeNum(set.playerRpes?.[p.id] ?? (isHost ? set.rpe : (isFirstGuest ? (set.p2_rpe || 0) : 0)), 0);
-                                                                    const rowCompleted = set.playerCompleted?.[p.id] ?? (isHost ? set.completed : (isFirstGuest ? (set.p2_completed || false) : false));
-                                                                    const rowLocked = set.playerLocked?.[p.id] ?? (isHost ? set.locked : (isFirstGuest ? (set.p2_locked || false) : false));
-                                                                    const rowCompletedAt = set.playerCompletedAt?.[p.id] ?? (isHost ? set.completedAt : (isFirstGuest ? set.p2_completedAt : undefined));
+                                                                    const isAbandoned = isMultiplayer && !p.isOnline && p.id !== user?.id;
+
+                                                                    const rowWeight = isAbandoned ? 0 : safeNum(set.playerWeights?.[p.id] ?? (isHost ? set.weight : (isFirstGuest ? (set.p2_weight || 0) : 0)), 0);
+                                                                    const rowReps = isAbandoned ? 0 : safeNum(set.playerReps?.[p.id] ?? (isHost ? set.reps : (isFirstGuest ? (set.p2_reps || 0) : 0)), 0);
+                                                                    const rowTime = isAbandoned ? 0 : safeNum(set.playerTimes?.[p.id] ?? (isHost ? set.time : (isFirstGuest ? (set.p2_time || 0) : 0)), 0);
+                                                                    const rowDistance = isAbandoned ? 0 : safeNum(set.playerDistances?.[p.id] ?? (isHost ? set.distance : (isFirstGuest ? (set.p2_distance || 0) : 0)), 0);
+                                                                    const rowRpe = isAbandoned ? 0 : safeNum(set.playerRpes?.[p.id] ?? (isHost ? set.rpe : (isFirstGuest ? (set.p2_rpe || 0) : 0)), 0);
+                                                                    const rowCompleted = isAbandoned ? false : (set.playerCompleted?.[p.id] ?? (isHost ? set.completed : (isFirstGuest ? (set.p2_completed || false) : false)));
+                                                                    const rowLocked = isAbandoned ? true : (set.playerLocked?.[p.id] ?? (isHost ? set.locked : (isFirstGuest ? (set.p2_locked || false) : false)));
+                                                                    const rowCompletedAt = isAbandoned ? undefined : (set.playerCompletedAt?.[p.id] ?? (isHost ? set.completedAt : (isFirstGuest ? set.p2_completedAt : undefined)));
                                                                     
-                                                                    const inputDisabled = rowLocked || rowReadOnly;
-                                                                    const lockToggleDisabled = rowReadOnly;
+                                                                    const inputDisabled = isAbandoned || rowLocked || rowReadOnly;
+                                                                    const lockToggleDisabled = isAbandoned || rowReadOnly;
 
                                                                     return (
                                                                         <div key={p.id} className={`flex items-center gap-1 w-full flex-nowrap ${pIdx > 0 ? 'mt-1 pt-2 border-t border-white/5' : ''}`}>
