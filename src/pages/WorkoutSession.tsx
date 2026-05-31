@@ -336,7 +336,7 @@ export const WorkoutSession = () => {
     const [routines, setRoutines] = useState<any[]>([]); // NEW: Local Routines
     const [showAddModal, setShowAddModal] = useState(false);
     const [resolvedGymId, setResolvedGymId] = useState<string | null>(null);
-    const [showExitModal, setShowExitModal] = useState(false);
+    const [showExitMenu, setShowExitMenu] = useState(false);
     const [showCoopExitModal, setShowCoopExitModal] = useState(false);
     const [showForceExitModal, setShowForceExitModal] = useState(false);
     const [showSummary, setShowSummary] = useState(false);
