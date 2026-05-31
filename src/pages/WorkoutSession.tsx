@@ -2996,7 +2996,7 @@ export const WorkoutSession = () => {
     const handleCancelSession = async () => {
         if (!sessionId) {
             isLeavingPageRef.current = true;
-            navigate(-1);
+            navigate('/');
             return;
         }
         if (activeExercises.length === 0) {
@@ -3012,7 +3012,7 @@ export const WorkoutSession = () => {
             setLoading(true);
             await workoutService.deleteSession(oldSessionId);
             setLoading(false);
-            navigate(-1);
+            navigate('/');
             return;
         }
 
@@ -3042,7 +3042,7 @@ export const WorkoutSession = () => {
             setLoading(true);
             await workoutService.deleteSession(oldSessionId);
             setLoading(false);
-            navigate(-1);
+            navigate('/');
         }
     };
 
