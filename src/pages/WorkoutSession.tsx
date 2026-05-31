@@ -2876,11 +2876,44 @@ export const WorkoutSession = () => {
             }
         });
 
-        const prevPWeights = previousSet?.playerWeights || {};
-        const prevPReps = previousSet?.playerReps || {};
-        const prevPTimes = previousSet?.playerTimes || {};
-        const prevPDistances = previousSet?.playerDistances || {};
-        const prevPRpes = previousSet?.playerRpes || {};
+        const prevPWeights: Record<string, number> = {};
+        const prevPReps: Record<string, number> = {};
+        const prevPTimes: Record<string, number> = {};
+        const prevPDistances: Record<string, number> = {};
+        const prevPRpes: Record<string, number> = {};
+
+        const originalWeights = previousSet?.playerWeights || {};
+        const originalReps = previousSet?.playerReps || {};
+        const originalTimes = previousSet?.playerTimes || {};
+        const originalDistances = previousSet?.playerDistances || {};
+        const originalRpes = previousSet?.playerRpes || {};
+
+        if (isMultiplayer && participantsRef.current.length > 0) {
+            participantsRef.current.forEach(p => {
+                const isAbandoned = !p.isOnline && p.id !== user?.id;
+                if (!isAbandoned) {
+                    prevPWeights[p.id] = originalWeights[p.id] !== undefined ? originalWeights[p.id] : 0;
+                    prevPReps[p.id] = originalReps[p.id] !== undefined ? originalReps[p.id] : 0;
+                    prevPTimes[p.id] = originalTimes[p.id] !== undefined ? originalTimes[p.id] : 0;
+                    prevPDistances[p.id] = originalDistances[p.id] !== undefined ? originalDistances[p.id] : 0;
+                    prevPRpes[p.id] = originalRpes[p.id] !== undefined ? originalRpes[p.id] : 0;
+                } else {
+                    prevPWeights[p.id] = 0;
+                    prevPReps[p.id] = 0;
+                    prevPTimes[p.id] = 0;
+                    prevPDistances[p.id] = 0;
+                    prevPRpes[p.id] = 0;
+                }
+            });
+        } else {
+            // Single player fallback
+            const myId = user?.id || 'single-user';
+            prevPWeights[myId] = originalWeights[myId] !== undefined ? originalWeights[myId] : (previousSet?.weight || 0);
+            prevPReps[myId] = originalReps[myId] !== undefined ? originalReps[myId] : (previousSet?.reps || 0);
+            prevPTimes[myId] = originalTimes[myId] !== undefined ? originalTimes[myId] : (previousSet?.time || 0);
+            prevPDistances[myId] = originalDistances[myId] !== undefined ? originalDistances[myId] : (previousSet?.distance || 0);
+            prevPRpes[myId] = originalRpes[myId] !== undefined ? originalRpes[myId] : (previousSet?.rpe || 0);
+        }
 
         updated[exerciseIndex].sets.push({
             id: Math.random().toString(),
@@ -2892,11 +2925,11 @@ export const WorkoutSession = () => {
             rpe: previousSet?.rpe || 0,
             custom: customMetrics,
             completed: false,
-            playerWeights: { ...prevPWeights },
-            playerReps: { ...prevPReps },
-            playerTimes: { ...prevPTimes },
-            playerDistances: { ...prevPDistances },
-            playerRpes: { ...prevPRpes },
+            playerWeights: prevPWeights,
+            playerReps: prevPReps,
+            playerTimes: prevPTimes,
+            playerDistances: prevPDistances,
+            playerRpes: prevPRpes,
             playerCompleted: {},
             playerLocked: {},
             playerCompletedAt: {},
