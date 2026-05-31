@@ -4679,15 +4679,17 @@ export const WorkoutSession = () => {
                                 {(summaryTab === 'grupal' && isGroupMode) && (
                                     <div className={`flex flex-col ${cardSpacing}`}>
                                         {activeExercises.map((ex, exIdx) => {
-                                            const activePlayers = allPlayers.filter(p =>
-                                                ex.sets.some(s =>
+                                            const hasAnyData = ex.sets.some(s =>
+                                                allPlayers.some(p =>
                                                     Number(s.playerWeights?.[p.id]) > 0 ||
                                                     Number(s.playerReps?.[p.id]) > 0 ||
                                                     Number(s.playerTimes?.[p.id]) > 0 ||
                                                     Number(s.playerDistances?.[p.id]) > 0
                                                 )
                                             );
-                                            if (activePlayers.length === 0) return null;
+                                            if (!hasAnyData) return null;
+
+                                            const activePlayers = allPlayers;
 
                                             return (
                                                 <div key={exIdx} className={`${cardStyle} transform hover:-translate-y-0.5 transition-transform duration-200`}>
