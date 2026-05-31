@@ -4490,6 +4490,71 @@ export const WorkoutSession = () => {
                             {/* Vintage Film Overlay effect */}
                             <div className="absolute inset-0 bg-white/[0.01] pointer-events-none mix-blend-overlay z-10" />
 
+                            {/* SPECTACULAR CELEBRATORY GOLDEN CONFETTI STYLE */}
+                            <style dangerouslySetInnerHTML={{__html: `
+                                @keyframes confettiBurstLeft {
+                                    0% { transform: translateY(105vh) translateX(0) scale(0.4) rotate(0deg); opacity: 0; }
+                                    10% { opacity: 1; }
+                                    35% { transform: translateY(48vh) translateX(-50px) scale(1.1) rotate(140deg); opacity: 1; }
+                                    80% { transform: translateY(85vh) translateX(-70px) scale(0.85) rotate(280deg); opacity: 0.9; }
+                                    100% { transform: translateY(98vh) translateX(-80px) scale(0.4) rotate(360deg); opacity: 0; }
+                                }
+                                @keyframes confettiBurstCenter {
+                                    0% { transform: translateY(105vh) translateX(0) scale(0.4) rotate(0deg); opacity: 0; }
+                                    10% { opacity: 1; }
+                                    35% { transform: translateY(38vh) translateX(5px) scale(1.2) rotate(120deg); opacity: 1; }
+                                    80% { transform: translateY(85vh) translateX(15px) scale(0.85) rotate(260deg); opacity: 0.9; }
+                                    100% { transform: translateY(98vh) translateX(20px) scale(0.4) rotate(360deg); opacity: 0; }
+                                }
+                                @keyframes confettiBurstRight {
+                                    0% { transform: translateY(105vh) translateX(0) scale(0.4) rotate(0deg); opacity: 0; }
+                                    10% { opacity: 1; }
+                                    35% { transform: translateY(50vh) translateX(50px) scale(1.1) rotate(160deg); opacity: 1; }
+                                    80% { transform: translateY(85vh) translateX(70px) scale(0.85) rotate(300deg); opacity: 0.9; }
+                                    100% { transform: translateY(98vh) translateX(80px) scale(0.4) rotate(360deg); opacity: 0; }
+                                }
+                                .confetti-gold {
+                                    position: absolute;
+                                    pointer-events: none;
+                                    z-index: 5;
+                                    border-radius: 1px;
+                                    opacity: 0;
+                                }
+                            `}} />
+
+                            {/* Spectacular Celebratory Golden Confetti Storm (Starts from below, shoots upwards in 3.2s loops) */}
+                            <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+                                {/* Left Burst */}
+                                <div className="confetti-gold bg-yellow-400 w-1.5 h-3" style={{ left: '15%', animation: 'confettiBurstLeft 3.2s infinite ease-out', animationDelay: '0s' }} />
+                                <div className="confetti-gold bg-yellow-300 w-2 h-2" style={{ left: '25%', animation: 'confettiBurstLeft 3.2s infinite ease-out', animationDelay: '0.5s' }} />
+                                <div className="confetti-gold bg-amber-400 w-3 h-1.5" style={{ left: '35%', animation: 'confettiBurstLeft 3.2s infinite ease-out', animationDelay: '1.0s' }} />
+                                <div className="confetti-gold bg-yellow-500 w-2 h-3.5" style={{ left: '45%', animation: 'confettiBurstLeft 3.2s infinite ease-out', animationDelay: '1.5s' }} />
+                                <div className="confetti-gold bg-yellow-200 w-1.5 h-2.5" style={{ left: '18%', animation: 'confettiBurstLeft 3.2s infinite ease-out', animationDelay: '2.0s' }} />
+                                <div className="confetti-gold bg-amber-300 w-2.5 h-3" style={{ left: '28%', animation: 'confettiBurstLeft 3.2s infinite ease-out', animationDelay: '2.5s' }} />
+                                <div className="confetti-gold bg-yellow-400 w-2 h-2" style={{ left: '38%', animation: 'confettiBurstLeft 3.2s infinite ease-out', animationDelay: '0.8s' }} />
+                                <div className="confetti-gold bg-yellow-500 w-3 h-2" style={{ left: '48%', animation: 'confettiBurstLeft 3.2s infinite ease-out', animationDelay: '1.3s' }} />
+                                
+                                {/* Center Burst */}
+                                <div className="confetti-gold bg-amber-400 w-1.5 h-3.5" style={{ left: '48%', animation: 'confettiBurstCenter 3.2s infinite ease-out', animationDelay: '0.2s' }} />
+                                <div className="confetti-gold bg-yellow-300 w-2.5 h-2" style={{ left: '50%', animation: 'confettiBurstCenter 3.2s infinite ease-out', animationDelay: '0.7s' }} />
+                                <div className="confetti-gold bg-yellow-400 w-2 h-3" style={{ left: '52%', animation: 'confettiBurstCenter 3.2s infinite ease-out', animationDelay: '1.2s' }} />
+                                <div className="confetti-gold bg-amber-500 w-1.5 h-2.5" style={{ left: '49%', animation: 'confettiBurstCenter 3.2s infinite ease-out', animationDelay: '1.7s' }} />
+                                <div className="confetti-gold bg-yellow-300 w-3 h-1.5" style={{ left: '51%', animation: 'confettiBurstCenter 3.2s infinite ease-out', animationDelay: '2.2s' }} />
+                                <div className="confetti-gold bg-yellow-400 w-2 h-3.5" style={{ left: '53%', animation: 'confettiBurstCenter 3.2s infinite ease-out', animationDelay: '2.7s' }} />
+                                <div className="confetti-gold bg-amber-300 w-2 h-2" style={{ left: '47%', animation: 'confettiBurstCenter 3.2s infinite ease-out', animationDelay: '0.9s' }} />
+                                <div className="confetti-gold bg-yellow-500 w-1.5 h-3" style={{ left: '55%', animation: 'confettiBurstCenter 3.2s infinite ease-out', animationDelay: '1.9s' }} />
+
+                                {/* Right Burst */}
+                                <div className="confetti-gold bg-yellow-400 w-2.5 h-2.5" style={{ left: '65%', animation: 'confettiBurstRight 3.2s infinite ease-out', animationDelay: '0.1s' }} />
+                                <div className="confetti-gold bg-amber-400 w-2 h-3" style={{ left: '75%', animation: 'confettiBurstRight 3.2s infinite ease-out', animationDelay: '0.6s' }} />
+                                <div className="confetti-gold bg-yellow-300 w-3 h-2" style={{ left: '85%', animation: 'confettiBurstRight 3.2s infinite ease-out', animationDelay: '1.1s' }} />
+                                <div className="confetti-gold bg-yellow-500 w-1.5 h-2.5" style={{ left: '68%', animation: 'confettiBurstRight 3.2s infinite ease-out', animationDelay: '1.6s' }} />
+                                <div className="confetti-gold bg-amber-300 w-2 h-3.5" style={{ left: '78%', animation: 'confettiBurstRight 3.2s infinite ease-out', animationDelay: '2.1s' }} />
+                                <div className="confetti-gold bg-yellow-400 w-3 h-1.5" style={{ left: '88%', animation: 'confettiBurstRight 3.2s infinite ease-out', animationDelay: '2.6s' }} />
+                                <div className="confetti-gold bg-yellow-200 w-2 h-2" style={{ left: '72%', animation: 'confettiBurstRight 3.2s infinite ease-out', animationDelay: '1.0s' }} />
+                                <div className="confetti-gold bg-amber-500 w-2 h-3" style={{ left: '82%', animation: 'confettiBurstRight 3.2s infinite ease-out', animationDelay: '1.8s' }} />
+                            </div>
+
                             {/* STICKY HEADER with Animated Comic Logo (Ultra Compacted) */}
                             <div className="flex-shrink-0 bg-black/40 border-b border-black pt-1.5 px-2 pb-1.5 relative">
                                 <div className="text-center flex flex-col items-center mb-1">
