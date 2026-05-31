@@ -1329,9 +1329,28 @@ export const WorkoutSession = () => {
     useEffect(() => {
         if (!startTime || isFinished) return;
 
+        const MAX_SESSION_MS = 5 * 60 * 60 * 1000; // 5 hours hard limit
+
         const tick = () => {
             const now = new Date();
             const diff = Math.max(0, now.getTime() - new Date(startTime).getTime());
+
+            // ⏱️ AUTO-KILL: Force-end sessions that exceed 5 hours
+            if (diff >= MAX_SESSION_MS) {
+                console.warn('⏰ Sesión superó el límite de 5 horas. Cerrando automáticamente...');
+                setIsFinished(true);
+                isLeavingPageRef.current = true;
+                // Clean up all local state silently
+                if (sessionId) {
+                    localStorage.removeItem(`workout_draft_${sessionId}`);
+                    workoutService.deleteSession(sessionId).catch(() => {});
+                }
+                localStorage.removeItem(STORAGE_KEY);
+                localStorage.removeItem('ginx_coop_state');
+                setSessionId(null);
+                navigate('/');
+                return;
+            }
 
             const hours = Math.floor(diff / (1000 * 60 * 60));
             const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -1347,7 +1366,7 @@ export const WorkoutSession = () => {
         tick(); // Immediate update
         const interval = setInterval(tick, 200); // High-frequency tick (200ms) to ensure perfect cross-device synchronization
         return () => clearInterval(interval);
-    }, [startTime, isFinished]);
+    }, [startTime, isFinished, sessionId]);
 
     // Init Logic
     useEffect(() => {
