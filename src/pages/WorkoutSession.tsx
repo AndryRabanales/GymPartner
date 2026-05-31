@@ -4485,13 +4485,23 @@ export const WorkoutSession = () => {
                     const rowPadding = 'px-1.5 py-[1px]';
 
                     return (
-                        <div className="fixed inset-0 z-[180] flex flex-col bg-[#0c0b09] bg-[radial-gradient(circle_at_center,_#1d1a14_0%,_#0a0907_100%)] overflow-hidden">
+                        <div className="fixed inset-0 z-[180] flex flex-col summary-animated-bg overflow-hidden">
                             
                             {/* Vintage Film Overlay effect */}
                             <div className="absolute inset-0 bg-white/[0.01] pointer-events-none mix-blend-overlay z-10" />
 
                             {/* SPECTACULAR CELEBRATORY GOLDEN CONFETTI STYLE */}
                             <style dangerouslySetInnerHTML={{__html: `
+                                .summary-animated-bg {
+                                    background: linear-gradient(-45deg, #000000, #131102, #292404, #080701, #000000);
+                                    background-size: 400% 400%;
+                                    animation: premiumGradient 15s ease infinite;
+                                }
+                                @keyframes premiumGradient {
+                                    0% { background-position: 0% 50%; }
+                                    50% { background-position: 100% 50%; }
+                                    100% { background-position: 0% 50%; }
+                                }
                                 @keyframes confettiBurstLeft {
                                     0% { transform: translateY(105vh) translateX(0) scale(0.4) rotate(0deg); opacity: 0; }
                                     10% { opacity: 1; }
