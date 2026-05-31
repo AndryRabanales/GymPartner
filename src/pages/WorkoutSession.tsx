@@ -4493,9 +4493,9 @@ export const WorkoutSession = () => {
                             {/* SPECTACULAR CELEBRATORY GOLDEN CONFETTI STYLE */}
                             <style dangerouslySetInnerHTML={{__html: `
                                 .summary-animated-bg {
-                                    background: linear-gradient(-45deg, #000000, #131102, #292404, #080701, #000000);
+                                    background: linear-gradient(-45deg, #000000, #4d4002, #000000, #7a6603, #000000);
                                     background-size: 400% 400%;
-                                    animation: premiumGradient 15s ease infinite;
+                                    animation: premiumGradient 9s ease infinite;
                                 }
                                 @keyframes premiumGradient {
                                     0% { background-position: 0% 50%; }
