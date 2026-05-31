@@ -395,7 +395,7 @@ export const AppLayout = () => {
             }
         });
     }, []);
-
+const notificationSeen = useRef<Set<string>>(new Set());
     // Subscribe to real-time live workout notifications
     useEffect(() => {
         if (!user) return;
@@ -411,37 +411,27 @@ export const AppLayout = () => {
             }, (payload) => {
                 const newNotification = payload.new;
                 console.log("🔔 Real-time notification received:", newNotification);
-                
+                // Deduplicate notifications by ID
+                if (newNotification.id) {
+                    if (notificationSeen.current.has(newNotification.id)) {
+                        console.warn('🔔 Duplicate notification ignored:', newNotification.id);
+                        return;
+                    }
+                    notificationSeen.current.add(newNotification.id);
+                }
                 if (newNotification.type === 'system' && newNotification.title?.includes('EN VIVO')) {
                     toast.custom((t) => (
-                        <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-neutral-950/95 backdrop-blur-2xl border border-red-500/40 shadow-[0_20px_50px_rgba(239,68,68,0.2)] rounded-3xl pointer-events-auto flex p-4`}>
-                            <div className="flex-1 w-0">
-                                <div className="flex items-center">
-                                    <div className="shrink-0">
-                                        <div className="w-10 h-10 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center text-red-500 animate-pulse font-black text-[9px] tracking-widest">
-                                            LIVE
-                                        </div>
-                                    </div>
-                                    <div className="ml-3 flex-1">
-                                        <p className="text-sm font-black text-white uppercase tracking-wider italic">
-                                            {newNotification.title}
-                                        </p>
-                                        <p className="mt-0.5 text-xs text-neutral-300 font-bold uppercase leading-normal">
-                                            {newNotification.message}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="ml-4 shrink-0 flex items-center">
-                                <button
-                                    onClick={() => toast.dismiss(t.id)}
-                                    className="border border-white/10 hover:bg-white/5 rounded-xl px-3 py-1.5 text-[9px] font-black text-neutral-400 hover:text-white transition-colors uppercase tracking-widest"
-                                >
-                                    Cerrar
-                                </button>
-                            </div>
-                        </div>
-                    ), { duration: 6000 });
+    <div className="max-w-xs w-full bg-neutral-950/80 backdrop-blur-sm border border-white/10 rounded-xl p-3 flex items-start space-x-3 animate-enter">
+        <div className="flex-shrink-0 pt-0.5">
+            <div className="w-6 h-6 rounded-full bg-red-500/30 flex items-center justify-center text-red-500 font-bold text-xs">LIVE</div>
+        </div>
+        <div className="flex-1 min-w-0">
+            <p className="text-sm font-black text-white uppercase tracking-wider">{newNotification.title}</p>
+            <p className="text-xs text-neutral-300 mt-0.5">{newNotification.message}</p>
+        </div>
+        <button onClick={() => toast.dismiss(t.id)} className="text-xs text-neutral-400 hover:text-white">✕</button>
+    </div>
+), {duration: 6000});
                 } else if (newNotification.type === 'system' && newNotification.title?.includes('FINALIZADO')) {
                     toast.custom((t) => (
                         <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-neutral-950/95 backdrop-blur-2xl border border-green-500/40 shadow-[0_20px_50px_rgba(34,197,94,0.2)] rounded-3xl pointer-events-auto flex p-4`}>
@@ -475,15 +465,35 @@ export const AppLayout = () => {
                 } else if (newNotification.type === 'coop_invite') {
                     const modeLabel = newNotification.data?.mode === 'conjunto' ? 'CONJUNTO' : 'SEPARADO';
                     toast.custom((t) => (
-                        <CoopInviteToast
-                            newNotification={newNotification}
-                            t={t}
-                            modeLabel={modeLabel}
-                            user={user}
-                            navigate={navigate}
-                            notificationService={notificationService}
-                        />
-                    ), { duration: 15000 }); // 15 seconds to accept before it hides globally
+                        <div className="max-w-xs w-full bg-neutral-950/80 backdrop-blur-sm border border-white/10 rounded-xl p-3 flex items-start space-x-3 animate-enter">
+                            <div className="flex-shrink-0 pt-0.5">
+                                <div className="w-6 h-6 rounded-full bg-yellow-500/30 flex items-center justify-center text-yellow-500 font-bold text-xs">⚔️</div>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-black text-white uppercase tracking-wider">INVITACIÓN DE {modeLabel}</p>
+                                <p className="text-xs text-neutral-300 mt-0.5">{newNotification.data?.sender_name || 'Alguien'} te invita a un entrenamiento {modeLabel}</p>
+                            </div>
+                            <div className="flex flex-col space-y-1">
+                                <button onClick={async () => {
+                                    toast.dismiss(t.id);
+                                    await notificationService.updateInvitationStatus(newNotification, 'rejected');
+                                }} className="text-xs text-red-500 hover:text-red-300">Ignorar</button>
+                                <button onClick={async () => {
+                                    toast.dismiss(t.id);
+                                    await notificationService.updateInvitationStatus(newNotification, 'accepted');
+                                    const mode = newNotification.data?.mode || 'separado';
+                                    await supabase.from('notifications').insert({
+                                        user_id: newNotification.data?.sender_id,
+                                        type: 'coop_accepted',
+                                        title: 'RETO ACEPTADO',
+                                        message: `¡${user.user_metadata.full_name || 'Alguien'} ha aceptado tu desafío!`,
+                                        data: { partner_id: user.id, mode, chat_id: newNotification.data?.chat_id }
+                                    });
+                                    navigate('/workout', { state: { isMultiplayer: true, multiplayerMode: mode, partnerId: newNotification.data?.sender_id, chatId: newNotification.data?.chat_id, isInviter: false } });
+                                }} className="text-xs text-green-500 hover:text-green-300">Aceptar</button>
+                            </div>
+                        </div>
+                    ), {duration: 15000});
                 } else if (newNotification.type === 'coop_accepted') {
                     // Instantly pull the inviter into the workout session
                     toast.success(newNotification.message || "Reto aceptado. Entrando a la sesión...");
@@ -498,14 +508,43 @@ export const AppLayout = () => {
                     });
                 } else if (newNotification.type === 'coop_join_request') {
                     toast.custom((t) => (
-                        <CoopJoinRequestToast
-                            newNotification={newNotification}
-                            t={t}
-                            user={user}
-                            navigate={navigate}
-                            notificationService={notificationService}
-                        />
-                    ), { duration: 15000 });
+                        <div className="max-w-xs w-full bg-neutral-950/80 backdrop-blur-sm border border-white/10 rounded-xl p-3 flex items-start space-x-3 animate-enter">
+                            <div className="flex-shrink-0 pt-0.5">
+                                <div className="w-6 h-6 rounded-full bg-yellow-500/30 flex items-center justify-center text-yellow-500 font-bold text-xs">🤝</div>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-black text-white uppercase tracking-wider">SOLICITUD DE UNIÓN</p>
+                                <p className="text-xs text-neutral-300 mt-0.5">@{newNotification.data?.sender_name || 'Alguien'} quiere unirse</p>
+                            </div>
+                            <div className="flex flex-col space-y-1">
+                                <button onClick={async () => {
+                                    toast.dismiss(t.id);
+                                    await notificationService.updateInvitationStatus(newNotification, 'rejected');
+                                }} className="text-xs text-red-500 hover:text-red-300">Ignorar</button>
+                                <button onClick={async () => {
+                                    toast.dismiss(t.id);
+                                    const senderId = newNotification.data?.sender_id;
+                                    if (!senderId) return;
+                                    const { data: activeSession, error: activeErr } = await workoutService.getActiveSession(user.id);
+                                    let resolvedSession = activeSession;
+                                    if (!resolvedSession) {
+                                        const newSess = await workoutService.startSession(user.id, undefined, true, 'conjunto', senderId);
+                                        if (newSess?.data) resolvedSession = newSess.data;
+                                    }
+                                    await notificationService.updateInvitationStatus(newNotification, 'accepted');
+                                    await supabase.from('workout_sessions').update({ is_multiplayer: true, multiplayer_mode: 'conjunto', partner_id: senderId }).eq('id', resolvedSession.id);
+                                    await supabase.from('notifications').insert({
+                                        user_id: senderId,
+                                        type: 'coop_join_accepted',
+                                        title: 'SOLICITUD ACEPTADA',
+                                        message: `¡${user.user_metadata.username || 'Tu compañero'} aceptó tu solicitud`,
+                                        data: { partner_id: user.id, mode: 'conjunto', chat_id: resolvedSession.id, session_id: resolvedSession.id }
+                                    });
+                                    navigate('/workout', { state: { isMultiplayer: true, multiplayerMode: 'conjunto', partnerId: senderId, chatId: resolvedSession.id, partnerSessionId: resolvedSession.id, isInviter: true } });
+                                }} className="text-xs text-green-500 hover:text-green-300">Aceptar</button>
+                            </div>
+                        </div>
+                    ), {duration: 15000});
                 } else if (newNotification.type === 'coop_join_accepted') {
                     toast.success(newNotification.message || "Solicitud aceptada. Entrando al gimnasio...");
                     navigate('/workout', { 
