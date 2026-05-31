@@ -392,8 +392,8 @@ export const WorkoutSession = () => {
             const pAvatar = partnerAvatar || '';
 
             const list = [
-                { id: user.id, username: myName, avatarUrl: myAvatar },
-                { id: partnerId, username: pName, avatarUrl: pAvatar }
+                { id: user.id, username: myName, avatarUrl: myAvatar, isOnline: true },
+                { id: partnerId, username: pName, avatarUrl: pAvatar, isOnline: true }
             ];
 
             const ordered = isInviter 
@@ -2444,7 +2444,7 @@ export const WorkoutSession = () => {
         value: any
     ) => {
         const pObj = participantsRef.current.find(p => p.id === targetUserId);
-        const isAbandoned = isMultiplayer && pObj && !pObj.isOnline && targetUserId !== user?.id;
+        const isAbandoned = isMultiplayer && pObj && pObj.isOnline === false && targetUserId !== user?.id;
         if (isAbandoned) return;
 
         setActiveExercises(prev => {
@@ -2545,7 +2545,7 @@ export const WorkoutSession = () => {
 
     const togglePlayerSetComplete = (exerciseIndex: number, setIndex: number, targetUserId: string) => {
         const pObj = participantsRef.current.find(p => p.id === targetUserId);
-        const isAbandoned = isMultiplayer && pObj && !pObj.isOnline && targetUserId !== user?.id;
+        const isAbandoned = isMultiplayer && pObj && pObj.isOnline === false && targetUserId !== user?.id;
         if (isAbandoned) return;
 
         const ex = activeExercises[exerciseIndex];
@@ -2890,7 +2890,7 @@ export const WorkoutSession = () => {
 
         if (isMultiplayer && participantsRef.current.length > 0) {
             participantsRef.current.forEach(p => {
-                const isAbandoned = !p.isOnline && p.id !== user?.id;
+                const isAbandoned = p.isOnline === false && p.id !== user?.id;
                 if (!isAbandoned) {
                     prevPWeights[p.id] = originalWeights[p.id] !== undefined ? originalWeights[p.id] : 0;
                     prevPReps[p.id] = originalReps[p.id] !== undefined ? originalReps[p.id] : 0;
@@ -3732,7 +3732,7 @@ export const WorkoutSession = () => {
                                                                     const isHost = p.id === (isInviter ? user?.id : partnerId);
                                                                     const isFirstGuest = p.id === firstGuestId;
 
-                                                                    const isAbandoned = isMultiplayer && !p.isOnline && p.id !== user?.id;
+                                                                    const isAbandoned = isMultiplayer && p.isOnline === false && p.id !== user?.id;
 
                                                                     const rowWeight = isAbandoned ? 0 : safeNum(set.playerWeights?.[p.id] ?? (isHost ? set.weight : (isFirstGuest ? (set.p2_weight || 0) : 0)), 0);
                                                                     const rowReps = isAbandoned ? 0 : safeNum(set.playerReps?.[p.id] ?? (isHost ? set.reps : (isFirstGuest ? (set.p2_reps || 0) : 0)), 0);
