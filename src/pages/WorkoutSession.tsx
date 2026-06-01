@@ -21,6 +21,7 @@ import { Loader2, ArrowLeft, Image as ImageIcon, MapPin, Search, Plus, Save, Act
 import { getCurrentPosition } from '../utils/geolocationUtils';
 import type { GymPlace, Database } from '../types/database';
 import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
+import { ForceExitModal } from '../components/common/ForceExitModal';
 import { Link, useNavigate, useParams, useSearchParams, useLocation } from 'react-router-dom';
 
 interface WorkoutSet {
@@ -886,7 +887,7 @@ export const WorkoutSession = () => {
                     } else if (!isInviterRef.current && !sessionIdRef.current) {
                         // Guest auto-starts their own session to activate their timer and enable logging
                         console.log('🚀 Guest auto-starting session on partner session ID sync...');
-                        startNewSession().then(() => {
+                        startNewSession(undefined, partnerSessionId, true, multiplayerMode || 'conjunto', partnerId || sender).then(() => {
                             if (partnerStartTime) {
                                 setStartTime(new Date(partnerStartTime));
                             }
@@ -3042,54 +3043,32 @@ export const WorkoutSession = () => {
     const handleCancelSession = async () => {
         if (!sessionId) {
             isLeavingPageRef.current = true;
-            navigate('/');
-            return;
-        }
-        if (activeExercises.length === 0) {
-            // If the workout hasn't started yet (no exercises), just exit immediately without asking complex coop questions!
-            isLeavingPageRef.current = true;
-            localStorage.removeItem(`workout_draft_${sessionId}`);
-            localStorage.removeItem(STORAGE_KEY);
-            localStorage.removeItem('ginx_coop_state');
-            setActiveExercises([]);
-            setIsFinished(true); // Disable history guard before navigating
-            const oldSessionId = sessionId;
-            setSessionId(null);  // Disable history guard before navigating
-            setLoading(true);
-            await workoutService.deleteSession(oldSessionId);
-            setLoading(false);
-            navigate('/');
+            navigate('/inicio');
             return;
         }
 
-        const msg = isMultiplayer
-            ? "¿Seguro que quieres cancelar este entrenamiento cooperativo? Se perderá todo el progreso registrado."
-            : "¿Seguro que quieres cancelar? Se perderá todo el progreso de esta sesión.";
-
-        if (window.confirm(msg)) {
-            isLeavingPageRef.current = true;
-            // Host broadcasts session_terminated to guests so they are safely clean-booted
-            if (isMultiplayer && isInviter && channelRef.current && user) {
-                console.log('📢 Host broadcasting session_terminated to guests during cancellation...');
-                channelRef.current.send({
-                    type: 'broadcast',
-                    event: 'session_terminated',
-                    payload: { sender: user.id }
-                }).catch(e => console.error('Error broadcasting session_terminated:', e));
-            }
-
-            localStorage.removeItem(`workout_draft_${sessionId}`);
-            localStorage.removeItem(STORAGE_KEY);
-            localStorage.removeItem('ginx_coop_state');
-            setActiveExercises([]);
-            setIsFinished(true); // Disable history guard before navigating
-            const oldSessionId = sessionId;
-            setSessionId(null);  // Disable history guard before navigating
-            setLoading(true);
-            await workoutService.deleteSession(oldSessionId);
-            setLoading(false);
-            navigate('/');
+        isLeavingPageRef.current = true;
+        // Host broadcasts session_terminated to guests so they are safely clean-booted
+        if (isMultiplayer && isInviter && channelRef.current && user) {
+            console.log('📢 Host broadcasting session_terminated to guests during cancellation...');
+            channelRef.current.send({
+                type: 'broadcast',
+                event: 'session_terminated',
+                payload: { sender: user.id }
+            }).catch(e => console.error('Error broadcasting session_terminated:', e));
         }
+
+        localStorage.removeItem(`workout_draft_${sessionId}`);
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem('ginx_coop_state');
+        setActiveExercises([]);
+        setIsFinished(true); // Disable history guard before navigating
+        const oldSessionId = sessionId;
+        setSessionId(null);  // Disable history guard before navigating
+        setLoading(true);
+        await workoutService.deleteSession(oldSessionId);
+        setLoading(false);
+        navigate('/inicio');
     };
 
     // NEW: Handle Restart
@@ -3662,7 +3641,10 @@ export const WorkoutSession = () => {
                                         <RotateCcw size={16} /> Reiniciar
                                     </button>
                                     <button
-                                        onClick={() => setShowCancelModal(true)}
+                                        onClick={() => {
+                                            setShowExitMenu(false);
+                                            setShowForceExitModal(true);
+                                        }}
                                         className="flex items-center gap-3 w-full p-3 text-left text-sm font-bold text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
                                     >
                                         <X size={16} /> Cancelar / Salir
@@ -4386,6 +4368,18 @@ export const WorkoutSession = () => {
 
 
             {/* --- MODALS --- */}
+
+            {/* Force Exit Modal */}
+            <ForceExitModal
+                isOpen={showForceExitModal}
+                onClose={() => setShowForceExitModal(false)}
+                onFinalize={handleFinishRequest}
+                onTemporaryExit={() => {
+                    isLeavingPageRef.current = true;
+                    navigate('/inicio');
+                }}
+                onCancelSession={handleCancelSession}
+            />
 
             {/* 1. Save Routine Modal */}
             {

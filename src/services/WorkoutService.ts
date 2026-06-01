@@ -334,7 +334,7 @@ class WorkoutService {
                 // 🛡️ MULTIPLAYER GUARD: Never auto-close a multiplayer session that has
                 // an active partner link. Screen locks cause temporary disconnections
                 // but the session in the DB must remain intact for both participants.
-                if (session.is_multiplayer && session.partner_session_id) {
+                if (session.is_multiplayer || session.partner_session_id) {
                     console.log(`🛡️ [Cleanup] Sesión multijugador activa preservada: ${session.id}`);
                     continue;
                 }

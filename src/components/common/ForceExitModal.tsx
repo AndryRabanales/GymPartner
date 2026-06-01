@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Check, AlertTriangle } from 'lucide-react';
+import { X, Check, AlertTriangle, Trash2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
 interface ForceExitModalProps {
@@ -7,9 +7,16 @@ interface ForceExitModalProps {
   onClose: () => void;
   onFinalize: () => void;
   onTemporaryExit: () => void;
+  onCancelSession?: () => void;
 }
 
-export const ForceExitModal: React.FC<ForceExitModalProps> = ({ isOpen, onClose, onFinalize, onTemporaryExit }) => {
+export const ForceExitModal: React.FC<ForceExitModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  onFinalize, 
+  onTemporaryExit,
+  onCancelSession 
+}) => {
   if (!isOpen) return null;
 
   const navigate = useNavigate();
@@ -25,6 +32,13 @@ export const ForceExitModal: React.FC<ForceExitModalProps> = ({ isOpen, onClose,
     navigate('/inicio');
   };
 
+  const handleCancelSession = () => {
+    if (onCancelSession) {
+      onCancelSession();
+    }
+    onClose();
+  };
+
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={onClose} />
@@ -38,7 +52,7 @@ export const ForceExitModal: React.FC<ForceExitModalProps> = ({ isOpen, onClose,
             ¿Salir del entrenamiento?
           </h2>
           <p className="text-sm text-neutral-400 mt-1 text-center max-w-xs">
-            Puedes finalizar, salir temporalmente o cancelar la acción.
+            Selecciona una opción para finalizar, pausar temporalmente o eliminar el entrenamiento actual.
           </p>
         </div>
         {/* Buttons */}
@@ -55,6 +69,14 @@ export const ForceExitModal: React.FC<ForceExitModalProps> = ({ isOpen, onClose,
           >
             <X size={18} /> Salir Temporalmente
           </button>
+          {onCancelSession && (
+            <button
+              onClick={handleCancelSession}
+              className="w-full flex items-center justify-center gap-2 py-3 bg-red-950/40 border border-red-500/20 text-red-500 hover:bg-red-950/60 font-black uppercase tracking-wider rounded-xl transition-all"
+            >
+              <Trash2 size={18} /> Eliminar Entrenamiento
+            </button>
+          )}
           <button
             onClick={onClose}
             className="w-full flex items-center justify-center gap-2 py-3 text-neutral-400 hover:text-white font-black uppercase tracking-wider rounded-xl transition-colors"
