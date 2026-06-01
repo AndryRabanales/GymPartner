@@ -3778,19 +3778,25 @@ export const WorkoutSession = () => {
                                                                     const isHost = p.id === (isInviter ? user?.id : partnerId);
                                                                     const isFirstGuest = p.id === firstGuestId;
 
-                                                                    const isAbandoned = isMultiplayer && p.isOnline === false && p.id !== user?.id;
+                                                                    // NOTE: A participant going offline (isOnline: false) due to screen lock
+                                                                    // is a TEMPORARY connection drop — it must NEVER block data entry for other
+                                                                    // participants. Only an explicit playerLocked flag or read-only mode can do that.
+                                                                    // isAbandoned is intentionally NOT used to disable inputs.
 
-                                                                    const rowWeight = isAbandoned ? 0 : safeNum(set.playerWeights?.[p.id] ?? (isHost ? set.weight : (isFirstGuest ? (set.p2_weight || 0) : 0)), 0);
-                                                                    const rowReps = isAbandoned ? 0 : safeNum(set.playerReps?.[p.id] ?? (isHost ? set.reps : (isFirstGuest ? (set.p2_reps || 0) : 0)), 0);
-                                                                    const rowTime = isAbandoned ? 0 : safeNum(set.playerTimes?.[p.id] ?? (isHost ? set.time : (isFirstGuest ? (set.p2_time || 0) : 0)), 0);
-                                                                    const rowDistance = isAbandoned ? 0 : safeNum(set.playerDistances?.[p.id] ?? (isHost ? set.distance : (isFirstGuest ? (set.p2_distance || 0) : 0)), 0);
-                                                                    const rowRpe = isAbandoned ? 0 : safeNum(set.playerRpes?.[p.id] ?? (isHost ? set.rpe : (isFirstGuest ? (set.p2_rpe || 0) : 0)), 0);
-                                                                    const rowCompleted = isAbandoned ? false : (set.playerCompleted?.[p.id] ?? (isHost ? set.completed : (isFirstGuest ? (set.p2_completed || false) : false)));
-                                                                    const rowLocked = isAbandoned ? true : (set.playerLocked?.[p.id] ?? (isHost ? set.locked : (isFirstGuest ? (set.p2_locked || false) : false)));
-                                                                    const rowCompletedAt = isAbandoned ? undefined : (set.playerCompletedAt?.[p.id] ?? (isHost ? set.completedAt : (isFirstGuest ? set.p2_completedAt : undefined)));
+                                                                    const rowWeight = safeNum(set.playerWeights?.[p.id] ?? (isHost ? set.weight : (isFirstGuest ? (set.p2_weight || 0) : 0)), 0);
+                                                                    const rowReps = safeNum(set.playerReps?.[p.id] ?? (isHost ? set.reps : (isFirstGuest ? (set.p2_reps || 0) : 0)), 0);
+                                                                    const rowTime = safeNum(set.playerTimes?.[p.id] ?? (isHost ? set.time : (isFirstGuest ? (set.p2_time || 0) : 0)), 0);
+                                                                    const rowDistance = safeNum(set.playerDistances?.[p.id] ?? (isHost ? set.distance : (isFirstGuest ? (set.p2_distance || 0) : 0)), 0);
+                                                                    const rowRpe = safeNum(set.playerRpes?.[p.id] ?? (isHost ? set.rpe : (isFirstGuest ? (set.p2_rpe || 0) : 0)), 0);
+                                                                    const rowCompleted = set.playerCompleted?.[p.id] ?? (isHost ? set.completed : (isFirstGuest ? (set.p2_completed || false) : false));
+                                                                    const rowLocked = set.playerLocked?.[p.id] ?? (isHost ? set.locked : (isFirstGuest ? (set.p2_locked || false) : false));
+                                                                    const rowCompletedAt = set.playerCompletedAt?.[p.id] ?? (isHost ? set.completedAt : (isFirstGuest ? set.p2_completedAt : undefined));
                                                                     
-                                                                    const inputDisabled = isAbandoned || rowLocked || rowReadOnly;
-                                                                    const lockToggleDisabled = isAbandoned || rowReadOnly;
+                                                                    // Only disable inputs if: the set row is explicitly locked (playerLocked) or
+                                                                    // we are in read-only viewing mode (viewing partner's exercises tab).
+                                                                    // A partner being temporarily offline (screen lock) must NOT disable any input.
+                                                                    const inputDisabled = rowLocked || rowReadOnly;
+                                                                    const lockToggleDisabled = rowReadOnly;
 
                                                                     return (
                                                                         <div key={p.id} className={`flex items-center gap-1 w-full flex-nowrap ${pIdx > 0 ? 'mt-1 pt-2 border-t border-white/5' : ''}`}>

@@ -424,6 +424,8 @@ const notificationSeen = useRef<Set<string>>(new Set());
                     notificationSeen.current.add(newNotification.id);
                 }
                 if (newNotification.type === 'system' && newNotification.title?.includes('EN VIVO')) {
+                    // Don't show "EN VIVO" noise while the user is already inside their own workout
+                    if (location.pathname.includes('/workout')) return;
                     toast.custom((t) => (
     <div className="max-w-xs w-full bg-neutral-950/80 backdrop-blur-sm border border-white/10 rounded-xl p-3 flex items-start space-x-3 animate-enter">
         <div className="flex-shrink-0 pt-0.5">
@@ -437,6 +439,10 @@ const notificationSeen = useRef<Set<string>>(new Set());
     </div>
 ), {duration: 6000});
                 } else if (newNotification.type === 'system' && newNotification.title?.includes('FINALIZADO')) {
+                    // Don't show "FINALIZADO" toast while user is inside an active workout session.
+                    // This prevents a false "partner finished" notification caused by screen locks
+                    // triggering cleanOrphanSessions or other cleanup logic on reconnect.
+                    if (location.pathname.includes('/workout')) return;
                     toast.custom((t) => (
                         <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-neutral-950/95 backdrop-blur-2xl border border-green-500/40 shadow-[0_20px_50px_rgba(34,197,94,0.2)] rounded-3xl pointer-events-auto flex p-4`}>
                             <div className="flex-1 w-0">

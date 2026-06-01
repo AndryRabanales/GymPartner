@@ -315,10 +315,11 @@ class WorkoutService {
         try {
             console.log('🧹 [Cleanup] Escaneando sesiones huérfanas para el usuario:', userId);
 
-            // Fetch ALL unfinished sessions regardless of age
+            // Fetch ALL unfinished sessions, including multiplayer flags to avoid
+            // auto-closing active co-op sessions (e.g. when partner locks their phone).
             const { data: activeSessions } = await supabase
                 .from('workout_sessions')
-                .select('id, started_at')
+                .select('id, started_at, is_multiplayer, partner_session_id')
                 .eq('user_id', userId)
                 .is('finished_at', null);
 
@@ -330,6 +331,14 @@ class WorkoutService {
             );
 
             for (const session of activeSessions) {
+                // 🛡️ MULTIPLAYER GUARD: Never auto-close a multiplayer session that has
+                // an active partner link. Screen locks cause temporary disconnections
+                // but the session in the DB must remain intact for both participants.
+                if (session.is_multiplayer && session.partner_session_id) {
+                    console.log(`🛡️ [Cleanup] Sesión multijugador activa preservada: ${session.id}`);
+                    continue;
+                }
+
                 const { count } = await supabase
                     .from('workout_logs')
                     .select('*', { count: 'exact', head: true })
@@ -348,8 +357,8 @@ class WorkoutService {
                     } else {
                         console.log(`ℹ️ [Cleanup] Sesión vacía reciente (${minutesSinceStart.toFixed(0)} min) — se preserva: ${session.id}`);
                     }
-                } else if (minutesSinceStart > 240) { // 4 hours matching getActiveSession
-                    // Session with logs but idle for more than 4 hours → auto-close
+                } else if (minutesSinceStart > 480) { // 8 hours (was 4h) — gives generous buffer for screen-lock recovery
+                    // Session with logs but idle for more than 8 hours → auto-close as truly abandoned
                     console.log(`🧹 [Cleanup] Cerrando sesión huérfana antigua con datos (${minutesSinceStart.toFixed(0)} min): ${session.id}`);
                     await this.finishSession(session.id, 'Cierre automático por inactividad');
                     closedIds.push(session.id);
@@ -362,6 +371,7 @@ class WorkoutService {
         }
         return closedIds;
     }
+
 
     // Log a single set (The "Hit")
     async logSet(setData: WorkoutSetData): Promise<{ data?: any; error?: any }> {
