@@ -196,10 +196,12 @@ export const ArsenalGrid = ({
                                             configOverride={effectiveConfig}
                                             variantLabel={variantInfo?.label}
                                             variantTotal={variantInfo?.total}
-                                            onVariantCycle={variantInfo && onVariantCycle ? () => {
+                                            onVariantCycle={variantInfo && onVariantCycle ? (direction) => {
                                                 const variants = variantInfo.variants;
                                                 const currentIdx = variants.findIndex((v: any) => v.seedName === item.name);
-                                                const nextIdx = (currentIdx + 1) % variants.length;
+                                                let nextIdx = direction === 'next' ? currentIdx + 1 : currentIdx - 1;
+                                                if (nextIdx < 0) nextIdx = variants.length - 1;
+                                                if (nextIdx >= variants.length) nextIdx = 0;
                                                 const next = variants[nextIdx];
                                                 const newId = `virtual-${next.seedName}`;
                                                 onVariantCycle(item.id, newId, variantInfo.baseId, next);

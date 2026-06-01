@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, ChevronRight } from 'lucide-react';
+import { Check, ChevronRight, ChevronLeft } from 'lucide-react';
 import type { Equipment, CustomSettings } from '../../services/GymEquipmentService';
 import { EQUIPMENT_CATEGORIES, COMMON_EQUIPMENT_SEEDS } from '../../services/GymEquipmentService';
 
@@ -14,8 +14,8 @@ export interface ArsenalCardProps {
     variantLabel?: string;
     /** How many variants exist for this exercise */
     variantTotal?: number;
-    /** Cycle to the next variant (stops propagation) */
-    onVariantCycle?: () => void;
+    /** Cycle to the next or previous variant (stops propagation) */
+    onVariantCycle?: (direction: 'next' | 'prev') => void;
 }
 
 export const ArsenalCard = ({ item, isSelected, userSettings, onEdit, configOverride, variantLabel, variantTotal, onVariantCycle }: ArsenalCardProps) => {
@@ -104,7 +104,24 @@ export const ArsenalCard = ({ item, isSelected, userSettings, onEdit, configOver
 
             <div className="flex flex-col h-full relative group aspect-[3/4] min-h-[130px] p-0.5 overflow-hidden bg-neutral-900 border border-white/5 rounded-lg">
                 {/* Icon or Image - Centered, maximized to fill space */}
-                <div className="flex-1 w-full relative overflow-hidden flex items-center justify-center pt-1 pb-1 z-10">
+                <div className="flex-1 w-full relative overflow-hidden flex items-center justify-center pt-1 pb-1 z-10 group/img">
+                    {/* Left/Right Arrows for variants */}
+                    {variantTotal && variantTotal > 1 && onVariantCycle && (
+                        <>
+                            <button
+                                onClick={e => { e.stopPropagation(); onVariantCycle('prev'); }}
+                                className="absolute left-0 z-30 p-1.5 rounded-r-lg bg-black/60 text-white hover:text-gym-primary hover:bg-black/90 transition-all backdrop-blur-md opacity-0 group-hover/img:opacity-100"
+                            >
+                                <ChevronLeft size={16} strokeWidth={4} />
+                            </button>
+                            <button
+                                onClick={e => { e.stopPropagation(); onVariantCycle('next'); }}
+                                className="absolute right-0 z-30 p-1.5 rounded-l-lg bg-black/60 text-white hover:text-gym-primary hover:bg-black/90 transition-all backdrop-blur-md opacity-0 group-hover/img:opacity-100"
+                            >
+                                <ChevronRight size={16} strokeWidth={4} />
+                            </button>
+                        </>
+                    )}
                     {(() => {
                         const normalize = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
                         const normName = normalize(item.name || '');
@@ -132,16 +149,13 @@ export const ArsenalCard = ({ item, isSelected, userSettings, onEdit, configOver
 
                 {/* Title - Anchored to bottom, with horizontal padding */}
                 <div className="text-center w-full px-1.5 leading-none z-20 pb-1 min-h-0 flex-shrink-0">
-                    {/* Variant badge — only shown when exercise has multiple variants */}
+                    {/* Variant label — only shown when exercise has multiple variants */}
                     {variantLabel && variantTotal && variantTotal > 1 && (
-                        <button
-                            onClick={e => { e.stopPropagation(); onVariantCycle?.(); }}
-                            className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[7px] font-black uppercase tracking-widest mb-0.5 transition-all
-                                ${isSelected ? 'bg-black/20 text-black' : 'bg-neutral-800 text-gym-primary hover:bg-gym-primary/20'}`}
+                        <span className={`inline-block px-1.5 py-0.5 rounded-full text-[7px] font-black uppercase tracking-widest mb-0.5
+                            ${isSelected ? 'bg-black/20 text-black' : 'bg-neutral-800 text-gym-primary'}`}
                         >
                             {variantLabel}
-                            <ChevronRight size={7} strokeWidth={3} />
-                        </button>
+                        </span>
                     )}
                     <h4 className={`text-[9px] font-black italic uppercase tracking-wider line-clamp-3 text-wrap leading-tight ${isSelected ? 'text-black' : 'text-neutral-200'} drop-shadow-sm`}>
                         {item.name}
