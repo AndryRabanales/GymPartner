@@ -1498,6 +1498,9 @@ export const WorkoutSession = () => {
     // Timer State (RESTORED)
     const [elapsedTime, setElapsedTime] = useState("00:00");
     const [ambiguousGyms, setAmbiguousGyms] = useState<any[]>([]);
+    // 'multiple_defaults' → user has several predeterminados nearby (R7)
+    // 'no_default'        → no predeterminado nearby; selection will save as one (R4)
+    const [ambiguousReason, setAmbiguousReason] = useState<'multiple_defaults' | 'no_default' | null>(null);
     const [isFinished, setIsFinished] = useState(false);
 
     // Timer Effect (RESTORED)
@@ -1632,56 +1635,97 @@ export const WorkoutSession = () => {
             const mergedInventory = [...items, ...personalItems.filter(i => !items.some(existing => existing.id === i.id))];
             setArsenal(mergedInventory);
 
-            // 3. PHASE 3: High-Precision Background GPS Resolution
-            // We only prompt or auto-resolve if no target gym is set via route and no default/home gym exists in passport!
-            (async () => {
-                try {
-                    // Always query GPS position to keep tracking active in the background as requested
-                    const gpsPosition = await getCurrentPosition({ enableHighAccuracy: true, timeout: 3500 })
-                        .catch(async () => {
-                            return await getCurrentPosition({ enableHighAccuracy: false, timeout: 2000 });
+            // 3. PHASE 3: GPS-based gym detection using passport gyms only
+            // Skipped when navigating to a specific gym via route parameter.
+            if (!targetGymId) {
+                (async () => {
+                    try {
+                        const gpsPosition = await getCurrentPosition({ enableHighAccuracy: true, timeout: 5000 })
+                            .catch(async () => getCurrentPosition({ enableHighAccuracy: false, timeout: 3000 }));
+
+                        // Helper: normalize a passport gym to the shape ambiguousGyms picker expects
+                        const toPickerShape = (g: typeof gyms[0], distM: number, saveAsDefault?: boolean) => ({
+                            id: g.gym_id,
+                            name: g.gym_name,
+                            place_id: g.google_place_id,
+                            lat: g.lat,
+                            lng: g.lng,
+                            address: '',
+                            dist: distM / 1000, // km (JSX shows dist*1000 → meters)
+                            saveAsDefault: saveAsDefault ?? false,
                         });
 
-                    if (gpsPosition && !resolvedInitialGymId) {
-                        const userLat = gpsPosition.lat;
-                        const userLng = gpsPosition.lng;
+                        if (gpsPosition) {
+                            const { lat: uLat, lng: uLng } = gpsPosition;
+                            // 150m detection radius — generous for indoor GPS drift
+                            const DETECT_M = 150;
 
-                        // Sort all gyms by distance using shared haversineDistance (meters)
-                        const gymsWithDistance = allGyms
-                            .filter(g => g.lat && g.lng)
-                            .map(g => ({
-                                ...g,
-                                dist: haversineDistance(userLat, userLng, g.lat, g.lng) / 1000, // km for display
-                            }))
-                            .filter(g => g.dist <= 0.5) // 500m radius
-                            .sort((a, b) => a.dist - b.dist);
+                            const nearby = gyms
+                                .filter(g => g.lat && g.lng)
+                                .map(g => ({ g, distM: haversineDistance(uLat, uLng, g.lat!, g.lng!) }))
+                                .filter(({ distM }) => distM <= DETECT_M)
+                                .sort((a, b) => a.distM - b.distM);
 
-                        if (gymsWithDistance.length > 0) {
-                            // Always present nearby gyms to let the user select where they want to train
-                            setAmbiguousGyms(gymsWithDistance);
+                            const nearbyDefaults = nearby.filter(({ g }) => g.is_home_base);
+                            const nearbyOthers   = nearby.filter(({ g }) => !g.is_home_base);
+
+                            if (nearbyDefaults.length === 1) {
+                                // R3, R5: exactly one predeterminado nearby → auto-select silently
+                                const { g, distM } = nearbyDefaults[0];
+                                if (g.gym_id !== resolvedInitialGymId) {
+                                    setDetectedGymName(g.gym_name);
+                                    setResolvedGymId(g.gym_id);
+                                    const [newItems, newRoutines] = await Promise.all([
+                                        equipmentService.getInventory(g.gym_id),
+                                        workoutService.getUserRoutines(userId, g.gym_id),
+                                    ]);
+                                    setRoutines(newRoutines);
+                                    setArsenal(prev => {
+                                        const merged = [...newItems, ...prev];
+                                        return Array.from(new Map(merged.map(i => [i.id, i])).values());
+                                    });
+                                }
+                                console.log(`✅ Predeterminado detectado: ${g.gym_name} (${Math.round(distM)}m)`);
+
+                            } else if (nearbyDefaults.length > 1) {
+                                // R7: multiple predeterminados nearby → picker (does NOT auto-save)
+                                setAmbiguousReason('multiple_defaults');
+                                setAmbiguousGyms(nearbyDefaults.map(({ g, distM }) => toPickerShape(g, distM, false)));
+
+                            } else if (nearbyOthers.length >= 1) {
+                                // R4: no default nearby but other passport gyms are → picker, selection saves as default
+                                setAmbiguousReason('no_default');
+                                setAmbiguousGyms(nearbyOthers.map(({ g, distM }) => toPickerShape(g, distM, true)));
+
+                            } else {
+                                // No passport gym nearby at all
+                                if (!resolvedInitialGymId) {
+                                    setDetectedGymName('Entrenamiento Libre');
+                                    setResolvedGymId(null);
+                                }
+                                // If there IS a pre-selected home gym (from phase 1), keep it —
+                                // user may be away from it but chose it explicitly before
+                            }
                         } else {
-                            // No gyms nearby! Train Libre normally
-                            console.log("📍 No gyms nearby. Training Libre.");
-                            setDetectedGymName("Entrenamiento Libre");
+                            // GPS unavailable
+                            if (!resolvedInitialGymId) {
+                                setDetectedGymName('Entrenamiento Libre');
+                                setResolvedGymId(null);
+                            }
+                        }
+                    } catch (err) {
+                        console.warn('Phase 3 GPS error:', err);
+                        if (!resolvedInitialGymId) {
+                            setDetectedGymName('Entrenamiento Libre');
                             setResolvedGymId(null);
                         }
-                    } else if (!gpsPosition && !resolvedInitialGymId) {
-                        console.log("📍 GPS failed or disabled. Training Libre.");
-                        setDetectedGymName("Entrenamiento Libre");
-                        setResolvedGymId(null);
                     }
-                } catch (err) {
-                    console.warn("Precision GPS failed:", err);
-                    if (!resolvedInitialGymId) {
-                        setDetectedGymName("Entrenamiento Libre");
-                        setResolvedGymId(null);
-                    }
-                }
-            })();
+                })();
+            }
 
             const handleSelectAmbiguousGym = async (gym: any) => {
                 try {
-                    // Ensure it's in passport
+                    // Ensure it's in passport (safety guard)
                     if (!gyms.some(g => g.gym_id === gym.id)) {
                         await userService.addGymToPassport(user!.id, {
                             place_id: gym.place_id,
@@ -1691,9 +1735,17 @@ export const WorkoutSession = () => {
                         });
                     }
 
+                    // R4: if this picker appeared because there's no default nearby,
+                    // save the selected gym as the new predeterminado
+                    if (gym.saveAsDefault) {
+                        await userService.toggleHomeBase(user!.id, gym.id, true);
+                        console.log(`⭐ Guardado como predeterminado: ${gym.name}`);
+                    }
+
                     setDetectedGymName(gym.name || '');
                     setResolvedGymId(gym.id);
                     setAmbiguousGyms([]);
+                    setAmbiguousReason(null);
 
                     // Hot-swap inventory and routines
                     const [newItems, newRoutines] = await Promise.all([
@@ -1704,8 +1756,7 @@ export const WorkoutSession = () => {
                     setRoutines(newRoutines);
                     setArsenal(prev => {
                         const combined = [...newItems, ...prev];
-                        const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
-                        return unique;
+                        return Array.from(new Map(combined.map(item => [item.id, item])).values());
                     });
                 } catch (err) {
                     console.error("Error setting ambiguous gym", err);
@@ -3776,10 +3827,20 @@ export const WorkoutSession = () => {
                             <div className="w-16 h-16 bg-gym-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-gym-primary/20">
                                 <MapIcon className="text-gym-primary w-8 h-8" />
                             </div>
-                            <h2 className="text-2xl font-black text-white italic uppercase tracking-tighter mb-2">Selecciona tu Base</h2>
-                            <p className="text-neutral-400 text-sm">Hemos detectado gimnasios cerca de ti. Selecciona en cuál estás entrenando.</p>
+                            {ambiguousReason === 'multiple_defaults' ? (
+                                <>
+                                    <h2 className="text-2xl font-black text-white italic uppercase tracking-tighter mb-2">¿En cuál entrenas?</h2>
+                                    <p className="text-neutral-400 text-sm">Tienes varios gyms predeterminados cerca. Elige uno para esta sesión.</p>
+                                    <p className="text-neutral-600 text-xs mt-1">Para no volver a ver esto, deja un único predeterminado desde <span className="text-yellow-500">Mis Gyms</span>.</p>
+                                </>
+                            ) : (
+                                <>
+                                    <h2 className="text-2xl font-black text-white italic uppercase tracking-tighter mb-2">Selecciona tu Base</h2>
+                                    <p className="text-neutral-400 text-sm">Hemos detectado gymnasios de tu pasaporte cerca. El que elijas se guardará como predeterminado.</p>
+                                </>
+                            )}
                         </div>
-                        
+
                         <div className="space-y-3 max-h-[30vh] overflow-y-auto pr-1 custom-scrollbar">
                             {ambiguousGyms.map(gym => (
                                 <button
@@ -3789,7 +3850,7 @@ export const WorkoutSession = () => {
                                 >
                                     <div>
                                         <div className="text-white font-bold text-sm group-hover:text-gym-primary transition-colors">{gym.name}</div>
-                                        <div className="text-neutral-500 text-xs">A {Math.round(gym.dist * 1000)}m de ti</div>
+                                        <div className="text-neutral-500 text-xs">A {Math.round(gym.dist * 1000)}m</div>
                                     </div>
                                     <Check className="text-gym-primary opacity-0 group-hover:opacity-100 transition-opacity" size={20} />
                                 </button>
@@ -3799,6 +3860,7 @@ export const WorkoutSession = () => {
                         <button
                             onClick={() => {
                                 setAmbiguousGyms([]);
+                                setAmbiguousReason(null);
                                 setResolvedGymId(null);
                                 setDetectedGymName("Entrenamiento Libre");
                             }}

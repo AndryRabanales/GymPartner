@@ -750,31 +750,36 @@ class UserService {
         }
     }
 
-    // Toggle a gym as Home Base (Sede) - Multiple allowed
+    // Set or remove a gym as the user's single predeterminado
     async toggleHomeBase(userId: string, gymId: string, isHomeBase: boolean): Promise<{ success: boolean; error?: string }> {
         try {
-            // Update the target gym to true/false
-            const { error: updateError } = await supabase
-                .from('user_gyms')
-                .update({ is_home_base: isHomeBase })
-                .match({ user_id: userId, gym_id: gymId });
-
-            if (updateError) throw updateError;
-            
-            // If setting true, optionally update profiles.home_gym_id to be the "last used" primary for legacy
             if (isHomeBase) {
+                // Enforce single predeterminado: clear every other gym first
                 await supabase
-                    .from('profiles')
-                    .update({ home_gym_id: gymId })
-                    .eq('id', userId);
+                    .from('user_gyms')
+                    .update({ is_home_base: false })
+                    .eq('user_id', userId)
+                    .neq('gym_id', gymId);
+
+                // Set the target
+                const { error } = await supabase
+                    .from('user_gyms')
+                    .update({ is_home_base: true })
+                    .match({ user_id: userId, gym_id: gymId });
+                if (error) throw error;
+
+                // Sync profiles.home_gym_id
+                await supabase.from('profiles').update({ home_gym_id: gymId }).eq('id', userId);
             } else {
-                // If setting false, check if it was the profile's home_gym_id and clear it if so
+                const { error } = await supabase
+                    .from('user_gyms')
+                    .update({ is_home_base: false })
+                    .match({ user_id: userId, gym_id: gymId });
+                if (error) throw error;
+
                 const { data: profile } = await supabase.from('profiles').select('home_gym_id').eq('id', userId).single();
                 if (profile?.home_gym_id === gymId) {
-                    await supabase
-                        .from('profiles')
-                        .update({ home_gym_id: null })
-                        .eq('id', userId);
+                    await supabase.from('profiles').update({ home_gym_id: null }).eq('id', userId);
                 }
             }
 

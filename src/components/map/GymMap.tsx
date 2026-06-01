@@ -230,16 +230,15 @@ export const GymMap = () => {
 
         const distMeters = haversineDistance(userLocation.lat, userLocation.lng, selectedGym.lat, selectedGym.lng);
 
-        // Adaptive threshold: base 300m + GPS accuracy margin (capped at 500m total)
-        // This prevents blocking users when GPS drifts inside a building
-        const accuracyMargin = isAccuracyUsable(userLocation.accuracy) ? 0 : userLocation.accuracy;
-        const threshold = Math.min(500, 300 + accuracyMargin);
+        // 90m base + small GPS accuracy margin for indoor drift (max 150m total)
+        const accuracyMargin = userLocation.accuracy > 30 ? Math.min(60, userLocation.accuracy * 0.5) : 0;
+        const threshold = Math.min(150, 90 + accuracyMargin);
 
         if (distMeters > threshold) {
             const distDisplay = distMeters >= 1000
                 ? `${(distMeters / 1000).toFixed(1)}km`
                 : `${Math.round(distMeters)}m`;
-            alert(`⛔ Estás muy lejos del gimnasio (${distDisplay}). Acércate a menos de 300m.`);
+            alert(`⛔ Debes estar a ≤90m del gimnasio para desbloquearlo.\nDistancia actual: ${distDisplay}`);
             return;
         }
 
@@ -828,10 +827,10 @@ export const GymMap = () => {
                                         : !isAccuracyUsable(userLocation.accuracy)
                                         ? ` · GPS débil (±${Math.round(userLocation.accuracy)}m)`
                                         : '';
-                                    if (!selectedGym.is_unlocked && dist > 300) {
+                                    if (!selectedGym.is_unlocked && dist > 90) {
                                         return (
                                             <p className="text-red-500 text-xs text-center font-bold mt-2">
-                                                📍 A {distDisplay}{accuracyTag}
+                                                📍 A {distDisplay} · necesitas ≤90m{accuracyTag}
                                             </p>
                                         );
                                     }
