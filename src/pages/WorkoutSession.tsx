@@ -17,7 +17,7 @@ import { normalizeText, getMuscleGroup } from '../utils/inventoryUtils';
 
 // Interface NumpadTarget removed
 // BattleTimer removed
-import { Loader2, ArrowLeft, Image as ImageIcon, MapPin, Search, Plus, Save, Activity, Layers, Tag, Battery, MapIcon, Check, Settings as SettingsIcon, Swords, Trash2, X, RotateCcw, Lock, Play, Loader, MoreVertical, Pause, LockOpen, LogOut, Award } from 'lucide-react';
+import { Loader2, ArrowLeft, ChevronLeft, Image as ImageIcon, MapPin, Search, Plus, Save, Activity, Layers, Tag, Battery, MapIcon, Check, Settings as SettingsIcon, Swords, Trash2, X, RotateCcw, Lock, Play, Loader, MoreVertical, Pause, LockOpen, LogOut, Award } from 'lucide-react';
 import { getCurrentPosition } from '../utils/geolocationUtils';
 import type { GymPlace, Database } from '../types/database';
 import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
@@ -3362,6 +3362,39 @@ export const WorkoutSession = () => {
     const [isSavingFlow, setIsSavingFlow] = useState(false);
     const [isFinalizing, setIsFinalizing] = useState(false);
 
+    /** Cancel finishing: go back to the active workout from the routine modal */
+    const handleCancelFinish = () => {
+        setShowRoutineModal(false);
+        setIsFinished(false);
+        isLeavingPageRef.current = false;
+        setRoutineName('');
+    };
+
+    /**
+     * Returns true if the given exercise list (by equipmentId, in order) already exists
+     * as a saved routine for the given userId.
+     */
+    const routineAlreadyExists = async (userId: string, exercises: typeof activeExercises): Promise<boolean> => {
+        try {
+            const userRoutines = await workoutService.getUserRoutines(userId, resolvedGymId);
+            if (!userRoutines || userRoutines.length === 0) return false;
+
+            // Build a canonical fingerprint of the current session: sorted order_index → equipmentId chain
+            const currentIds = exercises.map(e => e.equipmentId).join('|');
+
+            for (const routine of userRoutines) {
+                const sortedExercises = (routine.routine_exercises || [])
+                    .slice()
+                    .sort((a: any, b: any) => (a.order_index ?? 0) - (b.order_index ?? 0));
+                const savedIds = sortedExercises.map((e: any) => e.exercise_id).join('|');
+                if (savedIds === currentIds) return true;
+            }
+            return false;
+        } catch {
+            return false; // On error, assume it doesn't exist (show the modal to be safe)
+        }
+    };
+
     // 1. Triggered by UI Button
     const handleFinishRequest = async () => {
         if (isFinalizing) return;
@@ -3376,9 +3409,21 @@ export const WorkoutSession = () => {
         if (currentRoutineName && !hasChanged) {
             console.log('✨ Routine matches original template. Skipping save modal...');
             checkLocationStep();
-        } else {
-            setShowRoutineModal(true);
+            return;
         }
+
+        // Smart duplicate check: if the exact exercise list already exists as a saved routine,
+        // skip the save prompt for this user
+        if (user && activeExercises.length > 0) {
+            const exists = await routineAlreadyExists(user.id, activeExercises);
+            if (exists) {
+                console.log('✨ Identical routine already saved. Skipping save modal...');
+                checkLocationStep();
+                return;
+            }
+        }
+
+        setShowRoutineModal(true);
     };
 
     // 2. Save Routine (Optional)
@@ -4611,7 +4656,17 @@ export const WorkoutSession = () => {
                 showRoutineModal && (
                     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-4">
                         <div className="bg-neutral-900 border border-neutral-800 p-6 rounded-2xl w-full max-w-sm shadow-2xl relative">
-                            <h3 className="text-xl font-black italic uppercase text-white mb-2">¿Guardar Rutina?</h3>
+                            {/* Back arrow — returns to active workout */}
+                            <button
+                                onClick={handleCancelFinish}
+                                disabled={isSavingFlow || isFinalizing}
+                                className="absolute top-4 left-4 p-1.5 rounded-lg text-neutral-500 hover:text-white hover:bg-white/10 transition-all disabled:opacity-30"
+                                aria-label="Volver al entrenamiento"
+                            >
+                                <ChevronLeft size={20} strokeWidth={2.5} />
+                            </button>
+
+                            <h3 className="text-xl font-black italic uppercase text-white mb-2 pl-8">¿Guardar Rutina?</h3>
                             <p className="text-neutral-400 text-sm mb-6">Puedes guardar esta sesión como una rutina para repetirla en el futuro.</p>
 
                             <div className="space-y-4">

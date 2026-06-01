@@ -17,6 +17,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── iOS zoom prevention ────────────────────────────────────────────────────
+   iOS Safari zooms into any input/textarea/select whose font-size is below
+   16px. This rule ensures no element ever falls below that threshold,
+   covering inherited sizes from parent containers.
+   We use font-size: max(16px, 1em) so elements that are intentionally
+   larger (e.g. text-lg inside a form) are not shrunk.                      */
+input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+textarea,
+select {
+  font-size: max(16px, 1em) !important;
+}
+
 /* Custom Base Styles for Premium Feel */
 :root {
   color-scheme: dark;
