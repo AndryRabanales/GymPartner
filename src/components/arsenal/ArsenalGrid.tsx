@@ -186,7 +186,15 @@ export const ArsenalGrid = ({
 
                                 const variantInfo = variantBadgeMap?.get(item.name.toLowerCase());
                                 return (
-                                    <div key={item.id} className="cursor-pointer" onClick={() => onToggleSelection(item.id)}>
+                                    <div
+                                        key={item.id}
+                                        className="cursor-pointer"
+                                        onClick={(e) => {
+                                            // Ignore clicks that originated from a variant-cycle button
+                                            if ((e.target as HTMLElement).closest('[data-variant-btn="true"]')) return;
+                                            onToggleSelection(item.id);
+                                        }}
+                                    >
                                         <ArsenalCard
                                             item={item}
                                             muscleGroup={section}

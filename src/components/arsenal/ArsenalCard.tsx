@@ -109,12 +109,16 @@ export const ArsenalCard = ({ item, isSelected, userSettings, onEdit, configOver
                     {variantTotal && variantTotal > 1 && onVariantCycle && (
                         <>
                             <button
+                                data-variant-btn="true"
+                                onPointerDown={e => e.stopPropagation()}
                                 onClick={e => { e.stopPropagation(); onVariantCycle('prev'); }}
                                 className="absolute left-0 z-30 p-1.5 rounded-r-lg bg-black/60 text-white hover:text-gym-primary hover:bg-black/90 transition-all backdrop-blur-md"
                             >
                                 <ChevronLeft size={16} strokeWidth={4} />
                             </button>
                             <button
+                                data-variant-btn="true"
+                                onPointerDown={e => e.stopPropagation()}
                                 onClick={e => { e.stopPropagation(); onVariantCycle('next'); }}
                                 className="absolute right-0 z-30 p-1.5 rounded-l-lg bg-black/60 text-white hover:text-gym-primary hover:bg-black/90 transition-all backdrop-blur-md"
                             >
