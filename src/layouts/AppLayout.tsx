@@ -320,6 +320,12 @@ export const AppLayout = () => {
 
         const checkRescuableSession = async () => {
             try {
+                const isTempExit = sessionStorage.getItem('ginx_temp_exit_active') === 'true';
+                if (isTempExit) {
+                    setShowRescueModal(false);
+                    return;
+                }
+
                 const { data: session } = await workoutService.getActiveSession(user.id);
                 if (session) {
                     setRescueSessionId(session.id);

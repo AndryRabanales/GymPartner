@@ -279,6 +279,11 @@ export const WorkoutSession = () => {
     const activeExercisesRef = useRef<WorkoutExercise[]>([]);
     const startTimeRef = useRef<Date | null>(null);
     useEffect(() => {
+        // Clear temporary exit active flag when entering/returning to the workout session screen
+        sessionStorage.removeItem('ginx_temp_exit_active');
+    }, []);
+
+    useEffect(() => {
         activeExercisesRef.current = activeExercises;
     }, [activeExercises]);
     useEffect(() => {
@@ -3124,6 +3129,7 @@ export const WorkoutSession = () => {
         localStorage.removeItem(`workout_draft_${oldSessionId}`);
         localStorage.removeItem(STORAGE_KEY);
         localStorage.removeItem('ginx_coop_state');
+        sessionStorage.removeItem('ginx_temp_exit_active');
         setActiveExercises([]);
         setIsFinished(true); // Disable history guard before navigating
         setSessionId(null);  // Disable history guard before navigating
@@ -3495,6 +3501,7 @@ export const WorkoutSession = () => {
                 localStorage.removeItem(`workout_draft_${finalSessionId}`);
                 localStorage.removeItem(STORAGE_KEY); // Also clear global key
                 localStorage.removeItem('ginx_coop_state'); // Clear multiplayer state!
+                sessionStorage.removeItem('ginx_temp_exit_active');
                 // Removed blocking alert. 
                 // We'll rely on the UI showing "Guardando..." or similar via loading state, 
                 // or we could add a specific "Finished" state to show a success message briefly.
@@ -4453,6 +4460,7 @@ export const WorkoutSession = () => {
                 onClose={() => setShowForceExitModal(false)}
                 onFinalize={handleFinishRequest}
                 onTemporaryExit={() => {
+                    sessionStorage.setItem('ginx_temp_exit_active', 'true');
                     isLeavingPageRef.current = true;
                     navigate('/');
                 }}

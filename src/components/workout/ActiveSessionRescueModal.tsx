@@ -143,6 +143,7 @@ export const ActiveSessionRescueModal: React.FC<ActiveSessionRescueModalProps> =
           localStorage.removeItem(`workout_draft_${sessionId}`);
           localStorage.removeItem('ginx_active_session');
           localStorage.removeItem('ginx_coop_state');
+          sessionStorage.removeItem('ginx_temp_exit_active');
           onResolve();
         } catch (err) {
           console.error('Error auto-finalizing dead coop session:', err);
@@ -165,6 +166,7 @@ export const ActiveSessionRescueModal: React.FC<ActiveSessionRescueModalProps> =
         localStorage.removeItem(`workout_draft_${sessionId}`);
         localStorage.removeItem('ginx_active_session');
         localStorage.removeItem('ginx_coop_state');
+        sessionStorage.removeItem('ginx_temp_exit_active');
         onResolve();
       } catch (err) {
         console.error('Error deleting rescued session:', err);
