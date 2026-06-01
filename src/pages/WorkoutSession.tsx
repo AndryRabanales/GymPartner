@@ -1218,24 +1218,20 @@ export const WorkoutSession = () => {
 
     const scrollToCategory = (category: string) => {
         setActiveMuscleFilter(category);
-        // Direct scrollTop manipulation — more reliable than scrollIntoView inside fixed containers on iOS
-        setTimeout(() => {
+        // getBoundingClientRect is reliable across iOS/Android and fixed containers.
+        // offsetParent walk can fail when the container is inside position:fixed.
+        requestAnimationFrame(() => {
             const container = catalogScrollRef.current;
             const element = document.getElementById(`category-section-${category}`);
             if (container && element) {
-                // offsetTop is relative to the offsetParent chain, not necessarily the container.
-                // Walk up to find the offset relative to the scroll container.
-                let offset = 0;
-                let el: HTMLElement | null = element;
-                while (el && el !== container) {
-                    offset += el.offsetTop;
-                    el = el.offsetParent as HTMLElement | null;
-                }
-                container.scrollTo({ top: Math.max(0, offset - 8), behavior: 'smooth' });
+                const containerRect = container.getBoundingClientRect();
+                const elementRect  = element.getBoundingClientRect();
+                const targetTop = container.scrollTop + (elementRect.top - containerRect.top) - 8;
+                container.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
             } else if (container) {
                 container.scrollTo({ top: 0, behavior: 'smooth' });
             }
-        }, 50);
+        });
     };
     const catalogScrollRef = useRef<HTMLDivElement>(null);
 
@@ -4637,7 +4633,7 @@ export const WorkoutSession = () => {
             {/* Exercise Selector Modal */}
             {
                 showAddModal && (
-                    <div className="fixed inset-0 bg-black/95 z-[90] flex flex-col animate-in fade-in duration-200 relative">
+                    <div className="fixed inset-0 bg-black/95 z-[90] flex flex-col animate-in fade-in duration-200 overflow-hidden">
                         {/* Header */}
                         <div className="flex-none p-2.5 pb-1 border-b border-white/5 bg-neutral-950">
                             <div className="flex justify-between items-center mb-2">
@@ -4702,9 +4698,7 @@ export const WorkoutSession = () => {
 
                         {/* ── Extras panel — exercises not in catalog ── */}
                         {extrasSection && !isCreatingExercise && (
-                            <div className="absolute inset-0 z-[10] bg-black/95 flex flex-col animate-in slide-in-from-bottom-4 duration-200"
-                                style={{ top: 0 }}
-                            >
+                            <div className="fixed inset-0 z-[95] bg-black flex flex-col animate-in slide-in-from-bottom-4 duration-200 overflow-hidden">
                                 {/* Panel header */}
                                 <div className="flex-none px-4 py-3 border-b border-white/5 flex items-center gap-3">
                                     <button
@@ -4723,7 +4717,9 @@ export const WorkoutSession = () => {
                                     </div>
                                 </div>
                                 {/* Exercises grid */}
-                                <div className="flex-1 overflow-y-auto px-3 pt-4 pb-32">
+                                <div className="flex-1 px-3 pt-4 pb-32"
+                                    style={{ overflowY: 'scroll', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', minHeight: 0, height: 0 } as React.CSSProperties}
+                                >
                                     {extrasSectionInventory.length === 0 ? (
                                         <div className="flex flex-col items-center justify-center h-48 gap-3 text-neutral-600">
                                             <span className="text-4xl">✅</span>
@@ -4763,8 +4759,16 @@ export const WorkoutSession = () => {
 
                         <div
                             ref={catalogScrollRef}
-                            className="flex-1 min-h-0 px-2 sm:px-4 pb-32 bg-black"
-                            style={{ overflowY: 'scroll', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' } as React.CSSProperties}
+                            className="flex-1 px-2 sm:px-4 pb-32 bg-black"
+                            style={{
+                                overflowY: 'scroll',
+                                overflowX: 'hidden',
+                                WebkitOverflowScrolling: 'touch',
+                                touchAction: 'pan-y pinch-zoom',
+                                // Explicit height-0 base + flex-grow so iOS calculates the height correctly
+                                minHeight: 0,
+                                height: 0,
+                            } as React.CSSProperties}
                         >
                             {!isCreatingExercise ? (
                                 <div className="pt-4">
