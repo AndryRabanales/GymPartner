@@ -1514,6 +1514,36 @@ export const WorkoutSession = () => {
         }
     });
 
+    // Curated catalog inventory — shows only ONE item per exercise group (preferred variant).
+    // Variant duplicates are hidden; the user can cycle variants via the badge arrow on each card.
+    const { curatedCatalogInventory, variantBadgeMap } = (() => {
+        const prefs = getVariantPrefs();
+        // Build a set of seed names to HIDE (non-preferred variants)
+        const hiddenNames = new Set<string>();
+        // Build a map: preferred seedName → { label, totalVariants, baseId }
+        const badges = new Map<string, { label: string; total: number; baseId: string; variants: import('../data/exerciseCatalog').ExerciseVariant[] }>();
+
+        for (const base of CURATED_EXERCISES) {
+            if (base.variants.length <= 1) continue;
+            const preferredId = prefs[base.id] ?? base.variants[0].id;
+            const preferred = base.variants.find(v => v.id === preferredId) ?? base.variants[0];
+            badges.set(preferred.seedName.toLowerCase(), {
+                label: preferred.label,
+                total: base.variants.length,
+                baseId: base.id,
+                variants: base.variants,
+            });
+            for (const v of base.variants) {
+                if (v.seedName !== preferred.seedName) hiddenNames.add(v.seedName.toLowerCase());
+            }
+        }
+
+        const filtered = effectiveInventory.filter(
+            i => !hiddenNames.has(normalizeText(i.name))
+        );
+        return { curatedCatalogInventory: filtered, variantBadgeMap: badges };
+    })();
+
     const catalogItems = COMMON_EQUIPMENT_SEEDS.filter(seed => {
         if (activeMuscleFilter) {
             // @ts-expect-error - ignore typing
@@ -4564,75 +4594,132 @@ export const WorkoutSession = () => {
             {
                 showAddModal && (
                     <div className="fixed inset-0 bg-black/95 z-[90] flex flex-col animate-in fade-in duration-200">
-                        {isCreatingExercise ? (
-                        // ── Creating/editing custom exercise ───────────────────────────────
-                        <>
+                        {/* Header */}
                         <div className="flex-none p-2.5 pb-1 border-b border-white/5 bg-neutral-950">
                             <div className="flex justify-between items-center mb-2">
-                                <h2 className="text-lg font-black text-white italic uppercase tracking-tighter">
-                                    {editingItem ? 'Editar Ejercicio' : 'Crear Ejercicio'}
-                                </h2>
-                                <button onClick={() => { setIsCreatingExercise(false); setEditingItem(null); }}
-                                    className="bg-neutral-900 p-1.5 rounded-full text-white hover:bg-neutral-800 transition-colors">
-                                    <ArrowLeft size={16} />
-                                </button>
-                            </div>
-                        </div>
-                        {/* EquipmentForm body */}
-                        <div className="flex-1 overflow-y-auto px-2 sm:px-4 pb-8 bg-black">
-                            <EquipmentForm
-                                user={user}
-                                userSettings={userSettings}
-                                onUpdateSettings={setUserSettings}
-                                editingItem={editingItem}
-                                onClose={() => { setIsCreatingExercise(false); setEditingItem(null); }}
-                                onSuccess={(newItem, isEdit) => {
-                                    setArsenal(prev => isEdit ? prev.map(i => i.id === newItem.id ? newItem : i) : [...prev, newItem]);
-                                    setSelectedCatalogItems(prev => { const s = new Set(prev); s.add(newItem.id); return s; });
-                                    setIsCreatingExercise(false); setEditingItem(null); setSearchTerm('');
-                                }}
-                                activeSection={activeMuscleFilter || 'CHEST'}
-                                catalogItems={catalogItems}
-                                onQuickAdd={(seed) => {
-                                    const id = `virtual-${seed.name}`;
-                                    setSelectedCatalogItems(prev => { const s = new Set(prev); s.add(id); return s; });
-                                    setArsenal(prev => [...prev, { ...seed, id, gym_id: 'virtual', quantity: 1, condition: 'GOOD' } as any]);
-                                    setIsCreatingExercise(false);
-                                }}
-                            />
-                        </div>
-                        </>
-                        ) : (
-                        // ── Curated catalog ────────────────────────────────────────────────
-                        <>
-                        <div className="relative flex-1 min-h-0 flex flex-col">
-                            <WorkoutCatalog
-                                selected={selectedCatalogItems}
-                                onToggle={handleCatalogToggle}
-                                onClose={() => {
-                                    if (activeExercises.length === 0) {
-                                        isLeavingPageRef.current = true;
-                                        navigate('/');
-                                    } else {
-                                        setShowAddModal(false);
+                                <div>
+                                    <h2 className="text-lg md:text-2xl font-black text-white italic uppercase tracking-tighter">
+                                        {isCreatingExercise ? (editingItem ? 'Editar Ejercicio' : 'Crear Ejercicio') : 'Catálogo'}
+                                    </h2>
+                                </div>
+                                <button onClick={() => {
+                                    if (isCreatingExercise) { setIsCreatingExercise(false); setEditingItem(null); }
+                                    else {
+                                        if (activeExercises.length === 0) { isLeavingPageRef.current = true; navigate('/'); }
+                                        else { setShowAddModal(false); }
                                     }
-                                }}
-                            />
-                        </div>
-                        {/* Floating AGREGAR button */}
-                        {newlySelectedCount > 0 && (
-                            <div className="absolute bottom-6 left-0 w-full px-4 z-[100] flex justify-center pointer-events-none">
-                                <button
-                                    onClick={handleBatchAdd}
-                                    className="pointer-events-auto bg-gym-primary text-black font-black uppercase py-4 px-12 rounded-2xl shadow-[0_10px_40px_rgba(250,204,21,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center gap-3 text-lg animate-in slide-in-from-bottom-4 border-2 border-yellow-400"
-                                >
-                                    <Plus size={24} strokeWidth={3} />
-                                    AGREGAR ({newlySelectedCount})
+                                }} className="bg-neutral-900 p-1.5 rounded-full text-white hover:bg-neutral-800 transition-colors">
+                                    {isCreatingExercise ? <ArrowLeft size={16} /> : <X size={16} />}
                                 </button>
                             </div>
-                        )}
-                        </>
-                        )}
+
+                            {/* Search Bar */}
+                            {!isCreatingExercise && (
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-2.5 text-neutral-500" size={16} />
+                                    <input
+                                        type="text"
+                                        placeholder="Buscar ejercicio..."
+                                        value={searchTerm}
+                                        onChange={e => setSearchTerm(e.target.value)}
+                                        className="w-full bg-neutral-900 border border-neutral-800 rounded-xl py-2 pl-9 text-[16px] text-white focus:outline-none focus:border-gym-primary transition-all font-bold"
+                                        autoFocus
+                                    />
+                                </div>
+                            )}
+
+                            {/* Muscle Filter Bar */}
+                            {!isCreatingExercise && (
+                                <div className="mt-2 flex gap-2 overflow-x-auto py-1 px-1 no-scrollbar scroll-smooth items-center">
+                                    {[
+                                        { label: 'PECHO', subs: ['PECHO', 'HOMBRO', 'TRÍCEPS'] },
+                                        { label: 'ESPALDA', subs: ['ESPALDA', 'BÍCEPS', 'ANTEBRAZO'] },
+                                        { label: 'PIERNA', subs: ['CUÁDRICEPS', 'ISQUIOTIBIALES', 'GLÚTEOS', 'PANTORRILLAS', 'ADUCTORES'] },
+                                        { label: 'CORE', subs: ['ABDOMINALES', 'LUMBARES', 'CUELLO'] },
+                                        { label: 'CARDIO', subs: ['CARDIO'] },
+                                    ].map(group => (
+                                        <div key={group.label} className="flex items-center gap-1.5 shrink-0">
+                                            <button
+                                                onClick={() => scrollToCategory(group.subs[0])}
+                                                className={`shrink-0 px-5 py-2.5 rounded-xl text-sm font-black italic uppercase tracking-tighter transition-all border-2 ${activeMuscleFilter === group.subs[0] ? 'bg-gym-primary text-black border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-neutral-900 text-gym-primary border-neutral-800'}`}
+                                            >
+                                                {group.label}
+                                            </button>
+                                            {group.subs.slice(1).map(sub => (
+                                                <button key={sub} onClick={() => scrollToCategory(sub)}
+                                                    className={`shrink-0 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border ${activeMuscleFilter === sub ? 'bg-white text-black border-white' : 'bg-neutral-800 text-neutral-400 border-neutral-700'}`}>
+                                                    {sub}
+                                                </button>
+                                            ))}
+                                            <div className="w-px h-5 bg-neutral-800 mx-1 shrink-0" />
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        <div ref={catalogScrollRef} className="flex-1 overflow-y-auto min-h-0 px-2 sm:px-4 pb-32 bg-black">
+                            {!isCreatingExercise ? (
+                                <div className="pt-4">
+                                    <ArsenalGrid
+                                        inventory={curatedCatalogInventory}
+                                        selectedItems={selectedCatalogItems}
+                                        userSettings={userSettings}
+                                        searchTerm={searchTerm}
+                                        onToggleSelection={handleCatalogToggle}
+                                        onOpenCatalog={() => { }}
+                                        onEditItem={setEditingItem}
+                                        sectionOrder={CATALOG_ORDER}
+                                        gridClassName="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2"
+                                        variantBadgeMap={variantBadgeMap}
+                                        onVariantCycle={(oldId, newId, baseId, newVariant) => {
+                                            // Swap selectedCatalogItems if old variant was selected
+                                            setSelectedCatalogItems(prev => {
+                                                const next = new Set(prev);
+                                                if (next.has(oldId)) { next.delete(oldId); next.add(newId); }
+                                                return next;
+                                            });
+                                            // Save preference
+                                            saveVariantPref(baseId, newVariant.id);
+                                        }}
+                                    />
+                                </div>
+                            ) : (
+                                <EquipmentForm
+                                    user={user}
+                                    userSettings={userSettings}
+                                    onUpdateSettings={setUserSettings}
+                                    editingItem={editingItem}
+                                    onClose={() => { setIsCreatingExercise(false); setEditingItem(null); }}
+                                    onSuccess={(newItem, isEdit) => {
+                                        setArsenal(prev => isEdit ? prev.map(i => i.id === newItem.id ? newItem : i) : [...prev, newItem]);
+                                        setSelectedCatalogItems(prev => { const s = new Set(prev); s.add(newItem.id); return s; });
+                                        setIsCreatingExercise(false); setEditingItem(null); setSearchTerm('');
+                                    }}
+                                    activeSection={activeMuscleFilter || 'CHEST'}
+                                    catalogItems={catalogItems}
+                                    onQuickAdd={(seed) => {
+                                        const id = `virtual-${seed.name}`;
+                                        setSelectedCatalogItems(prev => { const s = new Set(prev); s.add(id); return s; });
+                                        setArsenal(prev => [...prev, { ...seed, id, gym_id: 'virtual', quantity: 1, condition: 'GOOD' } as any]);
+                                        setIsCreatingExercise(false);
+                                    }}
+                                />
+                            )}
+
+                            {/* Floating "Add" Button */}
+                            {!isCreatingExercise && newlySelectedCount > 0 && (
+                                <div className="fixed bottom-6 left-0 w-full px-4 z-[100] flex justify-center pointer-events-none">
+                                    <button
+                                        onClick={handleBatchAdd}
+                                        className="pointer-events-auto bg-gym-primary text-black font-black uppercase py-4 px-12 rounded-2xl shadow-[0_10px_40px_rgba(250,204,21,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center gap-3 text-lg animate-in slide-in-from-bottom-4 border-2 border-yellow-400"
+                                    >
+                                        <Plus size={24} strokeWidth={3} />
+                                        AGREGAR ({newlySelectedCount})
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )
             }

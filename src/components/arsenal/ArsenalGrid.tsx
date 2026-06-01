@@ -44,6 +44,10 @@ interface ArsenalGridProps {
     onToggleGlobalMetric?: (metricId: string) => void;
     /** Set of item IDs that have been manually overridden by the user */
     metricOverrides?: Set<string>;
+    /** Map of normalized seed name → variant badge info (for catalog view) */
+    variantBadgeMap?: Map<string, { label: string; total: number; baseId: string; variants: any[] }>;
+    /** Called when the user cycles to the next variant via the badge arrow */
+    onVariantCycle?: (oldId: string, newId: string, baseId: string, newVariant: any) => void;
 }
 
 export const ArsenalGrid = ({
@@ -59,7 +63,9 @@ export const ArsenalGrid = ({
     sectionOrder,
     globalMetrics,
     onToggleGlobalMetric,
-    metricOverrides
+    metricOverrides,
+    variantBadgeMap,
+    onVariantCycle,
 }: ArsenalGridProps) => {
 
     const DEFAULT_ORDER = [
@@ -178,6 +184,7 @@ export const ArsenalGrid = ({
                                     };
                                 }
 
+                                const variantInfo = variantBadgeMap?.get(item.name.toLowerCase());
                                 return (
                                     <div key={item.id} className="cursor-pointer" onClick={() => onToggleSelection(item.id)}>
                                         <ArsenalCard
@@ -187,6 +194,16 @@ export const ArsenalGrid = ({
                                             userSettings={userSettings}
                                             onEdit={onEditItem}
                                             configOverride={effectiveConfig}
+                                            variantLabel={variantInfo?.label}
+                                            variantTotal={variantInfo?.total}
+                                            onVariantCycle={variantInfo && onVariantCycle ? () => {
+                                                const variants = variantInfo.variants;
+                                                const currentIdx = variants.findIndex((v: any) => v.seedName === item.name);
+                                                const nextIdx = (currentIdx + 1) % variants.length;
+                                                const next = variants[nextIdx];
+                                                const newId = `virtual-${next.seedName}`;
+                                                onVariantCycle(item.id, newId, variantInfo.baseId, next);
+                                            } : undefined}
                                         />
                                     </div>
                                 );

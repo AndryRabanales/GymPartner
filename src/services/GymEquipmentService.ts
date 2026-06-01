@@ -534,7 +534,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "name": "Hip Thrust (Barra Libre)",
         "category": "FREE_WEIGHT",
         "targetMuscle": "Glúteos",
-        "icon": "Bridge",
+        "icon": "🌉",
         "image_url": "/ejercicioimg/ejercicios/Gluteo/HiptrustBarraLibre.png",
         "metrics": {
             "weight": true,
