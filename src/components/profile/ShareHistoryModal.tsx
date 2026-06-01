@@ -255,7 +255,7 @@ export const ShareHistoryModal = ({ userId, onClose }: ShareHistoryModalProps) =
                                 placeholder="Buscar aliado por nombre..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full bg-black border border-white/5 rounded-2xl py-3.5 pl-11 pr-4 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-gym-primary/50 transition-colors"
+                                className="w-full bg-black border border-white/5 rounded-2xl py-3.5 pl-11 pr-4 text-[16px] text-white placeholder-neutral-500 focus:outline-none focus:border-gym-primary/50 transition-colors"
                             />
                         </div>
 

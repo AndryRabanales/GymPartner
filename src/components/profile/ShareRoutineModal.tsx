@@ -202,7 +202,7 @@ export const ShareRoutineModal = ({ userId, routineIds, routineNames, onClose }:
                                 placeholder="Buscar por usuario..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full bg-black border border-neutral-800 rounded-xl py-3.5 pl-11 pr-4 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-gym-primary transition-colors"
+                                className="w-full bg-black border border-neutral-800 rounded-xl py-3.5 pl-11 pr-4 text-[16px] text-white placeholder-neutral-500 focus:outline-none focus:border-gym-primary transition-colors"
                             />
                         </div>
 

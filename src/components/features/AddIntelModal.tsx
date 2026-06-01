@@ -86,7 +86,7 @@ export const AddIntelModal = ({ isOpen, onClose, gymName }: AddIntelModalProps) 
                             <div>
                                 <label className="block text-sm font-medium text-neutral-400 mb-1">Detalles</label>
                                 <textarea
-                                    className="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-3 text-white focus:outline-none focus:border-gym-primary min-h-[100px]"
+                                    className="w-full bg-neutral-800 border border-neutral-700 rounded-lg p-3 text-[16px] text-white focus:outline-none focus:border-gym-primary min-h-[100px]"
                                     placeholder="Ej: La máquina de cables número 3 tiene la polea atascada..."
                                     required
                                 ></textarea>

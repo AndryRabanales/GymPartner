@@ -317,7 +317,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                                         }
                                     }}
                                     maxLength={20}
-                                    className="w-full bg-neutral-950/50 border-2 border-neutral-800 rounded-xl px-3.5 py-2.5 text-white font-bold tracking-tight focus:outline-none focus:border-gym-primary/70 focus:bg-neutral-950 transition-all placeholder:text-neutral-700 hover:border-neutral-700 text-xs"
+                                    className="w-full bg-neutral-950/50 border-2 border-neutral-800 rounded-xl px-3.5 py-2.5 text-white font-bold tracking-tight focus:outline-none focus:border-gym-primary/70 focus:bg-neutral-950 transition-all placeholder:text-neutral-700 hover:border-neutral-700 text-[16px]"
                                     placeholder="Tu nombre público..."
                                 />
                             </div>
@@ -345,7 +345,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                                         }
                                     }}
                                     rows={2}
-                                    className="w-full bg-neutral-950/50 border-2 border-neutral-800 rounded-xl px-3.5 py-2.5 text-white font-medium tracking-tight focus:outline-none focus:border-gym-primary/70 focus:bg-neutral-950 transition-all placeholder:text-neutral-700 hover:border-neutral-700 resize-none text-xs leading-relaxed"
+                                    className="w-full bg-neutral-950/50 border-2 border-neutral-800 rounded-xl px-3.5 py-2.5 text-white font-medium tracking-tight focus:outline-none focus:border-gym-primary/70 focus:bg-neutral-950 transition-all placeholder:text-neutral-700 hover:border-neutral-700 resize-none text-[16px] leading-relaxed"
                                     placeholder="Ej: Levantador de pesas | Entrenando..."
                                 />
                                 <p className="text-[8px] text-neutral-600 ml-1 leading-relaxed">

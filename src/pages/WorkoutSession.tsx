@@ -4314,7 +4314,7 @@ export const WorkoutSession = () => {
                                         placeholder="Buscar ejercicio o máquina..."
                                         value={searchTerm}
                                         onChange={e => setSearchTerm(e.target.value)}
-                                        className="w-full bg-neutral-900 border border-neutral-800 rounded-xl py-2 pl-9 text-xs md:text-sm text-white focus:outline-none focus:border-gym-primary transition-all font-bold"
+                                        className="w-full bg-neutral-900 border border-neutral-800 rounded-xl py-2 pl-9 text-[16px] text-white focus:outline-none focus:border-gym-primary transition-all font-bold"
                                         autoFocus
                                     />
                                 </div>
@@ -4552,7 +4552,7 @@ export const WorkoutSession = () => {
                                         placeholder="Ej. Pecho y Tríceps Destructor"
                                         value={routineName}
                                         onChange={(e) => setRoutineName(e.target.value)}
-                                        className="w-full bg-black border border-neutral-700 rounded-lg p-3 text-white font-bold focus:border-gym-primary outline-none transition-colors"
+                                        className="w-full bg-black border border-neutral-700 rounded-lg p-3 text-[16px] text-white font-bold focus:border-gym-primary outline-none transition-colors"
                                     />
                                 </div>
 
