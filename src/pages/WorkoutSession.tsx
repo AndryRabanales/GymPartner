@@ -11,7 +11,8 @@ import { userService } from '../services/UserService';
 import { workoutService } from '../services/WorkoutService';
 import { WorkoutCarousel } from '../components/workout/WorkoutCarousel';
 import { WorkoutCatalog } from '../components/workout/WorkoutCatalog';
-import { findBaseExercise, getVariantPrefs, saveVariantPref, getExtrasForMuscle } from '../data/exerciseCatalog';
+import { CURATED_EXERCISES, findBaseExercise, getVariantPrefs, saveVariantPref, getExtrasForMuscle } from '../data/exerciseCatalog';
+import type { ExerciseVariant } from '../data/exerciseCatalog';
 import { ArsenalGrid } from '../components/arsenal/ArsenalGrid';
 import { EquipmentForm } from '../components/arsenal/EquipmentForm';
 import { normalizeText, getMuscleGroup } from '../utils/inventoryUtils';
@@ -1521,7 +1522,7 @@ export const WorkoutSession = () => {
         // Build a set of seed names to HIDE (non-preferred variants)
         const hiddenNames = new Set<string>();
         // Build a map: preferred seedName → { label, totalVariants, baseId }
-        const badges = new Map<string, { label: string; total: number; baseId: string; variants: import('../data/exerciseCatalog').ExerciseVariant[] }>();
+        const badges = new Map<string, { label: string; total: number; baseId: string; variants: ExerciseVariant[] }>();
 
         for (const base of CURATED_EXERCISES) {
             if (base.variants.length <= 1) continue;
