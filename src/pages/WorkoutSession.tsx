@@ -871,6 +871,35 @@ export const WorkoutSession = () => {
                 // Eject user
                 navigate('/');
             })
+            .on('broadcast', { event: 'session_finished' }, async (payload) => {
+                const { sender } = payload.payload;
+                if (sender === user.id) return; // Ignore echoes
+                
+                console.log('🏁 Received session_finished signal from host. Finalizing guest session in cascade...');
+                toast.success("¡Entrenamiento finalizado por el anfitrión!");
+                
+                const finalSessionId = sessionIdRef.current;
+                
+                // Clear local cache immediately
+                if (finalSessionId) {
+                    localStorage.removeItem(`workout_draft_${finalSessionId}`);
+                }
+                localStorage.removeItem('workout_session_state');
+                localStorage.removeItem('ginx_coop_state');
+                
+                // Auto-finalize the guest's session in the DB
+                if (finalSessionId) {
+                    try {
+                        await workoutService.finishSession(finalSessionId, "Coop session cascade-closed by host finish", currentRoutineName, false);
+                    } catch (err) {
+                        console.error("Error finalizing guest session on cascade:", err);
+                    }
+                }
+                
+                isLeavingPageRef.current = true;
+                setLoading(false);
+                setShowSummary(true); // Take guest to summary too!
+            })
             .on('broadcast', { event: 'sync_session_id' }, (payload) => {
                 const { sessionId: partnerSessionId, startTime: partnerStartTime, sender } = payload.payload;
                 if (sender === user.id) return; // Ignore echoes
@@ -890,7 +919,7 @@ export const WorkoutSession = () => {
                                 if (error) console.error('Error linking partner session:', error);
                                 else console.log('✅ Linked partner session successfully!');
                              });
-                    } else if (!isInviterRef.current && !sessionIdRef.current) {
+                    } else if (!isInviterRef.current && !sessionIdRef.current && !isStartingSessionRef.current) {
                         // Guest auto-starts their own session to activate their timer and enable logging
                         console.log('🚀 Guest auto-starting session on partner session ID sync...');
                         startNewSession(undefined, partnerSessionId, true, multiplayerMode || 'conjunto', partnerId || sender).then(() => {
@@ -1892,6 +1921,7 @@ export const WorkoutSession = () => {
             localStorage.removeItem(STORAGE_KEY);
 
             if (newSession) {
+                sessionIdRef.current = newSession.id;
                 setSessionId(newSession.id);
                 setStartTime(new Date());
                 setElapsedTime("00:00");
@@ -3019,27 +3049,27 @@ export const WorkoutSession = () => {
     // ─── Navigation Lock ────────────────────────────────────────────────
     // 1. Block tab/window close while session is active
     useEffect(() => {
-        if (!sessionId || isFinished) return;
+        if (!user || isFinished) return;
         const handler = (e: BeforeUnloadEvent) => {
             e.preventDefault();
             e.returnValue = '¿Seguro que quieres salir? Tu entrenamiento sigue en curso y los datos podría perderse.';
         };
         window.addEventListener('beforeunload', handler);
         return () => window.removeEventListener('beforeunload', handler);
-    }, [sessionId, isFinished]);
+    }, [user, isFinished]);
 
     // 2. Block browser back button (popstate) while session is active.
     // Works with BrowserRouter (no Data Router needed).
     // Strategy: push a "guard" entry when session starts so back button hits it;
     // on popstate re-push the guard and show the force exit modal.
     useEffect(() => {
-        if (!sessionId || isFinished) return;
+        if (!user || isFinished) return;
 
         // Push a sentinel so the very first back-press hits our handler
         window.history.pushState({ workoutGuard: true }, '');
 
         const handlePopState = (e: PopStateEvent) => {
-            if (isLeavingPageRef.current || !sessionId || isFinished) return;
+            if (isLeavingPageRef.current || !user || isFinished) return;
             // Re-push the sentinel immediately to neutralise the navigation
             window.history.pushState({ workoutGuard: true }, '');
             // Show our premium modal instead
@@ -3050,7 +3080,7 @@ export const WorkoutSession = () => {
         return () => {
             window.removeEventListener('popstate', handlePopState);
         };
-    }, [sessionId, isFinished]);
+    }, [user, isFinished]);
 
     // NEW: Persist Active Exercises to LocalStorage
     useEffect(() => {
@@ -3446,6 +3476,15 @@ export const WorkoutSession = () => {
 
             if (result.success) {
                 console.log('✅ Sesión terminada exitosamente');
+
+                if (isMultiplayer && isInviter && channelRef.current && user) {
+                    console.log('📢 Host broadcasting session_finished to guests...');
+                    channelRef.current.send({
+                        type: 'broadcast',
+                        event: 'session_finished',
+                        payload: { sender: user.id }
+                    }).catch(e => console.error('Error broadcasting session_finished:', e));
+                }
 
                 localStorage.removeItem(`workout_draft_${finalSessionId}`);
                 localStorage.removeItem(STORAGE_KEY); // Also clear global key

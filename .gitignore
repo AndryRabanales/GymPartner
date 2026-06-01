@@ -30,3 +30,4 @@ ios/
 .env
 .env.production
 .env.development
+.aider*

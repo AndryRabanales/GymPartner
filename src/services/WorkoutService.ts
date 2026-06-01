@@ -890,11 +890,12 @@ class WorkoutService {
 
             const sessionIds = userSessions.map(s => s.id);
 
-            // Step 2: Find the most recent log for this exercise within those sessions
+            // Step 2: Find the most recent log for this exercise within those sessions, owned by this user
             const { data: lastLog, error: lastLogError } = await supabase
                 .from('workout_logs')
                 .select('session_id')
                 .eq('exercise_id', exerciseId)
+                .eq('owner_id', userId)
                 .in('session_id', sessionIds)
                 .order('created_at', { ascending: false })
                 .limit(1)
@@ -902,12 +903,13 @@ class WorkoutService {
 
             if (lastLogError || !lastLog) return [];
 
-            // Step 3: Fetch all sets for that session and exercise
+            // Step 3: Fetch all sets for that session and exercise, strictly scoped to this user
             const { data: ghostSets, error: setsError } = await supabase
                 .from('workout_logs')
                 .select('*')
                 .eq('session_id', lastLog.session_id)
                 .eq('exercise_id', exerciseId)
+                .eq('owner_id', userId)
                 .order('created_at', { ascending: true });
 
             if (setsError) return [];
