@@ -123,7 +123,8 @@ const CoopInviteToast = ({
                                 multiplayerMode: mode, 
                                 partnerId: senderId,
                                 chatId: newNotification.data?.chat_id,
-                                isInviter: false
+                                isInviter: false,
+                                forceNewSession: true
                             } 
                         });
                     }}
@@ -281,7 +282,8 @@ const CoopJoinRequestToast = ({
                                 partnerId: senderId,
                                 chatId: roomSessionId,
                                 partnerSessionId: roomSessionId,
-                                isInviter: true
+                                isInviter: true,
+                                forceNewSession: true
                             } 
                         });
                     }}
@@ -532,7 +534,7 @@ const notificationSeen = useRef<Set<string>>(new Set());
                                         message: `¡${user.user_metadata.full_name || 'Alguien'} ha aceptado tu desafío!`,
                                         data: { partner_id: user.id, mode, chat_id: newNotification.data?.chat_id }
                                     });
-                                    navigate('/workout', { state: { isMultiplayer: true, multiplayerMode: mode, partnerId: newNotification.data?.sender_id, chatId: newNotification.data?.chat_id, isInviter: false } });
+                                    navigate('/workout', { state: { isMultiplayer: true, multiplayerMode: mode, partnerId: newNotification.data?.sender_id, chatId: newNotification.data?.chat_id, isInviter: false, forceNewSession: true } });
                                 }} className="text-xs text-green-500 hover:text-green-300">Aceptar</button>
                             </div>
                         </div>
@@ -546,7 +548,8 @@ const notificationSeen = useRef<Set<string>>(new Set());
                             multiplayerMode: newNotification.data?.mode || 'separado', 
                             partnerId: newNotification.data?.partner_id,
                             chatId: newNotification.data?.chat_id,
-                            isInviter: true
+                            isInviter: true,
+                            forceNewSession: true
                         } 
                     });
                 } else if (newNotification.type === 'coop_join_request') {
@@ -583,7 +586,7 @@ const notificationSeen = useRef<Set<string>>(new Set());
                                         message: `¡${user.user_metadata.username || 'Tu compañero'} aceptó tu solicitud`,
                                         data: { partner_id: user.id, mode: 'conjunto', chat_id: resolvedSession.id, session_id: resolvedSession.id }
                                     });
-                                    navigate('/workout', { state: { isMultiplayer: true, multiplayerMode: 'conjunto', partnerId: senderId, chatId: resolvedSession.id, partnerSessionId: resolvedSession.id, isInviter: true } });
+                                    navigate('/workout', { state: { isMultiplayer: true, multiplayerMode: 'conjunto', partnerId: senderId, chatId: resolvedSession.id, partnerSessionId: resolvedSession.id, isInviter: true, forceNewSession: true } });
                                 }} className="text-xs text-green-500 hover:text-green-300">Aceptar</button>
                             </div>
                         </div>
@@ -597,7 +600,8 @@ const notificationSeen = useRef<Set<string>>(new Set());
                             partnerId: newNotification.data?.partner_id,
                             chatId: newNotification.data?.chat_id,
                             partnerSessionId: newNotification.data?.session_id,
-                            isInviter: false
+                            isInviter: false,
+                            forceNewSession: true
                         } 
                     });
                 }

@@ -188,7 +188,8 @@ export const InboxPage = () => {
                         multiplayerMode: mode, 
                         partnerId: senderId,
                         chatId: notification.data?.chat_id,
-                        isInviter: false
+                        isInviter: false,
+                        forceNewSession: true
                     } 
                 });
                 setProcessingId(null);

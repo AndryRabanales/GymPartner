@@ -1594,7 +1594,9 @@ export const WorkoutSession = () => {
                 await workoutService.finishSession(active.id, 'Cierre automático: sesión demasiado antigua');
             }
 
-            const shouldRestore = active && !isTooOldToRestore && !(currentIsMultiplayer && !currentIsInviter);
+            const navState = location.state as any || {};
+            const forceNewSession = navState.forceNewSession === true;
+            const shouldRestore = active && !isTooOldToRestore && !forceNewSession && !(currentIsMultiplayer && !currentIsInviter);
 
             if (shouldRestore) {
                 setSessionId(active.id);
@@ -1697,7 +1699,19 @@ export const WorkoutSession = () => {
                 // If there was a stale active session but we are joining a multiplayer session, finish it first
                 if (active) {
                     console.log("🧹 Finishing stale active session before joining multiplayer:", active.id);
+                    localStorage.removeItem(`workout_draft_${active.id}`);
                     await workoutService.finishSession(active.id, "Stale session auto-closed to join multiplayer");
+                }
+
+                // Clear any other global state files preventatively on forced new session
+                if (forceNewSession) {
+                    localStorage.removeItem(STORAGE_KEY);
+                    localStorage.removeItem('workout_session_state');
+                    localStorage.removeItem('ginx_coop_state');
+                    setActiveExercises([]);
+                    setCurrentRoutineName('');
+                    setOriginalExerciseIds([]);
+                    setIsRoutineModified(false);
                 }
 
                 // Starting a fresh session: reset any stale cached multiplayer flags in local state/storage 
