@@ -1218,18 +1218,24 @@ export const WorkoutSession = () => {
 
     const scrollToCategory = (category: string) => {
         setActiveMuscleFilter(category);
-
-        // Use a small timeout to ensure state update and DOM alignment
+        // Direct scrollTop manipulation — more reliable than scrollIntoView inside fixed containers on iOS
         setTimeout(() => {
+            const container = catalogScrollRef.current;
             const element = document.getElementById(`category-section-${category}`);
-            if (element) {
-                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            } else {
-                if (catalogScrollRef.current) {
-                    catalogScrollRef.current.scrollTop = 0;
+            if (container && element) {
+                // offsetTop is relative to the offsetParent chain, not necessarily the container.
+                // Walk up to find the offset relative to the scroll container.
+                let offset = 0;
+                let el: HTMLElement | null = element;
+                while (el && el !== container) {
+                    offset += el.offsetTop;
+                    el = el.offsetParent as HTMLElement | null;
                 }
+                container.scrollTo({ top: Math.max(0, offset - 8), behavior: 'smooth' });
+            } else if (container) {
+                container.scrollTo({ top: 0, behavior: 'smooth' });
             }
-        }, 100);
+        }, 50);
     };
     const catalogScrollRef = useRef<HTMLDivElement>(null);
 
@@ -4666,31 +4672,29 @@ export const WorkoutSession = () => {
                                 </div>
                             )}
 
-                            {/* Muscle Filter Bar */}
+                            {/* Muscle anchors — tap to jump to section, all exercises stay visible */}
                             {!isCreatingExercise && (
-                                <div className="mt-2 flex gap-2 overflow-x-auto py-1 px-1 no-scrollbar scroll-smooth items-center">
+                                <div
+                                    className="mt-2 flex gap-1.5 py-1 px-1 no-scrollbar items-center"
+                                    style={{ overflowX: 'scroll', WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' } as React.CSSProperties}
+                                >
                                     {[
-                                        { label: 'PECHO', subs: ['PECHO', 'HOMBRO', 'TRÍCEPS'] },
-                                        { label: 'ESPALDA', subs: ['ESPALDA', 'BÍCEPS', 'ANTEBRAZO'] },
-                                        { label: 'PIERNA', subs: ['CUÁDRICEPS', 'ISQUIOTIBIALES', 'GLÚTEOS', 'PANTORRILLAS', 'ADUCTORES'] },
-                                        { label: 'CORE', subs: ['ABDOMINALES', 'LUMBARES', 'CUELLO'] },
-                                        { label: 'CARDIO', subs: ['CARDIO'] },
-                                    ].map(group => (
-                                        <div key={group.label} className="flex items-center gap-1.5 shrink-0">
-                                            <button
-                                                onClick={() => scrollToCategory(group.subs[0])}
-                                                className={`shrink-0 px-5 py-2.5 rounded-xl text-sm font-black italic uppercase tracking-tighter transition-all border-2 ${activeMuscleFilter === group.subs[0] ? 'bg-gym-primary text-black border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-neutral-900 text-gym-primary border-neutral-800'}`}
-                                            >
-                                                {group.label}
-                                            </button>
-                                            {group.subs.slice(1).map(sub => (
-                                                <button key={sub} onClick={() => scrollToCategory(sub)}
-                                                    className={`shrink-0 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border ${activeMuscleFilter === sub ? 'bg-white text-black border-white' : 'bg-neutral-800 text-neutral-400 border-neutral-700'}`}>
-                                                    {sub}
-                                                </button>
-                                            ))}
-                                            <div className="w-px h-5 bg-neutral-800 mx-1 shrink-0" />
-                                        </div>
+                                        'PECHO','HOMBRO','TRÍCEPS',
+                                        'ESPALDA','BÍCEPS','ANTEBRAZO',
+                                        'CUÁDRICEPS','ISQUIOTIBIALES','GLÚTEOS','PANTORRILLAS',
+                                        'ABDOMINALES','CUELLO','CARDIO',
+                                    ].map(cat => (
+                                        <button
+                                            key={cat}
+                                            onClick={() => scrollToCategory(cat)}
+                                            className={`shrink-0 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border transition-all
+                                                ${activeMuscleFilter === cat
+                                                    ? 'bg-gym-primary text-black border-gym-primary'
+                                                    : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:border-gym-primary/40'
+                                                }`}
+                                        >
+                                            {cat}
+                                        </button>
                                     ))}
                                 </div>
                             )}
@@ -4757,7 +4761,11 @@ export const WorkoutSession = () => {
                             </div>
                         )}
 
-                        <div ref={catalogScrollRef} className="flex-1 overflow-y-auto min-h-0 px-2 sm:px-4 pb-32 bg-black">
+                        <div
+                            ref={catalogScrollRef}
+                            className="flex-1 min-h-0 px-2 sm:px-4 pb-32 bg-black"
+                            style={{ overflowY: 'scroll', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' } as React.CSSProperties}
+                        >
                             {!isCreatingExercise ? (
                                 <div className="pt-4">
                                     <ArsenalGrid
