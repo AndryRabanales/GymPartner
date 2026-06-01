@@ -10,6 +10,8 @@ import { equipmentService, COMMON_EQUIPMENT_SEEDS } from '../services/GymEquipme
 import { userService } from '../services/UserService';
 import { workoutService } from '../services/WorkoutService';
 import { WorkoutCarousel } from '../components/workout/WorkoutCarousel';
+import { WorkoutCatalog } from '../components/workout/WorkoutCatalog';
+import { findBaseExercise, getVariantPrefs, saveVariantPref, getExtrasForMuscle } from '../data/exerciseCatalog';
 import { ArsenalGrid } from '../components/arsenal/ArsenalGrid';
 import { EquipmentForm } from '../components/arsenal/EquipmentForm';
 import { normalizeText, getMuscleGroup } from '../utils/inventoryUtils';
@@ -4066,10 +4068,37 @@ export const WorkoutSession = () => {
                                 <div key={exercise.id} className="h-full flex flex-col bg-neutral-900/40 border border-white/5 rounded-2xl overflow-hidden backdrop-blur-sm shadow-xl mx-1 relative">
                                     {/* Header */}
                                     <div className="p-4 flex justify-between items-start bg-white/5 border-b border-white/5 shrink-0">
-                                        <div>
-                                            <h3 className="text-2xl font-black italic uppercase text-white leading-tight">
-                                                {exercise.equipmentName}
-                                            </h3>
+                                        <div className="flex-1 min-w-0">
+                                            {(() => {
+                                                const base = findBaseExercise(exercise.equipmentName);
+                                                const activeVariant = base?.variants.find(v => v.seedName === exercise.equipmentName);
+                                                return (
+                                                    <>
+                                                        <h3 className="text-2xl font-black italic uppercase text-white leading-tight truncate">
+                                                            {base ? base.name : exercise.equipmentName}
+                                                        </h3>
+                                                        {base && base.variants.length > 1 && (
+                                                            <button
+                                                                onClick={() => {
+                                                                    // Cycle to next variant
+                                                                    const currentIdx = base.variants.findIndex(v => v.seedName === exercise.equipmentName);
+                                                                    const nextIdx = (currentIdx + 1) % base.variants.length;
+                                                                    const nextVariant = base.variants[nextIdx];
+                                                                    saveVariantPref(base.id, nextVariant.id);
+                                                                    setActiveExercises(prev => prev.map((ex, idx) =>
+                                                                        idx !== mapIndex ? ex : { ...ex, equipmentName: nextVariant.seedName, equipmentId: `virtual-${nextVariant.seedName}` }
+                                                                    ));
+                                                                }}
+                                                                className="mt-1 inline-flex items-center gap-1.5 text-[11px] font-bold text-neutral-400 hover:text-gym-primary bg-neutral-800/60 hover:bg-gym-primary/10 border border-neutral-700 hover:border-gym-primary/40 px-2.5 py-1 rounded-full transition-all"
+                                                            >
+                                                                <span>{activeVariant?.icon ?? '💪'}</span>
+                                                                <span>{activeVariant?.label ?? exercise.equipmentName}</span>
+                                                                <ChevronLeft size={10} className="rotate-[-90deg]" />
+                                                            </button>
+                                                        )}
+                                                    </>
+                                                );
+                                            })()}
                                             {canModifyStructure && (
                                                 <div className="flex gap-2 mt-2">
                                                     <button
@@ -4535,237 +4564,75 @@ export const WorkoutSession = () => {
             {
                 showAddModal && (
                     <div className="fixed inset-0 bg-black/95 z-[90] flex flex-col animate-in fade-in duration-200">
-                        {/* Header */}
+                        {isCreatingExercise ? (
+                        // ── Creating/editing custom exercise ───────────────────────────────
+                        <>
                         <div className="flex-none p-2.5 pb-1 border-b border-white/5 bg-neutral-950">
                             <div className="flex justify-between items-center mb-2">
-                                <div>
-                                    <h2 className="text-lg md:text-2xl font-black text-white italic uppercase tracking-tighter">
-                                        {isCreatingExercise ? (editingItem ? 'Editar Ejercicio' : 'Crear Ejercicio') : 'Catálogo'}
-                                    </h2>
-                                </div>
-                                <button onClick={() => {
-                                    if (isCreatingExercise) { setIsCreatingExercise(false); setEditingItem(null); }
-                                    else {
-                                        // If closing "Armería" with 0 exercises, go back to Profile (Cancel Session)
-                                        if (activeExercises.length === 0) {
-                                            isLeavingPageRef.current = true;
-                                            navigate('/');
-                                        } else {
-                                            setShowAddModal(false);
-                                        }
-                                    }
-                                }} className="bg-neutral-900 p-1.5 rounded-full text-white hover:bg-neutral-800 transition-colors">
-                                    {isCreatingExercise ? <ArrowLeft size={16} /> : <X size={16} />}
+                                <h2 className="text-lg font-black text-white italic uppercase tracking-tighter">
+                                    {editingItem ? 'Editar Ejercicio' : 'Crear Ejercicio'}
+                                </h2>
+                                <button onClick={() => { setIsCreatingExercise(false); setEditingItem(null); }}
+                                    className="bg-neutral-900 p-1.5 rounded-full text-white hover:bg-neutral-800 transition-colors">
+                                    <ArrowLeft size={16} />
                                 </button>
                             </div>
-
-                            {/* Search Bar - only show if NOT creating custom */}
-                            {!isCreatingExercise && (
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-2.5 text-neutral-500" size={16} />
-                                    <input
-                                        type="text"
-                                        placeholder="Buscar ejercicio o máquina..."
-                                        value={searchTerm}
-                                        onChange={e => setSearchTerm(e.target.value)}
-                                        className="w-full bg-neutral-900 border border-neutral-800 rounded-xl py-2 pl-9 text-[16px] text-white focus:outline-none focus:border-gym-primary transition-all font-bold"
-                                        autoFocus
-                                    />
-                                </div>
-                            )}
-
-                            {/* Muscle Filter Bar */}
-                            {!isCreatingExercise && (
-                                <div className="mt-2 flex gap-2 overflow-x-auto py-1 px-1 no-scrollbar scroll-smooth items-center">
-                                    {/* --- RAMA: PECHO --- */}
-                                    <button
-                                        onClick={() => scrollToCategory("PECHO")}
-                                        className={`shrink-0 px-6 py-2.5 rounded-xl text-sm font-black italic uppercase tracking-tighter transition-all border-2 ${activeMuscleFilter === "PECHO" ? 'bg-gym-primary text-black border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-neutral-900 text-gym-primary border-neutral-800'}`}
-                                    >
-                                        PECHO
-                                    </button>
-                                    {["PECHO", "HOMBRO", "TRÍCEPS"].map(sub => (
-                                        <button
-                                            key={sub}
-                                            onClick={() => scrollToCategory(sub)}
-                                            className={`shrink-0 px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border ${activeMuscleFilter === sub ? 'bg-white text-black border-white' : 'bg-neutral-800 text-neutral-400 border-neutral-700'}`}
-                                        >
-                                            {sub}
-                                        </button>
-                                    ))}
-
-                                    <div className="w-px h-6 bg-neutral-800 mx-2 shrink-0" />
-
-                                    {/* --- RAMA: ESPALDA --- */}
-                                    <button
-                                        onClick={() => scrollToCategory("ESPALDA")}
-                                        className={`shrink-0 px-6 py-2.5 rounded-xl text-sm font-black italic uppercase tracking-tighter transition-all border-2 ${activeMuscleFilter === "ESPALDA" ? 'bg-gym-primary text-black border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-neutral-900 text-gym-primary border-neutral-800'}`}
-                                    >
-                                        ESPALDA
-                                    </button>
-                                    {["ESPALDA", "BÍCEPS", "ANTEBRAZO"].map(sub => (
-                                        <button
-                                            key={sub}
-                                            onClick={() => scrollToCategory(sub)}
-                                            className={`shrink-0 px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border ${activeMuscleFilter === sub ? 'bg-white text-black border-white' : 'bg-neutral-800 text-neutral-400 border-neutral-700'}`}
-                                        >
-                                            {sub}
-                                        </button>
-                                    ))}
-
-                                    <div className="w-px h-6 bg-neutral-800 mx-2 shrink-0" />
-
-                                    {/* --- RAMA: PIERNA --- */}
-                                    <button
-                                        onClick={() => scrollToCategory("PIERNA")}
-                                        className={`shrink-0 px-6 py-2.5 rounded-xl text-sm font-black italic uppercase tracking-tighter transition-all border-2 ${activeMuscleFilter === "PIERNA" ? 'bg-gym-primary text-black border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-neutral-900 text-gym-primary border-neutral-800'}`}
-                                    >
-                                        PIERNA
-                                    </button>
-                                    {["CUÁDRICEPS", "ISQUIOTIBIALES", "GLÚTEOS", "PANTORRILLAS", "ADUCTORES"].map(sub => (
-                                        <button
-                                            key={sub}
-                                            onClick={() => scrollToCategory(sub)}
-                                            className={`shrink-0 px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border ${activeMuscleFilter === sub ? 'bg-white text-black border-white' : 'bg-neutral-800 text-neutral-400 border-neutral-700'}`}
-                                        >
-                                            {sub}
-                                        </button>
-                                    ))}
-
-                                    <div className="w-px h-6 bg-neutral-800 mx-2 shrink-0" />
-
-                                    {/* --- RAMA: CORE --- */}
-                                    <button
-                                        onClick={() => scrollToCategory("CORE")}
-                                        className={`shrink-0 px-6 py-2.5 rounded-xl text-sm font-black italic uppercase tracking-tighter transition-all border-2 ${activeMuscleFilter === "CORE" ? 'bg-gym-primary text-black border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-neutral-900 text-gym-primary border-neutral-800'}`}
-                                    >
-                                        CORE
-                                    </button>
-                                    {["ABDOMINALES", "LUMBARES", "CUELLO"].map(sub => (
-                                        <button
-                                            key={sub}
-                                            onClick={() => scrollToCategory(sub)}
-                                            className={`shrink-0 px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border ${activeMuscleFilter === sub ? 'bg-white text-black border-white' : 'bg-neutral-800 text-neutral-400 border-neutral-700'}`}
-                                        >
-                                            {sub}
-                                        </button>
-                                    ))}
-
-                                    <div className="w-px h-6 bg-neutral-800 mx-2 shrink-0" />
-
-                                    {/* --- RAMA: CARDIO --- */}
-                                    <button
-                                        onClick={() => scrollToCategory("CARDIO")}
-                                        className={`shrink-0 px-6 py-2.5 rounded-xl text-sm font-black italic uppercase tracking-tighter transition-all border-2 ${activeMuscleFilter === "CARDIO" ? 'bg-gym-primary text-black border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-neutral-900 text-gym-primary border-neutral-800'}`}
-                                    >
-                                        CARDIO
-                                    </button>
-                                </div>
-                            )}
                         </div>
-
-                        <div ref={catalogScrollRef} className="flex-1 overflow-y-auto min-h-0 px-2 sm:px-4 pb-32 bg-black">
-                            {!isCreatingExercise ? (
-                                <div className="pt-4">
-                                    <ArsenalGrid
-                                        inventory={effectiveInventory}
-                                        selectedItems={selectedCatalogItems}
-                                        userSettings={userSettings}
-                                        searchTerm={searchTerm}
-                                        onToggleSelection={handleCatalogToggle}
-                                        onOpenCatalog={() => { }}
-                                        onEditItem={setEditingItem}
-                                        sectionOrder={CATALOG_ORDER}
-                                        gridClassName="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2"
-                                    />
-                                </div>
-                            ) : (
-                                <EquipmentForm
-                                    user={user}
-                                    userSettings={userSettings}
-                                    onUpdateSettings={setUserSettings}
-                                    editingItem={editingItem}
-                                    onClose={() => { setIsCreatingExercise(false); setEditingItem(null); }}
-                                    onSuccess={(newItem, isEdit) => {
-                                        // Update Local Inventory State (Optimistic)
-                                        setArsenal(prev => {
-                                            if (isEdit) return prev.map(i => i.id === newItem.id ? newItem : i);
-                                            return [...prev, newItem];
-                                        });
-
-                                        if (isEdit) {
-                                            // If Editing: Just update the visual state, DO NOT start session.
-                                            // Ensure it is selected so the user can see it's ready.
-                                            setSelectedCatalogItems(prev => {
-                                                const newSet = new Set(prev);
-                                                newSet.add(newItem.id);
-                                                return newSet;
-                                            });
-                                            // Close the form to return to grid
-                                            setIsCreatingExercise(false);
-                                            setEditingItem(null);
-                                        } else {
-                                            // If New Creation: Select it and return to grid (User might want to add more)
-                                            // PREVIOUSLY: addExercise(newItem) -> Auto-start.
-                                            // NEW BEHAVIOR: Just Select it.
-                                            setSelectedCatalogItems(prev => {
-                                                const newSet = new Set(prev);
-                                                newSet.add(newItem.id);
-                                                return newSet;
-                                            });
-                                            // setShowAddModal(false); // REMOVED: Keep user in Catalog
-                                            // User said "haz que el boton de guardar... te siga manteniendo en el mismo lugar". 
-                                            // Return to Grid View
-                                            setIsCreatingExercise(false);
-                                            setEditingItem(null);
-                                            setSearchTerm('');
-                                        }
-                                    }}
-                                    activeSection={activeMuscleFilter || 'CHEST'}
-                                    catalogItems={catalogItems}
-                                    onQuickAdd={(seed) => {
-                                        // Quick Add Seed from Catalog
-                                        const tempId = `virtual-${seed.name}`;
-                                        // Create virtual item object since it might not be in the list yet
-                                        // @ts-expect-error - ignore typing
-                                        const virtualItem: Equipment = {
-                                            ...seed,
-                                            id: tempId,
-                                            gym_id: 'virtual',
-                                            quantity: 1,
-                                            condition: 'GOOD'
-                                        };
-
-                                        // addExercise(virtualItem); // REMOVED: Auto-start legacy
-                                        // setShowAddModal(false);   // REMOVED: Close legacy
-
-                                        // NEW: Select it and keep in catalog
-                                        setSelectedCatalogItems(prev => {
-                                            const newSet = new Set(prev);
-                                            newSet.add(virtualItem.id);
-                                            return newSet;
-                                        });
-                                        // Add to inventory so it renders as selected
-                                        setArsenal(prev => [...prev, virtualItem]);
-
-                                        setIsCreatingExercise(false);
-                                    }}
-                                />
-                            )}
-
-                            {/* Floating "Add" Button for Batch Selection */}
-                            {!isCreatingExercise && newlySelectedCount > 0 && (
-                                <div className="fixed bottom-6 left-0 w-full px-4 z-[100] flex justify-center pointer-events-none">
-                                    <button
-                                        onClick={handleBatchAdd}
-                                        className="pointer-events-auto bg-gym-primary text-black font-black uppercase py-4 px-12 rounded-2xl shadow-[0_10px_40px_rgba(250,204,21,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center gap-3 text-lg animate-in slide-in-from-bottom-4 border-2 border-yellow-400"
-                                    >
-                                        <Plus size={24} strokeWidth={3} />
-                                        AGREGAR ({newlySelectedCount})
-                                    </button>
-                                </div>
-                            )}
+                        {/* EquipmentForm body */}
+                        <div className="flex-1 overflow-y-auto px-2 sm:px-4 pb-8 bg-black">
+                            <EquipmentForm
+                                user={user}
+                                userSettings={userSettings}
+                                onUpdateSettings={setUserSettings}
+                                editingItem={editingItem}
+                                onClose={() => { setIsCreatingExercise(false); setEditingItem(null); }}
+                                onSuccess={(newItem, isEdit) => {
+                                    setArsenal(prev => isEdit ? prev.map(i => i.id === newItem.id ? newItem : i) : [...prev, newItem]);
+                                    setSelectedCatalogItems(prev => { const s = new Set(prev); s.add(newItem.id); return s; });
+                                    setIsCreatingExercise(false); setEditingItem(null); setSearchTerm('');
+                                }}
+                                activeSection={activeMuscleFilter || 'CHEST'}
+                                catalogItems={catalogItems}
+                                onQuickAdd={(seed) => {
+                                    const id = `virtual-${seed.name}`;
+                                    setSelectedCatalogItems(prev => { const s = new Set(prev); s.add(id); return s; });
+                                    setArsenal(prev => [...prev, { ...seed, id, gym_id: 'virtual', quantity: 1, condition: 'GOOD' } as any]);
+                                    setIsCreatingExercise(false);
+                                }}
+                            />
                         </div>
+                        </>
+                        ) : (
+                        // ── Curated catalog ────────────────────────────────────────────────
+                        <>
+                        <div className="relative flex-1 min-h-0 flex flex-col">
+                            <WorkoutCatalog
+                                selected={selectedCatalogItems}
+                                onToggle={handleCatalogToggle}
+                                onClose={() => {
+                                    if (activeExercises.length === 0) {
+                                        isLeavingPageRef.current = true;
+                                        navigate('/');
+                                    } else {
+                                        setShowAddModal(false);
+                                    }
+                                }}
+                            />
+                        </div>
+                        {/* Floating AGREGAR button */}
+                        {newlySelectedCount > 0 && (
+                            <div className="absolute bottom-6 left-0 w-full px-4 z-[100] flex justify-center pointer-events-none">
+                                <button
+                                    onClick={handleBatchAdd}
+                                    className="pointer-events-auto bg-gym-primary text-black font-black uppercase py-4 px-12 rounded-2xl shadow-[0_10px_40px_rgba(250,204,21,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center gap-3 text-lg animate-in slide-in-from-bottom-4 border-2 border-yellow-400"
+                                >
+                                    <Plus size={24} strokeWidth={3} />
+                                    AGREGAR ({newlySelectedCount})
+                                </button>
+                            </div>
+                        )}
+                        </>
+                        )}
                     </div>
                 )
             }
