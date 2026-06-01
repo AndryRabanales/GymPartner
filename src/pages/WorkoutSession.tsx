@@ -376,6 +376,18 @@ export const WorkoutSession = () => {
     const [originalMetricsSnapshot, setOriginalMetricsSnapshot] = useState<string | null>(null); // To detect changes in routine targets
     const [isRoutineModified, setIsRoutineModified] = useState(false); // Tracks if routine structure changed during session
 
+    // [NEW] Multiplayer references to avoid stale closures
+    const currentRoutineNameRef = useRef<string | undefined>(currentRoutineName);
+    const isRoutineModifiedRef = useRef<boolean>(isRoutineModified);
+
+    useEffect(() => {
+        currentRoutineNameRef.current = currentRoutineName;
+    }, [currentRoutineName]);
+
+    useEffect(() => {
+        isRoutineModifiedRef.current = isRoutineModified;
+    }, [isRoutineModified]);
+
     // --- Multiplayer Sync Hooks ---
     const [partnerName, setPartnerName] = useState<string>('Compañero');
     const [partnerAvatar, setPartnerAvatar] = useState<string | null>(null);
@@ -656,8 +668,18 @@ export const WorkoutSession = () => {
                 }
             })
             .on('broadcast', { event: 'sync_state' }, (payload) => {
-                const { exercises, sender, knownParticipants } = payload.payload;
+                const { exercises, sender, knownParticipants, routineName, isRoutineModified: incomingRoutineModified } = payload.payload;
                 if (sender === user.id) return; // Ignore echoes
+
+                if (routineName !== undefined && routineName !== null) {
+                    console.log('🔄 Synchronized routine name via broadcast:', routineName);
+                    setCurrentRoutineName(routineName);
+                }
+
+                if (incomingRoutineModified !== undefined && incomingRoutineModified !== null) {
+                    console.log('🔄 Synchronized isRoutineModified via broadcast:', incomingRoutineModified);
+                    setIsRoutineModified(incomingRoutineModified);
+                }
 
                 if (knownParticipants && Array.isArray(knownParticipants)) {
                     setParticipants(prev => {
@@ -839,7 +861,9 @@ export const WorkoutSession = () => {
                         payload: { 
                             exercises: activeExercisesRef.current, 
                             sender: user.id,
-                            knownParticipants: participantsRef.current
+                            knownParticipants: participantsRef.current,
+                            routineName: currentRoutineNameRef.current,
+                            isRoutineModified: isRoutineModifiedRef.current
                         }
                     }).catch(e => console.error('Error broadcasting hydration state:', e));
                 }
@@ -883,32 +907,31 @@ export const WorkoutSession = () => {
             })
             .on('broadcast', { event: 'session_finished' }, async (payload) => {
                 const { sender } = payload.payload;
-                if (sender === user.id) return; // Ignore echoes
-                
-                console.log('🏁 Received session_finished signal from host. Finalizing guest session in cascade...');
-                toast.success("¡Entrenamiento finalizado por el anfitrión!");
-                
+                if (sender === user.id) return; // Ignore own echo (host side)
+
+                console.log('🏁 [Guest] Host closed the room. Session already finalized in DB by closeRoom().');
+                toast.success("¡El anfitrión cerró la sala! Tu progreso fue guardado.");
+
+                // closeRoom() already finalized the session in DB — just clear local state
                 const finalSessionId = sessionIdRef.current;
-                
-                // Clear local cache immediately
-                if (finalSessionId) {
-                    localStorage.removeItem(`workout_draft_${finalSessionId}`);
-                }
+                if (finalSessionId) localStorage.removeItem(`workout_draft_${finalSessionId}`);
                 localStorage.removeItem('workout_session_state');
                 localStorage.removeItem('ginx_coop_state');
-                
-                // Auto-finalize the guest's session in the DB
-                if (finalSessionId) {
-                    try {
-                        await workoutService.finishSession(finalSessionId, "Coop session cascade-closed by host finish", currentRoutineName, false);
-                    } catch (err) {
-                        console.error("Error finalizing guest session on cascade:", err);
-                    }
-                }
-                
+                sessionStorage.removeItem('ginx_temp_exit_active');
+
                 isLeavingPageRef.current = true;
                 setLoading(false);
-                setShowSummary(true); // Take guest to summary too!
+                setShowSummary(true);
+            })
+            .on('broadcast', { event: 'participant_left' }, (payload) => {
+                const { sender } = payload.payload;
+                if (sender === user.id) return;
+                // Find participant name for the toast
+                const leavingParticipant = participantsRef.current.find(p => p.id === sender);
+                const leavingName = leavingParticipant?.username || 'Un participante';
+                toast(`${leavingName} abandonó la sala.`, { icon: '👋' });
+                // Remove them from participants list
+                setParticipants(prev => prev.filter(p => p.id !== sender));
             })
             .on('broadcast', { event: 'sync_session_id' }, (payload) => {
                 const { sessionId: partnerSessionId, startTime: partnerStartTime, sender } = payload.payload;
@@ -959,7 +982,9 @@ export const WorkoutSession = () => {
                         payload: { 
                             exercises: activeExercises, 
                             sender: user.id,
-                            knownParticipants: participantsRef.current
+                            knownParticipants: participantsRef.current,
+                            routineName: currentRoutineName,
+                            isRoutineModified: isRoutineModified
                         }
                     }).catch(e => console.error(e));
 
@@ -1005,13 +1030,18 @@ export const WorkoutSession = () => {
                 channelRef.current.send({
                     type: 'broadcast',
                     event: 'sync_state',
-                    payload: { exercises: activeExercises, sender: user.id }
+                    payload: { 
+                        exercises: activeExercises, 
+                        sender: user.id,
+                        routineName: currentRoutineName,
+                        isRoutineModified: isRoutineModified
+                    }
                 }).catch(e => console.error(e));
             }
         }, 500); // 500ms debounce to allow fluent typing without focus loss
 
         return () => clearTimeout(handler);
-    }, [activeExercises, isMultiplayer, user]);
+    }, [activeExercises, isMultiplayer, user, currentRoutineName, isRoutineModified]);
 
     // Broadcast updated participant list whenever it changes on the Host's device to keep row slot alignment
     useEffect(() => {
@@ -1023,7 +1053,9 @@ export const WorkoutSession = () => {
                 payload: {
                     exercises: activeExercisesRef.current,
                     sender: user.id,
-                    knownParticipants: participants
+                    knownParticipants: participants,
+                    routineName: currentRoutineNameRef.current,
+                    isRoutineModified: isRoutineModifiedRef.current
                 }
             }).catch(e => console.error(e));
         }
@@ -1620,10 +1652,13 @@ export const WorkoutSession = () => {
             // 3. Restore or Start Logic
             const active = activeResult.data;
 
-            // 🛡️ Age guard: never restore a session started more than 4 hours ago;
-            // it should have been closed by cleanOrphanSessions above, but
-            // network failures or race conditions could sneak one through.
-            const SESSION_MAX_RESTORE_MS = 4 * 60 * 60 * 1000; // 4 hours
+            // 🛡️ Age guard: never restore a session that is too old.
+            // Multiplayer (room) sessions get a 12h window — rooms are persistent by design.
+            // Solo sessions get a 4h window.
+            const isActiveMultiplayer = active?.is_multiplayer === true;
+            const SESSION_MAX_RESTORE_MS = isActiveMultiplayer
+                ? 12 * 60 * 60 * 1000  // 12 hours for rooms
+                : 4 * 60 * 60 * 1000;  // 4 hours for solo
             const activeAge = active ? Date.now() - new Date(active.started_at).getTime() : Infinity;
             const isTooOldToRestore = activeAge > SESSION_MAX_RESTORE_MS;
 
@@ -1736,7 +1771,7 @@ export const WorkoutSession = () => {
                             });
                         });
                         setActiveExercises(restoredExercises);
-                    } else {
+                    } else if (!(currentIsMultiplayer && !currentIsInviter)) {
                         setShowAddModal(true);
                     }
                 }
@@ -1806,7 +1841,7 @@ export const WorkoutSession = () => {
                             setStartTime(new Date(partnerActive.started_at));
                         }
                     // Only prompt for routine/exercises if no exercises were already restored
-                    } else if (activeExercisesRef.current.length === 0) {
+                    } else if (activeExercisesRef.current.length === 0 && !(currentIsMultiplayer && !currentIsInviter)) {
                         if (localRoutines.length === 0) setShowAddModal(true);
                         else setShowStartOptionsModal(true);
                     }
@@ -3495,48 +3530,69 @@ export const WorkoutSession = () => {
 
         try {
             const flowNotes = `Flujo de Llenado: ${exerciseFillFlow.map(f => f.exerciseName).join(' ➔ ')}`;
-            const result = await workoutService.finishSession(finalSessionId, flowNotes, currentRoutineName, true);
+
+            let result: { success: boolean; error?: any };
+
+            // ── HOST: Close entire room (finalizes all guest sessions too) ────────
+            if (isMultiplayer && isInviter && finalSessionId) {
+                console.log('🏠 Host closing room for all participants:', finalSessionId);
+
+                // 1. Broadcast to online guests FIRST so they go to summary immediately
+                if (channelRef.current && user) {
+                    channelRef.current.send({
+                        type: 'broadcast',
+                        event: 'session_finished',
+                        payload: { sender: user.id, room_id: finalSessionId }
+                    }).catch(e => console.error('Error broadcasting session_finished:', e));
+                }
+
+                // 2. Close room in DB (awards GX to everyone, finalizes all sessions,
+                //    sends `room_closed` notifications to offline guests)
+                const roomResult = await workoutService.closeRoom(finalSessionId, flowNotes, currentRoutineName);
+                result = roomResult;
+
+            // ── GUEST: Leave room (finalize only own session) ─────────────────────
+            } else if (isMultiplayer && !isInviter && finalSessionId) {
+                console.log('👤 Guest leaving room, finalizing own session:', finalSessionId);
+
+                // Broadcast so host + other guests see this user left
+                if (channelRef.current && user) {
+                    channelRef.current.send({
+                        type: 'broadcast',
+                        event: 'participant_left',
+                        payload: { sender: user.id }
+                    }).catch(e => console.error('Error broadcasting participant_left:', e));
+                }
+
+                result = await workoutService.finishSession(finalSessionId, flowNotes, currentRoutineName, true);
+
+            // ── SOLO: Standard finalization ───────────────────────────────────────
+            } else {
+                result = await workoutService.finishSession(finalSessionId, flowNotes, currentRoutineName, true);
+            }
+
             localStorage.setItem(`exercise_fill_flow_${finalSessionId}`, JSON.stringify(exerciseFillFlow));
 
             if (result.success) {
                 console.log('✅ Sesión terminada exitosamente');
-
-                if (isMultiplayer && isInviter && channelRef.current && user) {
-                    console.log('📢 Host broadcasting session_finished to guests...');
-                    channelRef.current.send({
-                        type: 'broadcast',
-                        event: 'session_finished',
-                        payload: { sender: user.id }
-                    }).catch(e => console.error('Error broadcasting session_finished:', e));
-                }
-
                 localStorage.removeItem(`workout_draft_${finalSessionId}`);
-                localStorage.removeItem(STORAGE_KEY); // Also clear global key
-                localStorage.removeItem('ginx_coop_state'); // Clear multiplayer state!
+                localStorage.removeItem(STORAGE_KEY);
+                localStorage.removeItem('ginx_coop_state');
                 sessionStorage.removeItem('ginx_temp_exit_active');
-                // Removed blocking alert. 
-                // We'll rely on the UI showing "Guardando..." or similar via loading state, 
-                // or we could add a specific "Finished" state to show a success message briefly.
-                // For now, let's just wait a moment so the user SEES the timer stopped.
-
-                // Optional: Force update the local duration to ensure it matches exactly what we sent? 
-                // Actually the backend sets the time. The difference is negligible.
 
                 setTimeout(() => {
                     setLoading(false);
                     isLeavingPageRef.current = true;
                     setShowSummary(true);
-                }, 1500); // 1.5s delay to admire the frozen timer and "Saving" state
+                }, 1500);
             } else {
                 console.error('❌ Error terminando sesión:', result.error);
-                // alert('❌ Error guardando entrenamiento: ' + JSON.stringify(result.error));
                 setLoading(false);
-                setIsFinished(false); // Resume timer if failed
+                setIsFinished(false);
                 setIsFinalizing(false);
             }
         } catch (error) {
             console.error('❌ Exception terminando sesión:', error);
-            // alert('❌ Error inesperado: ' + error);
             setLoading(false);
             setIsFinished(false);
             setIsFinalizing(false);

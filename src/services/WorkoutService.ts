@@ -413,16 +413,32 @@ class WorkoutService {
 
     // Get incomplete session if app crashed or user left
     async getActiveSession(userId: string): Promise<{ data: WorkoutSession | null; error: any }> {
-        // Only consider sessions started within the last 4 hours as truly "active".
-        // Anything older is treated as a ghost and will be swept by cleanOrphanSessions.
+        // Multiplayer (room) sessions get a wider recovery window — rooms can persist longer.
+        // We run two queries: one tight (4h) for solo, one wide (12h) for coop.
         const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString();
+        const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
 
+        // First: check for a recent coop session (widest window)
+        const { data: coopData, error: coopError } = await supabase
+            .from('workout_sessions')
+            .select('*')
+            .eq('user_id', userId)
+            .is('finished_at', null)
+            .eq('is_multiplayer', true)
+            .gt('started_at', twelveHoursAgo)
+            .order('started_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        if (coopData) return { data: coopData, error: null };
+
+        // Fallback: solo session (4h window)
         const { data, error } = await supabase
             .from('workout_sessions')
             .select('*')
             .eq('user_id', userId)
             .is('finished_at', null)
-            .gt('started_at', fourHoursAgo) // ← tightened from 12h to 4h
+            .gt('started_at', fourHoursAgo)
             .order('started_at', { ascending: false })
             .limit(1)
             .maybeSingle();
@@ -433,6 +449,159 @@ class WorkoutService {
         }
 
         return { data, error: null };
+    }
+
+    // ─── ROOM METHODS ─────────────────────────────────────────────────────────
+    // room_id = the Host's session ID.
+    // Host session: id = room_id, is_multiplayer=true
+    // Guest sessions: partner_session_id = room_id, is_multiplayer=true
+
+    /** Returns all user_ids currently active in a room (host + guests). */
+    async getRoomActiveMembers(roomId: string): Promise<string[]> {
+        try {
+            // Host
+            const { data: host } = await supabase
+                .from('workout_sessions')
+                .select('user_id')
+                .eq('id', roomId)
+                .is('finished_at', null)
+                .maybeSingle();
+
+            // Guests
+            const { data: guests } = await supabase
+                .from('workout_sessions')
+                .select('user_id')
+                .eq('partner_session_id', roomId)
+                .is('finished_at', null);
+
+            const ids: string[] = [];
+            if (host) ids.push(host.user_id);
+            if (guests) guests.forEach(g => ids.push(g.user_id));
+            return ids;
+        } catch {
+            return [];
+        }
+    }
+
+    /** Returns whether the room (host's session) is still open. */
+    async isRoomOpen(roomId: string): Promise<boolean> {
+        const { data } = await supabase
+            .from('workout_sessions')
+            .select('id')
+            .eq('id', roomId)
+            .is('finished_at', null)
+            .maybeSingle();
+        return !!data;
+    }
+
+    /** Given a guest's session, returns the host's user_id so join requests can be routed. */
+    async getRoomHostUserId(guestSessionId: string): Promise<string | null> {
+        try {
+            const { data: guest } = await supabase
+                .from('workout_sessions')
+                .select('partner_session_id')
+                .eq('id', guestSessionId)
+                .maybeSingle();
+
+            if (!guest?.partner_session_id) return null;
+
+            const { data: host } = await supabase
+                .from('workout_sessions')
+                .select('user_id')
+                .eq('id', guest.partner_session_id)
+                .maybeSingle();
+
+            return host?.user_id || null;
+        } catch {
+            return null;
+        }
+    }
+
+    /**
+     * Host closes the room.
+     * 1. Finalizes host's own session (isManual=true for GX award).
+     * 2. Finalizes ALL guest sessions (isManual=false — guests get GX via their own
+     *    finalization flow triggered by the `session_finished` broadcast).
+     * 3. Sends a `room_closed` notification to every guest's user_id.
+     */
+    async closeRoom(roomId: string, notes?: string, routineName?: string): Promise<{ success: boolean }> {
+        const now = new Date().toISOString();
+
+        // 1. Finalize host session with GX
+        const hostResult = await this.finishSession(roomId, notes, routineName, true);
+        if (!hostResult.success) {
+            console.error('closeRoom: failed to finalize host session');
+        }
+
+        // 2. Find and finalize all guest sessions
+        const { data: guests } = await supabase
+            .from('workout_sessions')
+            .select('id, user_id')
+            .eq('partner_session_id', roomId)
+            .is('finished_at', null);
+
+        if (guests && guests.length > 0) {
+            // 2a. Get guest session details before finalizing
+            const guestSessionIds = guests.map(g => g.id);
+            const { data: guestSessions } = await supabase
+                .from('workout_sessions')
+                .select('id, user_id, started_at')
+                .in('id', guestSessionIds);
+
+            // 2b. Bulk set finished_at for all guests
+            await supabase
+                .from('workout_sessions')
+                .update({ finished_at: now, end_time: now, notes: 'Sala cerrada por el anfitrión' })
+                .eq('partner_session_id', roomId)
+                .is('finished_at', null);
+
+            // 2c. Award GX to each guest + send room_closed notification
+            try {
+                const { userService } = await import('./UserService');
+
+                // Get host profile for notification message
+                const { data: hostSession } = await supabase
+                    .from('workout_sessions')
+                    .select('user_id')
+                    .eq('id', roomId)
+                    .maybeSingle();
+                const { data: hostProfile } = hostSession
+                    ? await supabase.from('profiles').select('username').eq('id', hostSession.user_id).maybeSingle()
+                    : { data: null };
+                const hostName = hostProfile?.username || 'el anfitrión';
+
+                for (const gSess of (guestSessions || [])) {
+                    const durationMinutes = (Date.now() - new Date(gSess.started_at).getTime()) / 60000;
+
+                    if (durationMinutes >= 20) {
+                        const today = new Date().toLocaleDateString('en-CA');
+                        const { data: todaySessions } = await supabase
+                            .from('workout_sessions')
+                            .select('id')
+                            .eq('user_id', gSess.user_id)
+                            .not('finished_at', 'is', null)
+                            .like('finished_at', `${today}%`);
+
+                        if (!todaySessions || todaySessions.length <= 1) {
+                            await userService.addGxPoints(gSess.user_id, 3, 'workout_finished_coop');
+                        }
+                    }
+
+                    // Send room_closed notification — this wakes up offline guests
+                    await supabase.from('notifications').insert({
+                        user_id: gSess.user_id,
+                        type: 'room_closed',
+                        title: '🏁 SALA CERRADA',
+                        message: `${hostName} cerró la sala. Tu progreso fue guardado en tu historial.`,
+                        data: { room_id: roomId, host_name: hostName }
+                    });
+                }
+            } catch (e) {
+                console.warn('closeRoom: error awarding guest GX or sending notifications:', e);
+            }
+        }
+
+        return { success: true };
     }
 
     // Get logs for an active session (The "Replay")

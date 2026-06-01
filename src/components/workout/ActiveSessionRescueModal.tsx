@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertTriangle, Play, Trash2, Clock, MapPin, Loader2 } from 'lucide-react';
+import { AlertTriangle, Play, Trash2, Clock, MapPin, Loader2, Users, DoorOpen } from 'lucide-react';
 import { workoutService } from '../../services/WorkoutService';
 import { supabase } from '../../lib/supabase';
 
@@ -9,7 +9,7 @@ interface ActiveSessionRescueModalProps {
   sessionId: string;
   gymId: string | null;
   startedAt: string;
-  onResolve: () => void; // Called when session is successfully resumed or deleted
+  onResolve: () => void;
 }
 
 export const ActiveSessionRescueModal: React.FC<ActiveSessionRescueModalProps> = ({
@@ -24,263 +24,346 @@ export const ActiveSessionRescueModal: React.FC<ActiveSessionRescueModalProps> =
   const navigate = useNavigate();
   const [gymName, setGymName] = useState<string>('Entrenamiento Personal');
   const [elapsedTime, setElapsedTime] = useState<string>('00:00');
-  const [loadingDelete, setLoadingDelete] = useState<boolean>(false);
+  const [loadingAction, setLoadingAction] = useState<boolean>(false);
 
-  // Fetch gym name if gymId is present
+  // ─── Session type detection ────────────────────────────────────────────────
+  type RoomStatus = 'checking' | 'room_open' | 'room_closed' | 'solo';
+  const [roomStatus, setRoomStatus] = useState<RoomStatus>('checking');
+  const [hostName, setHostName] = useState<string | null>(null);
+  const [hostId, setHostId] = useState<string | null>(null);
+  const [roomId, setRoomId] = useState<string | null>(null);
+  const [memberCount, setMemberCount] = useState<number>(0);
+  const [isHost, setIsHost] = useState<boolean>(false);
+
   useEffect(() => {
+    if (!gymId || gymId === 'virtual' || gymId === 'personal') {
+      setGymName('Entrenamiento Personal');
+      return;
+    }
     let active = true;
-    const fetchGym = async () => {
-      if (!gymId || gymId === 'virtual' || gymId === 'personal') {
-        if (active) setGymName('Entrenamiento Personal');
-        return;
-      }
-      try {
-        const { data } = await supabase
-          .from('gyms')
-          .select('name')
-          .eq('id', gymId)
-          .maybeSingle();
-        if (active && data?.name) {
-          setGymName(data.name);
-        }
-      } catch (err) {
-        console.warn('Error fetching gym name for rescue modal:', err);
-      }
-    };
-    fetchGym();
+    supabase.from('gyms').select('name').eq('id', gymId).maybeSingle().then(({ data }) => {
+      if (active && data?.name) setGymName(data.name);
+    });
     return () => { active = false; };
   }, [gymId]);
 
-  const [partnerStatus, setPartnerStatus] = useState<'active' | 'dead' | 'checking'>('checking');
-  const [hostName, setHostName] = useState<string | null>(null);
-
-  // Verify if partner's co-op session is still active
   useEffect(() => {
+    if (!sessionId) return;
     let active = true;
-    const verifyPartnerSession = async () => {
-      if (!sessionId) return;
-      try {
-        const { data: mySess } = await supabase
-          .from('workout_sessions')
-          .select('is_multiplayer, partner_session_id, partner_id')
-          .eq('id', sessionId)
+
+    const detectRoom = async () => {
+      const { data: mySess } = await supabase
+        .from('workout_sessions')
+        .select('is_multiplayer, partner_session_id, partner_id, user_id')
+        .eq('id', sessionId)
+        .maybeSingle();
+
+      if (!active || !mySess) return;
+
+      if (!mySess.is_multiplayer) {
+        setRoomStatus('solo');
+        return;
+      }
+
+      // ── Am I the HOST? ────────────────────────────────────────────────────
+      // Host's session has partner_session_id = null (or pointing to a guest, not to another host)
+      // We detect "I am host" when NO session references MY session as its partner_session_id
+      // Simplest heuristic: if partner_session_id is null → I'm the host
+      const amHost = !mySess.partner_session_id;
+      setIsHost(amHost);
+
+      const resolvedRoomId = amHost ? sessionId : mySess.partner_session_id;
+      setRoomId(resolvedRoomId);
+
+      // ── Is room still open? ───────────────────────────────────────────────
+      const open = await workoutService.isRoomOpen(resolvedRoomId!);
+
+      if (!active) return;
+
+      if (open) {
+        setRoomStatus('room_open');
+        // Fetch active member count
+        const members = await workoutService.getRoomActiveMembers(resolvedRoomId!);
+        if (active) setMemberCount(members.length);
+      } else {
+        setRoomStatus('room_closed');
+      }
+
+      // ── Fetch host info (for guests) ─────────────────────────────────────
+      if (!amHost && mySess.partner_id) {
+        setHostId(mySess.partner_id);
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('id', mySess.partner_id)
           .maybeSingle();
-
-        if (!active) return;
-
-        if (mySess?.is_multiplayer) {
-          // If multiplayer guest, let's fetch the Host's profile name
-          if (mySess.partner_id) {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('username, full_name')
-              .eq('id', mySess.partner_id)
-              .maybeSingle();
-              
-            if (active && profile) {
-              setHostName(profile.full_name || profile.username || 'Tu compañero');
-            }
-          }
-
-          if (mySess.partner_id && mySess.partner_session_id) {
-            // Check host session active status securely using the RLS-compatible endpoint
-            const partnerActiveResult = await workoutService.getActiveSession(mySess.partner_id);
-            const partnerActive = partnerActiveResult?.data;
-
-            if (!active) return;
-
-            if (!partnerActive || partnerActive.id !== mySess.partner_session_id) {
-              setPartnerStatus('dead');
-            } else {
-              setPartnerStatus('active');
-            }
-          } else {
-            // We are the Host/Inviter (partner_id is null on host session)
-            setPartnerStatus('active');
-          }
-        } else {
-          // We are an individual training session
-          setPartnerStatus('active');
-        }
-      } catch (err) {
-        console.warn('Error checking partner session active status:', err);
-        if (active) setPartnerStatus('active');
+        if (active && profile) setHostName(profile.username);
       }
     };
-    verifyPartnerSession();
+
+    detectRoom();
     return () => { active = false; };
   }, [sessionId]);
 
-  // Premium Timer Logic
+  // Elapsed timer
   useEffect(() => {
     if (!startedAt) return;
-
     const tick = () => {
-      const now = Date.now();
-      const diff = Math.max(0, now - new Date(startedAt).getTime());
-      const hours = Math.floor(diff / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-      if (hours > 0) {
-        setElapsedTime(`${hours}h ${minutes.toString().padStart(2, '0')}m`);
-      } else {
-        setElapsedTime(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
-      }
+      const diff = Math.max(0, Date.now() - new Date(startedAt).getTime());
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      setElapsedTime(h > 0 ? `${h}h ${String(m).padStart(2, '0')}m` : `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`);
     };
-
-    const interval = setInterval(tick, 1000);
+    const id = setInterval(tick, 1000);
     tick();
-    return () => clearInterval(interval);
+    return () => clearInterval(id);
   }, [startedAt]);
 
-  const handleResume = async () => {
-    if (partnerStatus === 'dead') {
-      if (window.confirm('Tu compañero ha finalizado o cancelado el entrenamiento cooperativo conjunto. ¿Deseas CONTINUAR este entrenamiento de forma INDIVIDUAL para no perder tu progreso de hoy? (Si pulsas Cancelar, finalizaremos y guardaremos tus series de forma limpia en tu historial)')) {
-        setLoadingDelete(true);
-        try {
-          // Convert the session to individual in Supabase so they can keep working solo
-          await supabase
-            .from('workout_sessions')
-            .update({
-              is_multiplayer: false,
-              multiplayer_mode: null,
-              partner_id: null,
-              partner_session_id: null
-            })
-            .eq('id', sessionId);
+  // ─── Actions ───────────────────────────────────────────────────────────────
 
-          localStorage.removeItem('ginx_coop_state');
-          sessionStorage.removeItem('ginx_temp_exit_active');
-          onResolve();
-          navigate(`/workout/${gymId || 'personal'}`, { 
-            state: { 
-              sessionId,
-              isMultiplayer: false,
-              forceNewSession: false
-            } 
-          });
-        } catch (err) {
-          console.error('Error converting dead coop to individual session:', err);
-          alert('Error al intentar convertir el entrenamiento a individual.');
-        } finally {
-          setLoadingDelete(false);
-        }
-      } else {
-        // User clicked Cancel: Finalize and archive the workout to history so NO progress is lost!
-        setLoadingDelete(true);
-        try {
-          await workoutService.finishSession(sessionId, "Sesión cooperativa convertida y archivada por salida del compañero", undefined, false);
-          localStorage.removeItem(`workout_draft_${sessionId}`);
-          localStorage.removeItem('ginx_active_session');
-          localStorage.removeItem('ginx_coop_state');
-          sessionStorage.removeItem('ginx_temp_exit_active');
-          onResolve();
-        } catch (err) {
-          console.error('Error auto-finalizing dead coop session:', err);
-          alert('Error al intentar archivar el entrenamiento.');
-        } finally {
-          setLoadingDelete(false);
-        }
-      }
-      return;
-    }
+  const handleRejoinRoom = () => {
     onResolve();
-    navigate(`/workout/${gymId || 'personal'}`, { state: { sessionId } });
-  };
+    sessionStorage.removeItem('ginx_temp_exit_active');
 
-  const handleDelete = async () => {
-    if (window.confirm('¿Seguro que deseas eliminar por completo este entrenamiento pendiente? Todo el progreso de hoy se perderá.')) {
-      setLoadingDelete(true);
-      try {
-        await workoutService.deleteSession(sessionId);
-        localStorage.removeItem(`workout_draft_${sessionId}`);
-        localStorage.removeItem('ginx_active_session');
-        localStorage.removeItem('ginx_coop_state');
-        sessionStorage.removeItem('ginx_temp_exit_active');
-        onResolve();
-      } catch (err) {
-        console.error('Error deleting rescued session:', err);
-        alert('Error al intentar eliminar el entrenamiento.');
-      } finally {
-        setLoadingDelete(false);
-      }
+    if (isHost) {
+      // Host returns to their own session — no extra state needed
+      navigate('/workout', { state: { sessionId, isMultiplayer: true, multiplayerMode: 'conjunto', isInviter: true, forceNewSession: false } });
+    } else {
+      // Guest restores room context from localStorage or reconstructs from DB
+      const cachedStr = localStorage.getItem('ginx_coop_state');
+      const cached = cachedStr ? JSON.parse(cachedStr) : {};
+
+      const partnerSessionIdToUse = cached.partnerSessionId || cached.chatId || roomId;
+      const partnerIdToUse = cached.partnerId || hostId;
+
+      // Ensure coop state is persisted for recovery
+      localStorage.setItem('ginx_coop_state', JSON.stringify({
+        isMultiplayer: true,
+        multiplayerMode: 'conjunto',
+        partnerId: partnerIdToUse,
+        chatId: partnerSessionIdToUse,
+        partnerSessionId: partnerSessionIdToUse,
+        isInviter: false
+      }));
+
+      navigate('/workout', {
+        state: {
+          sessionId,
+          isMultiplayer: true,
+          multiplayerMode: 'conjunto',
+          partnerId: partnerIdToUse,
+          chatId: partnerSessionIdToUse,
+          partnerSessionId: partnerSessionIdToUse,
+          isInviter: false,
+          forceNewSession: false
+        }
+      });
     }
   };
+
+  const handleLeaveRoom = async () => {
+    const confirmMsg = isHost
+      ? '¿Cerrar la sala para todos? Cada participante conservará su progreso en su historial.'
+      : '¿Salir de la sala? Tu progreso quedará guardado en tu historial.';
+
+    if (!window.confirm(confirmMsg)) return;
+
+    setLoadingAction(true);
+    try {
+      if (isHost && roomId) {
+        // Host closes the whole room
+        await workoutService.closeRoom(roomId);
+      } else {
+        // Guest leaves: finalize only their session
+        await workoutService.finishSession(sessionId, 'Salida manual de la sala', undefined, true);
+      }
+      localStorage.removeItem('ginx_coop_state');
+      localStorage.removeItem('ginx_active_session');
+      localStorage.removeItem(`workout_draft_${sessionId}`);
+      sessionStorage.removeItem('ginx_temp_exit_active');
+      onResolve();
+    } catch (err) {
+      console.error('Error leaving room:', err);
+      alert('Error al salir de la sala. Por favor intenta de nuevo.');
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
+  const handleResumeSolo = () => {
+    onResolve();
+    sessionStorage.removeItem('ginx_temp_exit_active');
+    navigate(`/workout/${gymId || 'personal'}`, { state: { sessionId, forceNewSession: false } });
+  };
+
+  const handleDeleteSolo = async () => {
+    if (!window.confirm('¿Eliminar este entrenamiento? Todo el progreso se perderá.')) return;
+    setLoadingAction(true);
+    try {
+      await workoutService.deleteSession(sessionId);
+      localStorage.removeItem(`workout_draft_${sessionId}`);
+      localStorage.removeItem('ginx_active_session');
+      sessionStorage.removeItem('ginx_temp_exit_active');
+      onResolve();
+    } catch (err) {
+      console.error('Error deleting session:', err);
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
+  // ─── Render ────────────────────────────────────────────────────────────────
+  const isRoom = roomStatus === 'room_open' || roomStatus === 'room_closed';
+  const isLoading = roomStatus === 'checking';
+
+  const title = isLoading
+    ? 'Verificando...'
+    : roomStatus === 'room_open'
+      ? isHost ? '¡Tu Sala está Activa!' : `¡Sala de ${hostName || 'tu compañero'}!`
+      : roomStatus === 'room_closed'
+        ? 'Sala Cerrada'
+        : '¡Entrenamiento Pendiente!';
+
+  const subtitle = isLoading
+    ? ''
+    : roomStatus === 'room_open'
+      ? isHost ? 'ANFITRIÓN DE LA SALA' : 'SALA EN PROGRESO'
+      : roomStatus === 'room_closed'
+        ? 'EL ANFITRIÓN CERRÓ LA SALA'
+        : 'SESIÓN EN EJECUCIÓN DETECTADA';
 
   return (
     <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
-      {/* Premium blur backdrop */}
       <div className="absolute inset-0 bg-black/90 backdrop-blur-md" />
-      
-      {/* Card container */}
+
       <div className="relative z-10 w-full max-w-md bg-neutral-900 border border-yellow-500/30 rounded-3xl shadow-[0_0_50px_rgba(250,204,21,0.25)] overflow-hidden animate-in zoom-in-95 duration-300">
-        
-        {/* Animated Gold Header */}
+
+        {/* Header */}
         <div className="pt-8 pb-4 flex flex-col items-center bg-gradient-to-b from-yellow-500/10 to-transparent border-b border-white/5">
           <div className="w-16 h-16 rounded-full bg-yellow-500/20 flex items-center justify-center mb-3 shadow-[0_0_20px_rgba(250,204,21,0.4)] animate-pulse">
-            <AlertTriangle size={32} className="text-yellow-500" />
+            {isRoom ? <Users size={32} className="text-yellow-500" /> : <AlertTriangle size={32} className="text-yellow-500" />}
           </div>
-          <h2 className="text-xl font-black text-white uppercase tracking-wider text-center px-6 italic">
-            {hostName ? '¡Entrenamiento Conjunto!' : '¡Entrenamiento Pendiente!'}
-          </h2>
-          <p className="text-[10px] font-black text-yellow-500 uppercase tracking-widest mt-1">
-            {hostName ? `SALA DE ${hostName.toUpperCase()}` : 'SESIÓN EN EJECUCIÓN DETECTADA'}
-          </p>
+          <h2 className="text-xl font-black text-white uppercase tracking-wider text-center px-6 italic">{title}</h2>
+          {subtitle ? (
+            <p className="text-[10px] font-black text-yellow-500 uppercase tracking-widest mt-1">{subtitle}</p>
+          ) : null}
         </div>
 
-        {/* Details Panel */}
+        {/* Details */}
         <div className="p-6 space-y-4">
-          <p className="text-neutral-400 text-xs text-center font-semibold leading-relaxed">
-            {hostName 
-              ? `Hemos detectado que tienes una sesión cooperativa activa en la sala de ${hostName}. Puedes volver a unirte para seguir entrenando juntos o cerrarla de forma permanente.`
-              : 'Hemos detectado que tienes un entrenamiento activo que no fue finalizado o cerrado correctamente. Rescata tu entrenamiento ahora o elimínalo.'
-            }
-          </p>
-
-          <div className="bg-black/40 border border-white/5 rounded-2xl p-4 flex flex-col gap-3">
-            <div className="flex items-center gap-3">
-              <MapPin className="text-yellow-500 shrink-0" size={18} />
-              <div className="flex flex-col">
-                <span className="text-[9px] font-black text-neutral-500 uppercase tracking-wider">Ubicación / Tipo</span>
-                <span className="text-xs font-black text-white uppercase italic">{gymName}</span>
-              </div>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="animate-spin text-yellow-500" size={24} />
             </div>
+          ) : (
+            <>
+              <p className="text-neutral-400 text-xs text-center font-semibold leading-relaxed">
+                {roomStatus === 'room_open' && isHost && 'Tu sala está activa. Otros participantes pueden estar entrenando. Puedes volver cuando quieras.'}
+                {roomStatus === 'room_open' && !isHost && `La sala de ${hostName || 'tu compañero'} sigue activa. Puedes reintegrarte y seguir entrenando.`}
+                {roomStatus === 'room_closed' && 'El anfitrión cerró la sala. Tu progreso fue guardado automáticamente en tu historial.'}
+                {roomStatus === 'solo' && 'Tienes un entrenamiento activo que no fue finalizado. Puedes retomarlo o eliminarlo.'}
+              </p>
 
-            <div className="flex items-center gap-3">
-              <Clock className="text-yellow-500 shrink-0" size={18} />
-              <div className="flex flex-col">
-                <span className="text-[9px] font-black text-neutral-500 uppercase tracking-wider">Tiempo Transcurrido</span>
-                <span className="text-sm font-mono font-black text-white tracking-widest">{elapsedTime}</span>
+              <div className="bg-black/40 border border-white/5 rounded-2xl p-4 flex flex-col gap-3">
+                <div className="flex items-center gap-3">
+                  <MapPin className="text-yellow-500 shrink-0" size={18} />
+                  <div className="flex flex-col">
+                    <span className="text-[9px] font-black text-neutral-500 uppercase tracking-wider">Ubicación</span>
+                    <span className="text-xs font-black text-white uppercase italic">{gymName}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Clock className="text-yellow-500 shrink-0" size={18} />
+                  <div className="flex flex-col">
+                    <span className="text-[9px] font-black text-neutral-500 uppercase tracking-wider">Tiempo Transcurrido</span>
+                    <span className="text-sm font-mono font-black text-white tracking-widest">{elapsedTime}</span>
+                  </div>
+                </div>
+
+                {isRoom && roomStatus === 'room_open' && memberCount > 0 && (
+                  <div className="flex items-center gap-3">
+                    <Users className="text-yellow-500 shrink-0" size={18} />
+                    <div className="flex flex-col">
+                      <span className="text-[9px] font-black text-neutral-500 uppercase tracking-wider">En la Sala Ahora</span>
+                      <span className="text-xs font-black text-white">{memberCount} participante{memberCount !== 1 ? 's' : ''} activo{memberCount !== 1 ? 's' : ''}</span>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          </div>
+            </>
+          )}
         </div>
 
-        {/* Action Buttons */}
-        <div className="p-6 pt-0 space-y-3">
-          <button
-            onClick={handleResume}
-            disabled={loadingDelete}
-            className="w-full flex items-center justify-center gap-2 py-4 bg-gradient-to-br from-yellow-400 to-orange-500 text-black font-black uppercase tracking-widest rounded-2xl shadow-lg hover:shadow-yellow-500/20 hover:scale-[1.01] transition-all active:scale-95 disabled:opacity-50"
-          >
-            <Play size={18} fill="currentColor" className="text-black" />
-            {hostName ? 'VOLVER AL ENTRENAMIENTO CONJUNTO' : 'VOLVER AL ENTRENAMIENTO'}
-          </button>
-          
-          <button
-            onClick={handleDelete}
-            disabled={loadingDelete}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-red-950/20 border border-red-500/30 text-red-500 hover:bg-red-950/40 font-black uppercase tracking-wider rounded-2xl transition-all active:scale-95 disabled:opacity-50"
-          >
-            {loadingDelete ? (
-              <Loader2 className="animate-spin" size={16} />
-            ) : (
-              <Trash2 size={16} />
+        {/* Actions */}
+        {!isLoading && (
+          <div className="p-6 pt-0 space-y-3">
+            {/* Room open: rejoin button */}
+            {roomStatus === 'room_open' && (
+              <button
+                onClick={handleRejoinRoom}
+                disabled={loadingAction}
+                className="w-full flex items-center justify-center gap-2 py-4 bg-gradient-to-br from-yellow-400 to-orange-500 text-black font-black uppercase tracking-widest rounded-2xl shadow-lg hover:shadow-yellow-500/20 hover:scale-[1.01] transition-all active:scale-95 disabled:opacity-50"
+              >
+                <Play size={18} fill="currentColor" />
+                {isHost ? 'VOLVER A MI SALA' : 'VOLVER A LA SALA'}
+              </button>
             )}
-            {hostName ? 'CERRAR PARTICIPACIÓN' : 'ELIMINAR ENTRENAMIENTO'}
-          </button>
-        </div>
+
+            {/* Room closed: just dismiss + clear */}
+            {roomStatus === 'room_closed' && (
+              <button
+                onClick={() => {
+                  localStorage.removeItem('ginx_coop_state');
+                  localStorage.removeItem('ginx_active_session');
+                  localStorage.removeItem(`workout_draft_${sessionId}`);
+                  onResolve();
+                }}
+                disabled={loadingAction}
+                className="w-full flex items-center justify-center gap-2 py-4 bg-gradient-to-br from-neutral-700 to-neutral-800 text-white font-black uppercase tracking-widest rounded-2xl transition-all active:scale-95 disabled:opacity-50"
+              >
+                <DoorOpen size={18} />
+                ENTENDIDO — VER MI HISTORIAL
+              </button>
+            )}
+
+            {/* Solo: resume */}
+            {roomStatus === 'solo' && (
+              <button
+                onClick={handleResumeSolo}
+                disabled={loadingAction}
+                className="w-full flex items-center justify-center gap-2 py-4 bg-gradient-to-br from-yellow-400 to-orange-500 text-black font-black uppercase tracking-widest rounded-2xl shadow-lg hover:shadow-yellow-500/20 hover:scale-[1.01] transition-all active:scale-95 disabled:opacity-50"
+              >
+                <Play size={18} fill="currentColor" />
+                RETOMAR ENTRENAMIENTO
+              </button>
+            )}
+
+            {/* Destructive: leave room (open) or delete session (solo) */}
+            {roomStatus === 'room_open' && (
+              <button
+                onClick={handleLeaveRoom}
+                disabled={loadingAction}
+                className="w-full flex items-center justify-center gap-2 py-3 bg-red-950/20 border border-red-500/30 text-red-500 hover:bg-red-950/40 font-black uppercase tracking-wider rounded-2xl transition-all active:scale-95 disabled:opacity-50"
+              >
+                {loadingAction ? <Loader2 className="animate-spin" size={16} /> : <Trash2 size={16} />}
+                {isHost ? 'CERRAR SALA PARA TODOS' : 'SALIR DE LA SALA'}
+              </button>
+            )}
+
+            {roomStatus === 'solo' && (
+              <button
+                onClick={handleDeleteSolo}
+                disabled={loadingAction}
+                className="w-full flex items-center justify-center gap-2 py-3 bg-red-950/20 border border-red-500/30 text-red-500 hover:bg-red-950/40 font-black uppercase tracking-wider rounded-2xl transition-all active:scale-95 disabled:opacity-50"
+              >
+                {loadingAction ? <Loader2 className="animate-spin" size={16} /> : <Trash2 size={16} />}
+                ELIMINAR ENTRENAMIENTO
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

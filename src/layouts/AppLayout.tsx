@@ -313,7 +313,7 @@ export const AppLayout = () => {
 
     useEffect(() => {
         if (!user) return;
-        
+
         // Never interrupt if they are already on the workout page
         if (location.pathname.includes('/workout')) {
             setShowRescueModal(false);
@@ -323,27 +323,27 @@ export const AppLayout = () => {
         const checkRescuableSession = async () => {
             try {
                 const { data: session } = await workoutService.getActiveSession(user.id);
-                
+
                 if (!session) {
                     setShowRescueModal(false);
                     return;
                 }
 
-                // 🛡️ [Room Auditor]: Verify if cooperative sessions are still alive and active
+                // ─── COOP ROOM SESSIONS ────────────────────────────────────────
+                // For multiplayer (room) sessions, we ALWAYS show the rescue modal
+                // regardless of ginx_temp_exit_active. Rooms survive disconnections
+                // by design — the user must explicitly leave or the host must close.
                 if (session.is_multiplayer) {
-                    // Sub-Case: We are the Guest (partner_id points to the Host)
-                    if (session.partner_id && session.partner_session_id) {
-                        const partnerActiveResult = await workoutService.getActiveSession(session.partner_id);
-                        const partnerActive = partnerActiveResult?.data;
-
-                        // If Host session has ended or is dead/changed
-                        if (!partnerActive || partnerActive.id !== session.partner_session_id) {
-                            console.log("☠️ [Room Auditor] Host session is dead or finished. Removing temp exit flag to force rescue modal decision.");
-                            sessionStorage.removeItem('ginx_temp_exit_active');
-                        }
-                    }
+                    setRescueSessionId(session.id);
+                    setRescueGymId(session.gym_id || null);
+                    setRescueStartedAt(session.started_at);
+                    setShowRescueModal(true);
+                    return;
                 }
 
+                // ─── INDIVIDUAL SESSIONS ───────────────────────────────────────
+                // For solo sessions, respect the temp-exit flag (user navigated away
+                // intentionally and has not lost their session).
                 const isTempExit = sessionStorage.getItem('ginx_temp_exit_active') === 'true';
                 if (isTempExit) {
                     setShowRescueModal(false);
@@ -533,102 +533,91 @@ const notificationSeen = useRef<Set<string>>(new Set());
                         </div>
                     ), { duration: 6000 });
                 } else if (newNotification.type === 'coop_invite') {
+                    // Rich toast using the existing CoopInviteToast component
                     const modeLabel = newNotification.data?.mode === 'conjunto' ? 'CONJUNTO' : 'SEPARADO';
                     toast.custom((t) => (
-                        <div className="max-w-xs w-full bg-neutral-950/80 backdrop-blur-sm border border-white/10 rounded-xl p-3 flex items-start space-x-3 animate-enter">
-                            <div className="flex-shrink-0 pt-0.5">
-                                <div className="w-6 h-6 rounded-full bg-yellow-500/30 flex items-center justify-center text-yellow-500 font-bold text-xs">⚔️</div>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-sm font-black text-white uppercase tracking-wider">INVITACIÓN DE {modeLabel}</p>
-                                <p className="text-xs text-neutral-300 mt-0.5">{newNotification.data?.sender_name || 'Alguien'} te invita a un entrenamiento {modeLabel}</p>
-                            </div>
-                            <div className="flex flex-col space-y-1">
-                                <button onClick={async () => {
-                                    toast.dismiss(t.id);
-                                    await notificationService.updateInvitationStatus(newNotification, 'rejected');
-                                }} className="text-xs text-red-500 hover:text-red-300">Ignorar</button>
-                                <button onClick={async () => {
-                                    toast.dismiss(t.id);
-                                    await notificationService.updateInvitationStatus(newNotification, 'accepted');
-                                    const mode = newNotification.data?.mode || 'separado';
-                                    await supabase.from('notifications').insert({
-                                        user_id: newNotification.data?.sender_id,
-                                        type: 'coop_accepted',
-                                        title: 'RETO ACEPTADO',
-                                        message: `¡${user.user_metadata.full_name || 'Alguien'} ha aceptado tu desafío!`,
-                                        data: { partner_id: user.id, mode, chat_id: newNotification.data?.chat_id }
-                                    });
-                                    navigate('/workout', { state: { isMultiplayer: true, multiplayerMode: mode, partnerId: newNotification.data?.sender_id, chatId: newNotification.data?.chat_id, isInviter: false, forceNewSession: true } });
-                                }} className="text-xs text-green-500 hover:text-green-300">Aceptar</button>
-                            </div>
-                        </div>
-                    ), {duration: 15000});
+                        <CoopInviteToast
+                            newNotification={newNotification}
+                            t={t}
+                            modeLabel={modeLabel}
+                            user={user}
+                            navigate={navigate}
+                            notificationService={notificationService}
+                        />
+                    ), { duration: 20000 });
                 } else if (newNotification.type === 'coop_accepted') {
-                    // Instantly pull the inviter into the workout session
-                    toast.success(newNotification.message || "Reto aceptado. Entrando a la sesión...");
-                    navigate('/workout', { 
-                        state: { 
-                            isMultiplayer: true, 
-                            multiplayerMode: newNotification.data?.mode || 'separado', 
-                            partnerId: newNotification.data?.partner_id,
-                            chatId: newNotification.data?.chat_id,
-                            isInviter: true,
-                            forceNewSession: true
-                        } 
-                    });
+                    // Host: guest accepted the invite → navigate into the workout (host is already there or navigating back)
+                    toast.success(newNotification.message || "¡Aliado aceptó. Entrando a la sala...");
+                    (async () => {
+                        try {
+                            const { data: activeSession } = await workoutService.getActiveSession(user.id);
+                            const roomId = activeSession?.id || newNotification.data?.chat_id;
+                            navigate('/workout', {
+                                state: {
+                                    isMultiplayer: true,
+                                    multiplayerMode: newNotification.data?.mode || 'conjunto',
+                                    partnerId: newNotification.data?.partner_id,
+                                    // room_id is the host's own session id
+                                    chatId: roomId,
+                                    isInviter: true,
+                                    forceNewSession: !activeSession
+                                }
+                            });
+                        } catch (err) {
+                            console.error("Error on coop_accepted navigate:", err);
+                        }
+                    })();
                 } else if (newNotification.type === 'coop_join_request') {
+                    // HOST receives a join request from any user who sees the room is open.
+                    // Uses the rich CoopJoinRequestToast component.
                     toast.custom((t) => (
-                        <div className="max-w-xs w-full bg-neutral-950/80 backdrop-blur-sm border border-white/10 rounded-xl p-3 flex items-start space-x-3 animate-enter">
-                            <div className="flex-shrink-0 pt-0.5">
-                                <div className="w-6 h-6 rounded-full bg-yellow-500/30 flex items-center justify-center text-yellow-500 font-bold text-xs">🤝</div>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-sm font-black text-white uppercase tracking-wider">SOLICITUD DE UNIÓN</p>
-                                <p className="text-xs text-neutral-300 mt-0.5">@{newNotification.data?.sender_name || 'Alguien'} quiere unirse</p>
-                            </div>
-                            <div className="flex flex-col space-y-1">
-                                <button onClick={async () => {
-                                    toast.dismiss(t.id);
-                                    await notificationService.updateInvitationStatus(newNotification, 'rejected');
-                                }} className="text-xs text-red-500 hover:text-red-300">Ignorar</button>
-                                <button onClick={async () => {
-                                    toast.dismiss(t.id);
-                                    const senderId = newNotification.data?.sender_id;
-                                    if (!senderId) return;
-                                    const { data: activeSession, error: activeErr } = await workoutService.getActiveSession(user.id);
-                                    let resolvedSession = activeSession;
-                                    if (!resolvedSession) {
-                                        const newSess = await workoutService.startSession(user.id, undefined, true, 'conjunto', senderId);
-                                        if (newSess?.data) resolvedSession = newSess.data;
-                                    }
-                                    await notificationService.updateInvitationStatus(newNotification, 'accepted');
-                                    await supabase.from('workout_sessions').update({ is_multiplayer: true, multiplayer_mode: 'conjunto', partner_id: senderId }).eq('id', resolvedSession.id);
-                                    await supabase.from('notifications').insert({
-                                        user_id: senderId,
-                                        type: 'coop_join_accepted',
-                                        title: 'SOLICITUD ACEPTADA',
-                                        message: `¡${user.user_metadata.username || 'Tu compañero'} aceptó tu solicitud`,
-                                        data: { partner_id: user.id, mode: 'conjunto', chat_id: resolvedSession.id, session_id: resolvedSession.id }
-                                    });
-                                    navigate('/workout', { state: { isMultiplayer: true, multiplayerMode: 'conjunto', partnerId: senderId, chatId: resolvedSession.id, partnerSessionId: resolvedSession.id, isInviter: true, forceNewSession: true } });
-                                }} className="text-xs text-green-500 hover:text-green-300">Aceptar</button>
-                            </div>
-                        </div>
-                    ), {duration: 15000});
+                        <CoopJoinRequestToast
+                            newNotification={newNotification}
+                            t={t}
+                            user={user}
+                            navigate={navigate}
+                            notificationService={notificationService}
+                        />
+                    ), { duration: 20000 });
                 } else if (newNotification.type === 'coop_join_accepted') {
-                    toast.success(newNotification.message || "Solicitud aceptada. Entrando al gimnasio...");
-                    navigate('/workout', { 
-                        state: { 
-                            isMultiplayer: true, 
-                            multiplayerMode: 'conjunto', 
-                            partnerId: newNotification.data?.partner_id,
-                            chatId: newNotification.data?.chat_id,
-                            partnerSessionId: newNotification.data?.session_id,
+                    // Guest: host accepted their join request → navigate into the room
+                    toast.success(newNotification.message || "¡Acceso concedido! Entrando a la sala...");
+                    const roomId = newNotification.data?.session_id || newNotification.data?.chat_id;
+                    const hostId = newNotification.data?.partner_id;
+                    // Persist room state so rescue modal can restore it on reconnect
+                    localStorage.setItem('ginx_coop_state', JSON.stringify({
+                        isMultiplayer: true,
+                        multiplayerMode: 'conjunto',
+                        partnerId: hostId,
+                        chatId: roomId,
+                        partnerSessionId: roomId,
+                        isInviter: false
+                    }));
+                    navigate('/workout', {
+                        state: {
+                            isMultiplayer: true,
+                            multiplayerMode: 'conjunto',
+                            partnerId: hostId,
+                            chatId: roomId,
+                            partnerSessionId: roomId,
                             isInviter: false,
                             forceNewSession: true
-                        } 
+                        }
                     });
+                } else if (newNotification.type === 'room_closed') {
+                    // Room was closed by the host while this user was offline/disconnected.
+                    // Their session was already finalized in DB by closeRoom(). Show a toast.
+                    toast.custom((t) => (
+                        <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-sm w-full bg-neutral-950/95 backdrop-blur-2xl border border-neutral-700/40 rounded-3xl pointer-events-auto flex flex-col p-4`}>
+                            <p className="text-sm font-black text-white uppercase tracking-wider italic">🏁 SALA CERRADA</p>
+                            <p className="mt-1 text-[11px] text-neutral-300 font-bold uppercase leading-normal">
+                                {newNotification.message || 'El anfitrión cerró la sala de entrenamiento. Tu progreso fue guardado.'}
+                            </p>
+                            <button onClick={() => toast.dismiss(t.id)} className="mt-3 text-[10px] text-neutral-400 hover:text-white font-bold uppercase tracking-wider">Cerrar</button>
+                        </div>
+                    ), { duration: 8000 });
+                    // Clear any stale coop state
+                    localStorage.removeItem('ginx_coop_state');
                 }
             })
             .subscribe();
