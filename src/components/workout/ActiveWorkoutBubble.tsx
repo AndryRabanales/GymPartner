@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom'; // Changed useNavigate to useLocation for re-checks
-import { Play, X } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { Play, X, Users } from 'lucide-react';
 import { workoutService } from '../../services/WorkoutService';
 import { useAuth } from '../../context/AuthContext';
-import { supabase } from '../../lib/supabase'; // STANDARD ES6 IMPORT
+import { supabase } from '../../lib/supabase';
 
 export const ActiveWorkoutBubble = () => {
     const { user } = useAuth();
     const location = useLocation();
     const [sessionId, setSessionId] = useState<string | null>(null);
-    const [gymId, setGymId] = useState<string | null>(null); // NEW: Store Gym ID
+    const [gymId, setGymId] = useState<string | null>(null);
+    const [isMultiplayer, setIsMultiplayer] = useState(false);
     const [startTime, setStartTime] = useState<Date | null>(null);
     const [elapsedTime, setElapsedTime] = useState("00:00");
     const [isVisible, setIsVisible] = useState(false);
@@ -54,13 +55,15 @@ export const ActiveWorkoutBubble = () => {
         const { data: session } = await workoutService.getActiveSession(user!.id);
         if (session) {
             setSessionId(session.id);
-            setGymId(session.gym_id || null); // Fix: undefined -> null
+            setGymId(session.gym_id || null);
+            setIsMultiplayer(!!session.is_multiplayer);
             setStartTime(new Date(session.started_at));
             setIsVisible(true);
         } else {
             setIsVisible(false);
             setSessionId(null);
             setGymId(null);
+            setIsMultiplayer(false);
         }
     };
 
@@ -119,7 +122,10 @@ export const ActiveWorkoutBubble = () => {
                 <div className="flex items-center justify-between border-b border-white/5 pb-2">
                     <div className="flex items-center gap-2">
                         <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                        <span className="text-xs font-bold text-yellow-500 uppercase tracking-widest">En Progreso</span>
+                        {isMultiplayer
+                            ? <span className="text-xs font-bold text-yellow-500 uppercase tracking-widest flex items-center gap-1"><Users size={11} />Sala Activa</span>
+                            : <span className="text-xs font-bold text-yellow-500 uppercase tracking-widest">En Progreso</span>
+                        }
                     </div>
                     <button
                         onClick={handleCancel}
@@ -135,10 +141,21 @@ export const ActiveWorkoutBubble = () => {
                     <span className="font-mono text-2xl font-black text-white tracking-widest">{elapsedTime}</span>
                 </div>
 
-                {/* Resume Action */}
+                {/* Resume Action — passes full coop state for multiplayer sessions */}
                 <Link
-                    to={`/workout/${gymId || 'personal'}`}
-                    state={{ sessionId: sessionId }} // Pass session ID 
+                    to={isMultiplayer ? '/workout' : `/workout/${gymId || 'personal'}`}
+                    state={(() => {
+                        const base = { sessionId, forceNewSession: false };
+                        if (!isMultiplayer) return base;
+                        // Restore coop context from localStorage so WorkoutSession can rejoin the room
+                        try {
+                            const coop = JSON.parse(localStorage.getItem('ginx_coop_state') || '{}');
+                            return { ...base, ...coop };
+                        } catch {
+                            return base;
+                        }
+                    })()}
+                    onClick={() => sessionStorage.removeItem('ginx_temp_exit_active')}
                     className="flex items-center justify-center gap-2 bg-gym-primary text-black font-black text-sm uppercase py-3 rounded-xl hover:bg-yellow-400 transition-colors shadow-lg"
                 >
                     <Play size={16} fill="currentColor" /> Volver

@@ -1723,7 +1723,7 @@ export const WorkoutSession = () => {
                 && navState.sessionId
                 && active
                 && navState.sessionId === active.id
-                && navState.forceNewSession === false;
+                && navState.forceNewSession !== true; // false or undefined both mean "restore"
             const shouldRestore = active && !isTooOldToRestore && !forceNewSession && (isGuestReturning || !(currentIsMultiplayer && !currentIsInviter));
 
             if (shouldRestore) {
@@ -3195,14 +3195,13 @@ export const WorkoutSession = () => {
 
         const handlePopState = (e: PopStateEvent) => {
             if (isLeavingPageRef.current || !user || isFinished) return;
-            // Re-push 3 sentinels immediately to resist rapid back-tap drain
-            const REPUSH = 3;
-            for (let i = 0; i < REPUSH; i++) {
-                window.history.pushState({ workoutGuard: true }, '');
-            }
-            guardPushCountRef.current += REPUSH;
-            // Show exit modal instead of navigating away
-            setShowForceExitModal(true);
+            // Temporary exit: let the user browse freely, the ActiveWorkoutBubble
+            // will appear on every page as a persistent reminder with a VOLVER button.
+            // No blocking modal — same UX as solo sessions.
+            sessionStorage.setItem('ginx_temp_exit_active', 'true');
+            guardPushCountRef.current = 0;
+            isLeavingPageRef.current = true;
+            navigate('/');
         };
 
         window.addEventListener('popstate', handlePopState);
