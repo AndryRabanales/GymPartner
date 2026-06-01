@@ -82,23 +82,20 @@ export const ActiveSessionRescueModal: React.FC<ActiveSessionRescueModalProps> =
             }
           }
 
-          if (mySess.partner_session_id) {
-            // If we are the guest, validate if the host session still exists and is unfinished
-            const { data: partnerSess } = await supabase
-              .from('workout_sessions')
-              .select('id, finished_at')
-              .eq('id', mySess.partner_session_id)
-              .maybeSingle();
+          if (mySess.partner_id && mySess.partner_session_id) {
+            // Check host session active status securely using the RLS-compatible endpoint
+            const partnerActiveResult = await workoutService.getActiveSession(mySess.partner_id);
+            const partnerActive = partnerActiveResult?.data;
 
             if (!active) return;
 
-            if (!partnerSess || partnerSess.finished_at !== null) {
+            if (!partnerActive || partnerActive.id !== mySess.partner_session_id) {
               setPartnerStatus('dead');
             } else {
               setPartnerStatus('active');
             }
           } else {
-            // We are the Host/Inviter
+            // We are the Host/Inviter (partner_id is null on host session)
             setPartnerStatus('active');
           }
         } else {
