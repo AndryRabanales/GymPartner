@@ -355,6 +355,8 @@ export const WorkoutSession = () => {
     const [arsenal, setArsenal] = useState<Equipment[]>([]);
     const [routines, setRoutines] = useState<any[]>([]); // NEW: Local Routines
     const [showAddModal, setShowAddModal] = useState(false);
+    // Section name (e.g. "PECHO") of the "+" extras panel currently open
+    const [extrasSection, setExtrasSection] = useState<string | null>(null);
     const [resolvedGymId, setResolvedGymId] = useState<string | null>(null);
     const [showExitMenu, setShowExitMenu] = useState(false);
     const [showCoopExitModal, setShowCoopExitModal] = useState(false);
@@ -1478,6 +1480,7 @@ export const WorkoutSession = () => {
         // 3. Cleanup
         setSelectedCatalogItems(new Set());
         setShowAddModal(false);
+        setExtrasSection(null);
         setSearchTerm('');
     };
 
@@ -1514,6 +1517,30 @@ export const WorkoutSession = () => {
             } as Equipment);
         }
     });
+
+    // Map ArsenalGrid section names to catalog muscle keys for getExtrasForMuscle()
+    const sectionToCatalogMuscle = (section: string): string => {
+        const map: Record<string, string> = {
+            'CUÁDRICEPS': 'PIERNA', 'ISQUIOTIBIALES': 'PIERNA', 'PANTORRILLAS': 'PIERNA', 'ADUCTORES': 'PIERNA',
+            'LUMBARES': 'ABDOMINALES', 'CUELLO': 'ABDOMINALES',
+            'ANTEBRAZO': 'BÍCEPS',
+        };
+        return map[section] ?? section;
+    };
+
+    // Extras inventory for the "+" panel — seeds that are NOT in the curated catalog
+    // (neither as a base nor as any variant of a base)
+    const extrasSectionInventory: typeof effectiveInventory = extrasSection ? (() => {
+        const catalogMuscle = sectionToCatalogMuscle(extrasSection);
+        const extraNames = getExtrasForMuscle(catalogMuscle, COMMON_EQUIPMENT_SEEDS as any);
+        return extraNames.map(seedName => {
+            const existing = effectiveInventory.find(i => normalizeText(i.name) === normalizeText(seedName));
+            if (existing) return existing;
+            const seed = (COMMON_EQUIPMENT_SEEDS as any[]).find(s => s.name === seedName);
+            if (!seed) return null;
+            return { ...seed, id: `virtual-${seed.name}`, gym_id: 'virtual', quantity: 1, condition: 'GOOD' } as any;
+        }).filter(Boolean);
+    })() : [];
 
     // Curated catalog inventory — shows only ONE item per exercise group (preferred variant).
     // Variant duplicates are hidden; the user can cycle variants via the badge arrow on each card.
@@ -4594,7 +4621,7 @@ export const WorkoutSession = () => {
             {/* Exercise Selector Modal */}
             {
                 showAddModal && (
-                    <div className="fixed inset-0 bg-black/95 z-[90] flex flex-col animate-in fade-in duration-200">
+                    <div className="fixed inset-0 bg-black/95 z-[90] flex flex-col animate-in fade-in duration-200 relative">
                         {/* Header */}
                         <div className="flex-none p-2.5 pb-1 border-b border-white/5 bg-neutral-950">
                             <div className="flex justify-between items-center mb-2">
@@ -4659,6 +4686,67 @@ export const WorkoutSession = () => {
                             )}
                         </div>
 
+                        {/* ── Extras panel — exercises not in catalog ── */}
+                        {extrasSection && !isCreatingExercise && (
+                            <div className="absolute inset-0 z-[10] bg-black/95 flex flex-col animate-in slide-in-from-bottom-4 duration-200"
+                                style={{ top: 0 }}
+                            >
+                                {/* Panel header */}
+                                <div className="flex-none px-4 py-3 border-b border-white/5 flex items-center gap-3">
+                                    <button
+                                        onClick={() => setExtrasSection(null)}
+                                        className="bg-neutral-900 p-1.5 rounded-full text-white hover:bg-neutral-800 transition-colors"
+                                    >
+                                        <ArrowLeft size={16} />
+                                    </button>
+                                    <div>
+                                        <h3 className="text-base font-black text-white italic uppercase tracking-tight">
+                                            Más ejercicios de {extrasSection}
+                                        </h3>
+                                        <p className="text-[10px] text-neutral-500 font-bold">
+                                            {extrasSectionInventory.length} ejercicio{extrasSectionInventory.length !== 1 ? 's' : ''} adicionale{extrasSectionInventory.length !== 1 ? 's' : ''}
+                                        </p>
+                                    </div>
+                                </div>
+                                {/* Exercises grid */}
+                                <div className="flex-1 overflow-y-auto px-3 pt-4 pb-32">
+                                    {extrasSectionInventory.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center h-48 gap-3 text-neutral-600">
+                                            <span className="text-4xl">✅</span>
+                                            <p className="text-sm font-bold">Tienes todos los ejercicios de este músculo</p>
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                                            {extrasSectionInventory.map(item => {
+                                                const isSelected = selectedCatalogItems.has(item.id);
+                                                return (
+                                                    <div key={item.id} className="cursor-pointer" onClick={() => handleCatalogToggle(item.id)}>
+                                                        <ArsenalCard
+                                                            item={item}
+                                                            isSelected={isSelected}
+                                                            userSettings={userSettings}
+                                                        />
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                                {/* Floating AGREGAR inside panel */}
+                                {newlySelectedCount > 0 && (
+                                    <div className="absolute bottom-6 left-0 w-full px-4 flex justify-center pointer-events-none z-10">
+                                        <button
+                                            onClick={handleBatchAdd}
+                                            className="pointer-events-auto bg-gym-primary text-black font-black uppercase py-4 px-12 rounded-2xl shadow-[0_10px_40px_rgba(250,204,21,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center gap-3 text-lg border-2 border-yellow-400"
+                                        >
+                                            <Plus size={24} strokeWidth={3} />
+                                            AGREGAR ({newlySelectedCount})
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         <div ref={catalogScrollRef} className="flex-1 overflow-y-auto min-h-0 px-2 sm:px-4 pb-32 bg-black">
                             {!isCreatingExercise ? (
                                 <div className="pt-4">
@@ -4668,7 +4756,7 @@ export const WorkoutSession = () => {
                                         userSettings={userSettings}
                                         searchTerm={searchTerm}
                                         onToggleSelection={handleCatalogToggle}
-                                        onOpenCatalog={() => { }}
+                                        onOpenCatalog={(section) => setExtrasSection(section)}
                                         onEditItem={setEditingItem}
                                         sectionOrder={CATALOG_ORDER}
                                         gridClassName="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2"
