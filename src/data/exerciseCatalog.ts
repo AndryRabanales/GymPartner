@@ -1,62 +1,51 @@
 /**
- * Curated exercise catalog — ~60 base exercises, each with selectable variants.
- * Variant.seedName must match EXACTLY a name in COMMON_EQUIPMENT_SEEDS so that
- * handleBatchAdd can look it up and create the right WorkoutExercise.
+ * Curated exercise catalog.
+ * Variants are ordered: POSITION first (plano / inclinado / declinado / tumbado / sentado…)
+ * then EQUIPMENT within each position (Barra → Mancuernas → Smith → Máquina → Cable).
+ * One card per movement family — cycling the arrow shows every position+equipment combo.
  */
 
 export interface ExerciseVariant {
-    id: string;       // e.g. "barra"
-    label: string;    // e.g. "Barra"
-    seedName: string; // exact name in COMMON_EQUIPMENT_SEEDS
+    id: string;
+    label: string;    // e.g. "Plano · Barra"
+    seedName: string; // exact match in COMMON_EQUIPMENT_SEEDS
     icon: string;
 }
 
 export interface BaseExercise {
     id: string;
-    name: string;       // clean display name without variant suffix
-    muscle: string;     // e.g. "PECHO"
+    name: string;
+    muscle: string;
     icon: string;
     metrics: { weight: boolean; reps: boolean; time: boolean; distance: boolean; rpe: boolean };
     variants: ExerciseVariant[];
 }
 
-// ── PECHO ────────────────────────────────────────────────────────────────────
+// ─────────────────────────── PECHO ──────────────────────────────────────────
+// Press de Pecho: Position (Plano / Inclinado / Declinado) × Equipment (Barra / Mancuernas / Smith / Máquina / Cable)
 const PECHO: BaseExercise[] = [
     {
-        id: 'press_banca_plano',
-        name: 'Press Banca Plano',
+        id: 'press_pecho',
+        name: 'Press de Pecho',
         muscle: 'PECHO', icon: '🏋️‍♂️',
         metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
         variants: [
-            { id: 'barra',       label: 'Barra',       seedName: 'Press Banca Plano (Barra)',       icon: '🏋️‍♂️' },
-            { id: 'mancuernas',  label: 'Mancuernas',  seedName: 'Press Banca Plano (Mancuernas)',  icon: '🏋️'  },
-            { id: 'smith',       label: 'Smith',        seedName: 'Smith Press Plano',               icon: '⚙️'  },
-            { id: 'maquina',     label: 'Máquina',      seedName: 'Press de Pecho (Máquina)',        icon: '🤖'  },
-            { id: 'cable',       label: 'Cable/Polea',  seedName: 'Press Plano (Polea/Cable)',       icon: '⛓️'  },
-        ],
-    },
-    {
-        id: 'press_inclinado',
-        name: 'Press Inclinado',
-        muscle: 'PECHO', icon: '🏋️‍♂️',
-        metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
-        variants: [
-            { id: 'barra',       label: 'Barra',       seedName: 'Press Inclinado (Barra)',       icon: '🏋️‍♂️' },
-            { id: 'mancuernas',  label: 'Mancuernas',  seedName: 'Press Inclinado (Mancuernas)',  icon: '🏋️'  },
-            { id: 'smith',       label: 'Smith',        seedName: 'Smith Press Inclinado',         icon: '⚙️'  },
-            { id: 'maquina',     label: 'Máquina',      seedName: 'Press Inclinado (Máquina)',     icon: '🤖'  },
-            { id: 'cable',       label: 'Cable/Polea',  seedName: 'Press Inclinado (Polea/Cable)', icon: '⛓️'  },
-        ],
-    },
-    {
-        id: 'press_declinado',
-        name: 'Press Declinado',
-        muscle: 'PECHO', icon: '📉',
-        metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
-        variants: [
-            { id: 'barra',      label: 'Barra',      seedName: 'Press Declinado (Barra)',      icon: '📉' },
-            { id: 'mancuernas', label: 'Mancuernas', seedName: 'Press Declinado (Mancuernas)', icon: '🏋️' },
-            { id: 'maquina',    label: 'Máquina',    seedName: 'Press Declinado (Máquina)',    icon: '🤖' },
+            // ── Plano (pecho medio) ──
+            { id: 'plano_barra',      label: 'Plano · Barra',      seedName: 'Press Banca Plano (Barra)',       icon: '🏋️‍♂️' },
+            { id: 'plano_mancuernas', label: 'Plano · Mancuernas', seedName: 'Press Banca Plano (Mancuernas)',  icon: '🏋️'  },
+            { id: 'plano_smith',      label: 'Plano · Smith',       seedName: 'Smith Press Plano',               icon: '⚙️'  },
+            { id: 'plano_maquina',    label: 'Plano · Máquina',     seedName: 'Press de Pecho (Máquina)',        icon: '🤖'  },
+            { id: 'plano_cable',      label: 'Plano · Cable',       seedName: 'Press Plano (Polea/Cable)',       icon: '⛓️'  },
+            // ── Inclinado (pecho superior) ──
+            { id: 'incl_barra',       label: 'Inclinado · Barra',      seedName: 'Press Inclinado (Barra)',       icon: '🏋️‍♂️' },
+            { id: 'incl_mancuernas',  label: 'Inclinado · Mancuernas', seedName: 'Press Inclinado (Mancuernas)',  icon: '🏋️'  },
+            { id: 'incl_smith',       label: 'Inclinado · Smith',       seedName: 'Smith Press Inclinado',         icon: '⚙️'  },
+            { id: 'incl_maquina',     label: 'Inclinado · Máquina',     seedName: 'Press Inclinado (Máquina)',     icon: '🤖'  },
+            { id: 'incl_cable',       label: 'Inclinado · Cable',       seedName: 'Press Inclinado (Polea/Cable)', icon: '⛓️'  },
+            // ── Declinado (pecho inferior) ──
+            { id: 'decl_barra',       label: 'Declinado · Barra',      seedName: 'Press Declinado (Barra)',      icon: '📉' },
+            { id: 'decl_mancuernas',  label: 'Declinado · Mancuernas', seedName: 'Press Declinado (Mancuernas)', icon: '🏋️' },
+            { id: 'decl_maquina',     label: 'Declinado · Máquina',    seedName: 'Press Declinado (Máquina)',    icon: '🤖' },
         ],
     },
     {
@@ -65,9 +54,9 @@ const PECHO: BaseExercise[] = [
         muscle: 'PECHO', icon: '⚔️',
         metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
         variants: [
-            { id: 'crossover_alto', label: 'Polea Alta',  seedName: 'Cruce de Poleas (Crossover Alto)', icon: '⚔️' },
-            { id: 'crossover_bajo', label: 'Polea Baja',  seedName: 'Crossover en Polea Baja',          icon: '⚔️' },
-            { id: 'peck_deck',      label: 'Peck Deck',   seedName: 'Peck Deck (Mariposa)',             icon: '🦋' },
+            { id: 'polea_alta',  label: 'Polea Alta',  seedName: 'Cruce de Poleas (Crossover Alto)', icon: '⚔️' },
+            { id: 'polea_baja',  label: 'Polea Baja',  seedName: 'Crossover en Polea Baja',          icon: '⚔️' },
+            { id: 'peck_deck',   label: 'Peck Deck',   seedName: 'Peck Deck (Mariposa)',             icon: '🦋' },
         ],
     },
     {
@@ -76,8 +65,8 @@ const PECHO: BaseExercise[] = [
         muscle: 'PECHO', icon: '🏗️',
         metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
         variants: [
-            { id: 'paralelas',  label: 'Paralelas', seedName: 'Fondos (Dips)',              icon: '🏗️' },
-            { id: 'asistidos',  label: 'Asistidos', seedName: 'Fondos Asistidos (Pecho)',   icon: '🤖' },
+            { id: 'paralelas', label: 'Paralelas', seedName: 'Fondos (Dips)',            icon: '🏗️' },
+            { id: 'asistidos', label: 'Asistidos', seedName: 'Fondos Asistidos (Pecho)', icon: '🤖' },
         ],
     },
     {
@@ -91,17 +80,17 @@ const PECHO: BaseExercise[] = [
     },
 ];
 
-// ── HOMBRO ───────────────────────────────────────────────────────────────────
+// ─────────────────────────── HOMBRO ─────────────────────────────────────────
 const HOMBRO: BaseExercise[] = [
     {
-        id: 'press_militar',
-        name: 'Press Militar',
+        id: 'press_hombros',
+        name: 'Press de Hombros',
         muscle: 'HOMBRO', icon: '💂',
         metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
         variants: [
-            { id: 'barra',      label: 'Barra',      seedName: 'Press Militar (Barra)',        icon: '💂' },
-            { id: 'mancuernas', label: 'Mancuernas', seedName: 'Press Militar (Mancuernas)',   icon: '🏋️' },
-            { id: 'maquina',    label: 'Máquina',    seedName: 'Press de Hombros (Máquina)',   icon: '🤖' },
+            { id: 'barra',   label: 'Barra',   seedName: 'Press Militar (Barra)',      icon: '💂' },
+            { id: 'mancuernas', label: 'Mancuernas', seedName: 'Press Militar (Mancuernas)', icon: '🏋️' },
+            { id: 'maquina', label: 'Máquina', seedName: 'Press de Hombros (Máquina)', icon: '🤖' },
         ],
     },
     {
@@ -126,13 +115,13 @@ const HOMBRO: BaseExercise[] = [
         ],
     },
     {
-        id: 'pajaros',
-        name: 'Pájaros / Posterior',
+        id: 'posterior_hombro',
+        name: 'Posterior / Pájaros',
         muscle: 'HOMBRO', icon: '🦅',
         metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
         variants: [
             { id: 'mancuernas', label: 'Mancuernas', seedName: 'Pájaros / Vuelos (Mancuernas)', icon: '🦅' },
-            { id: 'maquina',    label: 'Peck Deck',  seedName: 'Peck Deck Invertido',           icon: '🦋' },
+            { id: 'peck_inv',   label: 'Peck Deck',  seedName: 'Peck Deck Invertido',           icon: '🦋' },
         ],
     },
     {
@@ -146,37 +135,32 @@ const HOMBRO: BaseExercise[] = [
     },
 ];
 
-// ── TRÍCEPS ──────────────────────────────────────────────────────────────────
+// ─────────────────────────── TRÍCEPS ────────────────────────────────────────
 const TRICEPS: BaseExercise[] = [
     {
         id: 'extension_triceps',
-        name: 'Extensión Tríceps',
+        name: 'Extensión Tríceps (Polea)',
         muscle: 'TRÍCEPS', icon: '🏇',
         metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
         variants: [
-            { id: 'cuerda',   label: 'Cuerda',      seedName: 'Extensiones de Tríceps (Polea/Cuerda)', icon: '🏇' },
+            // Pushdown (de pie empujando hacia abajo) — mismo patrón, diferente agarre
+            { id: 'cuerda',   label: 'Cuerda',       seedName: 'Extensiones de Tríceps (Polea/Cuerda)', icon: '🏇' },
             { id: 'barra',    label: 'Barra Recta',  seedName: 'Extensiones de Tríceps (Barra Recta)',  icon: '🦯' },
-            { id: 'polea',    label: 'Polea',        seedName: 'Extensiones de Tríceps (Polea)',        icon: '🏇' },
+            { id: 'polea',    label: 'Barra V',      seedName: 'Extensiones de Tríceps (Polea)',        icon: '🏇' },
         ],
     },
     {
         id: 'press_frances',
-        name: 'Press Francés',
+        name: 'Press Francés / Copa',
         muscle: 'TRÍCEPS', icon: '🇫🇷',
         metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
         variants: [
-            { id: 'barra',      label: 'Barra Z',    seedName: 'Press Francés (Barra Z)',    icon: '🇫🇷' },
-            { id: 'mancuernas', label: 'Mancuernas', seedName: 'Press Francés (Mancuernas)', icon: '🇫🇷' },
-        ],
-    },
-    {
-        id: 'copa_triceps',
-        name: 'Copa (Overhead)',
-        muscle: 'TRÍCEPS', icon: '🏆',
-        metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
-        variants: [
-            { id: 'dos_manos', label: 'Dos Manos', seedName: 'Copa a dos manos (Mancuerna)', icon: '🏆' },
-            { id: 'una_mano',  label: 'Una Mano',  seedName: 'Copa a una mano (Mancuerna)',  icon: '🏆' },
+            // Tumbado (skull crusher)
+            { id: 'tumbado_barra',      label: 'Tumbado · Barra Z',    seedName: 'Press Francés (Barra Z)',       icon: '🇫🇷' },
+            { id: 'tumbado_mancuernas', label: 'Tumbado · Mancuernas', seedName: 'Press Francés (Mancuernas)',    icon: '🇫🇷' },
+            // Overhead (copa sobre la cabeza)
+            { id: 'overhead_dos',       label: 'Overhead · Dos Manos', seedName: 'Copa a dos manos (Mancuerna)',  icon: '🏆' },
+            { id: 'overhead_una',       label: 'Overhead · Una Mano',  seedName: 'Copa a una mano (Mancuerna)',   icon: '🏆' },
         ],
     },
     {
@@ -185,8 +169,8 @@ const TRICEPS: BaseExercise[] = [
         muscle: 'TRÍCEPS', icon: '🛋️',
         metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
         variants: [
-            { id: 'banco',      label: 'En Banco',   seedName: 'Fondos en Bancos',    icon: '🛋️' },
-            { id: 'paralelas',  label: 'Paralelas',  seedName: 'Fondos en Paralelas', icon: '🛋️' },
+            { id: 'banco',     label: 'En Banco',  seedName: 'Fondos en Bancos',    icon: '🛋️' },
+            { id: 'paralelas', label: 'Paralelas', seedName: 'Fondos en Paralelas', icon: '🛋️' },
         ],
     },
     {
@@ -200,7 +184,7 @@ const TRICEPS: BaseExercise[] = [
     },
 ];
 
-// ── ESPALDA ──────────────────────────────────────────────────────────────────
+// ─────────────────────────── ESPALDA ────────────────────────────────────────
 const ESPALDA: BaseExercise[] = [
     {
         id: 'dominadas',
@@ -218,8 +202,9 @@ const ESPALDA: BaseExercise[] = [
         muscle: 'ESPALDA', icon: '🔻',
         metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
         variants: [
-            { id: 'polea_alta',     label: 'Polea Alta',    seedName: 'Jalón al Pecho (Polea Alta)',        icon: '🔻' },
-            { id: 'agarre_estrecho',label: 'Agarre Estrecho',seedName: 'Jalón al Pecho (Agarre Estrecho)', icon: '🔻' },
+            // Por agarre (posición de la mano cambia el ángulo de trabajo)
+            { id: 'prono_ancho',    label: 'Agarre Prono Ancho',   seedName: 'Jalón al Pecho (Polea Alta)',        icon: '🔻' },
+            { id: 'supino_estrecho',label: 'Agarre Estrecho',       seedName: 'Jalón al Pecho (Agarre Estrecho)', icon: '🔻' },
         ],
     },
     {
@@ -228,12 +213,15 @@ const ESPALDA: BaseExercise[] = [
         muscle: 'ESPALDA', icon: '🚣',
         metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
         variants: [
-            { id: 'mancuerna',    label: 'Mancuerna',     seedName: 'Remo con Mancuerna (Unilateral)',  icon: '👜' },
-            { id: 'barra_pendlay',label: 'Barra Pendlay',  seedName: 'Remo con Barra Pendlay',           icon: '🚣' },
-            { id: 'barra_yates',  label: 'Barra Yates',   seedName: 'Remo con Barra Yates',             icon: '🚣' },
-            { id: 'en_t',         label: 'En T',           seedName: 'Remo en T (Barra/Máquina)',         icon: '⚓' },
-            { id: 'maquina',      label: 'Máquina',        seedName: 'Remo en Máquina (Pecho Apoyado)',  icon: '🚜' },
-            { id: 'polea_baja',   label: 'Polea Baja',    seedName: 'Remo Gironda (Polea Baja)',         icon: '🛶' },
+            // Inclinado libre (torso inclinado, tirando hacia el cuerpo)
+            { id: 'pendlay',    label: 'Inclinado · Barra Pendlay', seedName: 'Remo con Barra Pendlay',          icon: '🚣' },
+            { id: 'yates',      label: 'Inclinado · Barra Yates',   seedName: 'Remo con Barra Yates',            icon: '🚣' },
+            { id: 'mancuerna',  label: 'Inclinado · Mancuerna',     seedName: 'Remo con Mancuerna (Unilateral)', icon: '👜' },
+            { id: 'en_t',       label: 'Inclinado · En T',           seedName: 'Remo en T (Barra/Máquina)',       icon: '⚓' },
+            // Apoyado / Máquina (soporte para el pecho o asiento)
+            { id: 'maquina_pc', label: 'Pecho Apoyado',             seedName: 'Remo en Máquina (Pecho Apoyado)', icon: '🚜' },
+            // Cable bajo sentado
+            { id: 'gironda',    label: 'Sentado · Polea Baja',      seedName: 'Remo Gironda (Polea Baja)',        icon: '🛶' },
         ],
     },
     {
@@ -242,7 +230,7 @@ const ESPALDA: BaseExercise[] = [
         muscle: 'ESPALDA', icon: '🧟',
         metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
         variants: [
-            { id: 'deadlift', label: 'Deadlift', seedName: 'Peso Muerto (Deadlift)', icon: '🧟' },
+            { id: 'convencional', label: 'Convencional', seedName: 'Peso Muerto (Deadlift)', icon: '🧟' },
         ],
     },
     {
@@ -256,7 +244,7 @@ const ESPALDA: BaseExercise[] = [
     },
 ];
 
-// ── BÍCEPS ───────────────────────────────────────────────────────────────────
+// ─────────────────────────── BÍCEPS ─────────────────────────────────────────
 const BICEPS: BaseExercise[] = [
     {
         id: 'curl_biceps',
@@ -264,10 +252,24 @@ const BICEPS: BaseExercise[] = [
         muscle: 'BÍCEPS', icon: '💪',
         metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
         variants: [
-            { id: 'mancuernas', label: 'Mancuernas', seedName: 'Curl de Bíceps (Mancuernas)',  icon: '💪' },
-            { id: 'barra',      label: 'Barra',      seedName: 'Curl de Bíceps con Barra',     icon: '🥖' },
-            { id: 'polea',      label: 'Polea',      seedName: 'Curl de Bíceps en Polea',      icon: '🐍' },
-            { id: 'bayoneta',   label: 'Bayoneta',   seedName: 'Curl de Bíceps Bayoneta',      icon: '💪' },
+            // De pie — equipamiento cambia el ángulo de supinación
+            { id: 'barra',      label: 'De Pie · Barra',      seedName: 'Curl de Bíceps con Barra',     icon: '🥖' },
+            { id: 'mancuernas', label: 'De Pie · Mancuernas', seedName: 'Curl de Bíceps (Mancuernas)',  icon: '💪' },
+            { id: 'bayoneta',   label: 'De Pie · Bayoneta',   seedName: 'Curl de Bíceps Bayoneta',      icon: '💪' },
+            { id: 'polea',      label: 'De Pie · Polea',      seedName: 'Curl de Bíceps en Polea',      icon: '🐍' },
+        ],
+    },
+    {
+        id: 'curl_predicador',
+        name: 'Curl Predicador / Araña',
+        muscle: 'BÍCEPS', icon: '🙏',
+        metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
+        variants: [
+            // Inclinado sobre banco predicador (mismo ángulo, diferente equipo)
+            { id: 'predicador_barra',   label: 'Predicador · Barra',   seedName: 'Curl Predicador (Barra)',   icon: '🙏' },
+            { id: 'predicador_maquina', label: 'Predicador · Máquina', seedName: 'Curl Predicador (Máquina)', icon: '🤖' },
+            // Spider (apoyo en banco inclinado boca abajo)
+            { id: 'spider',             label: 'Araña (Spider)',        seedName: 'Curl Araña (Spider Curl)',  icon: '🕷️' },
         ],
     },
     {
@@ -276,32 +278,13 @@ const BICEPS: BaseExercise[] = [
         muscle: 'BÍCEPS', icon: '🔨',
         metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
         variants: [
-            { id: 'mancuernas', label: 'Mancuernas', seedName: 'Curl Martillo (Mancuernas)',     icon: '🔨' },
-            { id: 'cuerda',     label: 'Polea/Cuerda',seedName: 'Curl Martillo (Polea/Cuerda)', icon: '⛓️' },
-        ],
-    },
-    {
-        id: 'curl_predicador',
-        name: 'Curl Predicador',
-        muscle: 'BÍCEPS', icon: '🙏',
-        metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
-        variants: [
-            { id: 'barra',   label: 'Barra',   seedName: 'Curl Predicador (Barra)',   icon: '🙏' },
-            { id: 'maquina', label: 'Máquina', seedName: 'Curl Predicador (Máquina)', icon: '🤖' },
-        ],
-    },
-    {
-        id: 'curl_arana',
-        name: 'Curl Araña',
-        muscle: 'BÍCEPS', icon: '🕷️',
-        metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
-        variants: [
-            { id: 'mancuernas', label: 'Mancuernas', seedName: 'Curl Araña (Spider Curl)', icon: '🕷️' },
+            { id: 'mancuernas', label: 'Mancuernas',  seedName: 'Curl Martillo (Mancuernas)',     icon: '🔨' },
+            { id: 'cuerda',     label: 'Polea/Cuerda', seedName: 'Curl Martillo (Polea/Cuerda)', icon: '⛓️' },
         ],
     },
 ];
 
-// ── PIERNA ───────────────────────────────────────────────────────────────────
+// ─────────────────────────── PIERNA ─────────────────────────────────────────
 const PIERNA: BaseExercise[] = [
     {
         id: 'sentadilla',
@@ -309,9 +292,11 @@ const PIERNA: BaseExercise[] = [
         muscle: 'PIERNA', icon: '🍑',
         metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
         variants: [
-            { id: 'barra',   label: 'Barra Libre', seedName: 'Sentadilla Libre (Barra)', icon: '🍑' },
-            { id: 'frontal', label: 'Frontal',      seedName: 'Sentadilla Frontal',       icon: '🏋️' },
-            { id: 'bulgara', label: 'Búlgara',      seedName: 'Sentadilla Búlgara',       icon: '🇧🇬' },
+            // Por posición (cambia el ángulo de la cadera y el músculo trabajado)
+            { id: 'barra_trasera', label: 'Barra Trasera',  seedName: 'Sentadilla Libre (Barra)', icon: '🍑' },
+            { id: 'frontal',       label: 'Frontal',         seedName: 'Sentadilla Frontal',       icon: '🏋️' },
+            { id: 'bulgara',       label: 'Búlgara',         seedName: 'Sentadilla Búlgara',       icon: '🇧🇬' },
+            { id: 'hack_maquina',  label: 'Hack (Máquina)',  seedName: 'Sentadilla Hack (Máquina)', icon: '🪑' },
         ],
     },
     {
@@ -329,7 +314,28 @@ const PIERNA: BaseExercise[] = [
         muscle: 'PIERNA', icon: '🦵',
         metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
         variants: [
-            { id: 'maquina', label: 'Máquina', seedName: 'Extensiones de Cuádriceps', icon: '🦵' },
+            { id: 'maquina', label: 'Sentado · Máquina', seedName: 'Extensiones de Cuádriceps', icon: '🦵' },
+        ],
+    },
+    {
+        id: 'curl_femoral',
+        name: 'Curl Femoral',
+        muscle: 'PIERNA', icon: '🥓',
+        metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
+        variants: [
+            // Diferente posición → ángulo de cadera diferente → estira más o menos el recto femoral
+            { id: 'tumbado',  label: 'Tumbado (Prono)',  seedName: 'Curl Femoral Tumbado (Máquina)',  icon: '🥓' },
+            { id: 'sentado',  label: 'Sentado',           seedName: 'Curl Femoral Sentado (Máquina)',  icon: '🪑' },
+        ],
+    },
+    {
+        id: 'peso_muerto_rumano',
+        name: 'Peso Muerto Rumano',
+        muscle: 'PIERNA', icon: '🎋',
+        metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
+        variants: [
+            { id: 'barra',      label: 'Barra',      seedName: 'Peso Muerto Rumano (Barra)',      icon: '🎋' },
+            { id: 'mancuernas', label: 'Mancuernas', seedName: 'Peso Muerto Rumano (Mancuernas)', icon: '🎋' },
         ],
     },
     {
@@ -344,35 +350,6 @@ const PIERNA: BaseExercise[] = [
         ],
     },
     {
-        id: 'hack_squat',
-        name: 'Hack Squat',
-        muscle: 'PIERNA', icon: '🪑',
-        metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
-        variants: [
-            { id: 'maquina', label: 'Máquina', seedName: 'Sentadilla Hack (Máquina)', icon: '🪑' },
-        ],
-    },
-    {
-        id: 'curl_femoral',
-        name: 'Curl Femoral',
-        muscle: 'PIERNA', icon: '🥓',
-        metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
-        variants: [
-            { id: 'tumbado',  label: 'Tumbado',  seedName: 'Curl Femoral Tumbado (Máquina)',  icon: '🥓' },
-            { id: 'sentado',  label: 'Sentado',  seedName: 'Curl Femoral Sentado (Máquina)',  icon: '🪑' },
-        ],
-    },
-    {
-        id: 'peso_muerto_rumano',
-        name: 'Peso Muerto Rumano',
-        muscle: 'PIERNA', icon: '🎋',
-        metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
-        variants: [
-            { id: 'barra',      label: 'Barra',      seedName: 'Peso Muerto Rumano (Barra)',      icon: '🎋' },
-            { id: 'mancuernas', label: 'Mancuernas', seedName: 'Peso Muerto Rumano (Mancuernas)', icon: '🎋' },
-        ],
-    },
-    {
         id: 'buenos_dias',
         name: 'Buenos Días',
         muscle: 'PIERNA', icon: '🌞',
@@ -383,7 +360,7 @@ const PIERNA: BaseExercise[] = [
     },
 ];
 
-// ── GLÚTEOS ──────────────────────────────────────────────────────────────────
+// ─────────────────────────── GLÚTEOS ────────────────────────────────────────
 const GLUTEOS: BaseExercise[] = [
     {
         id: 'hip_thrust',
@@ -391,6 +368,7 @@ const GLUTEOS: BaseExercise[] = [
         muscle: 'GLÚTEOS', icon: '🌉',
         metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
         variants: [
+            // Misma posición (tumbado, cadera empujando hacia arriba) — distinto equipo
             { id: 'barra',   label: 'Barra Libre', seedName: 'Hip Thrust (Barra Libre)', icon: '🌉' },
             { id: 'smith',   label: 'Smith',        seedName: 'Hip Thrust en Smith',      icon: '⚙️' },
             { id: 'maquina', label: 'Máquina',      seedName: 'Hip Thrust (Máquina)',     icon: '🤖' },
@@ -408,7 +386,7 @@ const GLUTEOS: BaseExercise[] = [
     },
 ];
 
-// ── ABDOMINALES ──────────────────────────────────────────────────────────────
+// ─────────────────────────── ABDOMINALES ────────────────────────────────────
 const ABDOMINALES: BaseExercise[] = [
     {
         id: 'crunch',
@@ -459,7 +437,7 @@ const ABDOMINALES: BaseExercise[] = [
     },
 ];
 
-// ── CARDIO ───────────────────────────────────────────────────────────────────
+// ─────────────────────────── CARDIO ─────────────────────────────────────────
 const CARDIO: BaseExercise[] = [
     {
         id: 'cinta_correr',
@@ -505,9 +483,8 @@ const CARDIO: BaseExercise[] = [
     },
 ];
 
-// ── Export ───────────────────────────────────────────────────────────────────
+// ─────────────────────────── Exports ────────────────────────────────────────
 
-/** All curated base exercises in catalog order */
 export const CURATED_EXERCISES: BaseExercise[] = [
     ...PECHO,
     ...HOMBRO,
@@ -520,7 +497,6 @@ export const CURATED_EXERCISES: BaseExercise[] = [
     ...CARDIO,
 ];
 
-/** Muscles in display order */
 export const CATALOG_MUSCLES = [
     'PECHO', 'HOMBRO', 'TRÍCEPS', 'ESPALDA', 'BÍCEPS',
     'PIERNA', 'GLÚTEOS', 'ABDOMINALES', 'CARDIO',
@@ -528,7 +504,7 @@ export const CATALOG_MUSCLES = [
 
 export type CatalogMuscle = typeof CATALOG_MUSCLES[number];
 
-/** Find which base exercise a given seed name belongs to (for variant switcher) */
+/** Find the base exercise that owns a given seed name (for the active-workout variant switcher) */
 export const findBaseExercise = (seedName: string): BaseExercise | null => {
     const n = seedName.toLowerCase().trim();
     return CURATED_EXERCISES.find(b =>
@@ -536,18 +512,17 @@ export const findBaseExercise = (seedName: string): BaseExercise | null => {
     ) ?? null;
 };
 
-/** localStorage keys */
+// ── localStorage helpers ──────────────────────────────────────────────────────
 const VARIANT_PREFS_KEY = 'ginx_variant_prefs';   // Record<baseId, variantId>
-const USER_EXTRAS_KEY   = 'ginx_catalog_extras';  // string[] of extra seedNames added by user
+const USER_EXTRAS_KEY   = 'ginx_catalog_extras';  // string[] extra seedNames
 
 export const getVariantPrefs = (): Record<string, string> => {
     try { return JSON.parse(localStorage.getItem(VARIANT_PREFS_KEY) || '{}'); }
     catch { return {}; }
 };
 export const saveVariantPref = (baseId: string, variantId: string): void => {
-    const prefs = getVariantPrefs();
-    prefs[baseId] = variantId;
-    localStorage.setItem(VARIANT_PREFS_KEY, JSON.stringify(prefs));
+    const p = getVariantPrefs(); p[baseId] = variantId;
+    localStorage.setItem(VARIANT_PREFS_KEY, JSON.stringify(p));
 };
 
 export const getUserExtras = (): string[] => {
@@ -555,22 +530,17 @@ export const getUserExtras = (): string[] => {
     catch { return []; }
 };
 export const addUserExtra = (seedName: string): void => {
-    const extras = getUserExtras();
-    if (!extras.includes(seedName)) {
-        extras.push(seedName);
-        localStorage.setItem(USER_EXTRAS_KEY, JSON.stringify(extras));
-    }
+    const e = getUserExtras();
+    if (!e.includes(seedName)) { e.push(seedName); localStorage.setItem(USER_EXTRAS_KEY, JSON.stringify(e)); }
 };
 
-/** Get preferred variant seedName for a base exercise */
 export const getPreferredSeedName = (base: BaseExercise): string => {
     const prefs = getVariantPrefs();
-    const preferredId = prefs[base.id];
-    const variant = preferredId ? base.variants.find(v => v.id === preferredId) : null;
-    return (variant ?? base.variants[0]).seedName;
+    const id = prefs[base.id];
+    return (id ? base.variants.find(v => v.id === id) : null)?.seedName ?? base.variants[0].seedName;
 };
 
-/** All seedNames from COMMON_EQUIPMENT_SEEDS that are NOT covered by curated variants */
+/** All seedNames from COMMON_EQUIPMENT_SEEDS that are NOT covered by any curated variant */
 export const getExtrasForMuscle = (muscle: string, allSeeds: { name: string; targetMuscle: string }[]): string[] => {
     const curatedNames = new Set(
         CURATED_EXERCISES
@@ -580,13 +550,13 @@ export const getExtrasForMuscle = (muscle: string, allSeeds: { name: string; tar
     return allSeeds
         .filter(s => {
             const m = s.targetMuscle?.toUpperCase();
-            const muscleMatch =
-                muscle === 'PIERNA' ? ['PIERNA', 'CUÁDRICEPS', 'ISQUIOTIBIALES'].includes(m) :
+            const match =
+                muscle === 'PIERNA'      ? ['PIERNA', 'CUÁDRICEPS', 'ISQUIOTIBIALES'].includes(m) :
                 muscle === 'ABDOMINALES' ? m === 'ABDOMINALES' :
-                muscle === 'GLÚTEOS' ? m === 'GLÚTEOS' :
-                muscle === 'CARDIO' ? m === 'CARDIO' :
+                muscle === 'GLÚTEOS'     ? m === 'GLÚTEOS' :
+                muscle === 'CARDIO'      ? m === 'CARDIO' :
                 m === muscle;
-            return muscleMatch && !curatedNames.has(s.name.toLowerCase());
+            return match && !curatedNames.has(s.name.toLowerCase());
         })
         .map(s => s.name);
 };
