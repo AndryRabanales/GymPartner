@@ -1707,7 +1707,15 @@ export const WorkoutSession = () => {
 
             const navState = location.state as any || {};
             const forceNewSession = navState.forceNewSession === true;
-            const shouldRestore = active && !isTooOldToRestore && !forceNewSession && !(currentIsMultiplayer && !currentIsInviter);
+            // Guests normally don't restore (to avoid re-loading a stale solo session when joining a new room).
+            // Exception: when a guest explicitly returns to their OWN active coop session via the rescue modal
+            // (navState carries the same sessionId as the active session and forceNewSession is false).
+            const isGuestReturning = currentIsMultiplayer && !currentIsInviter
+                && navState.sessionId
+                && active
+                && navState.sessionId === active.id
+                && navState.forceNewSession === false;
+            const shouldRestore = active && !isTooOldToRestore && !forceNewSession && (isGuestReturning || !(currentIsMultiplayer && !currentIsInviter));
 
             if (shouldRestore) {
                 setSessionId(active.id);
@@ -3155,19 +3163,23 @@ export const WorkoutSession = () => {
 
     // 2. Block browser back button (popstate) while session is active.
     // Works with BrowserRouter (no Data Router needed).
-    // Strategy: push a "guard" entry when session starts so back button hits it;
-    // on popstate re-push the guard and show the force exit modal.
+    // Strategy: push MULTIPLE sentinel entries so rapid back-taps can't drain
+    // the history stack before the handler fires and re-pushes them.
     useEffect(() => {
         if (!user || isFinished) return;
 
-        // Push a sentinel so the very first back-press hits our handler
-        window.history.pushState({ workoutGuard: true }, '');
+        // Push 5 sentinels so the user needs 5+ rapid taps before any navigates away
+        for (let i = 0; i < 5; i++) {
+            window.history.pushState({ workoutGuard: true }, '');
+        }
 
         const handlePopState = (e: PopStateEvent) => {
             if (isLeavingPageRef.current || !user || isFinished) return;
-            // Re-push the sentinel immediately to neutralise the navigation
-            window.history.pushState({ workoutGuard: true }, '');
-            // Show our premium modal instead
+            // Re-push 3 sentinels immediately to keep the stack full even under rapid tapping
+            for (let i = 0; i < 3; i++) {
+                window.history.pushState({ workoutGuard: true }, '');
+            }
+            // Show exit modal instead of navigating away
             setShowForceExitModal(true);
         };
 
