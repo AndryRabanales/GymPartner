@@ -10,6 +10,7 @@ import { RescueModal } from '../components/gamification/RescueModal';
 import { GPointsDisplay } from '../components/gamification/GPointsDisplay';
 
 import { ActiveWorkoutBubble } from '../components/workout/ActiveWorkoutBubble';
+import { ActiveSessionRescueModal } from '../components/workout/ActiveSessionRescueModal';
 import { useAutoCheckin } from '../hooks/useAutoCheckin';
 import { GlobalGPSGuard } from '../components/GlobalGPSGuard';
 import { supabase } from '../lib/supabase';
@@ -301,6 +302,38 @@ export const AppLayout = () => {
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const location = useLocation();
     const navigate = useNavigate();
+    const [rescueSessionId, setRescueSessionId] = useState<string | null>(null);
+    const [rescueGymId, setRescueGymId] = useState<string | null>(null);
+    const [rescueStartedAt, setRescueStartedAt] = useState<string | null>(null);
+    const [showRescueModal, setShowRescueModal] = useState<boolean>(false);
+
+    useEffect(() => {
+        if (!user) return;
+        
+        // Never interrupt if they are already on the workout page
+        if (location.pathname.includes('/workout')) {
+            setShowRescueModal(false);
+            return;
+        }
+
+        const checkRescuableSession = async () => {
+            try {
+                const { data: session } = await workoutService.getActiveSession(user.id);
+                if (session) {
+                    setRescueSessionId(session.id);
+                    setRescueGymId(session.gym_id || null);
+                    setRescueStartedAt(session.started_at);
+                    setShowRescueModal(true);
+                } else {
+                    setShowRescueModal(false);
+                }
+            } catch (err) {
+                console.warn('⚠️ [Rescue Check] Failed to check active session:', err);
+            }
+        };
+
+        checkRescuableSession();
+    }, [user, location.pathname]);
 
     const tokenRef = useRef<string | null>(null);
 
@@ -722,6 +755,13 @@ const notificationSeen = useRef<Set<string>>(new Set());
             <RescueModal />
             {isUploadModalOpen && <UploadModal onClose={() => setIsUploadModalOpen(false)} onSuccess={() => setIsUploadModalOpen(false)} />}
             <ActiveWorkoutBubble />
+            <ActiveSessionRescueModal
+                isOpen={showRescueModal && !!rescueSessionId && !!rescueStartedAt}
+                sessionId={rescueSessionId || ''}
+                gymId={rescueGymId}
+                startedAt={rescueStartedAt || ''}
+                onResolve={() => setShowRescueModal(false)}
+            />
             {shouldShowBottomNav && <BottomNav onUploadClick={() => setIsUploadModalOpen(true)} />}
             <Toaster position="top-center" reverseOrder={false} />
 
