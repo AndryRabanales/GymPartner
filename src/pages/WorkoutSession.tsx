@@ -1552,17 +1552,27 @@ export const WorkoutSession = () => {
         const badges = new Map<string, { label: string; total: number; baseId: string; variants: ExerciseVariant[] }>();
 
         for (const base of CURATED_EXERCISES) {
-            if (base.variants.length <= 1) continue;
+            // Single-variant exercises need no filtering, but DO need the badge map entry
+            // so the variant label renders in ArsenalCard if desired.
             const preferredId = prefs[base.id] ?? base.variants[0].id;
             const preferred = base.variants.find(v => v.id === preferredId) ?? base.variants[0];
-            badges.set(preferred.seedName.toLowerCase(), {
-                label: preferred.label,
-                total: base.variants.length,
-                baseId: base.id,
-                variants: base.variants,
-            });
-            for (const v of base.variants) {
-                if (v.seedName !== preferred.seedName) hiddenNames.add(v.seedName.toLowerCase());
+
+            if (base.variants.length > 1) {
+                // KEY FIX: use normalizeText (strips accents) for both the map key and the hidden set.
+                // Without this, accented names like "Máquina" → normalizeText gives "maquina"
+                // but .toLowerCase() gives "máquina" — the filter would miss them, leaving
+                // duplicate cards visible in the catalog.
+                badges.set(normalizeText(preferred.seedName), {
+                    label: preferred.label,
+                    total: base.variants.length,
+                    baseId: base.id,
+                    variants: base.variants,
+                });
+                for (const v of base.variants) {
+                    if (v.seedName !== preferred.seedName) {
+                        hiddenNames.add(normalizeText(v.seedName));
+                    }
+                }
             }
         }
 

@@ -184,7 +184,8 @@ export const ArsenalGrid = ({
                                     };
                                 }
 
-                                const variantInfo = variantBadgeMap?.get(item.name.toLowerCase());
+                                // Must use normalizeText (strips accents) to match the key used when building variantBadgeMap
+                                const variantInfo = variantBadgeMap?.get(normalizeText(item.name));
                                 return (
                                     <div
                                         key={item.id}

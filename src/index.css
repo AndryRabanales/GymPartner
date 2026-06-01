@@ -36,9 +36,10 @@ select {
   touch-action: manipulation;
 }
 
-/* Buttons and interactive elements: prevent double-tap zoom */
+/* Buttons: keep auto so swipe/scroll gestures work on iOS carousels.
+   Double-tap zoom is already blocked by maximum-scale=1 in the viewport. */
 button, a, [role="button"] {
-  touch-action: manipulation;
+  touch-action: auto;
 }
 
 /* Custom Base Styles for Premium Feel */
