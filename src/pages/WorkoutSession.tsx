@@ -3055,7 +3055,7 @@ export const WorkoutSession = () => {
     const handleCancelSession = async () => {
         if (!sessionId) {
             isLeavingPageRef.current = true;
-            navigate('/inicio');
+            navigate('/');
             return;
         }
 
@@ -3080,7 +3080,7 @@ export const WorkoutSession = () => {
         setLoading(true);
         await workoutService.deleteSession(oldSessionId);
         setLoading(false);
-        navigate('/inicio');
+        navigate('/');
     };
 
     // NEW: Handle Restart
@@ -4388,7 +4388,7 @@ export const WorkoutSession = () => {
                 onFinalize={handleFinishRequest}
                 onTemporaryExit={() => {
                     isLeavingPageRef.current = true;
-                    navigate('/inicio');
+                    navigate('/');
                 }}
                 onCancelSession={handleCancelSession}
             />
