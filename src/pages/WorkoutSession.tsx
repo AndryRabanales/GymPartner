@@ -290,6 +290,12 @@ export const WorkoutSession = () => {
         const state = location.state as any;
         if (state && state.isMultiplayer) {
             console.log('🔄 Sincronizando nuevo estado multijugador desde location.state:', state);
+            
+            // Clean local exercise state to prevent stale data leaking from a previous individual/coop session
+            setActiveExercises([]);
+            setCurrentRoutineName('');
+            setOriginalExerciseIds([]);
+            setIsRoutineModified(false);
             setIsMultiplayer(true);
             if (state.multiplayerMode) setMultiplayerMode(state.multiplayerMode);
             if (state.partnerId) setPartnerId(state.partnerId);
@@ -1824,6 +1830,12 @@ export const WorkoutSession = () => {
         setLoading(true);
         try {
             console.log("🚀 Starting NEW Session explicitly...");
+            
+            // Clean active exercise state completely before beginning new session
+            setActiveExercises([]);
+            setCurrentRoutineName('');
+            setOriginalExerciseIds([]);
+            setIsRoutineModified(false);
             
             let finalGymId = customGymId || resolvedGymId;
             let freshArsenal: any[] | undefined = undefined;
