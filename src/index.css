@@ -18,15 +18,27 @@
 @tailwind utilities;
 
 /* ── iOS zoom prevention ────────────────────────────────────────────────────
-   iOS Safari zooms into any input/textarea/select whose font-size is below
-   16px. This rule ensures no element ever falls below that threshold,
-   covering inherited sizes from parent containers.
-   We use font-size: max(16px, 1em) so elements that are intentionally
-   larger (e.g. text-lg inside a form) are not shrunk.                      */
-input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+   Primary fix: maximum-scale=1 in the viewport meta (index.html).
+   Secondary fix: enforce ≥16px on every interactive element so iOS has no
+   reason to zoom even if the viewport setting is overridden by a WebView.
+   touch-action: manipulation prevents double-tap zoom on buttons/inputs.   */
+input,
+input[type="text"],
+input[type="search"],
+input[type="number"],
+input[type="email"],
+input[type="password"],
+input[type="tel"],
+input[type="url"],
 textarea,
 select {
-  font-size: max(16px, 1em) !important;
+  font-size: 16px !important;
+  touch-action: manipulation;
+}
+
+/* Buttons and interactive elements: prevent double-tap zoom */
+button, a, [role="button"] {
+  touch-action: manipulation;
 }
 
 /* Custom Base Styles for Premium Feel */
