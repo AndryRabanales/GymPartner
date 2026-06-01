@@ -91,6 +91,7 @@ const HOMBRO: BaseExercise[] = [
             { id: 'barra',   label: 'Barra',   seedName: 'Press Militar (Barra)',      icon: '💂' },
             { id: 'mancuernas', label: 'Mancuernas', seedName: 'Press Militar (Mancuernas)', icon: '🏋️' },
             { id: 'maquina', label: 'Máquina', seedName: 'Press de Hombros (Máquina)', icon: '🤖' },
+            { id: 'smith',   label: 'Smith',   seedName: 'Press Militar en Smith',      icon: '⚙️' },
         ],
     },
     {
@@ -110,8 +111,10 @@ const HOMBRO: BaseExercise[] = [
         muscle: 'HOMBRO', icon: '🧟‍♂️',
         metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
         variants: [
-            { id: 'mancuernas', label: 'Mancuernas', seedName: 'Elevaciones Frontales (Mancuernas)', icon: '🧟‍♂️' },
-            { id: 'polea',      label: 'Polea',      seedName: 'Elevaciones Frontales (Polea)',       icon: '🧟‍♂️' },
+            { id: 'mancuernas', label: 'Mancuernas',           seedName: 'Elevaciones Frontales (Mancuernas)',            icon: '🧟‍♂️' },
+            { id: 'polea',      label: 'Polea',                seedName: 'Elevaciones Frontales (Polea)',                 icon: '🧟‍♂️' },
+            { id: 'disco',      label: 'Disco · Dos Manos',    seedName: 'Elevación Frontal con Disco (Dos Manos)',       icon: '🧟‍♂️' },
+            { id: 'dos_manos',  label: 'Mancuerna · Dos Manos',seedName: 'Elevación Frontal con Mancuerna (Dos Manos)',   icon: '🧟‍♂️' },
         ],
     },
     {
@@ -144,9 +147,10 @@ const TRICEPS: BaseExercise[] = [
         metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
         variants: [
             // Pushdown (de pie empujando hacia abajo) — mismo patrón, diferente agarre
-            { id: 'cuerda',   label: 'Cuerda',       seedName: 'Extensiones de Tríceps (Polea/Cuerda)', icon: '🏇' },
-            { id: 'barra',    label: 'Barra Recta',  seedName: 'Extensiones de Tríceps (Barra Recta)',  icon: '🦯' },
-            { id: 'polea',    label: 'Barra V',      seedName: 'Extensiones de Tríceps (Polea)',        icon: '🏇' },
+            { id: 'cuerda',   label: 'Cuerda',       seedName: 'Extensiones de Tríceps (Polea/Cuerda)',        icon: '🏇' },
+            { id: 'barra',    label: 'Barra Recta',  seedName: 'Extensiones de Tríceps (Barra Recta)',         icon: '🦯' },
+            { id: 'polea',    label: 'Barra V',      seedName: 'Extensiones de Tríceps (Polea)',               icon: '🏇' },
+            { id: 'una_mano', label: 'Una Mano',     seedName: 'Extensión de Tríceps con Cable (Una Mano)',    icon: '🏇' },
         ],
     },
     {
@@ -161,6 +165,8 @@ const TRICEPS: BaseExercise[] = [
             // Overhead (copa sobre la cabeza)
             { id: 'overhead_dos',       label: 'Overhead · Dos Manos', seedName: 'Copa a dos manos (Mancuerna)',  icon: '🏆' },
             { id: 'overhead_una',       label: 'Overhead · Una Mano',  seedName: 'Copa a una mano (Mancuerna)',   icon: '🏆' },
+            // Sentado
+            { id: 'sentado_barra',      label: 'Sentado · Barra',      seedName: 'Press Francés Sentado con Barra', icon: '🇫🇷' },
         ],
     },
     {
@@ -266,10 +272,13 @@ const BICEPS: BaseExercise[] = [
         metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
         variants: [
             // Inclinado sobre banco predicador (mismo ángulo, diferente equipo)
-            { id: 'predicador_barra',   label: 'Predicador · Barra',   seedName: 'Curl Predicador (Barra)',   icon: '🙏' },
-            { id: 'predicador_maquina', label: 'Predicador · Máquina', seedName: 'Curl Predicador (Máquina)', icon: '🤖' },
+            { id: 'predicador_barra',   label: 'Predicador · Barra',   seedName: 'Curl Predicador (Barra)',                    icon: '🙏' },
+            { id: 'predicador_maquina', label: 'Predicador · Máquina', seedName: 'Curl Predicador (Máquina)',                  icon: '🤖' },
             // Spider (apoyo en banco inclinado boca abajo)
-            { id: 'spider',             label: 'Araña (Spider)',        seedName: 'Curl Araña (Spider Curl)',  icon: '🕷️' },
+            { id: 'spider',             label: 'Araña (Spider)',        seedName: 'Curl Araña (Spider Curl)',                   icon: '🕷️' },
+            // Cable
+            { id: 'cable_alto',         label: 'Cable Polea Alta',     seedName: 'Curl de Cable en Polea Alta (De Pie)',       icon: '💪' },
+            { id: 'cable_bajo',         label: 'Cable Polea Baja',     seedName: 'Curl de Cable en Polea Baja (Una Mano)',     icon: '💪' },
         ],
     },
     {
@@ -384,6 +393,34 @@ const GLUTEOS: BaseExercise[] = [
             { id: 'maquina', label: 'Máquina', seedName: 'Patada de Glúteo (Máquina)', icon: '🤖' },
         ],
     },
+    {
+        id: 'abduccion_cadera',
+        name: 'Abducción de Cadera',
+        muscle: 'GLÚTEOS', icon: '🍑',
+        metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
+        variants: [
+            { id: 'maquina', label: 'Máquina', seedName: 'Abducción de Cadera (Máquina)', icon: '🤖' },
+            { id: 'polea',   label: 'Polea',   seedName: 'Abducción de Cadera (Polea)',   icon: '⛓️' },
+        ],
+    },
+    {
+        id: 'step_up',
+        name: 'Step Up',
+        muscle: 'GLÚTEOS', icon: '🚶',
+        metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
+        variants: [
+            { id: 'mancuernas', label: 'Mancuernas', seedName: 'Step Up con Mancuernas', icon: '🚶' },
+        ],
+    },
+    {
+        id: 'columpios_kettlebell',
+        name: 'Columpios (Swing)',
+        muscle: 'GLÚTEOS', icon: '🔔',
+        metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
+        variants: [
+            { id: 'kettlebell', label: 'Kettlebell', seedName: 'Columpios con Kettlebell', icon: '🔔' },
+        ],
+    },
 ];
 
 // ─────────────────────────── ABDOMINALES ────────────────────────────────────
@@ -433,6 +470,63 @@ const ABDOMINALES: BaseExercise[] = [
         metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
         variants: [
             { id: 'suelo', label: 'Suelo', seedName: 'Abdominales Inversos', icon: '🥨' },
+        ],
+    },
+];
+
+// ─────────────────────────── PANTORRILLAS ───────────────────────────────────
+const PANTORRILLAS: BaseExercise[] = [
+    {
+        id: 'elevacion_gemelos',
+        name: 'Elevación de Gemelos',
+        muscle: 'PANTORRILLAS', icon: '🦵',
+        metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
+        variants: [
+            // Posición de pie (más estiramiento del soleo)
+            { id: 'de_pie_maquina', label: 'De Pie · Máquina',  seedName: 'Elevación de Gemelos de Pie (Máquina)',    icon: '🦵' },
+            { id: 'de_pie_smith',   label: 'De Pie · Smith',    seedName: 'Elevación de Gemelos de Pie (Smith)',      icon: '⚙️' },
+            // Sentado (aísla el soleo)
+            { id: 'sentado',        label: 'Sentado · Máquina', seedName: 'Elevación de Gemelos Sentado (Máquina)',   icon: '🦵' },
+        ],
+    },
+];
+
+// ─────────────────────────── ANTEBRAZO ──────────────────────────────────────
+const ANTEBRAZO: BaseExercise[] = [
+    {
+        id: 'curl_muneca',
+        name: 'Curl de Muñeca',
+        muscle: 'ANTEBRAZO', icon: '🦾',
+        metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
+        variants: [
+            { id: 'normal',    label: 'Curl (Supino)',     seedName: 'Curl de Muñeca con Barra',      icon: '🦾' },
+            { id: 'extension', label: 'Extensión (Prono)', seedName: 'Extensión de Muñeca con Barra', icon: '🦾' },
+            { id: 'invertido', label: 'Barra Invertida',   seedName: 'Curl de Barra Invertido',       icon: '💪' },
+        ],
+    },
+];
+
+// ─────────────────────────── CUELLO ─────────────────────────────────────────
+const CUELLO: BaseExercise[] = [
+    {
+        id: 'encogimientos',
+        name: 'Encogimientos (Trapecios)',
+        muscle: 'CUELLO', icon: '🏋️‍♂️',
+        metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
+        variants: [
+            { id: 'barra',      label: 'Barra',      seedName: 'Encogimientos de Hombros con Barra (Trapecios)',      icon: '🏋️‍♂️' },
+            { id: 'mancuernas', label: 'Mancuernas', seedName: 'Encogimientos de Hombros con Mancuernas (Trapecios)', icon: '🏋️'   },
+        ],
+    },
+    {
+        id: 'cuello_arnes',
+        name: 'Cuello / Neck Harness',
+        muscle: 'CUELLO', icon: '🔗',
+        metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
+        variants: [
+            { id: 'arnes',     label: 'Arnés',     seedName: 'Arnés de Cuello (Neck Harness)',  icon: '🔗' },
+            { id: 'extension', label: 'Extensión', seedName: 'Extensiones de Cuello con Disco', icon: '💆' },
+            { id: 'flexion',   label: 'Flexión',   seedName: 'Flexiones de Cuello con Disco',   icon: '💆' },
         ],
     },
 ];
@@ -493,13 +587,16 @@ export const CURATED_EXERCISES: BaseExercise[] = [
     ...BICEPS,
     ...PIERNA,
     ...GLUTEOS,
+    ...PANTORRILLAS,
+    ...ANTEBRAZO,
     ...ABDOMINALES,
+    ...CUELLO,
     ...CARDIO,
 ];
 
 export const CATALOG_MUSCLES = [
     'PECHO', 'HOMBRO', 'TRÍCEPS', 'ESPALDA', 'BÍCEPS',
-    'PIERNA', 'GLÚTEOS', 'ABDOMINALES', 'CARDIO',
+    'PIERNA', 'GLÚTEOS', 'PANTORRILLAS', 'ANTEBRAZO', 'ABDOMINALES', 'CUELLO', 'CARDIO',
 ] as const;
 
 export type CatalogMuscle = typeof CATALOG_MUSCLES[number];
@@ -551,10 +648,13 @@ export const getExtrasForMuscle = (muscle: string, allSeeds: { name: string; tar
         .filter(s => {
             const m = s.targetMuscle?.toUpperCase();
             const match =
-                muscle === 'PIERNA'      ? ['PIERNA', 'CUÁDRICEPS', 'ISQUIOTIBIALES'].includes(m) :
-                muscle === 'ABDOMINALES' ? m === 'ABDOMINALES' :
-                muscle === 'GLÚTEOS'     ? m === 'GLÚTEOS' :
-                muscle === 'CARDIO'      ? m === 'CARDIO' :
+                muscle === 'PIERNA'        ? ['PIERNA', 'CUÁDRICEPS', 'ISQUIOTIBIALES'].includes(m) :
+                muscle === 'ABDOMINALES'   ? m === 'ABDOMINALES' :
+                muscle === 'GLÚTEOS'       ? m === 'GLÚTEOS' :
+                muscle === 'CARDIO'        ? m === 'CARDIO' :
+                muscle === 'PANTORRILLAS'  ? m === 'PANTORRILLAS' :
+                muscle === 'ANTEBRAZO'     ? m === 'ANTEBRAZO' :
+                muscle === 'CUELLO'        ? m === 'CUELLO' :
                 m === muscle;
             return match && !curatedNames.has(s.name.toLowerCase());
         })

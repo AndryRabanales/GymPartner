@@ -1425,6 +1425,263 @@ export const COMMON_EQUIPMENT_SEEDS = [
             "distance": false,
             "rpe": true
         }
+    },
+    // ── Bíceps (nuevos) ──────────────────────────────────────────────────
+    {
+        "name": "Curl de Cable en Polea Alta (De Pie)",
+        "category": "CABLE",
+        "targetMuscle": "Bíceps",
+        "icon": "💪",
+        "image_url": "/ejercicioimg/ejercicios/Biceps/Curl de cable en polea alta de pie.png",
+        "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
+    },
+    {
+        "name": "Curl de Cable en Polea Baja (Una Mano)",
+        "category": "CABLE",
+        "targetMuscle": "Bíceps",
+        "icon": "💪",
+        "image_url": "/ejercicioimg/ejercicios/Biceps/Curl de cable en polea baja a una mano.png",
+        "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
+    },
+    // ── Abdominales (nuevos) ─────────────────────────────────────────────
+    {
+        "name": "Crunch Oblicuo",
+        "category": "ACCESSORY",
+        "targetMuscle": "Abdominales",
+        "icon": "🥨",
+        "image_url": "/ejercicioimg/ejercicios/Abdomen/Crunch oblicuo.png",
+        "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
+    },
+    {
+        "name": "Encogimientos de Rodillas (Abs)",
+        "category": "ACCESSORY",
+        "targetMuscle": "Abdominales",
+        "icon": "🦵",
+        "image_url": "/ejercicioimg/ejercicios/Abdomen/Encogimientos de rodillas para abdominales.png",
+        "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
+    },
+    {
+        "name": "Plancha con Flexión",
+        "category": "ACCESSORY",
+        "targetMuscle": "Abdominales",
+        "icon": "🪵",
+        "image_url": "/ejercicioimg/ejercicios/Abdomen/Plancha con flexión.png",
+        "metrics": {"weight": false, "reps": true, "time": true, "distance": false, "rpe": false}
+    },
+    // ── Antebrazo (nuevos) ───────────────────────────────────────────────
+    {
+        "name": "Curl de Barra Invertido",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Antebrazo",
+        "icon": "💪",
+        "image_url": "/ejercicioimg/ejercicios/Antebrazo/Curl de barra invertido.png",
+        "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
+    },
+    {
+        "name": "Curl de Muñeca con Barra",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Antebrazo",
+        "icon": "🦾",
+        "image_url": "/ejercicioimg/ejercicios/Antebrazo/Curl de muñeca con barra sentado.png",
+        "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
+    },
+    {
+        "name": "Extensión de Muñeca con Barra",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Antebrazo",
+        "icon": "🦾",
+        "image_url": "/ejercicioimg/ejercicios/Antebrazo/extensión de muñeca con barra sentado.png",
+        "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
+    },
+    // ── Espalda (nuevos) ─────────────────────────────────────────────────
+    {
+        "name": "Encogimiento de Hombros con Barra",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Hombro",
+        "icon": "🏋️‍♂️",
+        "image_url": "/ejercicioimg/ejercicios/Espalda/Encogimiento de hombros con barra.png",
+        "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
+    },
+    {
+        "name": "Encogimiento de Hombros con Mancuernas",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Hombro",
+        "icon": "🏋️",
+        "image_url": "/ejercicioimg/ejercicios/Espalda/Encogimiento de hombros con mancuernas.png",
+        "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
+    },
+    {
+        "name": "Peso Muerto con Barra Hexagonal",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Espalda",
+        "icon": "⬡",
+        "image_url": "/ejercicioimg/ejercicios/Espalda/Peso muerto con barra hexagonal.png",
+        "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
+    },
+    {
+        "name": "Peso Muerto Sumo con Barra",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Espalda",
+        "icon": "🤼",
+        "image_url": "/ejercicioimg/ejercicios/Espalda/Peso muerto sumo con barra.png",
+        "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
+    },
+    // ── Gemelos (nuevos) ─────────────────────────────────────────────────
+    {
+        "name": "Elevación de Gemelos de Pie (Máquina)",
+        "category": "STRENGTH_MACHINE",
+        "targetMuscle": "Pantorrillas",
+        "icon": "🦵",
+        "image_url": "/ejercicioimg/ejercicios/Gemelos/Elevacion de gemelos de pie en maquina .png",
+        "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
+    },
+    {
+        "name": "Elevación de Gemelos de Pie (Smith)",
+        "category": "STRENGTH_MACHINE",
+        "targetMuscle": "Pantorrillas",
+        "icon": "⚙️",
+        "image_url": "/ejercicioimg/ejercicios/Gemelos/Elevacion de gemelos de pie en smith .png",
+        "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
+    },
+    {
+        "name": "Elevación de Gemelos Sentado (Máquina)",
+        "category": "STRENGTH_MACHINE",
+        "targetMuscle": "Pantorrillas",
+        "icon": "🦵",
+        "image_url": "/ejercicioimg/ejercicios/Gemelos/Elevación de gemelos sentado.png",
+        "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
+    },
+    // ── Glúteos (nuevos) ─────────────────────────────────────────────────
+    {
+        "name": "Abducción de Cadera (Polea)",
+        "category": "CABLE",
+        "targetMuscle": "Glúteos",
+        "icon": "🍑",
+        "image_url": "/ejercicioimg/ejercicios/Gluteo/Abducción con polea.png",
+        "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
+    },
+    {
+        "name": "Abducción de Cadera (Máquina)",
+        "category": "STRENGTH_MACHINE",
+        "targetMuscle": "Glúteos",
+        "icon": "🍑",
+        "image_url": "/ejercicioimg/ejercicios/Gluteo/Abducción de cadera con máquina de abducción de cadera.png",
+        "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
+    },
+    {
+        "name": "Caminata de Pato",
+        "category": "ACCESSORY",
+        "targetMuscle": "Glúteos",
+        "icon": "🦆",
+        "image_url": "/ejercicioimg/ejercicios/Gluteo/Caminata de pato.png",
+        "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
+    },
+    {
+        "name": "Columpios con Kettlebell",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Glúteos",
+        "icon": "🔔",
+        "image_url": "/ejercicioimg/ejercicios/Gluteo/Columpios con kettlebell.png",
+        "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
+    },
+    {
+        "name": "Elevación de Rana (Frog Pump)",
+        "category": "ACCESSORY",
+        "targetMuscle": "Glúteos",
+        "icon": "🐸",
+        "image_url": "/ejercicioimg/ejercicios/Gluteo/Elevaciones en posición de rana con propio peso.png",
+        "metrics": {"weight": false, "reps": true, "time": false, "distance": false, "rpe": false}
+    },
+    {
+        "name": "Step Up con Mancuernas",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Glúteos",
+        "icon": "🚶",
+        "image_url": "/ejercicioimg/ejercicios/Gluteo/Step Up con mancuernas.png",
+        "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
+    },
+    // ── Hombro (nuevos) ──────────────────────────────────────────────────
+    {
+        "name": "Elevación Frontal con Disco (Dos Manos)",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Hombro",
+        "icon": "🧟‍♂️",
+        "image_url": "/ejercicioimg/ejercicios/Hombro/Elevación frontal con disco a dos manos.png",
+        "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
+    },
+    {
+        "name": "Elevación Frontal con Mancuerna (Dos Manos)",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Hombro",
+        "icon": "🧟‍♂️",
+        "image_url": "/ejercicioimg/ejercicios/Hombro/Elevación frontal con mancuerna a dos manos.png",
+        "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
+    },
+    {
+        "name": "Press Militar en Smith",
+        "category": "STRENGTH_MACHINE",
+        "targetMuscle": "Hombro",
+        "icon": "⚙️",
+        "image_url": "/ejercicioimg/ejercicios/Hombro/Press militar en smith .png",
+        "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
+    },
+    // ── Cuello (nuevos) ──────────────────────────────────────────────────
+    {
+        "name": "Arnés de Cuello (Neck Harness)",
+        "category": "ACCESSORY",
+        "targetMuscle": "Cuello",
+        "icon": "🔗",
+        "image_url": "/ejercicioimg/ejercicios/Cuello/Arnés de cuello (Neck Harness).png",
+        "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
+    },
+    {
+        "name": "Encogimientos de Hombros con Barra (Trapecios)",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Cuello",
+        "icon": "🏋️‍♂️",
+        "image_url": "/ejercicioimg/ejercicios/Cuello/Encogimientos de hombros con barra.png",
+        "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
+    },
+    {
+        "name": "Encogimientos de Hombros con Mancuernas (Trapecios)",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Cuello",
+        "icon": "🏋️",
+        "image_url": "/ejercicioimg/ejercicios/Cuello/Encogimientos de hombros con mancuernas.png",
+        "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
+    },
+    {
+        "name": "Extensiones de Cuello con Disco",
+        "category": "ACCESSORY",
+        "targetMuscle": "Cuello",
+        "icon": "💆",
+        "image_url": "/ejercicioimg/ejercicios/Cuello/Extensiones de cuello con disco.png",
+        "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
+    },
+    {
+        "name": "Flexiones de Cuello con Disco",
+        "category": "ACCESSORY",
+        "targetMuscle": "Cuello",
+        "icon": "💆",
+        "image_url": "/ejercicioimg/ejercicios/Cuello/Flexiones de cuello con disco.png",
+        "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
+    },
+    // ── Tríceps (nuevos) ─────────────────────────────────────────────────
+    {
+        "name": "Extensión de Tríceps con Cable (Una Mano)",
+        "category": "CABLE",
+        "targetMuscle": "Tríceps",
+        "icon": "🏇",
+        "image_url": "/ejercicioimg/ejercicios/Triceps/Extensión de tríceps con cable a una mano.png",
+        "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
+    },
+    {
+        "name": "Press Francés Sentado con Barra",
+        "category": "FREE_WEIGHT",
+        "targetMuscle": "Tríceps",
+        "icon": "🇫🇷",
+        "image_url": "/ejercicioimg/ejercicios/Triceps/Press francés sentado con barra.png",
+        "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
     }
 ];;
 
