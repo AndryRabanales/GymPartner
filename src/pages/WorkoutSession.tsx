@@ -399,6 +399,11 @@ export const WorkoutSession = () => {
     const firstGuestIdRef = useRef<string | null>(null);
     useEffect(() => { firstGuestIdRef.current = firstGuestId; }, [firstGuestId]);
 
+    // Track users who have deliberately temp-exited so their metric inputs get locked for others
+    const [tempExitedUsers, setTempExitedUsers] = useState<Set<string>>(new Set());
+    const tempExitedUsersRef = useRef<Set<string>>(new Set());
+    useEffect(() => { tempExitedUsersRef.current = tempExitedUsers; }, [tempExitedUsers]);
+
     // Unify firstGuestId deterministically across all devices (Guest 1 is the first participant who is not the Host)
     useEffect(() => {
         const hostId = isInviter ? user?.id : partnerId;
@@ -616,6 +621,19 @@ export const WorkoutSession = () => {
                 });
             })
             .on('presence', { event: 'join' }, ({ newPresences }) => {
+                // Unlock inputs for any user who rejoins after a temp-exit
+                if (newPresences && newPresences.length > 0) {
+                    newPresences.forEach((p: any) => {
+                        const joinedId = p.user_id || p.id;
+                        if (joinedId && tempExitedUsersRef.current.has(joinedId)) {
+                            setTempExitedUsers(prev => {
+                                const next = new Set(prev);
+                                next.delete(joinedId);
+                                return next;
+                            });
+                        }
+                    });
+                }
                 if (newPresences && newPresences.length > 0 && activeExercisesRef.current.length > 0) {
                     console.log('👥 New user joined presence. Hydrating them with active exercises...');
                     channel.send({
@@ -959,6 +977,12 @@ export const WorkoutSession = () => {
                         return updated;
                     })
                 })));
+            })
+            .on('broadcast', { event: 'participant_temp_exit' }, (payload) => {
+                const { sender } = payload.payload;
+                if (sender === user.id) return;
+                // Lock this user's metric inputs for everyone else
+                setTempExitedUsers(prev => new Set([...prev, sender]));
             })
             .on('broadcast', { event: 'sync_session_id' }, (payload) => {
                 const { sessionId: partnerSessionId, startTime: partnerStartTime, sender } = payload.payload;
@@ -3195,9 +3219,14 @@ export const WorkoutSession = () => {
 
         const handlePopState = (e: PopStateEvent) => {
             if (isLeavingPageRef.current || !user || isFinished) return;
-            // Temporary exit: let the user browse freely, the ActiveWorkoutBubble
-            // will appear on every page as a persistent reminder with a VOLVER button.
-            // No blocking modal — same UX as solo sessions.
+            // Broadcast temp-exit so coop partners lock this user's inputs
+            if (channelRef.current && isMultiplayer) {
+                channelRef.current.send({
+                    type: 'broadcast',
+                    event: 'participant_temp_exit',
+                    payload: { sender: user.id }
+                }).catch(() => {});
+            }
             sessionStorage.setItem('ginx_temp_exit_active', 'true');
             guardPushCountRef.current = 0;
             isLeavingPageRef.current = true;
@@ -4042,26 +4071,31 @@ export const WorkoutSession = () => {
                                                                     const rowLocked = set.playerLocked?.[p.id] ?? (isHost ? set.locked : (isFirstGuest ? (set.p2_locked || false) : false));
                                                                     const rowCompletedAt = set.playerCompletedAt?.[p.id] ?? (isHost ? set.completedAt : (isFirstGuest ? set.p2_completedAt : undefined));
                                                                     
-                                                                    // Only disable inputs if: the set row is explicitly locked (playerLocked) or
-                                                                    // we are in read-only viewing mode (viewing partner's exercises tab).
-                                                                    // A partner being temporarily offline (screen lock) must NOT disable any input.
-                                                                    const inputDisabled = rowLocked || rowReadOnly;
+                                                                    // Disable inputs if: explicitly locked, read-only mode,
+                                                                    // OR the participant deliberately temp-exited (not just screen-lock offline).
+                                                                    const isTempExited = tempExitedUsers.has(p.id) && p.id !== user?.id;
+                                                                    const inputDisabled = rowLocked || rowReadOnly || isTempExited;
                                                                     const lockToggleDisabled = rowReadOnly;
 
                                                                     return (
                                                                         <div key={p.id} className={`flex items-center gap-1 w-full flex-nowrap ${pIdx > 0 ? 'mt-1 pt-2 border-t border-white/5' : ''}`}>
                                                                             {/* Premium Name Tag column on the left of each row */}
                                                                             {(isMultiplayer && multiplayerMode === 'conjunto') && (
-                                                                                <div className={`flex items-center justify-center min-w-[65px] max-w-[65px] bg-neutral-900/60 py-1.5 px-1.5 rounded-lg shadow-md transition-all ${
+                                                                                <div className={`flex flex-col items-center justify-center min-w-[65px] max-w-[65px] bg-neutral-900/60 py-1.5 px-1.5 rounded-lg shadow-md transition-all ${
                                                                                     isMyRow
                                                                                         ? 'border border-gym-primary/40 bg-gym-primary/10 shadow-gym-primary/5'
-                                                                                        : 'border border-white/5'
+                                                                                        : isTempExited
+                                                                                            ? 'border border-orange-500/30 bg-orange-500/5'
+                                                                                            : 'border border-white/5'
                                                                                 }`}>
                                                                                     <span className={`text-[9px] font-black tracking-tight uppercase truncate text-center w-full transition-colors ${
-                                                                                        isMyRow ? 'text-gym-primary font-bold' : 'text-neutral-400'
+                                                                                        isMyRow ? 'text-gym-primary font-bold' : isTempExited ? 'text-orange-400' : 'text-neutral-400'
                                                                                     }`}>
                                                                                         {displayName}
                                                                                     </span>
+                                                                                    {isTempExited && (
+                                                                                        <span className="text-[7px] text-orange-400/80 font-bold uppercase tracking-widest">Fuera</span>
+                                                                                    )}
                                                                                 </div>
                                                                             )}
                                                                             {exercise.metrics.weight && (
@@ -4077,7 +4111,7 @@ export const WorkoutSession = () => {
                                                                                         onChange={(e) => updatePlayerSet(mapIndex, setIndex, p.id, 'weight', toInternalWeight(e.target.value, exercise.weightUnit || 'kg'))}
                                                                                         onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
                                                                                         onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
-                                                                                        className={`w-full bg-neutral-800 text-center font-black text-base rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${rowCompleted ? 'text-neutral-500 bg-neutral-900/40' : 'text-white'} ${rowLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                                        className={`w-full bg-neutral-800 text-center font-black text-[16px] rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${rowCompleted ? 'text-neutral-500 bg-neutral-900/40' : 'text-white'} ${rowLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                                         placeholder="0"
                                                                                     />
                                                                                 </div>
@@ -4095,7 +4129,7 @@ export const WorkoutSession = () => {
                                                                                         onChange={(e) => updatePlayerSet(mapIndex, setIndex, p.id, 'reps', e.target.value)}
                                                                                         onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
                                                                                         onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
-                                                                                        className={`w-full bg-neutral-800 text-center font-black text-base rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${rowCompleted ? 'text-neutral-500 bg-neutral-900/40' : 'text-white'} ${rowLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                                        className={`w-full bg-neutral-800 text-center font-black text-[16px] rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${rowCompleted ? 'text-neutral-500 bg-neutral-900/40' : 'text-white'} ${rowLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                                         placeholder="0"
                                                                                     />
                                                                                 </div>
@@ -4113,7 +4147,7 @@ export const WorkoutSession = () => {
                                                                                         onChange={(e) => updatePlayerSet(mapIndex, setIndex, p.id, 'time', e.target.value)}
                                                                                         onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
                                                                                         onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
-                                                                                        className="w-full bg-neutral-800 text-center font-black text-base rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none"
+                                                                                        className="w-full bg-neutral-800 text-center font-black text-[16px] rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none"
                                                                                         placeholder="0s"
                                                                                     />
                                                                                 </div>
@@ -4131,7 +4165,7 @@ export const WorkoutSession = () => {
                                                                                         onChange={(e) => updatePlayerSet(mapIndex, setIndex, p.id, 'distance', e.target.value)}
                                                                                         onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
                                                                                         onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
-                                                                                        className="w-full bg-neutral-800 text-center font-black text-base rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none"
+                                                                                        className="w-full bg-neutral-800 text-center font-black text-[16px] rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none"
                                                                                         placeholder="0m"
                                                                                     />
                                                                                 </div>
@@ -4150,7 +4184,7 @@ export const WorkoutSession = () => {
                                                                                         onChange={(e) => updatePlayerSet(mapIndex, setIndex, p.id, 'rpe', e.target.value)}
                                                                                         onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
                                                                                         onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
-                                                                                        className="w-full bg-neutral-800 text-center font-black text-base rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none"
+                                                                                        className="w-full bg-neutral-800 text-center font-black text-[16px] rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none"
                                                                                         placeholder="-"
                                                                                     />
                                                                                 </div>
@@ -4171,7 +4205,7 @@ export const WorkoutSession = () => {
                                                                                             onChange={(e) => updateSet(mapIndex, setIndex, key, e.target.value, true)} // isCustom=true
                                                                                             onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
                                                                                             onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
-                                                                                            className="w-full bg-neutral-800 text-center font-black text-base rounded-lg py-2 text-white focus:ring-2 focus:ring-gym-primary outline-none"
+                                                                                            className="w-full bg-neutral-800 text-center font-black text-[16px] rounded-lg py-2 text-white focus:ring-2 focus:ring-gym-primary outline-none"
                                                                                         />
                                                                                     </div>
                                                                                 );
@@ -4643,6 +4677,13 @@ export const WorkoutSession = () => {
                 onClose={() => setShowForceExitModal(false)}
                 onFinalize={handleFinishRequest}
                 onTemporaryExit={() => {
+                    if (channelRef.current && isMultiplayer) {
+                        channelRef.current.send({
+                            type: 'broadcast',
+                            event: 'participant_temp_exit',
+                            payload: { sender: user?.id }
+                        }).catch(() => {});
+                    }
                     sessionStorage.setItem('ginx_temp_exit_active', 'true');
                     isLeavingPageRef.current = true;
                     navigate('/');
