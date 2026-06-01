@@ -339,6 +339,7 @@ export const WorkoutSession = () => {
     const [showExitMenu, setShowExitMenu] = useState(false);
     const [showCoopExitModal, setShowCoopExitModal] = useState(false);
     const [showForceExitModal, setShowForceExitModal] = useState(false);
+    const [showCancelModal, setShowCancelModal] = useState(false);
     const [showSummary, setShowSummary] = useState(false);
     const [summaryTab, setSummaryTab] = useState<'grupal' | 'individual'>('grupal');
     const [exerciseFillFlow, setExerciseFillFlow] = useState<{ exerciseName: string; timestamp: number }[]>([]);
@@ -1007,20 +1008,46 @@ export const WorkoutSession = () => {
         }).catch(e => console.error('Error sending sessionId broadcast:', e));
     }, [sessionId, startTime, isMultiplayer, user]);
     // Ensure absolute consistency when waking from background/sleep
+    // When the phone is locked/unlocked, Supabase Realtime WebSocket can drop.
+    // We re-track presence and request hydration after a short delay to let the channel reconnect.
     useEffect(() => {
         const handleVisibilityChange = () => {
-            if (document.visibilityState === 'visible' && isMultiplayer && channelRef.current && user) {
-                console.log('📱 App became visible. Requesting emergency hydration to catch up on missed events...');
-                channelRef.current.send({
-                    type: 'broadcast',
-                    event: 'request_hydration',
-                    payload: { sender: user.id }
-                }).catch(e => console.error('Error sending emergency hydration request:', e));
+            if (!isMultiplayer || !user) return;
+
+            if (document.visibilityState === 'visible') {
+                console.log('📱 [Wakeup] App became visible. Re-tracking presence and requesting hydration...');
+
+                // Wait for the Supabase Realtime WebSocket to fully reconnect after background/sleep.
+                // The channel may have been silently dropped by the OS — 1.5s is sufficient to reconnect.
+                setTimeout(() => {
+                    if (!channelRef.current || !user) return;
+
+                    // Re-announce our presence so the partner sees us as online again.
+                    channelRef.current.track({
+                        user_id: user.id,
+                        username: user.user_metadata?.username || user.user_metadata?.full_name || 'Yo',
+                        avatar_url: user.user_metadata?.avatar_url || '',
+                        joined_at: joinTimestamp
+                    }).then(() => {
+                        console.log('✅ [Wakeup] Presence re-tracked successfully.');
+                    }).catch(e => console.warn('⚠️ [Wakeup] Failed to re-track presence:', e));
+
+                    // Request full state hydration from the partner to recover any missed events.
+                    channelRef.current.send({
+                        type: 'broadcast',
+                        event: 'request_hydration',
+                        payload: { sender: user.id }
+                    }).catch(e => console.warn('⚠️ [Wakeup] Failed to send hydration request:', e));
+                }, 1500);
             }
+            // NOTE: On 'hidden' (phone locked), we intentionally do NOT clear any session state.
+            // The Realtime channel may drop temporarily but the workout session in Supabase DB
+            // remains untouched. The partner should treat a presence disappearance as a
+            // temporary disconnect, not a session termination.
         };
         document.addEventListener('visibilitychange', handleVisibilityChange);
         return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-    }, [isMultiplayer, user]);
+    }, [isMultiplayer, user, joinTimestamp]);
     // --- End Multiplayer Sync Hooks ---
 
     // NEW: Start Options Modal
@@ -3635,7 +3662,7 @@ export const WorkoutSession = () => {
                                         <RotateCcw size={16} /> Reiniciar
                                     </button>
                                     <button
-                                        onClick={handleCancelSession}
+                                        onClick={() => setShowCancelModal(true)}
                                         className="flex items-center gap-3 w-full p-3 text-left text-sm font-bold text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
                                     >
                                         <X size={16} /> Cancelar / Salir

@@ -368,7 +368,11 @@ export const AppLayout = () => {
         window.addEventListener('beforeunload', handleUnload);
         
         const handleVisibility = () => {
-            if (document.visibilityState === 'hidden') {
+            // If the app is hidden (e.g., device locked) and we are NOT on the workout page,
+            // mark the user as offline. During an active workout we keep the status alive to
+            // avoid the other participant thinking the session has finished.
+            const isWorkoutPage = location.pathname.includes('/workout');
+            if (document.visibilityState === 'hidden' && !isWorkoutPage) {
                 handleUnload();
             } else {
                 updateActiveStatus(new Date().toISOString());
