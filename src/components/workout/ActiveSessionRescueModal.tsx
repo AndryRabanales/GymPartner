@@ -51,6 +51,50 @@ export const ActiveSessionRescueModal: React.FC<ActiveSessionRescueModalProps> =
     return () => { active = false; };
   }, [gymId]);
 
+  const [partnerStatus, setPartnerStatus] = useState<'active' | 'dead' | 'checking'>('checking');
+
+  // Verify if partner's co-op session is still active
+  useEffect(() => {
+    let active = true;
+    const verifyPartnerSession = async () => {
+      if (!sessionId) return;
+      try {
+        const { data: mySess } = await supabase
+          .from('workout_sessions')
+          .select('is_multiplayer, partner_session_id')
+          .eq('id', sessionId)
+          .maybeSingle();
+
+        if (!active) return;
+
+        if (mySess?.is_multiplayer && mySess.partner_session_id) {
+          // If we are the guest, validate if the host session still exists and is unfinished
+          const { data: partnerSess } = await supabase
+            .from('workout_sessions')
+            .select('id, finished_at')
+            .eq('id', mySess.partner_session_id)
+            .maybeSingle();
+
+          if (!active) return;
+
+          if (!partnerSess || partnerSess.finished_at !== null) {
+            setPartnerStatus('dead');
+          } else {
+            setPartnerStatus('active');
+          }
+        } else {
+          // We are an individual training session or the Root Host
+          setPartnerStatus('active');
+        }
+      } catch (err) {
+        console.warn('Error checking partner session active status:', err);
+        if (active) setPartnerStatus('active');
+      }
+    };
+    verifyPartnerSession();
+    return () => { active = false; };
+  }, [sessionId]);
+
   // Premium Timer Logic
   useEffect(() => {
     if (!startedAt) return;
@@ -74,7 +118,25 @@ export const ActiveSessionRescueModal: React.FC<ActiveSessionRescueModalProps> =
     return () => clearInterval(interval);
   }, [startedAt]);
 
-  const handleResume = () => {
+  const handleResume = async () => {
+    if (partnerStatus === 'dead') {
+      if (window.confirm('El entrenamiento cooperativo conjunto ya fue finalizado o cancelado por tu compañero. ¿Deseas finalizar este entrenamiento y archivarlo síncronamente de forma limpia en tu historial?')) {
+        setLoadingDelete(true);
+        try {
+          await workoutService.finishSession(sessionId, "Sesión cooperativa huérfana archivada por desconexión", undefined, false);
+          localStorage.removeItem(`workout_draft_${sessionId}`);
+          localStorage.removeItem('ginx_active_session');
+          localStorage.removeItem('ginx_coop_state');
+          onResolve();
+        } catch (err) {
+          console.error('Error auto-finalizing dead coop session:', err);
+          alert('Error al intentar archivar la sesión.');
+        } finally {
+          setLoadingDelete(false);
+        }
+      }
+      return;
+    }
     onResolve();
     navigate(`/workout/${gymId || 'personal'}`, { state: { sessionId } });
   };
