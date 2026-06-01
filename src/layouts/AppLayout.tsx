@@ -274,6 +274,8 @@ const CoopJoinRequestToast = ({
                             }
                         });
 
+                        const hasActiveOnAccept = !!activeSession;
+
                         // Redirect to the workout session
                         navigate('/workout', { 
                             state: { 
@@ -283,7 +285,7 @@ const CoopJoinRequestToast = ({
                                 chatId: roomSessionId,
                                 partnerSessionId: roomSessionId,
                                 isInviter: true,
-                                forceNewSession: true
+                                forceNewSession: !hasActiveOnAccept
                             } 
                         });
                     }}

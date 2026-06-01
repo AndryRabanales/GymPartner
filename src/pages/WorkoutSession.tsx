@@ -296,11 +296,16 @@ export const WorkoutSession = () => {
         if (state && state.isMultiplayer) {
             console.log('🔄 Sincronizando nuevo estado multijugador desde location.state:', state);
             
-            // Clean local exercise state to prevent stale data leaking from a previous individual/coop session
-            setActiveExercises([]);
-            setCurrentRoutineName('');
-            setOriginalExerciseIds([]);
-            setIsRoutineModified(false);
+            // Clean local exercise state ONLY if forceNewSession is explicitly requested (fresh start)
+            if (state.forceNewSession === true) {
+                console.log('🧹 [Force New Session] Cleaning exercises from state');
+                setActiveExercises([]);
+                setCurrentRoutineName('');
+                setOriginalExerciseIds([]);
+                setIsRoutineModified(false);
+            } else {
+                console.log('🚀 [Preserve Session] Preserving existing exercises to invite partner to current room');
+            }
             setIsMultiplayer(true);
             if (state.multiplayerMode) setMultiplayerMode(state.multiplayerMode);
             if (state.partnerId) setPartnerId(state.partnerId);
