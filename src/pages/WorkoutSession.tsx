@@ -1667,21 +1667,27 @@ export const WorkoutSession = () => {
                     setDetectedGymName("Entrenamiento Libre");
                 }
 
-                // Hydrate from Draft or DB
-                const savedDraft = localStorage.getItem(`workout_draft_${active.id}`);
-                if (savedDraft) {
-                    const parsed = JSON.parse(savedDraft);
-                    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-                        // 🛡️ Sanitize ghost rest timers BEFORE hydrating state
-                        setActiveExercises(sanitizeRestTimers(parsed.exercises || []));
-                        if (parsed.routineName) setCurrentRoutineName(parsed.routineName);
-                        if (parsed.originalIds) setOriginalExerciseIds(parsed.originalIds);
-                        if (parsed.isRoutineModified !== undefined) setIsRoutineModified(parsed.isRoutineModified);
-                    } else {
-                        setActiveExercises(sanitizeRestTimers(Array.isArray(parsed) ? parsed : []));
-                    }
+                // If we are already training in this exact session, DO NOT re-hydrate it
+                // to prevent losing unsaved exercises/routines currently active in our React state.
+                if (sessionIdRef.current === active.id && activeExercisesRef.current.length > 0) {
+                    console.log("🚀 [Preserve State] We are already in this session with exercises loaded. Skipping hydration.");
                     setLoading(false);
                 } else {
+                    // Hydrate from Draft or DB
+                    const savedDraft = localStorage.getItem(`workout_draft_${active.id}`);
+                    if (savedDraft) {
+                        const parsed = JSON.parse(savedDraft);
+                        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                            // 🛡️ Sanitize ghost rest timers BEFORE hydrating state
+                            setActiveExercises(sanitizeRestTimers(parsed.exercises || []));
+                            if (parsed.routineName) setCurrentRoutineName(parsed.routineName);
+                            if (parsed.originalIds) setOriginalExerciseIds(parsed.originalIds);
+                            if (parsed.isRoutineModified !== undefined) setIsRoutineModified(parsed.isRoutineModified);
+                        } else {
+                            setActiveExercises(sanitizeRestTimers(Array.isArray(parsed) ? parsed : []));
+                        }
+                        setLoading(false);
+                    } else {
                     const logs = await workoutService.getSessionLogs(active.id);
                     if (logs && logs.length > 0) {
                         const restoredExercises: WorkoutExercise[] = [];
@@ -1734,7 +1740,8 @@ export const WorkoutSession = () => {
                         setShowAddModal(true);
                     }
                 }
-            } else {
+            }
+        } else {
                 const partnerActive = partnerActiveResult?.data;
                 const isJoiningNewCoop = currentIsMultiplayer && !currentIsInviter && partnerActive && (
                     !active || active.partner_session_id !== partnerActive.id
