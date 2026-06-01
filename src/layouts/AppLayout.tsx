@@ -338,17 +338,8 @@ export const AppLayout = () => {
 
                         // If Host session has ended or is dead/changed
                         if (!partnerActive || partnerActive.id !== session.partner_session_id) {
-                            console.log("☠️ [Room Auditor] Host session is dead or finished. Auto-finalizing guest's session...");
-                            
-                            // Auto-finalize guest session cleanly to prevent zombie sessions in DB
-                            await workoutService.finishSession(session.id, "Sesión cooperativa huérfana archivada por abandono del compañero", undefined, false);
-                            localStorage.removeItem(`workout_draft_${session.id}`);
-                            localStorage.removeItem('ginx_active_session');
-                            localStorage.removeItem('ginx_coop_state');
+                            console.log("☠️ [Room Auditor] Host session is dead or finished. Removing temp exit flag to force rescue modal decision.");
                             sessionStorage.removeItem('ginx_temp_exit_active');
-                            
-                            setShowRescueModal(false);
-                            return;
                         }
                     }
                 }

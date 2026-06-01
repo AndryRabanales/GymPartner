@@ -136,10 +136,41 @@ export const ActiveSessionRescueModal: React.FC<ActiveSessionRescueModalProps> =
 
   const handleResume = async () => {
     if (partnerStatus === 'dead') {
-      if (window.confirm('El entrenamiento cooperativo conjunto ya fue finalizado o cancelado por tu compañero. ¿Deseas finalizar este entrenamiento y archivarlo síncronamente de forma limpia en tu historial?')) {
+      if (window.confirm('Tu compañero ha finalizado o cancelado el entrenamiento cooperativo conjunto. ¿Deseas CONTINUAR este entrenamiento de forma INDIVIDUAL para no perder tu progreso de hoy? (Si pulsas Cancelar, finalizaremos y guardaremos tus series de forma limpia en tu historial)')) {
         setLoadingDelete(true);
         try {
-          await workoutService.finishSession(sessionId, "Sesión cooperativa huérfana archivada por desconexión", undefined, false);
+          // Convert the session to individual in Supabase so they can keep working solo
+          await supabase
+            .from('workout_sessions')
+            .update({
+              is_multiplayer: false,
+              multiplayer_mode: null,
+              partner_id: null,
+              partner_session_id: null
+            })
+            .eq('id', sessionId);
+
+          localStorage.removeItem('ginx_coop_state');
+          sessionStorage.removeItem('ginx_temp_exit_active');
+          onResolve();
+          navigate(`/workout/${gymId || 'personal'}`, { 
+            state: { 
+              sessionId,
+              isMultiplayer: false,
+              forceNewSession: false
+            } 
+          });
+        } catch (err) {
+          console.error('Error converting dead coop to individual session:', err);
+          alert('Error al intentar convertir el entrenamiento a individual.');
+        } finally {
+          setLoadingDelete(false);
+        }
+      } else {
+        // User clicked Cancel: Finalize and archive the workout to history so NO progress is lost!
+        setLoadingDelete(true);
+        try {
+          await workoutService.finishSession(sessionId, "Sesión cooperativa convertida y archivada por salida del compañero", undefined, false);
           localStorage.removeItem(`workout_draft_${sessionId}`);
           localStorage.removeItem('ginx_active_session');
           localStorage.removeItem('ginx_coop_state');
@@ -147,7 +178,7 @@ export const ActiveSessionRescueModal: React.FC<ActiveSessionRescueModalProps> =
           onResolve();
         } catch (err) {
           console.error('Error auto-finalizing dead coop session:', err);
-          alert('Error al intentar archivar la sesión.');
+          alert('Error al intentar archivar el entrenamiento.');
         } finally {
           setLoadingDelete(false);
         }
