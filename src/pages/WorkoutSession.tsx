@@ -2,7 +2,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { useState, useEffect, useRef, Fragment } from 'react';
+import { useState, useEffect, useRef, useMemo, Fragment } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import type { Equipment, CustomSettings } from '../services/GymEquipmentService';
@@ -395,6 +395,9 @@ export const WorkoutSession = () => {
     const [firstGuestId, setFirstGuestId] = useState<string | null>(null);
     const participantsRef = useRef<any[]>([]);
     useEffect(() => { participantsRef.current = participants; }, [participants]);
+
+    const firstGuestIdRef = useRef<string | null>(null);
+    useEffect(() => { firstGuestIdRef.current = firstGuestId; }, [firstGuestId]);
 
     // Unify firstGuestId deterministically across all devices (Guest 1 is the first participant who is not the Host)
     useEffect(() => {
@@ -945,12 +948,12 @@ export const WorkoutSession = () => {
                                 playerRestLastStartTime: { ...(s.playerRestLastStartTime || {}), [sender]: undefined }
                             };
                         }
-                        // Legacy p1 (host) fields
+                        // Legacy p1 (host) fields — only reset if the leaving user IS the host partner
                         if (sender === partnerId && s.restStatus === 'running') {
                             updated = { ...updated, restStatus: 'completed', restLastStartTime: undefined };
                         }
-                        // Legacy p2 (first guest) fields
-                        if (s.p2_restStatus === 'running') {
+                        // Legacy p2 (first guest) fields — only reset if the leaving user IS the first guest
+                        if (sender === firstGuestIdRef.current && s.p2_restStatus === 'running') {
                             updated = { ...updated, p2_restStatus: 'completed', p2_restLastStartTime: undefined };
                         }
                         return updated;
@@ -1429,15 +1432,21 @@ export const WorkoutSession = () => {
 
 
     // Computed: IDs already active in this session — used to show correct AGREGAR count (BUG-06)
-    const alreadyActiveIds = new Set<string>();
-    activeExercises.forEach(e => {
-        if (e.equipmentId) alreadyActiveIds.add(e.equipmentId);
-        if (e.equipmentName) {
-            alreadyActiveIds.add(`virtual-${e.equipmentName}`);
-            alreadyActiveIds.add(`virtual-${e.equipmentName.trim()}`);
-        }
-    });
-    const newlySelectedCount = Array.from(selectedCatalogItems).filter(id => !alreadyActiveIds.has(id)).length;
+    const alreadyActiveIds = useMemo(() => {
+        const ids = new Set<string>();
+        activeExercises.forEach(e => {
+            if (e.equipmentId) ids.add(e.equipmentId);
+            if (e.equipmentName) {
+                ids.add(`virtual-${e.equipmentName}`);
+                ids.add(`virtual-${e.equipmentName.trim()}`);
+            }
+        });
+        return ids;
+    }, [activeExercises]);
+    const newlySelectedCount = useMemo(
+        () => Array.from(selectedCatalogItems).filter(id => !alreadyActiveIds.has(id)).length,
+        [selectedCatalogItems, alreadyActiveIds]
+    );
 
     // Computed: Merge Seeds (Virtual) only if not already present by NAME in the real/global list
     const effectiveInventory = [...arsenal];
@@ -3165,20 +3174,33 @@ export const WorkoutSession = () => {
     // Works with BrowserRouter (no Data Router needed).
     // Strategy: push MULTIPLE sentinel entries so rapid back-taps can't drain
     // the history stack before the handler fires and re-pushes them.
+    const guardPushCountRef = useRef(0);
     useEffect(() => {
-        if (!user || isFinished) return;
+        if (!user || isFinished) {
+            // Session just ended — pop back the sentinel entries we pushed so
+            // the user's history stack isn't polluted after finishing.
+            if (guardPushCountRef.current > 0) {
+                window.history.go(-guardPushCountRef.current);
+                guardPushCountRef.current = 0;
+            }
+            return;
+        }
 
-        // Push 5 sentinels so the user needs 5+ rapid taps before any navigates away
-        for (let i = 0; i < 5; i++) {
+        // Push 2 sentinels on mount (protects against accidental single/double tap)
+        const INITIAL = 2;
+        for (let i = 0; i < INITIAL; i++) {
             window.history.pushState({ workoutGuard: true }, '');
         }
+        guardPushCountRef.current += INITIAL;
 
         const handlePopState = (e: PopStateEvent) => {
             if (isLeavingPageRef.current || !user || isFinished) return;
-            // Re-push 3 sentinels immediately to keep the stack full even under rapid tapping
-            for (let i = 0; i < 3; i++) {
+            // Re-push 3 sentinels immediately to resist rapid back-tap drain
+            const REPUSH = 3;
+            for (let i = 0; i < REPUSH; i++) {
                 window.history.pushState({ workoutGuard: true }, '');
             }
+            guardPushCountRef.current += REPUSH;
             // Show exit modal instead of navigating away
             setShowForceExitModal(true);
         };

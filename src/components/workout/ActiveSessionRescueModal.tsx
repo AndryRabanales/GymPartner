@@ -19,8 +19,7 @@ export const ActiveSessionRescueModal: React.FC<ActiveSessionRescueModalProps> =
   startedAt,
   onResolve
 }) => {
-  if (!isOpen) return null;
-
+  // NOTE: all hooks must run unconditionally — early return is at the bottom of the render
   const navigate = useNavigate();
   const [gymName, setGymName] = useState<string>('Entrenamiento Personal');
   const [elapsedTime, setElapsedTime] = useState<string>('00:00');
@@ -214,6 +213,8 @@ export const ActiveSessionRescueModal: React.FC<ActiveSessionRescueModalProps> =
   };
 
   // ─── Render ────────────────────────────────────────────────────────────────
+  if (!isOpen) return null;
+
   const isRoom = roomStatus === 'room_open' || roomStatus === 'room_closed';
   const isLoading = roomStatus === 'checking';
 
@@ -311,19 +312,29 @@ export const ActiveSessionRescueModal: React.FC<ActiveSessionRescueModalProps> =
               </button>
             )}
 
-            {/* Room closed: just dismiss + clear */}
+            {/* Room closed: finalize guest session + clear */}
             {roomStatus === 'room_closed' && (
               <button
-                onClick={() => {
+                onClick={async () => {
+                  setLoadingAction(true);
+                  try {
+                    // Finalize the guest's own session so it no longer appears as active
+                    await workoutService.finishSession(sessionId, 'Sala cerrada por el anfitrión', undefined, true);
+                  } catch (e) {
+                    console.warn('room_closed dismiss: could not finalize session', e);
+                  } finally {
+                    setLoadingAction(false);
+                  }
                   localStorage.removeItem('ginx_coop_state');
                   localStorage.removeItem('ginx_active_session');
                   localStorage.removeItem(`workout_draft_${sessionId}`);
+                  sessionStorage.removeItem('ginx_temp_exit_active');
                   onResolve();
                 }}
                 disabled={loadingAction}
                 className="w-full flex items-center justify-center gap-2 py-4 bg-gradient-to-br from-neutral-700 to-neutral-800 text-white font-black uppercase tracking-widest rounded-2xl transition-all active:scale-95 disabled:opacity-50"
               >
-                <DoorOpen size={18} />
+                {loadingAction ? <Loader2 className="animate-spin" size={18} /> : <DoorOpen size={18} />}
                 ENTENDIDO — VER MI HISTORIAL
               </button>
             )}

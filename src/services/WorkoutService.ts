@@ -430,6 +430,10 @@ class WorkoutService {
             .limit(1)
             .maybeSingle();
 
+        if (coopError) {
+            console.error('getActiveSession: coop query failed', coopError);
+            return { data: null, error: coopError };
+        }
         if (coopData) return { data: coopData, error: null };
 
         // Fallback: solo session (4h window)
@@ -530,7 +534,8 @@ class WorkoutService {
         // 1. Finalize host session with GX
         const hostResult = await this.finishSession(roomId, notes, routineName, true);
         if (!hostResult.success) {
-            console.error('closeRoom: failed to finalize host session');
+            console.error('closeRoom: failed to finalize host session', hostResult.error);
+            return { success: false };
         }
 
         // 2. Find and finalize all guest sessions
@@ -598,6 +603,7 @@ class WorkoutService {
                 }
             } catch (e) {
                 console.warn('closeRoom: error awarding guest GX or sending notifications:', e);
+                // Non-fatal: host session and guest sessions are already closed; only GX/notifications failed
             }
         }
 

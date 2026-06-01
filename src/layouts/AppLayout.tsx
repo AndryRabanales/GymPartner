@@ -330,10 +330,16 @@ export const AppLayout = () => {
                 }
 
                 // ─── COOP ROOM SESSIONS ────────────────────────────────────────
-                // For multiplayer (room) sessions, we ALWAYS show the rescue modal
-                // regardless of ginx_temp_exit_active. Rooms survive disconnections
-                // by design — the user must explicitly leave or the host must close.
+                // Respect temp-exit flag for coop too: if the user deliberately left
+                // via "Salir Temporalmente", don't interrupt them while browsing.
+                // We still show the modal on a cold load (phone killed, cache cleared)
+                // because sessionStorage is cleared between sessions.
                 if (session.is_multiplayer) {
+                    const isTempExitCoop = sessionStorage.getItem('ginx_temp_exit_active') === 'true';
+                    if (isTempExitCoop) {
+                        setShowRescueModal(false);
+                        return;
+                    }
                     setRescueSessionId(session.id);
                     setRescueGymId(session.gym_id || null);
                     setRescueStartedAt(session.started_at);
