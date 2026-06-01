@@ -322,21 +322,47 @@ export const AppLayout = () => {
 
         const checkRescuableSession = async () => {
             try {
+                const { data: session } = await workoutService.getActiveSession(user.id);
+                
+                if (!session) {
+                    setShowRescueModal(false);
+                    return;
+                }
+
+                // 🛡️ [Room Auditor]: Verify if cooperative sessions are still alive and active
+                if (session.is_multiplayer) {
+                    // Sub-Case: We are the Guest (partner_id points to the Host)
+                    if (session.partner_id && session.partner_session_id) {
+                        const partnerActiveResult = await workoutService.getActiveSession(session.partner_id);
+                        const partnerActive = partnerActiveResult?.data;
+
+                        // If Host session has ended or is dead/changed
+                        if (!partnerActive || partnerActive.id !== session.partner_session_id) {
+                            console.log("☠️ [Room Auditor] Host session is dead or finished. Auto-finalizing guest's session...");
+                            
+                            // Auto-finalize guest session cleanly to prevent zombie sessions in DB
+                            await workoutService.finishSession(session.id, "Sesión cooperativa huérfana archivada por abandono del compañero", undefined, false);
+                            localStorage.removeItem(`workout_draft_${session.id}`);
+                            localStorage.removeItem('ginx_active_session');
+                            localStorage.removeItem('ginx_coop_state');
+                            sessionStorage.removeItem('ginx_temp_exit_active');
+                            
+                            setShowRescueModal(false);
+                            return;
+                        }
+                    }
+                }
+
                 const isTempExit = sessionStorage.getItem('ginx_temp_exit_active') === 'true';
                 if (isTempExit) {
                     setShowRescueModal(false);
                     return;
                 }
 
-                const { data: session } = await workoutService.getActiveSession(user.id);
-                if (session) {
-                    setRescueSessionId(session.id);
-                    setRescueGymId(session.gym_id || null);
-                    setRescueStartedAt(session.started_at);
-                    setShowRescueModal(true);
-                } else {
-                    setShowRescueModal(false);
-                }
+                setRescueSessionId(session.id);
+                setRescueGymId(session.gym_id || null);
+                setRescueStartedAt(session.started_at);
+                setShowRescueModal(true);
             } catch (err) {
                 console.warn('⚠️ [Rescue Check] Failed to check active session:', err);
             }
