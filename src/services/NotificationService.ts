@@ -385,7 +385,11 @@ export const notificationService = {
                 .update({ last_message_at: new Date().toISOString() })
                 .eq('id', chat.id);
 
-            // The 1 GX point reward will now be awarded in ChatService after 4 messages from each participant.
+            // Award 1 GX to both users for matching
+            await Promise.all([
+                userService.addGxPoints(user.id, 1, 'match_accepted'),
+                userService.addGxPoints(senderId, 1, 'match_accepted'),
+            ]);
 
             return chat.id;
         }

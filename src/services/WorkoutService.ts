@@ -116,7 +116,7 @@ class WorkoutService {
     }
 
     // Finish the session (The "Victory")
-    async finishSession(sessionId: string, notes?: string, routineName?: string, isManual: boolean = false): Promise<{ success: boolean; error?: any }> {
+    async finishSession(sessionId: string, notes?: string, routineName?: string, isManual: boolean = false, geoVerified?: boolean): Promise<{ success: boolean; error?: any }> {
         const now = new Date().toISOString();
         const updatePayload: any = {
             end_time: now,
@@ -169,12 +169,15 @@ class WorkoutService {
                     const isFirstWorkoutToday = !todaySessions || todaySessions.length <= 1;
 
                     if (isFirstWorkoutToday) {
+                        if (geoVerified === false) {
+                            console.log(`📍 Geo check failed — no GX awarded for workout ${sessionId}.`);
+                        } else {
                         const isMulti = session.is_multiplayer || false;
                         const pointsAwarded = isMulti ? 3 : 2;
                         const reason = isMulti ? 'workout_finished_coop' : 'workout_finished';
 
                         console.log(`🎉 First qualified workout of the day (>= 20 mins)! Awarding ${pointsAwarded} GX points (isMultiplayer: ${isMulti}).`);
-                        
+
                         // Award GX points
                         await userService.addGxPoints(session.user_id, pointsAwarded, reason);
                         
@@ -191,6 +194,7 @@ class WorkoutService {
                             .from('profiles')
                             .update({ checkins_count: currentCount + 1 })
                             .eq('id', session.user_id);
+                        } // end else (geoVerified !== false)
                     }
                 } else {
                     console.log(`⚠️ Session duration (${durationMinutes.toFixed(1)} mins) is less than 20 mins. No GX points awarded.`);
@@ -528,11 +532,11 @@ class WorkoutService {
      *    finalization flow triggered by the `session_finished` broadcast).
      * 3. Sends a `room_closed` notification to every guest's user_id.
      */
-    async closeRoom(roomId: string, notes?: string, routineName?: string): Promise<{ success: boolean }> {
+    async closeRoom(roomId: string, notes?: string, routineName?: string, geoVerified?: boolean): Promise<{ success: boolean }> {
         const now = new Date().toISOString();
 
         // 1. Finalize host session with GX
-        const hostResult = await this.finishSession(roomId, notes, routineName, true);
+        const hostResult = await this.finishSession(roomId, notes, routineName, true, geoVerified);
         if (!hostResult.success) {
             console.error('closeRoom: failed to finalize host session', hostResult.error);
             return { success: false };

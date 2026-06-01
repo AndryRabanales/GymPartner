@@ -6,7 +6,7 @@ import { useGeolocation } from '../../hooks/useGeolocation';
 import { InteractiveOverlay } from '../onboarding/InteractiveOverlay';
 import { userService } from '../../services/UserService';
 import { notificationService } from '../../services/NotificationService';
-import { getDistance } from '../../utils/distance';
+import { haversineDistance, isAccuracyUsable } from '../../utils/geolocationUtils';
 import type { UserPrimaryGym } from '../../services/UserService';
 import { useNavigate } from 'react-router-dom';
 import { Lock, Star, Search, Loader, MapPin, Heart } from 'lucide-react';
@@ -75,17 +75,13 @@ export const GymMap = () => {
     }, [placesLib, map]);
 
     // Geolocation Effect
-    const { location: userLocation } = useGeolocation();
+    const { location: userLocation, loading: gpsLoading } = useGeolocation();
     const [hasCenteredOnce, setHasCenteredOnce] = useState(false);
 
     useEffect(() => {
-        if (userLocation && map && !hasCenteredOnce) {
-            // Use Real User Location
-            const pos = {
-                lat: userLocation.lat,
-                lng: userLocation.lng,
-            };
-            map.panTo(pos);
+        // Only center on FRESH positions (not stale cache from previous sessions)
+        if (userLocation?.isFresh && map && !hasCenteredOnce) {
+            map.panTo({ lat: userLocation.lat, lng: userLocation.lng });
             map.setZoom(15);
             setHasCenteredOnce(true);
         }
@@ -223,14 +219,27 @@ export const GymMap = () => {
         if (!selectedGym || !user) return;
 
         if (!userLocation) {
-            alert('⛔ Debes activar tu ubicación GPS para poder desbloquear un gimnasio.');
+            alert('⛔ Activa tu ubicación GPS para desbloquear un gimnasio.');
             return;
         }
 
-        // Distance Check: Enforce strict 0.16km (160m) maximum distance (Pokemon GO style)
-        const distance = getDistance(userLocation.lat, userLocation.lng, selectedGym.lat, selectedGym.lng);
-        if (distance > 0.16) {
-            alert(`⛔ Estás muy lejos para interactuar. Acércate más al gimnasio (Max 160m). Distancia actual: ${distance.toFixed(2)}km.`);
+        if (!userLocation.isFresh) {
+            alert('⏳ Esperando señal GPS fresca. Espera unos segundos e intenta de nuevo.');
+            return;
+        }
+
+        const distMeters = haversineDistance(userLocation.lat, userLocation.lng, selectedGym.lat, selectedGym.lng);
+
+        // Adaptive threshold: base 300m + GPS accuracy margin (capped at 500m total)
+        // This prevents blocking users when GPS drifts inside a building
+        const accuracyMargin = isAccuracyUsable(userLocation.accuracy) ? 0 : userLocation.accuracy;
+        const threshold = Math.min(500, 300 + accuracyMargin);
+
+        if (distMeters > threshold) {
+            const distDisplay = distMeters >= 1000
+                ? `${(distMeters / 1000).toFixed(1)}km`
+                : `${Math.round(distMeters)}m`;
+            alert(`⛔ Estás muy lejos del gimnasio (${distDisplay}). Acércate a menos de 300m.`);
             return;
         }
 
@@ -811,11 +820,30 @@ export const GymMap = () => {
                                     </div>
                                 )}
 
-                                {selectedGym.lat && userLocation && getDistance(userLocation.lat, userLocation.lng, selectedGym.lat, selectedGym.lng) > 0.16 && !selectedGym.is_unlocked && (
-                                    <p className="text-red-500 text-xs text-center font-bold mt-2">
-                                        ⛔ A {getDistance(userLocation.lat, userLocation.lng, selectedGym.lat, selectedGym.lng).toFixed(2)}km (Max 0.16km)
-                                    </p>
-                                )}
+                                {selectedGym.lat && userLocation && (() => {
+                                    const dist = haversineDistance(userLocation.lat, userLocation.lng, selectedGym.lat, selectedGym.lng);
+                                    const distDisplay = dist >= 1000 ? `${(dist / 1000).toFixed(1)}km` : `${Math.round(dist)}m`;
+                                    const accuracyTag = !userLocation.isFresh
+                                        ? ' · GPS en caché'
+                                        : !isAccuracyUsable(userLocation.accuracy)
+                                        ? ` · GPS débil (±${Math.round(userLocation.accuracy)}m)`
+                                        : '';
+                                    if (!selectedGym.is_unlocked && dist > 300) {
+                                        return (
+                                            <p className="text-red-500 text-xs text-center font-bold mt-2">
+                                                📍 A {distDisplay}{accuracyTag}
+                                            </p>
+                                        );
+                                    }
+                                    if (selectedGym.is_unlocked) {
+                                        return (
+                                            <p className="text-neutral-500 text-xs text-center mt-2">
+                                                📍 {distDisplay} de distancia
+                                            </p>
+                                        );
+                                    }
+                                    return null;
+                                })()}
                             </div>
                         </div>
                     </div>

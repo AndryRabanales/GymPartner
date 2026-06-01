@@ -18,7 +18,7 @@ import { normalizeText, getMuscleGroup } from '../utils/inventoryUtils';
 // Interface NumpadTarget removed
 // BattleTimer removed
 import { Loader2, ArrowLeft, ChevronLeft, Image as ImageIcon, MapPin, Search, Plus, Save, Activity, Layers, Tag, Battery, MapIcon, Check, Settings as SettingsIcon, Swords, Trash2, X, RotateCcw, Lock, Play, Loader, MoreVertical, Pause, LockOpen, LogOut, Award } from 'lucide-react';
-import { getCurrentPosition } from '../utils/geolocationUtils';
+import { getCurrentPosition, haversineDistance } from '../utils/geolocationUtils';
 import type { GymPlace, Database } from '../types/database';
 import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
 import { ForceExitModal } from '../components/common/ForceExitModal';
@@ -1646,18 +1646,14 @@ export const WorkoutSession = () => {
                         const userLat = gpsPosition.lat;
                         const userLng = gpsPosition.lng;
 
-                        // Sort all gyms by distance to pick the absolute closest ones
+                        // Sort all gyms by distance using shared haversineDistance (meters)
                         const gymsWithDistance = allGyms
                             .filter(g => g.lat && g.lng)
-                            .map(g => {
-                                const R = 6371;
-                                const dLat = (g.lat - userLat) * (Math.PI / 180);
-                                const dLon = (g.lng - userLng) * (Math.PI / 180);
-                                const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(userLat * (Math.PI / 180)) * Math.cos(g.lat * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-                                const dist = (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
-                                return { ...g, dist };
-                            })
-                            .filter(g => g.dist <= 0.5) // 500m radius for strict checking
+                            .map(g => ({
+                                ...g,
+                                dist: haversineDistance(userLat, userLng, g.lat, g.lng) / 1000, // km for display
+                            }))
+                            .filter(g => g.dist <= 0.5) // 500m radius
                             .sort((a, b) => a.dist - b.dist);
 
                         if (gymsWithDistance.length > 0) {
@@ -1956,23 +1952,19 @@ export const WorkoutSession = () => {
                 userService.getAllGyms()
             ]);
 
-            // Calculate distance to all gyms using Haversine
+            // Calculate distance to all gyms using shared haversineDistance (meters)
             const gymsWithDistance = allGyms
                 .filter(g => g.lat && g.lng)
-                .map(g => {
-                    const R = 6371;
-                    const dLat = (g.lat - userLat) * (Math.PI / 180);
-                    const dLon = (g.lng - userLng) * (Math.PI / 180);
-                    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(userLat * (Math.PI / 180)) * Math.cos(g.lat * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-                    const dist = (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
-                    return { ...g, dist };
-                })
-                .filter(g => g.dist <= 0.5) // Strict 500m radius
+                .map(g => ({
+                    ...g,
+                    dist: haversineDistance(userLat, userLng, g.lat, g.lng), // meters
+                }))
+                .filter(g => g.dist <= 500) // 500m radius
                 .sort((a, b) => a.dist - b.dist);
 
             if (gymsWithDistance.length > 0) {
                 const closestGym = gymsWithDistance[0];
-                console.log(`🎯 Ubicación confirmada en: ${closestGym.name} (${Math.round(closestGym.dist * 1000)}m)`);
+                console.log(`🎯 Ubicación confirmada en: ${closestGym.name} (${Math.round(closestGym.dist)}m)`);
 
                 // Auto-add to passport if not already registered
                 if (!gyms.some(g => g.gym_id === closestGym.id)) {
@@ -3675,6 +3667,33 @@ export const WorkoutSession = () => {
         try {
             const flowNotes = `Flujo de Llenado: ${exerciseFillFlow.map(f => f.exerciseName).join(' ➔ ')}`;
 
+            // ── GEO CHECK: verify user is near their gym (only if session has a gym) ──
+            let geoVerified: boolean | undefined = undefined;
+            if (resolvedGymId) {
+                try {
+                    const [userPos, gymRow] = await Promise.all([
+                        getCurrentPosition({ enableHighAccuracy: true, timeout: 5000 }).catch(() => null),
+                        supabase.from('gyms').select('lat, lng').eq('id', resolvedGymId).maybeSingle().then(r => r.data)
+                    ]);
+
+                    if (userPos && gymRow?.lat && gymRow?.lng) {
+                        const dist = haversineDistance(userPos.lat, userPos.lng, Number(gymRow.lat), Number(gymRow.lng));
+                        geoVerified = dist <= 1500; // 1.5 km — margen para GPS indoor
+                        if (!geoVerified) {
+                            import('react-hot-toast').then(({ default: t }) =>
+                                t.error('No estás cerca del gym — sin GX por este entrenamiento 📍', {
+                                    duration: 5000,
+                                    style: { background: '#171717', color: '#fff', border: '1px solid rgba(239,68,68,0.3)', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }
+                                })
+                            );
+                        }
+                    }
+                    // If GPS unavailable or gym has no coords → geoVerified stays undefined → GX awarded normally
+                } catch {
+                    // geo unavailable → award GX anyway (don't punish for GPS issues)
+                }
+            }
+
             let result: { success: boolean; error?: any };
 
             // ── HOST: Close entire room (finalizes all guest sessions too) ────────
@@ -3692,7 +3711,7 @@ export const WorkoutSession = () => {
 
                 // 2. Close room in DB (awards GX to everyone, finalizes all sessions,
                 //    sends `room_closed` notifications to offline guests)
-                const roomResult = await workoutService.closeRoom(finalSessionId, flowNotes, currentRoutineName);
+                const roomResult = await workoutService.closeRoom(finalSessionId, flowNotes, currentRoutineName, geoVerified);
                 result = roomResult;
 
             // ── GUEST: Leave room (finalize only own session) ─────────────────────
@@ -3708,11 +3727,11 @@ export const WorkoutSession = () => {
                     }).catch(e => console.error('Error broadcasting participant_left:', e));
                 }
 
-                result = await workoutService.finishSession(finalSessionId, flowNotes, currentRoutineName, true);
+                result = await workoutService.finishSession(finalSessionId, flowNotes, currentRoutineName, true, geoVerified);
 
             // ── SOLO: Standard finalization ───────────────────────────────────────
             } else {
-                result = await workoutService.finishSession(finalSessionId, flowNotes, currentRoutineName, true);
+                result = await workoutService.finishSession(finalSessionId, flowNotes, currentRoutineName, true, geoVerified);
             }
 
             localStorage.setItem(`exercise_fill_flow_${finalSessionId}`, JSON.stringify(exerciseFillFlow));
