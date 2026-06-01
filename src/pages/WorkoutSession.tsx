@@ -1725,15 +1725,21 @@ export const WorkoutSession = () => {
                     }
                 }
             } else {
+                const partnerActive = partnerActiveResult?.data;
+                const isJoiningNewCoop = currentIsMultiplayer && !currentIsInviter && partnerActive && (
+                    !active || active.partner_session_id !== partnerActive.id
+                );
+
                 // If there was a stale active session but we are joining a multiplayer session, finish it first
-                if (active) {
+                if (active && (forceNewSession || isJoiningNewCoop)) {
                     console.log("🧹 Finishing stale active session before joining multiplayer:", active.id);
                     localStorage.removeItem(`workout_draft_${active.id}`);
                     await workoutService.finishSession(active.id, "Stale session auto-closed to join multiplayer");
                 }
 
-                // Clear any other global state files preventatively on forced new session
-                if (forceNewSession) {
+                // Clear any other global state files preventatively on forced new session or new coop join
+                if (forceNewSession || isJoiningNewCoop) {
+                    console.log("🧹 [Coop Cleanup] Purging stale local draft keys to prevent ghost data leak on new session");
                     localStorage.removeItem(STORAGE_KEY);
                     localStorage.removeItem('workout_session_state');
                     localStorage.removeItem('ginx_coop_state');
