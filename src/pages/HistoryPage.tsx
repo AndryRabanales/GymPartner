@@ -141,7 +141,7 @@ export const HistoryPage = () => {
 
             if (error) throw error;
 
-            // Fetch partner session states for multiplayer workouts
+            // ── GUEST sessions: look up the host's session via partner_session_id ──
             const partnerSessionIds = (data || [])
                 .filter((s: any) => s.is_multiplayer && s.partner_session_id)
                 .map((s: any) => s.partner_session_id);
@@ -152,12 +152,32 @@ export const HistoryPage = () => {
                     .from('workout_sessions')
                     .select('id, finished_at, end_time, user:profiles(username)')
                     .in('id', partnerSessionIds);
-                
+
                 if (partnerData) {
                     partnerData.forEach((ps: any) => {
                         const isFinished = !!(ps.finished_at || ps.end_time);
                         const partnerUsername = ps.user?.username || 'Compañero';
                         partnerSessionsMap.set(ps.id, { finished: isFinished, username: partnerUsername });
+                    });
+                }
+            }
+
+            // ── HOST sessions: partner_session_id is null (host IS the room).
+            //    Look up the partner's profile by partner_id to get their username.
+            const hostPartnerUserIds = (data || [])
+                .filter((s: any) => s.is_multiplayer && !s.partner_session_id && s.partner_id)
+                .map((s: any) => s.partner_id);
+
+            let hostPartnerNamesMap = new Map<string, string>(); // userId → username
+            if (hostPartnerUserIds.length > 0) {
+                const { data: profileData } = await supabase
+                    .from('profiles')
+                    .select('id, username')
+                    .in('id', hostPartnerUserIds);
+
+                if (profileData) {
+                    profileData.forEach((p: any) => {
+                        hostPartnerNamesMap.set(p.id, p.username);
                     });
                 }
             }
@@ -234,8 +254,13 @@ export const HistoryPage = () => {
                 const end = new Date(s.end_time).getTime();
                 const duration = Math.round((end - start) / (1000 * 60));
 
-                const partnerInfo = s.is_multiplayer && s.partner_session_id 
+                // Guest → look up via partner_session_id (= host's session id)
+                // Host  → partner_session_id is null; use hostPartnerNamesMap by partner_id
+                const partnerInfo = s.is_multiplayer && s.partner_session_id
                     ? partnerSessionsMap.get(s.partner_session_id)
+                    : null;
+                const hostPartnerName = (!s.partner_session_id && s.partner_id)
+                    ? hostPartnerNamesMap.get(s.partner_id)
                     : null;
 
                 return {
@@ -249,8 +274,12 @@ export const HistoryPage = () => {
                     is_multiplayer: s.is_multiplayer,
                     partner_id: s.partner_id,
                     partner_session_id: s.partner_session_id,
-                    partner_status: partnerInfo ? (partnerInfo.finished ? 'finished' : 'in_progress') : (s.is_multiplayer ? 'in_progress' : undefined),
-                    partner_name: partnerInfo?.username || 'Compañero'
+                    // History only contains finished sessions (.not('end_time','is',null)).
+                    // If no partnerInfo (host case), default to 'finished' — both finished together.
+                    partner_status: partnerInfo
+                        ? (partnerInfo.finished ? 'finished' : 'in_progress')
+                        : (s.is_multiplayer ? 'finished' : undefined),
+                    partner_name: partnerInfo?.username || hostPartnerName || 'Compañero'
                 };
             });
 

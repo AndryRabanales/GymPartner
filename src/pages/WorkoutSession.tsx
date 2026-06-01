@@ -451,6 +451,9 @@ export const WorkoutSession = () => {
     const isInviterRef = useRef<boolean>(true); // tracks isInviter without stale closure
     const lastIncomingState = useRef<string>('');
     const isStartingSessionRef = useRef<boolean>(false);
+    // True while a guest is waiting for the host's first sync_state broadcast.
+    // Keeps `loading` pinned to true so the empty state never flashes before exercises arrive.
+    const waitingForGuestSyncRef = useRef<boolean>(false);
     const partnerSessionIdRef = useRef<string | null>(partnerSessionId);
     useEffect(() => {
         partnerSessionIdRef.current = partnerSessionId;
@@ -732,6 +735,14 @@ export const WorkoutSession = () => {
                 if (exercises && exercises.length > 0) {
                     const incomingStr = JSON.stringify(exercises);
                     lastIncomingState.current = incomingStr;
+
+                    // If we were waiting for the first host→guest sync, release loading now.
+                    // This prevents the empty-state flash: exercises and loading=false
+                    // land in the same React batch.
+                    if (waitingForGuestSyncRef.current) {
+                        waitingForGuestSyncRef.current = false;
+                        setLoading(false);
+                    }
 
                     if (multiplayerMode === 'conjunto') {
                         setActiveExercises(prev => {
@@ -1275,11 +1286,12 @@ export const WorkoutSession = () => {
     // Helpers for Unit Conversion
     const toDisplayWeight = (kgVal: number, unit: 'kg' | 'lb' = 'kg'): string => {
         if (!kgVal) return '';
-        if (unit === 'kg') return kgVal.toString();
-        // kg -> lb (1 kg = 2.20462 lb)
-        const lb = (kgVal * 2.20462);
-        // Round to 1 decimal like "45.5" but if it's "100.0" show "100"
-        return parseFloat(lb.toFixed(1)).toString();
+        if (unit === 'kg') {
+            // Avoid showing many decimals from lb→kg conversions (e.g. 11.33980925 → "11.34")
+            return parseFloat(kgVal.toFixed(2)).toString();
+        }
+        // kg → lb: always show exactly 1 decimal (e.g. 25.0, 45.5, 100.0)
+        return (kgVal * 2.20462).toFixed(1);
     };
 
     const toInternalWeight = (inputVal: string, unit: 'kg' | 'lb' = 'kg'): number => {
@@ -1960,6 +1972,8 @@ export const WorkoutSession = () => {
                         }
                         
                         if (currentIsMultiplayer && currentMultiplayerMode === 'conjunto' && !currentIsInviter) {
+                            // Flag: keep loading=true until the host's sync_state arrives with exercises
+                            waitingForGuestSyncRef.current = true;
                             console.log('🚀 Guest auto-starting session because partner has active session...');
                             // Wait for guest session to start so we have a sessionId and startTime
                             await startNewSession(partnerActive.gym_id || undefined, partnerActive.id, currentIsMultiplayer, currentMultiplayerMode, currentPartnerId);
@@ -1975,8 +1989,12 @@ export const WorkoutSession = () => {
 
         } catch (error) {
             console.error('❌ Error initializing battle:', error);
+            waitingForGuestSyncRef.current = false; // release on error so UI isn't stuck
         } finally {
-            setLoading(false);
+            // Guest stays in loading=true until host's sync_state arrives (handled above).
+            if (!waitingForGuestSyncRef.current) {
+                setLoading(false);
+            }
         }
     };
 
@@ -2725,9 +2743,10 @@ export const WorkoutSession = () => {
         fieldKey: 'weight' | 'reps' | 'time' | 'distance' | 'rpe' | 'completed' | 'locked',
         value: any
     ) => {
-        const pObj = participantsRef.current.find(p => p.id === targetUserId);
-        const isAbandoned = isMultiplayer && pObj && pObj.isOnline === false && targetUserId !== user?.id;
-        if (isAbandoned) return;
+        // A participant being offline (phone off, no WiFi) must NEVER block the partner
+        // from filling their data. Editing is only restricted after the workout ends
+        // or is cancelled — which is enforced by navigation away from this page.
+        // No isAbandoned guard here.
 
         setActiveExercises(prev => {
             const next = prev.map(ex => ({
@@ -2826,9 +2845,7 @@ export const WorkoutSession = () => {
     };
 
     const togglePlayerSetComplete = (exerciseIndex: number, setIndex: number, targetUserId: string) => {
-        const pObj = participantsRef.current.find(p => p.id === targetUserId);
-        const isAbandoned = isMultiplayer && pObj && pObj.isOnline === false && targetUserId !== user?.id;
-        if (isAbandoned) return;
+        // Same policy as updatePlayerSet: offline ≠ blocked. No isAbandoned guard.
 
         const ex = activeExercises[exerciseIndex];
         if (!ex) return;
@@ -3171,21 +3188,15 @@ export const WorkoutSession = () => {
         const originalRpes = previousSet?.playerRpes || {};
 
         if (isMultiplayer && participantsRef.current.length > 0) {
+            // Always carry over previous-set data for ALL participants, online or not.
+            // If a participant is offline, their last known values are still in the set —
+            // pre-filling them means the partner can see and adjust those values normally.
             participantsRef.current.forEach(p => {
-                const isAbandoned = p.isOnline === false && p.id !== user?.id;
-                if (!isAbandoned) {
-                    prevPWeights[p.id] = originalWeights[p.id] !== undefined ? originalWeights[p.id] : 0;
-                    prevPReps[p.id] = originalReps[p.id] !== undefined ? originalReps[p.id] : 0;
-                    prevPTimes[p.id] = originalTimes[p.id] !== undefined ? originalTimes[p.id] : 0;
-                    prevPDistances[p.id] = originalDistances[p.id] !== undefined ? originalDistances[p.id] : 0;
-                    prevPRpes[p.id] = originalRpes[p.id] !== undefined ? originalRpes[p.id] : 0;
-                } else {
-                    prevPWeights[p.id] = 0;
-                    prevPReps[p.id] = 0;
-                    prevPTimes[p.id] = 0;
-                    prevPDistances[p.id] = 0;
-                    prevPRpes[p.id] = 0;
-                }
+                prevPWeights[p.id]    = originalWeights[p.id]    !== undefined ? originalWeights[p.id]    : 0;
+                prevPReps[p.id]       = originalReps[p.id]       !== undefined ? originalReps[p.id]       : 0;
+                prevPTimes[p.id]      = originalTimes[p.id]      !== undefined ? originalTimes[p.id]      : 0;
+                prevPDistances[p.id]  = originalDistances[p.id]  !== undefined ? originalDistances[p.id]  : 0;
+                prevPRpes[p.id]       = originalRpes[p.id]       !== undefined ? originalRpes[p.id]       : 0;
             });
         } else {
             // Single player fallback
@@ -3954,7 +3965,7 @@ export const WorkoutSession = () => {
             <div className={`p-4 relative z-10 ${isMultiplayer ? 'pt-16' : ''}`}>
                 {/* Empty State / Routine Selection */}
                 {/* Empty State / Fallback if Modal is Closed */}
-                {activeExercises.length === 0 && !showAddModal && !loading && (
+                {activeExercises.length === 0 && !showAddModal && !loading && !showIntroAnim && (
                     <div className="h-[80vh] flex flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in duration-300">
                         <div className="bg-neutral-900/50 p-8 rounded-full border border-neutral-800 mb-8 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
                             <Swords size={80} className="text-neutral-600" strokeWidth={1} />
