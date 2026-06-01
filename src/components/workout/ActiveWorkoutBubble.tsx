@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Play, X, Users } from 'lucide-react';
 import { workoutService } from '../../services/WorkoutService';
@@ -15,6 +15,13 @@ export const ActiveWorkoutBubble = () => {
     const [elapsedTime, setElapsedTime] = useState("00:00");
     const [isVisible, setIsVisible] = useState(false);
     const [loading, setLoading] = useState(false);
+
+    // Drag state — null means use default CSS position (bottom-24 right-4)
+    const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+    const dragging = useRef(false);
+    const dragOffset = useRef({ x: 0, y: 0 });
+    const bubbleRef = useRef<HTMLDivElement>(null);
+    const hasMoved = useRef(false);
 
     // Check availability on mount and route change
     useEffect(() => {
@@ -112,11 +119,52 @@ export const ActiveWorkoutBubble = () => {
         }
     };
 
+    const onPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+        // Only drag from the bubble itself, not from buttons or links
+        if ((e.target as HTMLElement).closest('button, a')) return;
+        const el = bubbleRef.current;
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        dragging.current = true;
+        hasMoved.current = false;
+        dragOffset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        el.setPointerCapture(e.pointerId);
+        e.preventDefault();
+    }, []);
+
+    const onPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+        if (!dragging.current || !bubbleRef.current) return;
+        hasMoved.current = true;
+        const el = bubbleRef.current;
+        const W = window.innerWidth;
+        const H = window.innerHeight;
+        const elW = el.offsetWidth;
+        const elH = el.offsetHeight;
+        const x = Math.min(Math.max(0, e.clientX - dragOffset.current.x), W - elW);
+        const y = Math.min(Math.max(0, e.clientY - dragOffset.current.y), H - elH);
+        setPos({ x, y });
+    }, []);
+
+    const onPointerUp = useCallback(() => {
+        dragging.current = false;
+    }, []);
+
     if (!isVisible || !sessionId) return null;
 
+    const posStyle: React.CSSProperties = pos
+        ? { left: pos.x, top: pos.y, bottom: 'auto', right: 'auto' }
+        : {};
+
     return (
-        <div className="fixed bottom-24 right-4 z-50 animate-in slide-in-from-right-5 fade-in duration-300">
-            <div className="bg-neutral-900/90 backdrop-blur-md border border-yellow-500/30 rounded-2xl shadow-[0_0_30px_rgba(234,179,8,0.2)] p-4 flex flex-col gap-3 min-w-[200px]">
+        <div
+            ref={bubbleRef}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            style={posStyle}
+            className={`fixed z-50 ${pos ? '' : 'bottom-24 right-4'} animate-in slide-in-from-right-5 fade-in duration-300`}
+        >
+            <div className="bg-neutral-900/90 backdrop-blur-md border border-yellow-500/30 rounded-2xl shadow-[0_0_30px_rgba(234,179,8,0.2)] p-4 flex flex-col gap-3 min-w-[200px] cursor-grab active:cursor-grabbing touch-none select-none">
 
                 {/* Header */}
                 <div className="flex items-center justify-between border-b border-white/5 pb-2">
