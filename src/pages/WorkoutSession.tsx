@@ -3084,17 +3084,23 @@ export const WorkoutSession = () => {
             }).catch(e => console.error('Error broadcasting session_terminated:', e));
         }
 
-        localStorage.removeItem(`workout_draft_${sessionId}`);
+        const oldSessionId = sessionId;
+        localStorage.removeItem(`workout_draft_${oldSessionId}`);
         localStorage.removeItem(STORAGE_KEY);
         localStorage.removeItem('ginx_coop_state');
         setActiveExercises([]);
         setIsFinished(true); // Disable history guard before navigating
-        const oldSessionId = sessionId;
         setSessionId(null);  // Disable history guard before navigating
         setLoading(true);
-        await workoutService.deleteSession(oldSessionId);
-        setLoading(false);
-        navigate('/');
+
+        try {
+            await workoutService.deleteSession(oldSessionId);
+        } catch (err) {
+            console.error("Failed to delete session in DB cleanly:", err);
+        } finally {
+            setLoading(false);
+            navigate('/');
+        }
     };
 
     // NEW: Handle Restart
@@ -3199,6 +3205,7 @@ export const WorkoutSession = () => {
     // 1. Triggered by UI Button
     const handleFinishRequest = async () => {
         if (isFinalizing) return;
+        isLeavingPageRef.current = true; // Authorized navigation
         setIsFinished(true); // Stop timer
 
         // SMART SKIP: Skip modal if using a routine and the structure wasn't modified

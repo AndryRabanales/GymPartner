@@ -29,7 +29,6 @@ export const ForceExitModal: React.FC<ForceExitModalProps> = ({
   const handleTemporaryExit = () => {
     onTemporaryExit();
     onClose();
-    navigate('/');
   };
 
   const handleCancelSession = () => {
