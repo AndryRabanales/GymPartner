@@ -932,6 +932,30 @@ export const WorkoutSession = () => {
                 toast(`${leavingName} abandonó la sala.`, { icon: '👋' });
                 // Remove them from participants list
                 setParticipants(prev => prev.filter(p => p.id !== sender));
+                // Stop rest timers for the leaving participant so their timer freezes (BUG-03)
+                setActiveExercises(prev => prev.map(ex => ({
+                    ...ex,
+                    sets: ex.sets.map((s: any) => {
+                        let updated = { ...s };
+                        // Per-participant map (group mode)
+                        if (s.playerRestStatus?.[sender] === 'running') {
+                            updated = {
+                                ...updated,
+                                playerRestStatus: { ...s.playerRestStatus, [sender]: 'completed' },
+                                playerRestLastStartTime: { ...(s.playerRestLastStartTime || {}), [sender]: undefined }
+                            };
+                        }
+                        // Legacy p1 (host) fields
+                        if (sender === partnerId && s.restStatus === 'running') {
+                            updated = { ...updated, restStatus: 'completed', restLastStartTime: undefined };
+                        }
+                        // Legacy p2 (first guest) fields
+                        if (s.p2_restStatus === 'running') {
+                            updated = { ...updated, p2_restStatus: 'completed', p2_restLastStartTime: undefined };
+                        }
+                        return updated;
+                    })
+                })));
             })
             .on('broadcast', { event: 'sync_session_id' }, (payload) => {
                 const { sessionId: partnerSessionId, startTime: partnerStartTime, sender } = payload.payload;
@@ -1202,22 +1226,24 @@ export const WorkoutSession = () => {
     }, [activeMuscleFilter, searchTerm]);
 
     // Sync Selected Catalog Items reactively with active exercises
+    // Reset on close, rebuild fresh on open — prevents count inflation for coop guests (BUG-06)
     useEffect(() => {
-        if (showAddModal) {
-            setSelectedCatalogItems(prev => {
-                const updated = new Set(prev);
-                activeExercises.forEach(e => {
-                    if (e.equipmentId) updated.add(e.equipmentId);
-                    if (e.equipmentName) {
-                        updated.add(`virtual-${e.equipmentName}`);
-                        // Also handle edge cases where the name is slightly different
-                        updated.add(`virtual-${e.equipmentName.trim()}`);
-                    }
-                });
-                return updated;
-            });
+        if (!showAddModal) {
+            setSelectedCatalogItems(new Set());
+            return;
         }
-    }, [showAddModal, activeExercises]);
+        // Build a fresh set from current active exercises for visual "already in session" state.
+        // Newly toggled items are added on top via handleCatalogToggle.
+        const toMark = new Set<string>();
+        activeExercises.forEach(e => {
+            if (e.equipmentId) toMark.add(e.equipmentId);
+            if (e.equipmentName) {
+                toMark.add(`virtual-${e.equipmentName}`);
+                toMark.add(`virtual-${e.equipmentName.trim()}`);
+            }
+        });
+        setSelectedCatalogItems(toMark);
+    }, [showAddModal]); // Only re-run when modal opens/closes, not on every exercise change
 
     // Helpers for Unit Conversion
     const toDisplayWeight = (kgVal: number, unit: 'kg' | 'lb' = 'kg'): string => {
@@ -1401,6 +1427,17 @@ export const WorkoutSession = () => {
     };
 
 
+
+    // Computed: IDs already active in this session — used to show correct AGREGAR count (BUG-06)
+    const alreadyActiveIds = new Set<string>();
+    activeExercises.forEach(e => {
+        if (e.equipmentId) alreadyActiveIds.add(e.equipmentId);
+        if (e.equipmentName) {
+            alreadyActiveIds.add(`virtual-${e.equipmentName}`);
+            alreadyActiveIds.add(`virtual-${e.equipmentName.trim()}`);
+        }
+    });
+    const newlySelectedCount = Array.from(selectedCatalogItems).filter(id => !alreadyActiveIds.has(id)).length;
 
     // Computed: Merge Seeds (Virtual) only if not already present by NAME in the real/global list
     const effectiveInventory = [...arsenal];
@@ -4280,7 +4317,7 @@ export const WorkoutSession = () => {
             {/* Exercise Selector Modal */}
             {
                 showAddModal && (
-                    <div className="fixed inset-0 bg-black/95 z-50 flex flex-col animate-in fade-in duration-200">
+                    <div className="fixed inset-0 bg-black/95 z-[90] flex flex-col animate-in fade-in duration-200">
                         {/* Header */}
                         <div className="flex-none p-2.5 pb-1 border-b border-white/5 bg-neutral-950">
                             <div className="flex justify-between items-center mb-2">
@@ -4500,14 +4537,14 @@ export const WorkoutSession = () => {
                             )}
 
                             {/* Floating "Add" Button for Batch Selection */}
-                            {!isCreatingExercise && selectedCatalogItems.size > 0 && (
+                            {!isCreatingExercise && newlySelectedCount > 0 && (
                                 <div className="fixed bottom-6 left-0 w-full px-4 z-[100] flex justify-center pointer-events-none">
                                     <button
                                         onClick={handleBatchAdd}
                                         className="pointer-events-auto bg-gym-primary text-black font-black uppercase py-4 px-12 rounded-2xl shadow-[0_10px_40px_rgba(250,204,21,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center gap-3 text-lg animate-in slide-in-from-bottom-4 border-2 border-yellow-400"
                                     >
                                         <Plus size={24} strokeWidth={3} />
-                                        AGREGAR ({selectedCatalogItems.size})
+                                        AGREGAR ({newlySelectedCount})
                                     </button>
                                 </div>
                             )}
