@@ -872,6 +872,10 @@ export const WorkoutSession = () => {
                                 
                                 return {
                                     ...inEx,
+                                    // Preserve the local user's unit preference.
+                                    // The partner's weightUnit must not overwrite it —
+                                    // each user independently chooses kg or lb.
+                                    weightUnit: localEx.weightUnit || inEx.weightUnit,
                                     sets: mergedSets
                                 };
                             });
@@ -1305,13 +1309,22 @@ export const WorkoutSession = () => {
 
     // Toggle Unit for Specific Exercise
     const toggleExerciseUnit = (exerciseIndex: number) => {
-        const updated = [...activeExercises];
-        const currentUnit = updated[exerciseIndex].weightUnit || 'kg';
-        updated[exerciseIndex].weightUnit = currentUnit === 'kg' ? 'lb' : 'kg';
-        setActiveExercises(updated);
-        // Save as new default preference for future added exercises
-        localStorage.setItem('ginx_weight_unit', updated[exerciseIndex].weightUnit!);
-        setDefaultWeightUnit(updated[exerciseIndex].weightUnit!);
+        // Read the current unit from the last rendered state (NOT via mutation)
+        const currentUnit = activeExercises[exerciseIndex]?.weightUnit || 'kg';
+        const newUnit: 'kg' | 'lb' = currentUnit === 'kg' ? 'lb' : 'kg';
+
+        // Use functional update so React gets a fully immutable new state.
+        // Mutating the existing object (shallow copy) caused React to see stale
+        // snapshots on concurrent re-renders, reverting the unit immediately.
+        setActiveExercises(prev =>
+            prev.map((ex, idx) =>
+                idx === exerciseIndex ? { ...ex, weightUnit: newUnit } : ex
+            )
+        );
+
+        // Save as new default for future added exercises
+        localStorage.setItem('ginx_weight_unit', newUnit);
+        setDefaultWeightUnit(newUnit);
     };
 
 
