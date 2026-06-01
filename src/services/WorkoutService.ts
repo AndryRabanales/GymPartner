@@ -116,7 +116,7 @@ class WorkoutService {
     }
 
     // Finish the session (The "Victory")
-    async finishSession(sessionId: string, notes?: string, routineName?: string): Promise<{ success: boolean; error?: any }> {
+    async finishSession(sessionId: string, notes?: string, routineName?: string, isManual: boolean = false): Promise<{ success: boolean; error?: any }> {
         const now = new Date().toISOString();
         const updatePayload: any = {
             end_time: now,
@@ -136,6 +136,12 @@ class WorkoutService {
         if (error) {
             console.error('Error finishing session:', error);
             return { success: false, error };
+        }
+
+        // If this is an automatic/background close, skip G-points and notifications
+        if (!isManual) {
+            console.log(`ℹ️ [WorkoutService] Sesión ${sessionId} finalizada automáticamente (isManual=false). Omitiendo puntos y notificaciones.`);
+            return { success: true };
         }
 
         // 3. AWARD G-POINTS & TRAINING CUMULATIVE POINT for Training

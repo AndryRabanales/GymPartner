@@ -3408,7 +3408,7 @@ export const WorkoutSession = () => {
 
         try {
             const flowNotes = `Flujo de Llenado: ${exerciseFillFlow.map(f => f.exerciseName).join(' ➔ ')}`;
-            const result = await workoutService.finishSession(finalSessionId, flowNotes, currentRoutineName);
+            const result = await workoutService.finishSession(finalSessionId, flowNotes, currentRoutineName, true);
             localStorage.setItem(`exercise_fill_flow_${finalSessionId}`, JSON.stringify(exerciseFillFlow));
 
             if (result.success) {
