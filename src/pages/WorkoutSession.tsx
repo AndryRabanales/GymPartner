@@ -1424,6 +1424,18 @@ export const WorkoutSession = () => {
         activeExercises.forEach(e => {
             if (e.equipmentId) existingEquipmentIds.add(e.equipmentId);
             if (e.equipmentName) existingEquipmentIds.add(`virtual-${e.equipmentName}`);
+            // Recognize both old-format ("manifest-X") and new-format ("manifest-X__variant")
+            const mEntry = IMAGE_MANIFEST.find(entry =>
+                e.equipmentName?.startsWith(entry.name) ||
+                entry.variants.some(v => e.equipmentName?.includes(v.name))
+            );
+            if (mEntry) {
+                const mVariant = mEntry.variants.find(v =>
+                    e.equipmentName === `${mEntry.name} (${v.name})`
+                );
+                if (mVariant) existingEquipmentIds.add(`manifest-${mEntry.id}__${mVariant.id}`);
+                existingEquipmentIds.add(`manifest-${mEntry.id}`);
+            }
         });
 
         const newEquipmentIdsToAdd = Array.from(selectedCatalogItems).filter(id => !existingEquipmentIds.has(id));
@@ -1526,6 +1538,20 @@ export const WorkoutSession = () => {
             if (e.equipmentName) {
                 ids.add(`virtual-${e.equipmentName}`);
                 ids.add(`virtual-${e.equipmentName.trim()}`);
+            }
+            // Add the manifest variant-specific ID derived from the exercise name so both
+            // old-format equipmentIds ("manifest-X") and new-format ("manifest-X__variant")
+            // are recognized as already-active when the catalog rebuilds its selection.
+            const mEntry = IMAGE_MANIFEST.find(entry =>
+                e.equipmentName?.startsWith(entry.name) ||
+                entry.variants.some(v => e.equipmentName?.includes(v.name))
+            );
+            if (mEntry) {
+                const mVariant = mEntry.variants.find(v =>
+                    e.equipmentName === `${mEntry.name} (${v.name})`
+                );
+                if (mVariant) ids.add(`manifest-${mEntry.id}__${mVariant.id}`);
+                ids.add(`manifest-${mEntry.id}`);
             }
         });
         return ids;
@@ -4237,7 +4263,7 @@ export const WorkoutSession = () => {
                                                                     const newName = `${manifestEntry.name} (${nextV.name})`;
                                                                     saveVariantPref(`manifest-${manifestEntry.id}`, nextV.id);
                                                                     setActiveExercises(prev => prev.map((ex, idx) =>
-                                                                        idx !== mapIndex ? ex : { ...ex, equipmentName: newName, equipmentId: `manifest-${manifestEntry.id}` }
+                                                                        idx !== mapIndex ? ex : { ...ex, equipmentName: newName, equipmentId: `manifest-${manifestEntry.id}__${nextV.id}` }
                                                                     ));
                                                                 }}
                                                                 className="mt-1 inline-flex items-center gap-1.5 text-[11px] font-bold text-neutral-400 hover:text-gym-primary bg-neutral-800/60 hover:bg-gym-primary/10 border border-neutral-700 hover:border-gym-primary/40 px-2.5 py-1 rounded-full transition-all"
