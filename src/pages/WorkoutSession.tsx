@@ -285,6 +285,9 @@ export const WorkoutSession = () => {
     const [startTime, setStartTime] = useState<Date | null>(null);
     const [activeExercises, setActiveExercises] = useState<WorkoutExercise[]>([]);
     const activeExercisesRef = useRef<WorkoutExercise[]>([]);
+    // Tracks exercises deliberately removed during this session so incoming sync_state
+    // cannot re-add them (race condition fix for multiplayer).
+    const deletedExerciseIdsRef = useRef<Set<string>>(new Set());
     const startTimeRef = useRef<Date | null>(null);
     useEffect(() => {
         // Clear temporary exit active flag when entering/returning to the workout session screen
@@ -720,9 +723,12 @@ export const WorkoutSession = () => {
                     const incomingStr = JSON.stringify(exercises);
                     lastIncomingState.current = incomingStr;
 
+                    // Filter out exercises deleted locally — prevent sync from re-adding them
+                    const safeExercises = deletedExerciseIdsRef.current.size > 0
+                        ? exercises.filter((ex: any) => !deletedExerciseIdsRef.current.has(ex.id))
+                        : exercises;
+
                     // If we were waiting for the first host→guest sync, release loading now.
-                    // This prevents the empty-state flash: exercises and loading=false
-                    // land in the same React batch.
                     if (waitingForGuestSyncRef.current) {
                         waitingForGuestSyncRef.current = false;
                         setLoading(false);
@@ -730,9 +736,9 @@ export const WorkoutSession = () => {
 
                     if (multiplayerMode === 'conjunto') {
                         setActiveExercises(prev => {
-                            if (!prev || prev.length === 0) return exercises;
+                            if (!prev || prev.length === 0) return safeExercises;
                             
-                            return exercises.map((inEx, eIdx) => {
+                            return safeExercises.map((inEx: any, eIdx: number) => {
                                 const localEx = prev[eIdx];
                                 if (!localEx) return inEx;
                                 
@@ -865,9 +871,16 @@ export const WorkoutSession = () => {
                             });
                         });
                     } else if (multiplayerMode === 'separado') {
-                        setPartnerExercises(exercises); // Store for viewing
+                        setPartnerExercises(safeExercises);
                     }
                 }
+            })
+            .on('broadcast', { event: 'remove_exercise' }, (payload) => {
+                const { exerciseId, sender } = payload.payload;
+                if (sender === user.id) return;
+                deletedExerciseIdsRef.current.add(exerciseId);
+                setActiveExercises(prev => prev.filter(e => e.id !== exerciseId));
+                setIsRoutineModified(true);
             })
             .on('broadcast', { event: 'request_hydration' }, (payload) => {
                 const { sender } = payload.payload;
@@ -929,10 +942,91 @@ export const WorkoutSession = () => {
                 const { sender } = payload.payload;
                 if (sender === user.id) return; // Ignore own echo (host side)
 
-                console.log('🏁 [Guest] Host closed the room. Session already finalized in DB by closeRoom().');
-                toast.success("¡El anfitrión cerró la sala! Tu progreso fue guardado.");
+                console.log('🏁 [Guest] Host closed the room. Saving guest sets before summary...');
+                toast.loading("Guardando tu progreso...", { id: 'guest-save' });
 
-                // closeRoom() already finalized the session in DB — just clear local state
+                // closeRoom() sets finished_at for guest sessions but does NOT write workout_logs.
+                // Guests must save their own sets here before the summary screen.
+                const guestSessionId = sessionIdRef.current;
+                if (guestSessionId && activeExercisesRef.current.length > 0) {
+                    const myId = user.id;
+                    const savePromises: Promise<any>[] = [];
+
+                    for (const exercise of activeExercisesRef.current) {
+                        let resolvedExId: string | null = null;
+
+                        for (let j = 0; j < exercise.sets.length; j++) {
+                            const set = exercise.sets[j];
+                            const weightToSave    = Number(set.playerWeights?.[myId])   || 0;
+                            const repsToSave      = Number(set.playerReps?.[myId])      || 0;
+                            const timeToSave      = Number(set.playerTimes?.[myId])     || 0;
+                            const distanceToSave  = Number(set.playerDistances?.[myId]) || 0;
+                            const rpeToSave       = Number(set.playerRpes?.[myId])      || undefined;
+                            const isCompleted     = set.playerCompleted?.[myId]         || false;
+
+                            // Skip if already saved or nothing to record
+                            if (set.db_id) continue;
+                            if (!isCompleted && weightToSave === 0 && repsToSave === 0 && timeToSave === 0) continue;
+
+                            // Resolve exercise DB ID (lazy, once per exercise)
+                            if (!resolvedExId) {
+                                resolvedExId = await (async () => {
+                                    try {
+                                        const { data } = await supabase
+                                            .from('exercises')
+                                            .select('id')
+                                            .ilike('name', exercise.equipmentName)
+                                            .limit(1)
+                                            .single();
+                                        if (data?.id) return data.id;
+                                        const { data: created } = await supabase
+                                            .from('exercises')
+                                            .insert({ name: exercise.equipmentName })
+                                            .select()
+                                            .single();
+                                        return created?.id ?? null;
+                                    } catch { return null; }
+                                })();
+                            }
+                            if (!resolvedExId) continue;
+
+                            let restDuration = Number(set.playerRestAccumulated?.[myId]) || 0;
+                            const restStatus = set.playerRestStatus?.[myId];
+                            const restStart  = set.playerRestLastStartTime?.[myId];
+                            if (restStatus === 'running' && restStart) restDuration += Date.now() - restStart;
+
+                            savePromises.push(workoutService.logSet({
+                                session_id:        guestSessionId,
+                                exercise_id:       resolvedExId,
+                                set_number:        j + 1,
+                                sets:              1,
+                                weight_kg:         weightToSave,
+                                reps:              repsToSave,
+                                time:              timeToSave,
+                                distance:          distanceToSave,
+                                rpe:               rpeToSave,
+                                metrics_data:      {
+                                    ...(set.custom || {}),
+                                    ...(isCompleted ? { _checklist_timestamp: set.playerCompletedAt?.[myId] || Date.now() } : {}),
+                                    ...(exercise.weightUnit === 'lb' ? { _weight_unit: 'lb' } : {}),
+                                    _rest_duration_ms: restDuration,
+                                    _rest_status: restStatus === 'running' ? 'completed' : restStatus
+                                },
+                                category_snapshot: exercise.category || 'Custom',
+                                is_pr:             false,
+                                owner_id:          myId
+                            }));
+                        }
+                    }
+
+                    if (savePromises.length > 0) {
+                        await Promise.all(savePromises);
+                        console.log(`✅ [Guest] ${savePromises.length} sets guardados.`);
+                    }
+                }
+
+                toast.success("¡Progreso guardado!", { id: 'guest-save' });
+
                 const finalSessionId = sessionIdRef.current;
                 if (finalSessionId) localStorage.removeItem(`workout_draft_${finalSessionId}`);
                 localStorage.removeItem('workout_session_state');
@@ -2565,8 +2659,17 @@ export const WorkoutSession = () => {
     };
 
     const removeExercise = (id: string) => {
+        deletedExerciseIdsRef.current.add(id);
         setActiveExercises(prev => prev.filter(e => e.id !== id));
-        setIsRoutineModified(true); // Structural change: exercise removed
+        setIsRoutineModified(true);
+        // Broadcast immediately (bypass the 500ms debounce) so partners remove it right away
+        if (isMultiplayer && channelRef.current && user) {
+            channelRef.current.send({
+                type: 'broadcast',
+                event: 'remove_exercise',
+                payload: { exerciseId: id, sender: user.id }
+            }).catch(e => console.error('Error broadcasting exercise removal:', e));
+        }
     };
 
     const updateSet = (exerciseIndex: number, setIndex: number, field: string, value: string | number, isCustom: boolean = false) => {
