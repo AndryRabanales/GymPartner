@@ -1915,18 +1915,17 @@ export const WorkoutSession = () => {
             // Normalize "personal" string to null to prevent database casting errors
             const targetGymId = (routeGymId && routeGymId !== 'personal') ? routeGymId : null;
 
-            // Check if the user has a preselected home base (default gym) in their passport!
+            // Phase 1 only pre-selects a gym when the route explicitly specifies one.
+            // The homeGym is detected and auto-selected in Phase 3 GPS — that ensures
+            // the user is actually nearby before we commit to a gym. Without this guard,
+            // homeGyms far away would be loaded as the "current" gym even when the user
+            // is at a completely different location.
             const homeGym = gyms.find(g => g.is_home_base);
-            const resolvedInitialGymId = targetGymId || (homeGym ? homeGym.gym_id : null);
+            const resolvedInitialGymId = targetGymId || null;
 
-            // Set initial name immediately if resolved, otherwise "Buscando ubicación..."
             if (resolvedInitialGymId) {
-                if (resolvedInitialGymId === targetGymId) {
-                    const routeGym = gyms.find(g => g.gym_id === targetGymId);
-                    setDetectedGymName(routeGym ? (routeGym.gym_name || '') : 'Mi Gimnasio');
-                } else {
-                    setDetectedGymName(homeGym?.gym_name || 'Gimnasio Predeterminado');
-                }
+                const routeGym = gyms.find(g => g.gym_id === targetGymId);
+                setDetectedGymName(routeGym ? (routeGym.gym_name || '') : 'Mi Gimnasio');
             } else {
                 setDetectedGymName('Buscando ubicación...');
             }
@@ -2013,8 +2012,8 @@ export const WorkoutSession = () => {
 
                         if (gpsPosition) {
                             const { lat: uLat, lng: uLng } = gpsPosition;
-                            // 150m detection radius — generous for indoor GPS drift
-                            const DETECT_M = 150;
+                            // 60m detection radius — must be physically at the gym
+                            const DETECT_M = 60;
 
                             const nearby = gyms
                                 .filter(g => g.lat && g.lng)
@@ -2048,34 +2047,28 @@ export const WorkoutSession = () => {
                                 setAmbiguousReason('multiple_defaults');
                                 setAmbiguousGyms(nearbyDefaults.map(({ g, distM }) => toPickerShape(g, distM, false)));
 
-                            } else if (nearbyOthers.length >= 1 && !homeGym) {
-                                // R4: no default nearby AND no home gym set yet → picker (first-time setup, saves selection as default)
-                                // Skip this if user already has a home gym — Phase 1 already resolved it, no need to ask again.
+                            } else if (nearbyOthers.length >= 1) {
+                                // R4: passport gyms within range but none is default →
+                                // ask the user to pick one; the chosen gym becomes their new default.
                                 setAmbiguousReason('no_default');
                                 setAmbiguousGyms(nearbyOthers.map(({ g, distM }) => toPickerShape(g, distM, true)));
 
                             } else {
-                                // No passport gym nearby at all
-                                if (!resolvedInitialGymId) {
-                                    setDetectedGymName('Entrenamiento Libre');
-                                    setResolvedGymId(null);
-                                }
-                                // If there IS a pre-selected home gym (from phase 1), keep it —
-                                // user may be away from it but chose it explicitly before
-                            }
-                        } else {
-                            // GPS unavailable
-                            if (!resolvedInitialGymId) {
+                                // No passport gym within 60 m — always free workout.
+                                // Never fall back to a home gym that is far away; proximity is required.
                                 setDetectedGymName('Entrenamiento Libre');
                                 setResolvedGymId(null);
                             }
-                        }
-                    } catch (err) {
-                        console.warn('Phase 3 GPS error:', err);
-                        if (!resolvedInitialGymId) {
+                        } else {
+                            // GPS unavailable — cannot verify proximity, default to free workout.
                             setDetectedGymName('Entrenamiento Libre');
                             setResolvedGymId(null);
                         }
+                    } catch (err) {
+                        console.warn('Phase 3 GPS error:', err);
+                        // GPS failed — cannot determine location, use free workout.
+                        setDetectedGymName('Entrenamiento Libre');
+                        setResolvedGymId(null);
                     }
                 })();
             }

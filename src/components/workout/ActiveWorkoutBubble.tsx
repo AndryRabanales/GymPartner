@@ -110,9 +110,17 @@ export const ActiveWorkoutBubble = () => {
 
     const handleCancel = async () => {
         if (!sessionId) return;
-        if (window.confirm("¿Seguro que quieres cancelar el entrenamiento en progreso?")) {
+        const msg = isMultiplayer
+            ? '¿Salir de la sala? Tu progreso quedará guardado en tu historial.'
+            : '¿Terminar este entrenamiento? Los sets completados se guardarán en tu historial.';
+        if (window.confirm(msg)) {
             setLoading(true);
-            await workoutService.deleteSession(sessionId);
+            // Use finishSession so any already-logged sets are preserved in history.
+            // deleteSession would wipe the data entirely.
+            await workoutService.finishSession(sessionId, 'Sesión cerrada desde la burbuja de actividad');
+            localStorage.removeItem(`workout_draft_${sessionId}`);
+            localStorage.removeItem('ginx_coop_state');
+            sessionStorage.removeItem('ginx_temp_exit_active');
             setLoading(false);
             setIsVisible(false);
             setSessionId(null);

@@ -311,6 +311,20 @@ export const AppLayout = () => {
     const [rescueStartedAt, setRescueStartedAt] = useState<string | null>(null);
     const [showRescueModal, setShowRescueModal] = useState<boolean>(false);
 
+    // ── On startup: clean zombie/orphan sessions so they never accumulate ──────
+    // This runs once per login session. cleanOrphanSessions normally only runs
+    // inside initializeBattle (workout page entry), leaving zombies alive on all
+    // other pages. Running it here on mount ensures old sessions are closed as
+    // soon as the user opens the app, regardless of which page they land on.
+    useEffect(() => {
+        if (!user) return;
+        workoutService.cleanOrphanSessions(user.id)
+            .then(closedIds => {
+                closedIds.forEach(id => localStorage.removeItem(`workout_draft_${id}`));
+            })
+            .catch(() => {}); // non-blocking — never interrupt the user
+    }, [user?.id]);
+
     useEffect(() => {
         if (!user) return;
 
