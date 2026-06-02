@@ -4226,8 +4226,47 @@ export const WorkoutSession = () => {
                                     <div className="p-4 flex justify-between items-start bg-white/5 border-b border-white/5 shrink-0">
                                         <div className="flex-1 min-w-0">
                                             {(() => {
+                                                // 1. Check Manifest (New Dynamic Way)
+                                                const manifestEntry = IMAGE_MANIFEST.find(e => 
+                                                    exercise.equipmentName === e.name ||
+                                                    exercise.equipmentName?.startsWith(`${e.name} (`) ||
+                                                    e.variants.some(v => exercise.equipmentName?.includes(v.name))
+                                                );
+                                                
+                                                // 2. Check Legacy (Old Virtual Way)
                                                 const base = findBaseExercise(exercise.equipmentName);
-                                                const activeVariant = base?.variants.find(v => v.seedName === exercise.equipmentName);
+                                                const legacyVariant = base?.variants.find(v => v.seedName === exercise.equipmentName);
+
+                                                if (manifestEntry && manifestEntry.variants.length > 1) {
+                                                    // New manifest logic
+                                                    const activeV = manifestEntry.variants.find(v => exercise.equipmentName?.includes(v.name)) || manifestEntry.variants[0];
+                                                    return (
+                                                        <>
+                                                            <h3 className="text-2xl font-black italic uppercase text-white leading-tight truncate">
+                                                                {manifestEntry.name}
+                                                            </h3>
+                                                            <button
+                                                                onClick={() => {
+                                                                    const currentIdx = manifestEntry.variants.findIndex(v => v.name === activeV.name);
+                                                                    const nextIdx = (currentIdx + 1) % manifestEntry.variants.length;
+                                                                    const nextV = manifestEntry.variants[nextIdx];
+                                                                    const newName = `${manifestEntry.name} (${nextV.name})`;
+                                                                    saveVariantPref(`manifest-${manifestEntry.id}`, nextV.id);
+                                                                    setActiveExercises(prev => prev.map((ex, idx) =>
+                                                                        idx !== mapIndex ? ex : { ...ex, equipmentName: newName, equipmentId: `manifest-${manifestEntry.id}` }
+                                                                    ));
+                                                                }}
+                                                                className="mt-1 inline-flex items-center gap-1.5 text-[11px] font-bold text-neutral-400 hover:text-gym-primary bg-neutral-800/60 hover:bg-gym-primary/10 border border-neutral-700 hover:border-gym-primary/40 px-2.5 py-1 rounded-full transition-all"
+                                                            >
+                                                                <span>💪</span>
+                                                                <span>{activeV.name}</span>
+                                                                <ChevronLeft size={10} className="rotate-[-90deg]" />
+                                                            </button>
+                                                        </>
+                                                    );
+                                                }
+
+                                                // Legacy fallback
                                                 return (
                                                     <>
                                                         <h3 className="text-2xl font-black italic uppercase text-white leading-tight truncate">
@@ -4236,7 +4275,6 @@ export const WorkoutSession = () => {
                                                         {base && base.variants.length > 1 && (
                                                             <button
                                                                 onClick={() => {
-                                                                    // Cycle to next variant
                                                                     const currentIdx = base.variants.findIndex(v => v.seedName === exercise.equipmentName);
                                                                     const nextIdx = (currentIdx + 1) % base.variants.length;
                                                                     const nextVariant = base.variants[nextIdx];
@@ -4247,8 +4285,8 @@ export const WorkoutSession = () => {
                                                                 }}
                                                                 className="mt-1 inline-flex items-center gap-1.5 text-[11px] font-bold text-neutral-400 hover:text-gym-primary bg-neutral-800/60 hover:bg-gym-primary/10 border border-neutral-700 hover:border-gym-primary/40 px-2.5 py-1 rounded-full transition-all"
                                                             >
-                                                                <span>{activeVariant?.icon ?? '💪'}</span>
-                                                                <span>{activeVariant?.label ?? exercise.equipmentName}</span>
+                                                                <span>{legacyVariant?.icon ?? '💪'}</span>
+                                                                <span>{legacyVariant?.label ?? exercise.equipmentName}</span>
                                                                 <ChevronLeft size={10} className="rotate-[-90deg]" />
                                                             </button>
                                                         )}

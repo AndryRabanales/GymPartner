@@ -216,7 +216,8 @@ export const ArsenalGrid = ({
                                             onUnlock={locked && onUnlockItem ? () => onUnlockItem(item.id) : undefined}
                                             onVariantCycle={!locked && variantInfo && onVariantCycle ? (direction) => {
                                                 const variants = variantInfo.variants;
-                                                const currentIdx = variants.findIndex((v: any) => v.seedName === item.name);
+                                                // variantInfo.label contains the name of the currently active variant
+                                                const currentIdx = variants.findIndex((v: any) => v.label === variantInfo.label);
                                                 let nextIdx = direction === 'next' ? currentIdx + 1 : currentIdx - 1;
                                                 if (nextIdx < 0) nextIdx = variants.length - 1;
                                                 if (nextIdx >= variants.length) nextIdx = 0;
