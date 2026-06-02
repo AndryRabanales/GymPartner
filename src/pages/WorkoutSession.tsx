@@ -13,6 +13,8 @@ import { WorkoutCarousel } from '../components/workout/WorkoutCarousel';
 import { WorkoutCatalog } from '../components/workout/WorkoutCatalog';
 import { CURATED_EXERCISES, findBaseExercise, getVariantPrefs, saveVariantPref, getExtrasForMuscle } from '../data/exerciseCatalog';
 import type { ExerciseVariant } from '../data/exerciseCatalog';
+import { IMAGE_MANIFEST } from '../data/imageManifest';
+import { useUnlockedExercises } from '../hooks/useUnlockedExercises';
 import { ArsenalGrid } from '../components/arsenal/ArsenalGrid';
 import { EquipmentForm } from '../components/arsenal/EquipmentForm';
 import { normalizeText, getMuscleGroup } from '../utils/inventoryUtils';
@@ -247,6 +249,7 @@ const RestTimerDisplay = ({ status, accumulated, lastStartTime, isGold }: { stat
 };
 export const WorkoutSession = () => {
     const { user } = useAuth();
+    const { unlock: unlockExercise, isUnlocked } = useUnlockedExercises();
     const isLeavingPageRef = useRef(false);
     const navigate = useNavigate();
     const { gymId: routeGymId } = useParams<{ gymId: string }>();
@@ -1518,6 +1521,35 @@ export const WorkoutSession = () => {
                 quantity: 1
             } as Equipment);
         }
+    });
+
+    // ── Manifest-based exercises: inject locked items into effectiveInventory ──
+    // Locked exercises (from ocultos/ folders) are added so they appear in the catalog
+    // with a lock icon. They're only selectable once the user taps to unlock them.
+    const lockedItemIds = new Set<string>();
+    IMAGE_MANIFEST.forEach(entry => {
+        const itemId = `manifest-${entry.id}`;
+        if (!effectiveInventory.some(i => normalizeText(i.name) === normalizeText(entry.name))) {
+            effectiveInventory.push({
+                id:   itemId,
+                name: entry.name,
+                category: 'ACCESSORY',
+                target_muscle_group: entry.muscle,
+                image_url: entry.imagePath,
+                metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
+                quantity: 1,
+                condition: 'GOOD',
+                gym_id: 'manifest',
+            } as Equipment);
+        }
+        if (entry.isLocked && !isUnlocked(itemId)) {
+            lockedItemIds.add(itemId);
+        }
+        // Locked variants also get locked IDs
+        entry.variants.forEach(v => {
+            const vId = `manifest-${v.id}`;
+            if (v.isLocked && !isUnlocked(vId)) lockedItemIds.add(vId);
+        });
     });
 
     // Map ArsenalGrid section names to catalog muscle keys for getExtrasForMuscle()
@@ -4783,14 +4815,17 @@ export const WorkoutSession = () => {
                                         sectionOrder={CATALOG_ORDER}
                                         gridClassName="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2"
                                         variantBadgeMap={variantBadgeMap}
+                                        lockedItemIds={lockedItemIds}
+                                        onUnlockItem={(itemId) => {
+                                            unlockExercise(itemId);
+                                            // Remove from lockedItemIds on next render (state update triggers re-render)
+                                        }}
                                         onVariantCycle={(oldId, newId, baseId, newVariant) => {
-                                            // Swap selectedCatalogItems if old variant was selected
                                             setSelectedCatalogItems(prev => {
                                                 const next = new Set(prev);
                                                 if (next.has(oldId)) { next.delete(oldId); next.add(newId); }
                                                 return next;
                                             });
-                                            // Save preference
                                             saveVariantPref(baseId, newVariant.id);
                                         }}
                                     />

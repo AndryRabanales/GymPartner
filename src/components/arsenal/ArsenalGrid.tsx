@@ -48,6 +48,10 @@ interface ArsenalGridProps {
     variantBadgeMap?: Map<string, { label: string; total: number; baseId: string; variants: any[] }>;
     /** Called when the user cycles to the next variant via the badge arrow */
     onVariantCycle?: (oldId: string, newId: string, baseId: string, newVariant: any) => void;
+    /** Set of item IDs that are locked (from ocultos/ folder) */
+    lockedItemIds?: Set<string>;
+    /** Called when the user taps the lock overlay to unlock an exercise */
+    onUnlockItem?: (itemId: string) => void;
 }
 
 export const ArsenalGrid = ({
@@ -66,6 +70,8 @@ export const ArsenalGrid = ({
     metricOverrides,
     variantBadgeMap,
     onVariantCycle,
+    lockedItemIds,
+    onUnlockItem,
 }: ArsenalGridProps) => {
 
     const DEFAULT_ORDER = [
@@ -186,12 +192,13 @@ export const ArsenalGrid = ({
 
                                 // Must use normalizeText (strips accents) to match the key used when building variantBadgeMap
                                 const variantInfo = variantBadgeMap?.get(normalizeText(item.name));
+                                const locked = lockedItemIds?.has(item.id) ?? false;
                                 return (
                                     <div
                                         key={item.id}
                                         className="cursor-pointer"
                                         onClick={(e) => {
-                                            // Ignore clicks that originated from a variant-cycle button
+                                            if (locked) return; // lock overlay handles the click
                                             if ((e.target as HTMLElement).closest('[data-variant-btn="true"]')) return;
                                             onToggleSelection(item.id);
                                         }}
@@ -205,7 +212,9 @@ export const ArsenalGrid = ({
                                             configOverride={effectiveConfig}
                                             variantLabel={variantInfo?.label}
                                             variantTotal={variantInfo?.total}
-                                            onVariantCycle={variantInfo && onVariantCycle ? (direction) => {
+                                            isLocked={locked}
+                                            onUnlock={locked && onUnlockItem ? () => onUnlockItem(item.id) : undefined}
+                                            onVariantCycle={!locked && variantInfo && onVariantCycle ? (direction) => {
                                                 const variants = variantInfo.variants;
                                                 const currentIdx = variants.findIndex((v: any) => v.seedName === item.name);
                                                 let nextIdx = direction === 'next' ? currentIdx + 1 : currentIdx - 1;

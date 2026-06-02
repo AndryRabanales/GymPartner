@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Check, ChevronRight, ChevronLeft } from 'lucide-react';
 import type { Equipment, CustomSettings } from '../../services/GymEquipmentService';
 import { EQUIPMENT_CATEGORIES, COMMON_EQUIPMENT_SEEDS } from '../../services/GymEquipmentService';
+import { LockedExerciseOverlay } from '../workout/LockedExerciseOverlay';
 
 export interface ArsenalCardProps {
     item: Equipment;
@@ -16,9 +17,13 @@ export interface ArsenalCardProps {
     variantTotal?: number;
     /** Cycle to the next or previous variant (stops propagation) */
     onVariantCycle?: (direction: 'next' | 'prev') => void;
+    /** Whether this exercise is locked (from ocultos/ folder) */
+    isLocked?: boolean;
+    /** Called when the user taps the lock overlay to unlock */
+    onUnlock?: () => void;
 }
 
-export const ArsenalCard = ({ item, isSelected, userSettings, onEdit, configOverride, variantLabel, variantTotal, onVariantCycle }: ArsenalCardProps) => {
+export const ArsenalCard = ({ item, isSelected, userSettings, onEdit, configOverride, variantLabel, variantTotal, onVariantCycle, isLocked, onUnlock }: ArsenalCardProps) => {
     // Determine active metrics based on item data or fallback
     let activeMetricIds: string[] = [];
 
@@ -78,12 +83,18 @@ export const ArsenalCard = ({ item, isSelected, userSettings, onEdit, configOver
     return (
         <div className={`
             relative group h-full transition-all duration-300
+            ${isLocked ? 'opacity-80' : ''}
             ${isSelected
                 ? 'bg-gym-primary text-black ring-4 ring-gym-primary/30 shadow-[0_0_40px_rgba(255,255,255,0.3)]'
                 : 'bg-neutral-900 border border-white/5 hover:bg-neutral-800 hover:border-white/20'
             }
             rounded-2xl overflow-hidden flex flex-col
         `}>
+            {/* Lock overlay — shown when exercise is in ocultos/ folder */}
+            {isLocked && onUnlock && (
+                <LockedExerciseOverlay name={item.name} onUnlock={onUnlock} />
+            )}
+
             {/* Selection Indicator */}
             <div className={`absolute top-2 left-2 z-20 flex gap-1 flex-row-reverse`}>
                 {onEdit && (
