@@ -1497,7 +1497,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
     {
         "name": "Encogimiento de Hombros con Barra",
         "category": "FREE_WEIGHT",
-        "targetMuscle": "Hombro",
+        "targetMuscle": "Espalda",
         "icon": "🏋️‍♂️",
         "image_url": "/ejercicioimg/ejercicios/Espalda/Encogimiento de hombros con barra.png",
         "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
@@ -1505,7 +1505,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
     {
         "name": "Encogimiento de Hombros con Mancuernas",
         "category": "FREE_WEIGHT",
-        "targetMuscle": "Hombro",
+        "targetMuscle": "Espalda",
         "icon": "🏋️",
         "image_url": "/ejercicioimg/ejercicios/Espalda/Encogimiento de hombros con mancuernas.png",
         "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
