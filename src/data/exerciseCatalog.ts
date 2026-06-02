@@ -27,11 +27,10 @@ const PECHO: BaseExercise[] = [
         muscle: 'PECHO', icon: '🏋️‍♂️',
         metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
         variants: [
-            { id: 'maquina',    label: 'Máquina',     seedName: 'Press Inclinado (Máquina)',     icon: '🤖' },
-            { id: 'mancuernas', label: 'Mancuernas',  seedName: 'Press Inclinado (Mancuernas)',  icon: '🏋️' },
-            { id: 'barra',      label: 'Barra',        seedName: 'Press Inclinado (Barra)',       icon: '🏋️‍♂️' },
-            { id: 'cable',      label: 'Polea/Cable',  seedName: 'Press Inclinado (Polea/Cable)', icon: '⛓️' },
-            { id: 'smith',      label: 'Smith',        seedName: 'Smith Press Inclinado',         icon: '⚙️' },
+            { id: 'maquina',    label: 'Máquina',    seedName: 'Press Inclinado (Máquina)',    icon: '🤖'  },
+            { id: 'mancuernas', label: 'Mancuernas', seedName: 'Press Inclinado (Mancuernas)', icon: '🏋️' },
+            { id: 'barra',      label: 'Barra',      seedName: 'Press Inclinado (Barra)',      icon: '🏋️‍♂️' },
+            { id: 'smith',      label: 'Smith',      seedName: 'Smith Press Inclinado',        icon: '⚙️'  },
         ],
     },
     {
@@ -52,9 +51,10 @@ const PECHO: BaseExercise[] = [
         muscle: 'PECHO', icon: '📉',
         metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
         variants: [
-            { id: 'barra',      label: 'Barra',      seedName: 'Press Declinado (Barra)',      icon: '📉' },
-            { id: 'mancuernas', label: 'Mancuernas', seedName: 'Press Declinado (Mancuernas)', icon: '🏋️' },
-            { id: 'maquina',    label: 'Máquina',    seedName: 'Press Declinado (Máquina)',    icon: '🤖' },
+            { id: 'barra',      label: 'Barra',       seedName: 'Press Declinado (Barra)',       icon: '📉' },
+            { id: 'mancuernas', label: 'Mancuernas',  seedName: 'Press Declinado (Mancuernas)',  icon: '🏋️' },
+            { id: 'maquina',    label: 'Máquina',     seedName: 'Press Declinado (Máquina)',     icon: '🤖' },
+            { id: 'cable',      label: 'Polea/Cable', seedName: 'Press Declinado (Polea/Cable)', icon: '⛓️' },
         ],
     },
     {

@@ -1682,8 +1682,17 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "icon": "🇫🇷",
         "image_url": "/ejercicioimg/ejercicios/Triceps/Press frances/Press francés sentado con barra.png",
         "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
+    },
+    // ── Press Declinado Polea ───────────────────────────────────────────────────
+    {
+        "name": "Press Declinado (Polea/Cable)",
+        "category": "CABLE",
+        "targetMuscle": "Pecho",
+        "icon": "⛓️",
+        "image_url": "/ejercicioimg/ejercicios/pecho/Declinado/PressInclinadoConPolea.png",
+        "metrics": { "weight": true, "reps": true, "time": false, "distance": false, "rpe": false }
     }
-];;
+];
 
 // ... (skipping seeds)
 
