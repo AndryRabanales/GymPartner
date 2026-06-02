@@ -1851,8 +1851,9 @@ export const WorkoutSession = () => {
                                 setAmbiguousReason('multiple_defaults');
                                 setAmbiguousGyms(nearbyDefaults.map(({ g, distM }) => toPickerShape(g, distM, false)));
 
-                            } else if (nearbyOthers.length >= 1) {
-                                // R4: no default nearby but other passport gyms are → picker, selection saves as default
+                            } else if (nearbyOthers.length >= 1 && !homeGym) {
+                                // R4: no default nearby AND no home gym set yet → picker (first-time setup, saves selection as default)
+                                // Skip this if user already has a home gym — Phase 1 already resolved it, no need to ask again.
                                 setAmbiguousReason('no_default');
                                 setAmbiguousGyms(nearbyOthers.map(({ g, distM }) => toPickerShape(g, distM, true)));
 
