@@ -372,11 +372,14 @@ export default function WorkoutDetailPage() {
             let roomParticipants: RoomParticipant[] = [];
 
             if (session.is_multiplayer && session.multiplayer_mode === 'conjunto') {
+                try {
                 // Room ID is the host's session. Guests have partner_session_id → host's session.
                 const roomId = resolvedPartnerSessionId || session.id;
 
-                // Fetch all guest sessions (those pointing to this room)
-                const [{ data: guestSessions }, { data: hostRow }] = await Promise.all([
+                // Fetch all guest sessions (those pointing to this room).
+                // RLS: "Users can view active workout sessions of their matches" — use maybeSingle/
+                // catch to handle gracefully if the policy blocks access for finished sessions.
+                const [{ data: guestSessions, error: gErr }, { data: hostRow, error: hErr }] = await Promise.all([
                     supabase
                         .from('workout_sessions')
                         .select('id, user_id, started_at, end_time, finished_at')
@@ -389,6 +392,8 @@ export default function WorkoutDetailPage() {
                         .neq('user_id', session.user_id)
                         .maybeSingle()
                 ]);
+                if (gErr) console.warn('⚠️ Could not fetch guest sessions (RLS):', gErr.message);
+                if (hErr) console.warn('⚠️ Could not fetch host session (RLS):', hErr.message);
 
                 const otherSessions = [
                     ...(guestSessions || []),
@@ -462,6 +467,10 @@ export default function WorkoutDetailPage() {
                         sessionId: ps.id
                     });
                 }));
+                } catch (roomFetchErr) {
+                    console.warn('⚠️ Room participant fetch failed (RLS or network):', roomFetchErr);
+                    // Gracefully continue — show own session without partner columns
+                }
             }
 
             setWorkout({

@@ -761,9 +761,13 @@ export const WorkoutSession = () => {
                     if (multiplayerMode === 'conjunto') {
                         setActiveExercises(prev => {
                             if (!prev || prev.length === 0) return safeExercises;
-                            
-                            return safeExercises.map((inEx: any, eIdx: number) => {
-                                const localEx = prev[eIdx];
+
+                            // ID-based merge: match exercises by their stable ID, not by array index.
+                            // Index-based matching corrupts data when users add exercises in different orders.
+                            const mergedExercises = safeExercises.map((inEx: any) => {
+                                // Match by exercise UI id first, then by equipmentId as fallback
+                                const localEx = prev.find(e => e.id === inEx.id) ||
+                                                prev.find(e => e.equipmentId === inEx.equipmentId);
                                 if (!localEx) return inEx;
                                 
                                 const maxSets = Math.max(localEx.sets.length, inEx.sets.length);
@@ -829,9 +833,10 @@ export const WorkoutSession = () => {
                                      const rAcc = mergeMap(loc.playerRestAccumulated, inSet.playerRestAccumulated);
                                      const rLst = mergeMap(loc.playerRestLastStartTime, inSet.playerRestLastStartTime);
 
-                                     // Sync legacy properties to their dictionary counterparts for Host & First Guest
+                                     // Sync legacy properties to their dictionary counterparts for Host & First Guest.
+                                     // Use refs (not state) to avoid stale closures in the channel effect.
                                      const hostId = isInviter ? user?.id : partnerId;
-                                     const fgId = firstGuestId;
+                                     const fgId = firstGuestIdRef.current;
 
                                      const hostWeight = hostId && w[hostId] !== undefined ? w[hostId] : (useLoc ? loc.weight : inSet.weight);
                                      const hostReps = hostId && r[hostId] !== undefined ? r[hostId] : (useLoc ? loc.reps : inSet.reps);
@@ -896,6 +901,16 @@ export const WorkoutSession = () => {
                                     sets: mergedSets
                                 };
                             });
+
+                            // Preserve local-only exercises (added after the sender's last broadcast).
+                            // Without this, exercises added locally would disappear on next incoming sync.
+                            const incomingIds = new Set(safeExercises.map((e: any) => e.id));
+                            const localOnly = prev.filter(e =>
+                                !incomingIds.has(e.id) &&
+                                !deletedExerciseIdsRef.current.has(e.id)
+                            );
+
+                            return [...mergedExercises, ...localOnly];
                         });
                     } else if (multiplayerMode === 'separado') {
                         setPartnerExercises(safeExercises);
@@ -989,8 +1004,9 @@ export const WorkoutSession = () => {
 
                         for (let j = 0; j < exercise.sets.length; j++) {
                             const set = exercise.sets[j];
-                            // Guest in session_finished is always the first guest (non-inviter)
-                            const guestIsFirstGuest = myId === firstGuestId;
+                            // Use firstGuestIdRef.current (not firstGuestId state) to avoid stale
+                            // closure — the channel effect captures state once at registration time.
+                            const guestIsFirstGuest = myId === firstGuestIdRef.current;
                             const weightToSave    = Number(set.playerWeights?.[myId]   ?? (guestIsFirstGuest ? (set.p2_weight   || 0) : 0)) || 0;
                             const repsToSave      = Number(set.playerReps?.[myId]      ?? (guestIsFirstGuest ? (set.p2_reps     || 0) : 0)) || 0;
                             const timeToSave      = Number(set.playerTimes?.[myId]     ?? (guestIsFirstGuest ? (set.p2_time     || 0) : 0)) || 0;
@@ -1401,21 +1417,26 @@ export const WorkoutSession = () => {
                 toMark.add(`virtual-${e.equipmentName}`);
                 toMark.add(`virtual-${e.equipmentName.trim()}`);
             }
-            // For manifest-sourced exercises, add the variant-specific ID so the correct
-            // per-variant card appears selected (new format: manifest-<id>__<variantId>).
-            // Also fall back to the plain manifest ID for legacy/single-variant exercises.
+            // Mark the manifest variant-specific ID so the correct per-variant card
+            // appears selected. For single-variant exercises use the plain manifest ID.
+            // NEVER add the plain manifest ID for multi-variant exercises — doing so
+            // creates phantom/ghost exercises in handleBatchAdd.
+            // Exact match only — avoid prefix ambiguity (e.g. "Press" matching both
+            // "Press Inclinado" and "Press Plano"). Equipment names are always either
+            // the exact base name or "BaseName (VariantName)".
             const manifestEntry = IMAGE_MANIFEST.find(entry =>
-                e.equipmentName?.startsWith(entry.name) ||
-                entry.variants.some(v => e.equipmentName?.includes(v.name))
+                e.equipmentName === entry.name ||
+                entry.variants.some(v => e.equipmentName === `${entry.name} (${v.name})`)
             );
             if (manifestEntry) {
-                const matchedVariant = manifestEntry.variants.find(v =>
-                    e.equipmentName === `${manifestEntry.name} (${v.name})`
-                );
-                if (matchedVariant) {
-                    toMark.add(`manifest-${manifestEntry.id}__${matchedVariant.id}`);
+                if (manifestEntry.variants.length > 1) {
+                    const matchedVariant = manifestEntry.variants.find(v =>
+                        e.equipmentName === `${manifestEntry.name} (${v.name})`
+                    );
+                    if (matchedVariant) {
+                        toMark.add(`manifest-${manifestEntry.id}__${matchedVariant.id}`);
+                    }
                 } else {
-                    // Single-variant or no variant match — keep plain manifest ID
                     toMark.add(`manifest-${manifestEntry.id}`);
                 }
             }
@@ -1556,17 +1577,19 @@ export const WorkoutSession = () => {
         activeExercises.forEach(e => {
             if (e.equipmentId) existingEquipmentIds.add(e.equipmentId);
             if (e.equipmentName) existingEquipmentIds.add(`virtual-${e.equipmentName}`);
-            // Recognize both old-format ("manifest-X") and new-format ("manifest-X__variant")
             const mEntry = IMAGE_MANIFEST.find(entry =>
-                e.equipmentName?.startsWith(entry.name) ||
-                entry.variants.some(v => e.equipmentName?.includes(v.name))
+                e.equipmentName === entry.name ||
+                entry.variants.some(v => e.equipmentName === `${entry.name} (${v.name})`)
             );
             if (mEntry) {
-                const mVariant = mEntry.variants.find(v =>
-                    e.equipmentName === `${mEntry.name} (${v.name})`
-                );
-                if (mVariant) existingEquipmentIds.add(`manifest-${mEntry.id}__${mVariant.id}`);
-                existingEquipmentIds.add(`manifest-${mEntry.id}`);
+                if (mEntry.variants.length > 1) {
+                    const mVariant = mEntry.variants.find(v =>
+                        e.equipmentName === `${mEntry.name} (${v.name})`
+                    );
+                    if (mVariant) existingEquipmentIds.add(`manifest-${mEntry.id}__${mVariant.id}`);
+                } else {
+                    existingEquipmentIds.add(`manifest-${mEntry.id}`);
+                }
             }
         });
 
@@ -1671,19 +1694,24 @@ export const WorkoutSession = () => {
                 ids.add(`virtual-${e.equipmentName}`);
                 ids.add(`virtual-${e.equipmentName.trim()}`);
             }
-            // Add the manifest variant-specific ID derived from the exercise name so both
-            // old-format equipmentIds ("manifest-X") and new-format ("manifest-X__variant")
-            // are recognized as already-active when the catalog rebuilds its selection.
+            // Register manifest variant-specific IDs so the catalog shows correct selection state.
+            // For multi-variant exercises: only add the variant-specific ID (manifest-X__variantId).
+            // For single-variant: only add the plain manifest ID.
+            // Never mix both for the same exercise — plain IDs on multi-variant items would mark
+            // phantom exercises as "already active".
             const mEntry = IMAGE_MANIFEST.find(entry =>
-                e.equipmentName?.startsWith(entry.name) ||
-                entry.variants.some(v => e.equipmentName?.includes(v.name))
+                e.equipmentName === entry.name ||
+                entry.variants.some(v => e.equipmentName === `${entry.name} (${v.name})`)
             );
             if (mEntry) {
-                const mVariant = mEntry.variants.find(v =>
-                    e.equipmentName === `${mEntry.name} (${v.name})`
-                );
-                if (mVariant) ids.add(`manifest-${mEntry.id}__${mVariant.id}`);
-                ids.add(`manifest-${mEntry.id}`);
+                if (mEntry.variants.length > 1) {
+                    const mVariant = mEntry.variants.find(v =>
+                        e.equipmentName === `${mEntry.name} (${v.name})`
+                    );
+                    if (mVariant) ids.add(`manifest-${mEntry.id}__${mVariant.id}`);
+                } else {
+                    ids.add(`manifest-${mEntry.id}`);
+                }
             }
         });
         return ids;
@@ -1760,55 +1788,50 @@ export const WorkoutSession = () => {
     //
     // Stable IDs ("manifest-<id>") prevent the "cards replacing" bug: the card
     // stays in the same grid slot even when the displayed variant changes.
+    // Each unlocked variant of a multi-variant exercise gets its OWN card with its full name.
+    // Single-variant exercises keep their base name and stable manifest ID.
+    // IDs use the "manifest-<entryId>__<variantId>" format — no plain "manifest-<entryId>"
+    // for multi-variant exercises, which was causing ghost/duplicate exercises on add.
     const { curatedCatalogInventory, variantBadgeMap } = (() => {
-        const prefs = getVariantPrefs();
-        const badges = new Map<string, { label: string; total: number; baseId: string; currentId: string; variants: any[] }>();
+        const badges = new Map<string, { label: string; total: number; baseId: string; currentId?: string; variants: any[] }>();
         const items: Equipment[] = [];
 
         for (const entry of IMAGE_MANIFEST) {
             if (entry.isLocked) continue;
 
-            const stableId = `manifest-${entry.id}`;
-            const hasVariants = entry.variants.length > 1;
+            const baseId = `manifest-${entry.id}`;
             const isCardio = entry.muscle === 'CARDIO';
             const metrics = isCardio
                 ? { weight: false, reps: false, time: true, distance: true, rpe: false }
                 : { weight: true, reps: true, time: false, distance: false, rpe: false };
 
-            let displayImagePath = entry.imagePath;
-
-            if (hasVariants) {
-                const prefVariantId = prefs[stableId];
-                const preferred = prefVariantId
-                    ? entry.variants.find(v => v.id === prefVariantId)
-                    : null;
-                const activeVariant = preferred ?? entry.variants.find(v => !v.isLocked) ?? entry.variants[0];
-                displayImagePath = activeVariant.imagePath;
-                // currentId lets ArsenalGrid compute the variant-specific selection ID
-                badges.set(stableId, {
-                    label:     activeVariant.name,
-                    total:     entry.variants.length,
-                    baseId:    stableId,
-                    currentId: activeVariant.id,
-                    variants:  entry.variants.map(v => ({
-                        id:        v.id,
-                        label:     v.name,
-                        seedName:  v.name,
-                        imagePath: v.imagePath,
-                        isLocked:  v.isLocked,
-                    })),
-                });
+            if (entry.variants.length > 1) {
+                // One card per unlocked variant — full name includes variant label.
+                // No cycling badge needed since each variant is already its own card.
+                for (const variant of entry.variants) {
+                    if (variant.isLocked) continue;
+                    items.push({
+                        id:                  `${baseId}__${variant.id}`,
+                        name:                `${entry.name} (${variant.name})`,
+                        category:            'ACCESSORY',
+                        target_muscle_group: entry.muscle,
+                        image_url:           variant.imagePath,
+                        metrics,
+                        quantity: 1, condition: 'GOOD', gym_id: 'manifest',
+                    } as Equipment);
+                }
+            } else {
+                // Single-variant: keep the stable base ID and the exercise's own name
+                items.push({
+                    id:                  baseId,
+                    name:                entry.name,
+                    category:            'ACCESSORY',
+                    target_muscle_group: entry.muscle,
+                    image_url:           entry.imagePath,
+                    metrics,
+                    quantity: 1, condition: 'GOOD', gym_id: 'manifest',
+                } as Equipment);
             }
-
-            items.push({
-                id:                  stableId,
-                name:                entry.name,
-                category:            'ACCESSORY',
-                target_muscle_group: entry.muscle,
-                image_url:           displayImagePath,
-                metrics,
-                quantity: 1, condition: 'GOOD', gym_id: 'manifest',
-            } as Equipment);
         }
 
         // Also add any non-manifest items from the gym's real arsenal
@@ -1992,7 +2015,10 @@ export const WorkoutSession = () => {
                         }).catch(e => console.warn('⚠️ Auto-register host gym failed:', e));
                     }
 
-                    // Override the guest's gym with the host's gym
+                    // Override the guest's gym with the host's gym.
+                    // Also clear any stale ambiguous-gym picker from a previous session.
+                    setAmbiguousGyms([]);
+                    setAmbiguousReason(null);
                     setResolvedGymId(hostGymId);
                     setDetectedGymName(gymName);
 
@@ -2437,7 +2463,11 @@ export const WorkoutSession = () => {
         setLoading(true);
         try {
             console.log("🚀 Starting NEW Session explicitly...");
-            
+
+            // Clear the deleted-exercise filter so re-added exercises from a previous
+            // session don't get permanently blocked in the new session's CRDT merge.
+            deletedExerciseIdsRef.current.clear();
+
             // Clean active exercise state completely before beginning new session
             setActiveExercises([]);
             setCurrentRoutineName('');
@@ -3275,6 +3305,24 @@ export const WorkoutSession = () => {
             if (!s.playerLastUpdated) s.playerLastUpdated = {};
             s.playerLastUpdated[targetUserId] = Date.now();
             s.lastUpdatedAt = Date.now();
+
+            // Snapshot the displayed value into playerWeights/Reps when completing.
+            // Needed for ghost-set users (pre-populated sets they didn't edit) and for
+            // 3rd+ participants who have no scalar fallback (p2_weight is only for Guest 1).
+            if (nextCompleted) {
+                const displayedW = s.playerWeights[targetUserId] ??
+                    (isHost ? (s.weight || 0) : (isFirstGuest ? (s.p2_weight || 0) : 0));
+                const displayedR = s.playerReps[targetUserId] ??
+                    (isHost ? (s.reps || 0) : (isFirstGuest ? (s.p2_reps || 0) : 0));
+                const displayedT = s.playerTimes[targetUserId] ??
+                    (isHost ? (s.time || 0) : (isFirstGuest ? (s.p2_time || 0) : 0));
+                if (s.playerWeights[targetUserId] === undefined && displayedW > 0)
+                    s.playerWeights[targetUserId] = displayedW;
+                if (s.playerReps[targetUserId] === undefined && displayedR > 0)
+                    s.playerReps[targetUserId] = displayedR;
+                if (s.playerTimes[targetUserId] === undefined && displayedT > 0)
+                    s.playerTimes[targetUserId] = displayedT;
+            }
 
             if (isHost) {
                 s.completed = nextCompleted;
@@ -4465,19 +4513,21 @@ export const WorkoutSession = () => {
                                         <div className="flex-1 min-w-0">
                                             {(() => {
                                                 // 1. Check Manifest (New Dynamic Way)
-                                                const manifestEntry = IMAGE_MANIFEST.find(e => 
+                                                // Exact match only — avoids prefix ambiguity and substring collisions.
+                                                const manifestEntry = IMAGE_MANIFEST.find(e =>
                                                     exercise.equipmentName === e.name ||
-                                                    exercise.equipmentName?.startsWith(`${e.name} (`) ||
-                                                    e.variants.some(v => exercise.equipmentName?.includes(v.name))
+                                                    e.variants.some(v => exercise.equipmentName === `${e.name} (${v.name})`)
                                                 );
-                                                
+
                                                 // 2. Check Legacy (Old Virtual Way)
                                                 const base = findBaseExercise(exercise.equipmentName);
                                                 const legacyVariant = base?.variants.find(v => v.seedName === exercise.equipmentName);
 
                                                 if (manifestEntry && manifestEntry.variants.length > 1) {
-                                                    // New manifest logic
-                                                    const activeV = manifestEntry.variants.find(v => exercise.equipmentName?.includes(v.name)) || manifestEntry.variants[0];
+                                                    // Exact variant match — avoids "Barra" matching "Barra Olímpica" via includes()
+                                                    const activeV = manifestEntry.variants.find(v =>
+                                                        exercise.equipmentName === `${manifestEntry.name} (${v.name})`
+                                                    ) || manifestEntry.variants[0];
                                                     return (
                                                         <>
                                                             <h3 className="text-2xl font-black italic uppercase text-white leading-tight truncate">
@@ -5153,13 +5203,8 @@ export const WorkoutSession = () => {
                                             unlockExercise(itemId);
                                             // Remove from lockedItemIds on next render (state update triggers re-render)
                                         }}
-                                        onVariantCycle={(_oldId, _newId, baseId, newVariant) => {
-                                            // baseId = "manifest-<entryId>" (stable)
-                                            // newVariant.id is the variant id from imageManifest variants
-                                            saveVariantPref(baseId, newVariant.id);
-                                            // Trigger re-render so image/label updates
-                                            setSelectedCatalogItems(prev => new Set(prev));
-                                        }}
+                                        // onVariantCycle removed — each variant is now its own card,
+                                        // cycling within a single card is no longer used.
                                     />
                                 </div>
                             ) : (

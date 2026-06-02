@@ -171,14 +171,10 @@ export const ArsenalGrid = ({
 
                         <div className={gridClassName}>
                             {items.map(item => {
-                                const variantInfo = variantBadgeMap?.get(item.id);
                                 const locked = lockedItemIds?.has(item.id) ?? false;
-                                // When a variant is active, selection is scoped to that specific variant
-                                // (format: "manifest-X__variantId"). Non-variant items use item.id directly.
-                                const effectiveSelectionId = variantInfo?.currentId
-                                    ? `${item.id}__${variantInfo.currentId}`
-                                    : item.id;
-                                const isSelected = selectedItems.has(effectiveSelectionId);
+                                // Each variant is its own item with its own ID — no effectiveSelectionId
+                                // computation needed. Plain item.id is the selection key.
+                                const isSelected = selectedItems.has(item.id);
                                 let effectiveConfig = routineConfigs.get(item.id);
 
                                 // Preview global metrics for unselected items
@@ -203,7 +199,7 @@ export const ArsenalGrid = ({
                                         onClick={(e) => {
                                             if (locked) return;
                                             if ((e.target as HTMLElement).closest('[data-variant-btn="true"]')) return;
-                                            onToggleSelection(effectiveSelectionId);
+                                            onToggleSelection(item.id);
                                         }}
                                     >
                                         <ArsenalCard
@@ -213,19 +209,8 @@ export const ArsenalGrid = ({
                                             userSettings={userSettings}
                                             onEdit={onEditItem}
                                             configOverride={effectiveConfig}
-                                            variantLabel={variantInfo?.label}
-                                            variantTotal={variantInfo?.total}
                                             isLocked={locked}
                                             onUnlock={locked && onUnlockItem ? () => onUnlockItem(item.id) : undefined}
-                                            onVariantCycle={!locked && variantInfo && onVariantCycle ? (direction) => {
-                                                const variants = variantInfo.variants;
-                                                const currentIdx = variants.findIndex((v: any) => v.label === variantInfo.label);
-                                                let nextIdx = direction === 'next' ? currentIdx + 1 : currentIdx - 1;
-                                                if (nextIdx < 0) nextIdx = variants.length - 1;
-                                                if (nextIdx >= variants.length) nextIdx = 0;
-                                                const next = variants[nextIdx];
-                                                onVariantCycle(item.id, `${item.id}__${next.id}`, variantInfo.baseId, next);
-                                            } : undefined}
                                         />
                                     </div>
                                 );
