@@ -190,8 +190,8 @@ export const ArsenalGrid = ({
                                     };
                                 }
 
-                                // Must use normalizeText (strips accents) to match the key used when building variantBadgeMap
-                                const variantInfo = variantBadgeMap?.get(normalizeText(item.name));
+                                // variantBadgeMap is now keyed by the stable item.id ("curated-<baseId>")
+                                const variantInfo = variantBadgeMap?.get(item.id);
                                 const locked = lockedItemIds?.has(item.id) ?? false;
                                 return (
                                     <div

@@ -1285,14 +1285,20 @@ export const WorkoutSession = () => {
             return;
         }
         // Build a fresh set from current active exercises for visual "already in session" state.
-        // Newly toggled items are added on top via handleCatalogToggle.
+        // Includes curated-<baseId> for exercises that belong to a curated base exercise.
         const toMark = new Set<string>();
+        const prefs = getVariantPrefs();
         activeExercises.forEach(e => {
             if (e.equipmentId) toMark.add(e.equipmentId);
             if (e.equipmentName) {
                 toMark.add(`virtual-${e.equipmentName}`);
                 toMark.add(`virtual-${e.equipmentName.trim()}`);
             }
+            // Also mark the stable curated ID so the card shows as selected
+            const base = CURATED_EXERCISES.find(b =>
+                b.variants.some(v => normalizeText(v.seedName) === normalizeText(e.equipmentName ?? ''))
+            );
+            if (base) toMark.add(`curated-${base.id}`);
         });
         setSelectedCatalogItems(toMark);
     }, [showAddModal]); // Only re-run when modal opens/closes, not on every exercise change
@@ -1436,6 +1442,19 @@ export const WorkoutSession = () => {
 
         const itemsToAdd: Equipment[] = [];
         newEquipmentIdsToAdd.forEach(id => {
+            // "curated-<baseId>" → resolve to the actual preferred variant seed
+            if (id.startsWith('curated-')) {
+                const baseId = id.slice('curated-'.length);
+                const base = CURATED_EXERCISES.find(b => b.id === baseId);
+                if (base) {
+                    const prefs = getVariantPrefs();
+                    const preferredVariantId = prefs[base.id] ?? base.variants[0].id;
+                    const preferred = base.variants.find(v => v.id === preferredVariantId) ?? base.variants[0];
+                    const seedItem = effectiveInv.find(i => normalizeText(i.name) === normalizeText(preferred.seedName));
+                    if (seedItem) itemsToAdd.push(seedItem);
+                }
+                return;
+            }
             const item = effectiveInv.find(i => i.id === id);
             if (item) itemsToAdd.push(item);
         });
@@ -1523,11 +1542,12 @@ export const WorkoutSession = () => {
         }
     });
 
-    // ── Manifest-based exercises: inject locked items into effectiveInventory ──
-    // Locked exercises (from ocultos/ folders) are added so they appear in the catalog
-    // with a lock icon. They're only selectable once the user taps to unlock them.
+    // ── Locked exercises from ocultos/ folders (via IMAGE_MANIFEST) ──────────
+    // These appear in the catalog with a lock icon. Injected ONLY if not already
+    // present by name in effectiveInventory (avoids duplicates with seeds).
     const lockedItemIds = new Set<string>();
     IMAGE_MANIFEST.forEach(entry => {
+        if (!entry.isLocked) return; // only inject locked exercises
         const itemId = `manifest-${entry.id}`;
         if (!effectiveInventory.some(i => normalizeText(i.name) === normalizeText(entry.name))) {
             effectiveInventory.push({
@@ -1537,19 +1557,10 @@ export const WorkoutSession = () => {
                 target_muscle_group: entry.muscle,
                 image_url: entry.imagePath,
                 metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
-                quantity: 1,
-                condition: 'GOOD',
-                gym_id: 'manifest',
+                quantity: 1, condition: 'GOOD', gym_id: 'manifest',
             } as Equipment);
         }
-        if (entry.isLocked && !isUnlocked(itemId)) {
-            lockedItemIds.add(itemId);
-        }
-        // Locked variants also get locked IDs
-        entry.variants.forEach(v => {
-            const vId = `manifest-${v.id}`;
-            if (v.isLocked && !isUnlocked(vId)) lockedItemIds.add(vId);
-        });
+        if (!isUnlocked(itemId)) lockedItemIds.add(itemId);
     });
 
     // Map ArsenalGrid section names to catalog muscle keys for getExtrasForMuscle()
@@ -1576,44 +1587,64 @@ export const WorkoutSession = () => {
         }).filter(Boolean);
     })() : [];
 
-    // Curated catalog inventory — shows only ONE item per exercise group (preferred variant).
-    // Variant duplicates are hidden; the user can cycle variants via the badge arrow on each card.
+    // ── Curated catalog inventory — STABLE IDs fix the "cards replacing" bug ──
+    // Root cause of the bug: cycling a variant changes WHICH item is in the array
+    // (e.g., "Barra" at index 5 → removed; "Mancuernas" at index 6 → added).
+    // Because different indices are filtered in/out, React sees a new key AND the
+    // surrounding cards shift position, making it look like exercises swap places.
+    //
+    // Fix: every base exercise gets a SYNTHETIC item with id = "curated-<baseId>".
+    // That id never changes regardless of which variant is selected → React keeps
+    // the same DOM node in the same slot → no swapping, no position shifts.
     const { curatedCatalogInventory, variantBadgeMap } = (() => {
         const prefs = getVariantPrefs();
-        // Build a set of seed names to HIDE (non-preferred variants)
-        const hiddenNames = new Set<string>();
-        // Build a map: preferred seedName → { label, totalVariants, baseId }
+        // Map stable item id → badge info (for variant arrow in ArsenalCard)
         const badges = new Map<string, { label: string; total: number; baseId: string; variants: ExerciseVariant[] }>();
+        // Set of all variant seedNames that are NOT currently preferred (to exclude from "extras")
+        const allVariantNames = new Set<string>();
+
+        const stableItems: Equipment[] = [];
 
         for (const base of CURATED_EXERCISES) {
-            // Single-variant exercises need no filtering, but DO need the badge map entry
-            // so the variant label renders in ArsenalCard if desired.
             const preferredId = prefs[base.id] ?? base.variants[0].id;
-            const preferred = base.variants.find(v => v.id === preferredId) ?? base.variants[0];
+            const preferred   = base.variants.find(v => v.id === preferredId) ?? base.variants[0];
 
+            // Track all variant seed names so they don't appear in extras/freestyle inventory
+            base.variants.forEach(v => allVariantNames.add(normalizeText(v.seedName)));
+
+            // Find the matching Equipment from effectiveInventory for this preferred variant
+            const source = effectiveInventory.find(
+                i => normalizeText(i.name) === normalizeText(preferred.seedName)
+            );
+            if (!source) continue; // variant seed missing → skip silently
+
+            const stableId = `curated-${base.id}`;
+
+            // Build variant badge info so ArsenalCard can show the cycle arrow
             if (base.variants.length > 1) {
-                // KEY FIX: use normalizeText (strips accents) for both the map key and the hidden set.
-                // Without this, accented names like "Máquina" → normalizeText gives "maquina"
-                // but .toLowerCase() gives "máquina" — the filter would miss them, leaving
-                // duplicate cards visible in the catalog.
-                badges.set(normalizeText(preferred.seedName), {
-                    label: preferred.label,
-                    total: base.variants.length,
-                    baseId: base.id,
+                badges.set(stableId, {
+                    label:    preferred.label,
+                    total:    base.variants.length,
+                    baseId:   base.id,
                     variants: base.variants,
                 });
-                for (const v of base.variants) {
-                    if (v.seedName !== preferred.seedName) {
-                        hiddenNames.add(normalizeText(v.seedName));
-                    }
-                }
             }
+
+            stableItems.push({
+                ...source,
+                id: stableId, // ← STABLE: never changes on variant cycle
+            });
         }
 
-        const filtered = effectiveInventory.filter(
-            i => !hiddenNames.has(normalizeText(i.name))
+        // Non-curated items: standalone exercises (seeds NOT covered by any variant)
+        const nonCurated = effectiveInventory.filter(
+            i => !allVariantNames.has(normalizeText(i.name)) && !i.id.startsWith('curated-')
         );
-        return { curatedCatalogInventory: filtered, variantBadgeMap: badges };
+
+        return {
+            curatedCatalogInventory: [...stableItems, ...nonCurated],
+            variantBadgeMap: badges,
+        };
     })();
 
     const catalogItems = COMMON_EQUIPMENT_SEEDS.filter(seed => {
@@ -4820,13 +4851,13 @@ export const WorkoutSession = () => {
                                             unlockExercise(itemId);
                                             // Remove from lockedItemIds on next render (state update triggers re-render)
                                         }}
-                                        onVariantCycle={(oldId, newId, baseId, newVariant) => {
-                                            setSelectedCatalogItems(prev => {
-                                                const next = new Set(prev);
-                                                if (next.has(oldId)) { next.delete(oldId); next.add(newId); }
-                                                return next;
-                                            });
+                                        onVariantCycle={(oldId, _newId, baseId, newVariant) => {
+                                            // oldId = stableId ("curated-<baseId>") — stays the SAME after cycling.
+                                            // We don't swap the id in selectedCatalogItems; the selection persists.
+                                            // We just update the preference so the displayed variant changes.
                                             saveVariantPref(baseId, newVariant.id);
+                                            // Force re-render so the new variant's image/label shows
+                                            setSelectedCatalogItems(prev => new Set(prev));
                                         }}
                                     />
                                 </div>
