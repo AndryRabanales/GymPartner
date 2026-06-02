@@ -341,11 +341,21 @@ class WorkoutService {
             );
 
             for (const session of activeSessions) {
-                // 🛡️ MULTIPLAYER GUARD: Never auto-close a multiplayer session that has
-                // an active partner link. Screen locks cause temporary disconnections
-                // but the session in the DB must remain intact for both participants.
+                const minutesSinceStart =
+                    (Date.now() - new Date(session.started_at).getTime()) / (1000 * 60);
+                const ROOM_MAX_MINUTES = 300; // 5 hours — max room lifetime
+
+                // 🛡️ MULTIPLAYER GUARD: Preserve active multiplayer sessions unless they
+                // exceed the 5-hour room limit. Screen locks cause temporary disconnections
+                // but sessions under 5 hours must remain intact for all participants.
                 if (session.is_multiplayer || session.partner_session_id) {
-                    console.log(`🛡️ [Cleanup] Sesión multijugador activa preservada: ${session.id}`);
+                    if (minutesSinceStart > ROOM_MAX_MINUTES) {
+                        console.log(`⏰ [Cleanup] Sala multijugador expirada (${minutesSinceStart.toFixed(0)} min > 5h): ${session.id}`);
+                        await this.finishSession(session.id, 'Cierre automático: límite de 5 horas de sala');
+                        closedIds.push(session.id);
+                    } else {
+                        console.log(`🛡️ [Cleanup] Sesión multijugador activa preservada (${minutesSinceStart.toFixed(0)} min): ${session.id}`);
+                    }
                     continue;
                 }
 
@@ -355,11 +365,8 @@ class WorkoutService {
                     .eq('session_id', session.id);
 
                 const hasLogs = (count || 0) > 0;
-                const minutesSinceStart =
-                    (Date.now() - new Date(session.started_at).getTime()) / (1000 * 60);
 
                 if (!hasLogs) {
-                    // Only delete empty sessions if they are older than 30 minutes (prevent deleting active setups)
                     if (minutesSinceStart > 30) {
                         console.log(`🧹 [Cleanup] Eliminando sesión vacía fantasma antigua: ${session.id} (${minutesSinceStart.toFixed(0)} min)`);
                         await this.deleteSession(session.id);
@@ -367,8 +374,7 @@ class WorkoutService {
                     } else {
                         console.log(`ℹ️ [Cleanup] Sesión vacía reciente (${minutesSinceStart.toFixed(0)} min) — se preserva: ${session.id}`);
                     }
-                } else if (minutesSinceStart > 480) { // 8 hours (was 4h) — gives generous buffer for screen-lock recovery
-                    // Session with logs but idle for more than 8 hours → auto-close as truly abandoned
+                } else if (minutesSinceStart > 480) {
                     console.log(`🧹 [Cleanup] Cerrando sesión huérfana antigua con datos (${minutesSinceStart.toFixed(0)} min): ${session.id}`);
                     await this.finishSession(session.id, 'Cierre automático por inactividad');
                     closedIds.push(session.id);
@@ -417,19 +423,18 @@ class WorkoutService {
 
     // Get incomplete session if app crashed or user left
     async getActiveSession(userId: string): Promise<{ data: WorkoutSession | null; error: any }> {
-        // Multiplayer (room) sessions get a wider recovery window — rooms can persist longer.
-        // We run two queries: one tight (4h) for solo, one wide (12h) for coop.
-        const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString();
-        const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
+        // Room (multiplayer) sessions live up to 5 hours; solo sessions up to 4 hours.
+        const fourHoursAgo  = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString();
+        const fiveHoursAgo  = new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString();
 
-        // First: check for a recent coop session (widest window)
+        // First: check for a recent coop session (5-hour window)
         const { data: coopData, error: coopError } = await supabase
             .from('workout_sessions')
             .select('*')
             .eq('user_id', userId)
             .is('finished_at', null)
             .eq('is_multiplayer', true)
-            .gt('started_at', twelveHoursAgo)
+            .gt('started_at', fiveHoursAgo)
             .order('started_at', { ascending: false })
             .limit(1)
             .maybeSingle();

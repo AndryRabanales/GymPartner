@@ -2078,11 +2078,11 @@ export const WorkoutSession = () => {
             const active = activeResult.data;
 
             // 🛡️ Age guard: never restore a session that is too old.
-            // Multiplayer (room) sessions get a 12h window — rooms are persistent by design.
-            // Solo sessions get a 4h window.
+            // Room sessions expire after 5 hours — this matches the "room active until all leave
+            // or 5 hours" rule. Solo sessions get a 4-hour window.
             const isActiveMultiplayer = active?.is_multiplayer === true;
             const SESSION_MAX_RESTORE_MS = isActiveMultiplayer
-                ? 12 * 60 * 60 * 1000  // 12 hours for rooms
+                ? 5 * 60 * 60 * 1000   // 5 hours for rooms
                 : 4 * 60 * 60 * 1000;  // 4 hours for solo
             const activeAge = active ? Date.now() - new Date(active.started_at).getTime() : Infinity;
             const isTooOldToRestore = activeAge > SESSION_MAX_RESTORE_MS;
@@ -2090,7 +2090,8 @@ export const WorkoutSession = () => {
             if (active && isTooOldToRestore) {
                 console.warn(`⚠️ Sesión activa demasiado antigua (${(activeAge / 60000).toFixed(0)} min) — cerrando y descartando.`);
                 localStorage.removeItem(`workout_draft_${active.id}`);
-                await workoutService.finishSession(active.id, 'Cierre automático: sesión demasiado antigua');
+                localStorage.removeItem('ginx_coop_state');
+                await workoutService.finishSession(active.id, 'Cierre automático: límite de 5 horas');
             }
 
             const navState = location.state as any || {};
@@ -4068,15 +4069,15 @@ export const WorkoutSession = () => {
 
             let result: { success: boolean; error?: any };
 
-            // ── HOST: Close entire room (finalizes all guest sessions too) ────────
-            if (isMultiplayer && isInviter && finalSessionId) {
-                console.log('🏠 Host closing room for all participants:', finalSessionId);
+            // ── MULTIPLAYER (host OR guest): leave the room independently ──────────
+            // The room stays alive for remaining participants. Any user — including the host —
+            // saves only their own session. The room closes naturally when everyone has left,
+            // or after the 5-hour auto-expiry (enforced on entry in initializeBattle).
+            if (isMultiplayer && finalSessionId) {
+                console.log('🏃 [Multiplayer] User leaving room, finalizing own session:', finalSessionId);
 
                 if (channelRef.current && user) {
-                    // 0. Send a final sync_state snapshot so guests have the latest exercise
-                    //    data (including their playerWeights/playerReps) BEFORE receiving
-                    //    session_finished. This prevents a race where participants-change
-                    //    or channel cleanup broadcasts empty exercises first.
+                    // Broadcast final exercise snapshot so remaining participants keep full data
                     const snapshot = activeExercisesRef.current;
                     if (snapshot.length > 0) {
                         channelRef.current.send({
@@ -4092,25 +4093,7 @@ export const WorkoutSession = () => {
                         }).catch(e => console.error('Error broadcasting final sync_state:', e));
                     }
 
-                    // 1. Tell guests to save their sets and show summary
-                    channelRef.current.send({
-                        type: 'broadcast',
-                        event: 'session_finished',
-                        payload: { sender: user.id, room_id: finalSessionId }
-                    }).catch(e => console.error('Error broadcasting session_finished:', e));
-                }
-
-                // 2. Close room in DB (awards GX to everyone, finalizes all sessions,
-                //    sends `room_closed` notifications to offline guests)
-                const roomResult = await workoutService.closeRoom(finalSessionId, flowNotes, currentRoutineName, geoVerified);
-                result = roomResult;
-
-            // ── GUEST: Leave room (finalize only own session) ─────────────────────
-            } else if (isMultiplayer && !isInviter && finalSessionId) {
-                console.log('👤 Guest leaving room, finalizing own session:', finalSessionId);
-
-                // Broadcast so host + other guests see this user left
-                if (channelRef.current && user) {
+                    // Tell remaining participants this user is leaving
                     channelRef.current.send({
                         type: 'broadcast',
                         event: 'participant_left',
@@ -4118,6 +4101,7 @@ export const WorkoutSession = () => {
                     }).catch(e => console.error('Error broadcasting participant_left:', e));
                 }
 
+                // Finalize only this user's session (awards their GX, sets finished_at)
                 result = await workoutService.finishSession(finalSessionId, flowNotes, currentRoutineName, true, geoVerified);
 
             // ── SOLO: Standard finalization ───────────────────────────────────────
