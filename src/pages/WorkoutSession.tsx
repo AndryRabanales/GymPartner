@@ -1861,6 +1861,9 @@ export const WorkoutSession = () => {
 
     const initializeBattle = async (userId: string) => {
         if (!userId) return navigate('/login');
+        // Never run init logic while the session is finishing or the summary is showing —
+        // doing so can open the catalog or start-options modal over the finish flow.
+        if (isFinished || showSummary) return;
 
         // Extract fresh state variables directly from location to avoid closure staleness on route navigation
         const navState = location.state as any || {};
@@ -3793,6 +3796,9 @@ export const WorkoutSession = () => {
         if (isFinalizing) return;
         isLeavingPageRef.current = true; // Authorized navigation
         setIsFinished(true); // Stop timer
+        // Close any open modals that might visually conflict with the finish flow
+        setShowAddModal(false);
+        setShowStartOptionsModal(false);
 
         // SMART SKIP: Skip modal if using a routine and the structure wasn't modified
         const hasChanged = currentRoutineName
@@ -4899,9 +4905,9 @@ export const WorkoutSession = () => {
                 )
             }
 
-            {/* Exercise Selector Modal */}
+            {/* Exercise Selector Modal — hidden when summary/finish overlay is active */}
             {
-                showAddModal && (
+                showAddModal && !showSummary && !showRoutineModal && (
                     <div className="fixed inset-0 bg-black/95 z-[90] flex flex-col animate-in fade-in duration-200 overflow-hidden">
                         {/* Header */}
                         <div className="flex-none p-2.5 pb-1 border-b border-white/5 bg-neutral-950">
@@ -5188,9 +5194,9 @@ export const WorkoutSession = () => {
 
 
 
-            {/* 3. NEW: Start Options Modal (Routine vs Quick Start) */}
+            {/* 3. Start Options Modal — hidden when finish/summary is active */}
             {
-                showStartOptionsModal && (
+                showStartOptionsModal && !showSummary && !showRoutineModal && !isFinished && (
                     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/95 backdrop-blur-md animate-in fade-in duration-300 p-4">
                         <div className="w-full max-w-md bg-neutral-900/50 border border-neutral-800 rounded-3xl p-6 md:p-8 flex flex-col gap-6 relative overflow-hidden">
                             {/* Background FX */}
