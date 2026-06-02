@@ -2204,7 +2204,10 @@ export const WorkoutSession = () => {
                             });
                         });
                         setActiveExercises(restoredExercises);
-                    } else if (!(currentIsMultiplayer && !currentIsInviter)) {
+                    } else if (!currentIsMultiplayer && activeExercisesRef.current.length === 0) {
+                        // Only open catalog automatically in solo mode AND if exercises are truly absent.
+                        // In multiplayer the host's exercises come from the catalog selection flow,
+                        // and the guest's come from sync_state — never open the catalog as a side effect.
                         setShowAddModal(true);
                     }
                 }
@@ -2275,8 +2278,10 @@ export const WorkoutSession = () => {
                             await startNewSession(partnerActive.gym_id || undefined, partnerActive.id, currentIsMultiplayer, currentMultiplayerMode, currentPartnerId);
                             setStartTime(new Date(partnerActive.started_at));
                         }
-                    // Only prompt for routine/exercises if no exercises were already restored
-                    } else if (activeExercisesRef.current.length === 0 && !(currentIsMultiplayer && !currentIsInviter)) {
+                    // Only prompt for routine/exercises in solo mode with truly no exercises.
+                    // Never auto-open the catalog for multiplayer (host waits for catalog selection,
+                    // guest waits for sync_state) to avoid the visual bug of the modal appearing on entry.
+                    } else if (activeExercisesRef.current.length === 0 && !currentIsMultiplayer) {
                         if (localRoutines.length === 0) setShowAddModal(true);
                         else setShowStartOptionsModal(true);
                     }
