@@ -285,6 +285,9 @@ export const WorkoutSession = () => {
     const [startTime, setStartTime] = useState<Date | null>(null);
     const [activeExercises, setActiveExercises] = useState<WorkoutExercise[]>([]);
     const activeExercisesRef = useRef<WorkoutExercise[]>([]);
+    // Snapshot of the last non-empty exercises state — used by session_finished handler so
+    // guests can save sets even if activeExercisesRef is cleared before the event arrives.
+    const lastNonEmptyExercisesRef = useRef<WorkoutExercise[]>([]);
     // Tracks exercises deliberately removed during this session so incoming sync_state
     // cannot re-add them (race condition fix for multiplayer).
     const deletedExerciseIdsRef = useRef<Set<string>>(new Set());
@@ -296,6 +299,9 @@ export const WorkoutSession = () => {
 
     useEffect(() => {
         activeExercisesRef.current = activeExercises;
+        if (activeExercises.length > 0) {
+            lastNonEmptyExercisesRef.current = activeExercises;
+        }
     }, [activeExercises]);
     useEffect(() => {
         startTimeRef.current = startTime;
@@ -948,11 +954,16 @@ export const WorkoutSession = () => {
                 // closeRoom() sets finished_at for guest sessions but does NOT write workout_logs.
                 // Guests must save their own sets here before the summary screen.
                 const guestSessionId = sessionIdRef.current;
-                if (guestSessionId && activeExercisesRef.current.length > 0) {
+                // Fallback to lastNonEmptyExercisesRef in case a race condition cleared activeExercisesRef
+                // before this event arrived (e.g. empty sync_state from host's participants effect).
+                const exercisesToSave = activeExercisesRef.current.length > 0
+                    ? activeExercisesRef.current
+                    : lastNonEmptyExercisesRef.current;
+                if (guestSessionId && exercisesToSave.length > 0) {
                     const myId = user.id;
                     const savePromises: Promise<any>[] = [];
 
-                    for (const exercise of activeExercisesRef.current) {
+                    for (const exercise of exercisesToSave) {
                         let resolvedExId: string | null = null;
 
                         for (let j = 0; j < exercise.sets.length; j++) {
@@ -1188,8 +1199,10 @@ export const WorkoutSession = () => {
     }, [activeExercises, isMultiplayer, user, currentRoutineName, isRoutineModified]);
 
     // Broadcast updated participant list whenever it changes on the Host's device to keep row slot alignment
+    // Guard: never broadcast with empty exercises — that would wipe guests' active sessions.
     useEffect(() => {
-        if (isMultiplayer && isInviter && channelRef.current && user && participants.length > 0) {
+        if (isMultiplayer && isInviter && channelRef.current && user && participants.length > 0
+            && activeExercisesRef.current.length > 0) {
             console.log('📢 Host broadcasting updated participant list to all devices:', participants.map(p => p.username));
             channelRef.current.send({
                 type: 'broadcast',
@@ -4054,8 +4067,27 @@ export const WorkoutSession = () => {
             if (isMultiplayer && isInviter && finalSessionId) {
                 console.log('🏠 Host closing room for all participants:', finalSessionId);
 
-                // 1. Broadcast to online guests FIRST so they go to summary immediately
                 if (channelRef.current && user) {
+                    // 0. Send a final sync_state snapshot so guests have the latest exercise
+                    //    data (including their playerWeights/playerReps) BEFORE receiving
+                    //    session_finished. This prevents a race where participants-change
+                    //    or channel cleanup broadcasts empty exercises first.
+                    const snapshot = activeExercisesRef.current;
+                    if (snapshot.length > 0) {
+                        channelRef.current.send({
+                            type: 'broadcast',
+                            event: 'sync_state',
+                            payload: {
+                                exercises: snapshot,
+                                sender: user.id,
+                                knownParticipants: participantsRef.current,
+                                routineName: currentRoutineNameRef.current,
+                                isRoutineModified: isRoutineModifiedRef.current
+                            }
+                        }).catch(e => console.error('Error broadcasting final sync_state:', e));
+                    }
+
+                    // 1. Tell guests to save their sets and show summary
                     channelRef.current.send({
                         type: 'broadcast',
                         event: 'session_finished',
