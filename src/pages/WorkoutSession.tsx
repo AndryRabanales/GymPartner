@@ -1263,17 +1263,30 @@ export const WorkoutSession = () => {
         // Build a fresh set from current active exercises for visual "already in session" state.
         const toMark = new Set<string>();
         activeExercises.forEach(e => {
+            // Always keep the exact equipmentId (covers manifest, virtual, and real DB IDs)
             if (e.equipmentId) toMark.add(e.equipmentId);
             if (e.equipmentName) {
                 toMark.add(`virtual-${e.equipmentName}`);
                 toMark.add(`virtual-${e.equipmentName.trim()}`);
             }
-            // Mark the manifest-based stable ID if this exercise came from the manifest
+            // For manifest-sourced exercises, add the variant-specific ID so the correct
+            // per-variant card appears selected (new format: manifest-<id>__<variantId>).
+            // Also fall back to the plain manifest ID for legacy/single-variant exercises.
             const manifestEntry = IMAGE_MANIFEST.find(entry =>
                 e.equipmentName?.startsWith(entry.name) ||
                 entry.variants.some(v => e.equipmentName?.includes(v.name))
             );
-            if (manifestEntry) toMark.add(`manifest-${manifestEntry.id}`);
+            if (manifestEntry) {
+                const matchedVariant = manifestEntry.variants.find(v =>
+                    e.equipmentName === `${manifestEntry.name} (${v.name})`
+                );
+                if (matchedVariant) {
+                    toMark.add(`manifest-${manifestEntry.id}__${matchedVariant.id}`);
+                } else {
+                    // Single-variant or no variant match — keep plain manifest ID
+                    toMark.add(`manifest-${manifestEntry.id}`);
+                }
+            }
         });
         setSelectedCatalogItems(toMark);
     }, [showAddModal]); // Only re-run when modal opens/closes, not on every exercise change
@@ -1418,19 +1431,24 @@ export const WorkoutSession = () => {
         const itemsToAdd: Equipment[] = [];
         newEquipmentIdsToAdd.forEach(id => {
             if (id.startsWith('manifest-')) {
-                // Filesystem-driven: find the manifest entry and resolve the active variant
-                const manifestId = id.slice('manifest-'.length);
+                // ID formats:
+                //   "manifest-<entryId>__<variantId>"  → variant-specific (new format)
+                //   "manifest-<entryId>"               → single-variant or legacy
+                const withoutPrefix = id.slice('manifest-'.length);
+                const sepIdx = withoutPrefix.indexOf('__');
+                const manifestId = sepIdx >= 0 ? withoutPrefix.slice(0, sepIdx) : withoutPrefix;
+                const variantId  = sepIdx >= 0 ? withoutPrefix.slice(sepIdx + 2) : null;
+
                 const entry = IMAGE_MANIFEST.find(e => e.id === manifestId);
                 if (entry) {
-                    const prefs = getVariantPrefs();
-                    const prefVariantId = prefs[id];
-                    const preferred = prefVariantId
-                        ? entry.variants.find(v => v.id === prefVariantId)
-                        : null;
-                    const activeVariant = preferred ?? entry.variants.find(v => !v.isLocked) ?? entry.variants[0];
+                    const activeVariant = variantId
+                        ? (entry.variants.find(v => v.id === variantId) ?? entry.variants[0])
+                        : (entry.variants.find(v => !v.isLocked) ?? entry.variants[0]);
+
                     const displayName = entry.variants.length > 1 && activeVariant
                         ? `${entry.name} (${activeVariant.name})`
                         : entry.name;
+
                     itemsToAdd.push({
                         id:                  id,
                         name:                displayName,
@@ -1585,60 +1603,49 @@ export const WorkoutSession = () => {
     // Stable IDs ("manifest-<id>") prevent the "cards replacing" bug: the card
     // stays in the same grid slot even when the displayed variant changes.
     const { curatedCatalogInventory, variantBadgeMap } = (() => {
-        const prefs = getVariantPrefs();
         const badges = new Map<string, { label: string; total: number; baseId: string; variants: any[] }>();
         const items: Equipment[] = [];
 
         for (const entry of IMAGE_MANIFEST) {
-            if (entry.isLocked) continue; // locked items are injected separately above
+            if (entry.isLocked) continue;
 
-            const stableId = `manifest-${entry.id}`;
-            const hasVariants = entry.variants.length > 1;
+            const baseId = `manifest-${entry.id}`;
+            const isCardio = entry.muscle === 'CARDIO';
+            const metrics = isCardio
+                ? { weight: false, reps: false, time: true, distance: true, rpe: false }
+                : { weight: true, reps: true, time: false, distance: false, rpe: false };
 
-            // Determine which variant to show (or use the standalone image)
-            let displayImagePath = entry.imagePath;
-            let displayName = entry.name;
-            let displayVariantLabel = '';
-
-            if (hasVariants) {
-                const prefVariantId = prefs[stableId];
-                const preferred = prefVariantId
-                    ? entry.variants.find(v => v.id === prefVariantId)
-                    : null;
-                const activeVariant = preferred ?? entry.variants.find(v => !v.isLocked) ?? entry.variants[0];
-                displayImagePath = activeVariant.imagePath;
-                displayVariantLabel = activeVariant.name;
-                badges.set(stableId, {
-                    label:   activeVariant.name,
-                    total:   entry.variants.length,
-                    baseId:  stableId,
-                    variants: entry.variants.map(v => ({
-                        id:       v.id,
-                        label:    v.name,
-                        seedName: v.name,   // used by cycle handler
-                        imagePath: v.imagePath,
-                        isLocked: v.isLocked,
-                    })),
-                });
+            if (entry.variants.length > 1) {
+                // Each unlocked variant becomes its own independently-selectable card.
+                // ID format: "manifest-<entryId>__<variantId>" (double underscore separator).
+                for (const variant of entry.variants) {
+                    if (variant.isLocked) continue;
+                    const variantItemId = `${baseId}__${variant.id}`;
+                    items.push({
+                        id:                  variantItemId,
+                        name:                `${entry.name} (${variant.name})`,
+                        category:            'ACCESSORY',
+                        target_muscle_group: entry.muscle,
+                        image_url:           variant.imagePath,
+                        metrics,
+                        quantity: 1, condition: 'GOOD', gym_id: 'manifest',
+                    } as Equipment);
+                }
+            } else {
+                // Single-variant exercise — keep the original stable ID
+                items.push({
+                    id:                  baseId,
+                    name:                entry.name,
+                    category:            'ACCESSORY',
+                    target_muscle_group: entry.muscle,
+                    image_url:           entry.imagePath,
+                    metrics,
+                    quantity: 1, condition: 'GOOD', gym_id: 'manifest',
+                } as Equipment);
             }
-
-            items.push({
-                id:                  stableId,
-                name:                displayName,
-                category:            'ACCESSORY',
-                target_muscle_group: entry.muscle,
-                image_url:           displayImagePath,
-                metrics:             entry.muscle === 'CARDIO'
-                                       ? { weight: false, reps: false, time: true, distance: true, rpe: false }
-                                       : { weight: true, reps: true, time: false, distance: false, rpe: false },
-                quantity:  1,
-                condition: 'GOOD',
-                gym_id:    'manifest',
-            } as Equipment);
         }
 
         // Also add any non-manifest items that are in the gym's real arsenal
-        // (custom equipment added by the gym admin)
         const manifestIds = new Set(items.map(i => i.id));
         const arsenalExtras = arsenal.filter(i => !manifestIds.has(i.id) && i.gym_id !== 'virtual' && i.gym_id !== 'manifest');
         arsenalExtras.forEach(i => items.push(i));
