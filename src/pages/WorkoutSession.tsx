@@ -408,12 +408,30 @@ export const WorkoutSession = () => {
     }, [isRoutineModified]);
 
     // --- Multiplayer Sync Hooks ---
+    // Accumulates every participant who ever joined the room — never removes entries.
+    // Used by the summary so we can show all players' data even after some have left.
+    const allTimeParticipantsRef = useRef<any[]>([]);
+    // Tracks participants who have FINISHED and left. Their playerWeights/Reps/etc.
+    // data is frozen in the CRDT merge — no incoming sync can overwrite their final values.
+    const finalizedParticipantsRef = useRef<Set<string>>(new Set());
     const [partnerName, setPartnerName] = useState<string>('Compañero');
     const [partnerAvatar, setPartnerAvatar] = useState<string | null>(null);
     const [participants, setParticipants] = useState<any[]>([]);
     const [firstGuestId, setFirstGuestId] = useState<string | null>(null);
     const participantsRef = useRef<any[]>([]);
-    useEffect(() => { participantsRef.current = participants; }, [participants]);
+    useEffect(() => {
+        participantsRef.current = participants;
+        // Accumulate all-time participants (never remove — needed for summary display)
+        participants.forEach(p => {
+            if (p.id && !allTimeParticipantsRef.current.some(x => x.id === p.id)) {
+                allTimeParticipantsRef.current.push({ ...p });
+            } else if (p.id) {
+                // Keep username/avatar up to date
+                const idx = allTimeParticipantsRef.current.findIndex(x => x.id === p.id);
+                if (idx >= 0) allTimeParticipantsRef.current[idx] = { ...allTimeParticipantsRef.current[idx], ...p };
+            }
+        });
+    }, [participants]);
 
     const firstGuestIdRef = useRef<string | null>(null);
     useEffect(() => { firstGuestIdRef.current = firstGuestId; }, [firstGuestId]);
@@ -778,12 +796,15 @@ export const WorkoutSession = () => {
                                      const mergeMap = (locMap: Record<string, any> = {}, inMap: Record<string, any> = {}) => {
                                          const res = { ...locMap };
                                          for (const key of Object.keys(inMap || {})) {
+                                             // Never overwrite a finalized participant's data with incoming sync values.
+                                             // Their values were locked when they called finishSession and left the room.
+                                             if (finalizedParticipantsRef.current.has(key)) continue;
                                              const inVal = inMap[key];
                                              const locVal = locMap[key];
-                                             
+
                                              const hasLoc = locVal !== undefined;
                                              const hasIn = inVal !== undefined;
-                                             
+
                                              if (hasLoc && hasIn) {
                                                  const locPTime = loc.playerLastUpdated?.[key] || 0;
                                                  const inPTime = inSet.playerLastUpdated?.[key] || 0;
@@ -1057,6 +1078,8 @@ export const WorkoutSession = () => {
                 const leavingParticipant = participantsRef.current.find(p => p.id === sender);
                 const leavingName = leavingParticipant?.username || 'Un participante';
                 toast(`${leavingName} abandonó la sala.`, { icon: '👋' });
+                // Mark this participant as finalized so the CRDT merge never overwrites their data
+                finalizedParticipantsRef.current.add(sender);
                 // Remove them from participants list
                 setParticipants(prev => prev.filter(p => p.id !== sender));
                 // Stop rest timers for the leaving participant so their timer freezes (BUG-03)
@@ -5340,8 +5363,10 @@ export const WorkoutSession = () => {
                 showSummary && (() => {
                     const myId = user?.id || '';
                     const myName = (user?.user_metadata?.full_name || user?.user_metadata?.username || 'Yo').split(' ')[0];
-                    const allPlayers = (isMultiplayer && multiplayerMode === 'conjunto' && participants.length > 0)
-                        ? participants
+                    // Use allTimeParticipantsRef so we include users who already left the room.
+                    // This ensures the summary shows everyone's data even after participants disconnect.
+                    const allPlayers = (isMultiplayer && multiplayerMode === 'conjunto' && allTimeParticipantsRef.current.length > 0)
+                        ? allTimeParticipantsRef.current
                         : [{ id: myId, username: myName, avatar_url: user?.user_metadata?.avatar_url }];
                     const isGroupMode = allPlayers.length > 1;
 
@@ -5614,11 +5639,14 @@ export const WorkoutSession = () => {
                                                                     const d = Number(s.playerDistances?.[p.id]) || 0;
                                                                     const hasVal = w > 0 || r > 0 || t > 0 || d > 0;
                                                                     const isMe = p.id === myId;
+                                                                    const unit = ex.weightUnit || 'kg';
+                                                                    // Convert stored kg → display value (integer for lb, 1 decimal for kg)
+                                                                    const wDisplay = w > 0 ? toDisplayWeight(w, unit) : '';
                                                                     return (
                                                                         <div key={p.id} className="flex flex-col items-center justify-center py-0.5">
                                                                             {hasVal ? (
                                                                                 <div className="flex flex-col items-center">
-                                                                                    {w > 0 && <span className={`${wTextSize} font-black leading-none tracking-tight ${isMe ? 'text-yellow-400' : 'text-white'}`}>{w}<span className={`${wUnitSize} font-bold text-neutral-400 ml-0.5`}>{ex.weightUnit || 'kg'}</span></span>}
+                                                                                    {w > 0 && <span className={`${wTextSize} font-black leading-none tracking-tight ${isMe ? 'text-yellow-400' : 'text-white'}`}>{wDisplay}<span className={`${wUnitSize} font-bold text-neutral-400 ml-0.5`}>{unit}</span></span>}
                                                                                     {r > 0 && <span className={`${detailTextSize} text-neutral-400 leading-none font-bold mt-0.5`}>{r}r</span>}
                                                                                     {t > 0 && <span className={`${detailTextSize} text-neutral-400 leading-none font-bold mt-0.5`}>{t}s</span>}
                                                                                     {d > 0 && <span className={`${detailTextSize} text-neutral-400 leading-none font-bold mt-0.5`}>{d}{ex.distanceUnit || 'm'}</span>}
@@ -5642,11 +5670,17 @@ export const WorkoutSession = () => {
                                 {(summaryTab === 'individual' || !isGroupMode) && (
                                     <div className={`flex flex-col ${cardSpacing}`}>
                                         {activeExercises.map((ex, exIdx) => {
+                                            // Scalar fallback mirrors the display formula used in the input rows:
+                                            // playerWeights[myId] → p2_weight (firstGuest) → set.weight (host/solo) → 0
+                                            const myIsHost2 = !isMultiplayer || isInviter;
+                                            const myIsFirstGuest2 = isMultiplayer && !isInviter && myId === firstGuestId;
+                                            const _w = (s: any) => Number(s.playerWeights?.[myId] ?? (myIsHost2 ? (s.weight || 0) : (myIsFirstGuest2 ? (s.p2_weight || 0) : 0))) || 0;
+                                            const _r = (s: any) => Number(s.playerReps?.[myId]    ?? (myIsHost2 ? (s.reps   || 0) : (myIsFirstGuest2 ? (s.p2_reps   || 0) : 0))) || 0;
+                                            const _t = (s: any) => Number(s.playerTimes?.[myId]   ?? (myIsHost2 ? (s.time   || 0) : (myIsFirstGuest2 ? (s.p2_time   || 0) : 0))) || 0;
+                                            const _d = (s: any) => Number(s.playerDistances?.[myId] ?? (myIsHost2 ? (s.distance || 0) : (myIsFirstGuest2 ? (s.p2_distance || 0) : 0))) || 0;
+
                                             const mySets = ex.sets.map((s, i) => ({ ...s, idx: i })).filter(s =>
-                                                Number(s.playerWeights?.[myId]) > 0 ||
-                                                Number(s.playerReps?.[myId]) > 0 ||
-                                                Number(s.playerTimes?.[myId]) > 0 ||
-                                                Number(s.playerDistances?.[myId]) > 0
+                                                _w(s) > 0 || _r(s) > 0 || _t(s) > 0 || _d(s) > 0
                                             );
                                             if (mySets.length === 0) return null;
 
@@ -5673,15 +5707,19 @@ export const WorkoutSession = () => {
                                                         {hasTimeOrDistance && <div className="text-center font-black leading-none">TIEMPO/DIST</div>}
                                                     </div>
                                                     {mySets.map(s => {
-                                                        const w = Number(s.playerWeights?.[myId]) || 0;
-                                                        const r = Number(s.playerReps?.[myId]) || 0;
-                                                        const t = Number(s.playerTimes?.[myId]) || 0;
-                                                        const d = Number(s.playerDistances?.[myId]) || 0;
+                                                        // Use the same scalar fallback helpers defined above
+                                                        const w = _w(s);
+                                                        const r = _r(s);
+                                                        const t = _t(s);
+                                                        const d = _d(s);
+                                                        const unit2 = ex.weightUnit || 'kg';
+                                                        // Convert stored kg → display value (integer for lb, 1 decimal for kg)
+                                                        const wDisplay2 = w > 0 ? toDisplayWeight(w, unit2) : '';
                                                         return (
                                                             <div key={s.id} className={`grid ${hasTimeOrDistance ? 'grid-cols-4' : 'grid-cols-3'} ${rowPadding} border-b border-black/20 last:border-0 items-center bg-black/10 hover:bg-black/20 transition-colors`}>
                                                                 <div className={`${rowTextSize} text-yellow-500/40 font-black italic leading-none`}>#{s.idx + 1}</div>
                                                                 <div className="text-center leading-none">
-                                                                    {w > 0 ? <span className={`${wTextSize} font-black text-yellow-400 leading-none`}>{w}<span className={`${wUnitSize} font-bold text-neutral-400 ml-0.5`}>{ex.weightUnit || 'kg'}</span></span> : <span className={`text-neutral-700 ${rowTextSize} font-bold leading-none`}>—</span>}
+                                                                    {w > 0 ? <span className={`${wTextSize} font-black text-yellow-400 leading-none`}>{wDisplay2}<span className={`${wUnitSize} font-bold text-neutral-400 ml-0.5`}>{unit2}</span></span> : <span className={`text-neutral-700 ${rowTextSize} font-bold leading-none`}>—</span>}
                                                                 </div>
                                                                 <div className="text-center leading-none">
                                                                     {r > 0 ? <span className={`${wTextSize} font-black text-white leading-none`}>{r}</span> : <span className={`text-neutral-700 ${rowTextSize} font-bold leading-none`}>—</span>}

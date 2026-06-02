@@ -36,6 +36,16 @@ interface ExerciseDetail {
 }
 
 
+interface RoomParticipant {
+    userId: string;
+    name: string;
+    avatarUrl?: string;
+    exercises: ExerciseDetail[];
+    volume: number;
+    status: 'finished' | 'in_progress';
+    sessionId: string;
+}
+
 interface WorkoutDetail {
     id: string;
     user_id: string;
@@ -56,6 +66,8 @@ interface WorkoutDetail {
     partner_exercises?: ExerciseDetail[];
     partner_volume?: number;
     partner_duration_minutes?: number;
+    // All room participants (includes all users, not just direct partner)
+    room_participants?: RoomParticipant[];
 }
 
 export default function WorkoutDetailPage() {
@@ -354,6 +366,104 @@ export default function WorkoutDetailPage() {
             // Fix gym access (handle array or object)
             const gymData = Array.isArray(session.gyms) ? session.gyms[0] : session.gyms;
 
+            // ── Fetch ALL room participants for group history ────────────────
+            // The direct partner data (above) is kept for backward compat.
+            // room_participants includes everyone in the room for the joint view.
+            let roomParticipants: RoomParticipant[] = [];
+
+            if (session.is_multiplayer && session.multiplayer_mode === 'conjunto') {
+                // Room ID is the host's session. Guests have partner_session_id → host's session.
+                const roomId = resolvedPartnerSessionId || session.id;
+
+                // Fetch all guest sessions (those pointing to this room)
+                const [{ data: guestSessions }, { data: hostRow }] = await Promise.all([
+                    supabase
+                        .from('workout_sessions')
+                        .select('id, user_id, started_at, end_time, finished_at')
+                        .eq('partner_session_id', roomId)
+                        .not('user_id', 'eq', session.user_id),
+                    supabase
+                        .from('workout_sessions')
+                        .select('id, user_id, started_at, end_time, finished_at')
+                        .eq('id', roomId)
+                        .neq('user_id', session.user_id)
+                        .maybeSingle()
+                ]);
+
+                const otherSessions = [
+                    ...(guestSessions || []),
+                    ...(hostRow ? [hostRow] : [])
+                ].filter((s, idx, arr) => arr.findIndex(x => x.id === s.id) === idx); // dedup
+
+                // Fetch profiles + logs for each participant in parallel
+                await Promise.all(otherSessions.map(async (ps) => {
+                    const [{ data: prof }, { data: pLogs }] = await Promise.all([
+                        supabase.from('profiles').select('username, avatar_url').eq('id', ps.user_id).maybeSingle(),
+                        supabase
+                            .from('workout_logs')
+                            .select(`
+                                exercise_id, set_number, weight_kg, reps, rpe, time, distance,
+                                metrics_data, is_pr, category_snapshot,
+                                equipment:exercise_id ( name, target_muscle_group )
+                            `)
+                            .eq('session_id', ps.id)
+                            .order('exercise_id')
+                            .order('set_number')
+                    ]);
+
+                    const pExMap = new Map<string, ExerciseDetail>();
+                    let pVol = 0;
+                    (pLogs || []).forEach((log: any) => {
+                        const exId = log.exercise_id;
+                        if (!pExMap.has(exId)) {
+                            pExMap.set(exId, {
+                                exercise_id: exId,
+                                exercise_name: log.equipment?.name || 'Ejercicio',
+                                muscle_group: log.category_snapshot || log.equipment?.target_muscle_group || 'General',
+                                sets: []
+                            });
+                        }
+                        pExMap.get(exId)!.sets.push({
+                            set_number: log.set_number,
+                            weight_kg: log.weight_kg || 0,
+                            reps: log.reps || 0,
+                            rpe: log.rpe,
+                            time: log.time,
+                            distance: log.distance,
+                            metrics_data: log.metrics_data,
+                            is_pr: log.is_pr || false,
+                            weightUnit: log.metrics_data?._weight_unit || 'kg'
+                        });
+                        pVol += (log.weight_kg || 0) * (log.reps || 0);
+                    });
+
+                    // Compute metrics flags
+                    const pExArr = Array.from(pExMap.values());
+                    pExArr.forEach(ex => {
+                        ex.metrics = {
+                            hasWeight: ex.sets.some(s => s.weight_kg > 0),
+                            hasReps: ex.sets.some(s => s.reps > 0),
+                            hasTime: ex.sets.some(s => (s.time || 0) > 0),
+                            hasDistance: ex.sets.some(s => (s.distance || 0) > 0),
+                            hasRpe: ex.sets.some(s => (s.rpe || 0) > 0),
+                            hasCompletedAt: false,
+                            hasRestDuration: false,
+                            customKeys: []
+                        };
+                    });
+
+                    roomParticipants.push({
+                        userId: ps.user_id,
+                        name: prof?.username || 'Participante',
+                        avatarUrl: prof?.avatar_url,
+                        exercises: pExArr,
+                        volume: Math.round(pVol),
+                        status: !!(ps.finished_at || ps.end_time) ? 'finished' : 'in_progress',
+                        sessionId: ps.id
+                    });
+                }));
+            }
+
             setWorkout({
                 id: session.id,
                 user_id: session.user_id,
@@ -373,7 +483,8 @@ export default function WorkoutDetailPage() {
                 partner_status: partnerStatus,
                 partner_exercises: partnerExercises,
                 partner_volume: partnerVol,
-                partner_duration_minutes: partnerDuration
+                partner_duration_minutes: partnerDuration,
+                room_participants: roomParticipants.length > 0 ? roomParticipants : undefined
             });
 
             setLoading(false);
@@ -533,13 +644,18 @@ export default function WorkoutDetailPage() {
                             </button>
                             <button
                                 onClick={() => {
-                                    if (workout.partner_status === 'in_progress') {
-                                        toast.error(`¡${workout.partner_name} aún está entrenando! Espera a que termine.`);
+                                    // Allow joint view when all participants have finished OR when room_participants has data
+                                    const hasRoomData = workout.room_participants && workout.room_participants.length > 0;
+                                    const allDone = hasRoomData
+                                        ? workout.room_participants!.every(p => p.status === 'finished')
+                                        : workout.partner_status !== 'in_progress';
+                                    if (!allDone && !hasRoomData) {
+                                        toast.error('Espera a que todos finalicen.');
                                     } else {
                                         setViewMode('joint');
                                     }
                                 }}
-                                className={`flex-1 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${workout.partner_status === 'in_progress' ? 'opacity-40 cursor-not-allowed' : ''} ${viewMode === 'joint' ? 'bg-gradient-to-r from-yellow-500 to-amber-500 text-black shadow-lg font-black' : 'text-neutral-400 hover:text-white'}`}
+                                className={`flex-1 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${viewMode === 'joint' ? 'bg-gradient-to-r from-yellow-500 to-amber-500 text-black shadow-lg font-black' : 'text-neutral-400 hover:text-white'}`}
                             >
                                 Historial Conjunto 🤝
                             </button>
@@ -580,9 +696,16 @@ export default function WorkoutDetailPage() {
 
                 {viewMode === 'joint' && (
                     (() => {
+                        // Use room_participants (all users) if available, else fall back to direct partner
+                        const allOtherParticipants = workout.room_participants && workout.room_participants.length > 0
+                            ? workout.room_participants
+                            : (workout.partner_exercises && workout.partner_exercises.length > 0
+                                ? [{ userId: workout.partner_id || '', name: workout.partner_name || 'Compañero', exercises: workout.partner_exercises || [], volume: workout.partner_volume || 0, status: workout.partner_status || 'finished', sessionId: workout.partner_session_id || '' } as RoomParticipant]
+                                : []);
+
                         const allExerciseIds = Array.from(new Set([
                             ...workout.exercises.map(e => e.exercise_id),
-                            ...(workout.partner_exercises || []).map(e => e.exercise_id)
+                            ...allOtherParticipants.flatMap(p => p.exercises.map(e => e.exercise_id))
                         ]));
 
                         if (allExerciseIds.length === 0) {
@@ -594,18 +717,40 @@ export default function WorkoutDetailPage() {
                             );
                         }
 
+                        const playerColors = ['text-gym-primary', 'text-blue-400', 'text-purple-400', 'text-green-400', 'text-orange-400'];
+
                         return allExerciseIds.map((exId) => {
                             const myEx = workout.exercises.find(e => e.exercise_id === exId);
-                            const partnerEx = (workout.partner_exercises || []).find(e => e.exercise_id === exId);
-                            const name = myEx?.exercise_name || partnerEx?.exercise_name || 'Ejercicio Desconocido';
-                            const muscle = myEx?.muscle_group || partnerEx?.muscle_group || 'General';
+                            const name = myEx?.exercise_name
+                                || allOtherParticipants.find(p => p.exercises.find(e => e.exercise_id === exId))?.exercises.find(e => e.exercise_id === exId)?.exercise_name
+                                || 'Ejercicio Desconocido';
+                            const muscle = myEx?.muscle_group
+                                || allOtherParticipants.find(p => p.exercises.find(e => e.exercise_id === exId))?.exercises.find(e => e.exercise_id === exId)?.muscle_group
+                                || 'General';
+
+                            // All participants including me, each as { name, ex, colorClass }
+                            const allParticipantsForEx = [
+                                { name: 'Yo', ex: myEx, color: playerColors[0], isMine: true },
+                                ...allOtherParticipants.map((p, idx) => ({
+                                    name: p.name,
+                                    ex: p.exercises.find(e => e.exercise_id === exId),
+                                    color: playerColors[(idx + 1) % playerColors.length],
+                                    isMine: false
+                                }))
+                            ];
+
+                            const gridCols = allParticipantsForEx.length === 2
+                                ? 'grid-cols-1 md:grid-cols-2'
+                                : allParticipantsForEx.length === 3
+                                    ? 'grid-cols-1 md:grid-cols-3'
+                                    : 'grid-cols-2 md:grid-cols-4';
 
                             return (
                                 <div key={exId} className="bg-neutral-900 border border-neutral-800 rounded-3xl overflow-hidden shadow-2xl relative">
                                     {/* Header */}
-                                    <div className="p-6 border-b border-neutral-800 flex justify-between items-center bg-neutral-900/50 backdrop-blur-sm">
+                                    <div className="p-4 md:p-6 border-b border-neutral-800 flex flex-wrap justify-between items-center bg-neutral-900/50 backdrop-blur-sm gap-3">
                                         <div>
-                                            <h3 className="text-xl md:text-2xl font-black text-white italic uppercase tracking-tight mb-2">
+                                            <h3 className="text-lg md:text-2xl font-black text-white italic uppercase tracking-tight mb-1">
                                                 {name}
                                             </h3>
                                             <span className="inline-flex items-center gap-1.5 bg-neutral-800 text-neutral-400 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
@@ -613,51 +758,34 @@ export default function WorkoutDetailPage() {
                                                 {muscle}
                                             </span>
                                         </div>
-                                        <div className="text-right flex gap-4">
-                                            <div>
-                                                <div className="text-lg font-black text-gym-primary font-mono tracking-tighter">
-                                                    {myEx?.sets.reduce((sum, set) => sum + (set.weight_kg * set.reps), 0).toFixed(0) || '0'}
-                                                    <span className="text-[10px] text-neutral-500 ml-0.5 font-sans font-bold">KG</span>
+                                        <div className="flex gap-3 flex-wrap">
+                                            {allParticipantsForEx.map((p, idx) => (
+                                                <div key={idx} className="text-right">
+                                                    <div className={`text-base font-black ${p.color} font-mono tracking-tighter`}>
+                                                        {p.ex?.sets.reduce((sum, s) => sum + (s.weight_kg * s.reps), 0).toFixed(0) || '—'}
+                                                        {p.ex && <span className="text-[9px] text-neutral-500 ml-0.5 font-sans font-bold">kg</span>}
+                                                    </div>
+                                                    <div className="text-[8px] text-neutral-500 font-bold uppercase tracking-widest truncate max-w-[60px]">{p.name.substring(0, 8)}</div>
                                                 </div>
-                                                <div className="text-[8px] text-neutral-500 font-bold uppercase tracking-widest">Mi Vol</div>
-                                            </div>
-                                            <div className="border-l border-neutral-800 pl-4">
-                                                <div className="text-lg font-black text-blue-400 font-mono tracking-tighter">
-                                                    {partnerEx?.sets.reduce((sum, set) => sum + (set.weight_kg * set.reps), 0).toFixed(0) || '0'}
-                                                    <span className="text-[10px] text-neutral-500 ml-0.5 font-sans font-bold">KG</span>
-                                                </div>
-                                                <div className="text-[8px] text-neutral-500 font-bold uppercase tracking-widest">{workout.partner_name?.substring(0, 8)}</div>
-                                            </div>
+                                            ))}
                                         </div>
                                     </div>
 
-                                    {/* Side by side comparison layout */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-neutral-800">
-                                        {/* My Sets */}
-                                        <div className="p-4 space-y-3">
-                                            <div className="text-xs font-black text-gym-primary uppercase tracking-widest px-2 flex justify-between">
-                                                <span>Mis Series ⚡</span>
-                                                <span className="text-[10px] text-neutral-500 font-normal lowercase">({myEx?.sets.length || 0} series)</span>
+                                    {/* Per-participant sets columns */}
+                                    <div className={`grid ${gridCols} divide-y md:divide-y-0 md:divide-x divide-neutral-800`}>
+                                        {allParticipantsForEx.map((p, idx) => (
+                                            <div key={idx} className="p-3 md:p-4 space-y-2">
+                                                <div className={`text-[10px] font-black ${p.color} uppercase tracking-widest px-2 flex justify-between`}>
+                                                    <span>{p.isMine ? 'Yo ⚡' : `${p.name.substring(0, 10)} ⚔️`}</span>
+                                                    <span className="text-neutral-500 font-normal lowercase">({p.ex?.sets.length || 0} sets)</span>
+                                                </div>
+                                                {p.ex ? (
+                                                    <SetsTableCompact exercise={p.ex} workoutStartedAt={workout.started_at} isMine={p.isMine} />
+                                                ) : (
+                                                    <div className="text-center py-4 text-[10px] text-neutral-700 italic font-bold uppercase tracking-wider">— no registró —</div>
+                                                )}
                                             </div>
-                                            {myEx ? (
-                                                <SetsTableCompact exercise={myEx} workoutStartedAt={workout.started_at} isMine={true} />
-                                            ) : (
-                                                <div className="text-center py-6 text-xs text-neutral-600 italic">No realizado</div>
-                                            )}
-                                        </div>
-
-                                        {/* Partner Sets */}
-                                        <div className="p-4 space-y-3">
-                                            <div className="text-xs font-black text-blue-400 uppercase tracking-widest px-2 flex justify-between">
-                                                <span>{workout.partner_name} ⚔️</span>
-                                                <span className="text-[10px] text-neutral-500 font-normal lowercase">({partnerEx?.sets.length || 0} series)</span>
-                                            </div>
-                                            {partnerEx ? (
-                                                <SetsTableCompact exercise={partnerEx} workoutStartedAt={workout.started_at} isMine={false} />
-                                            ) : (
-                                                <div className="text-center py-6 text-xs text-neutral-600 italic">No realizado</div>
-                                            )}
-                                        </div>
+                                        ))}
                                     </div>
                                 </div>
                             );
