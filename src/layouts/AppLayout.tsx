@@ -481,6 +481,15 @@ const notificationSeen = useRef<Set<string>>(new Set());
             }, (payload) => {
                 const newNotification = payload.new;
                 console.log("🔔 Real-time notification received:", newNotification);
+
+                // Guard: Supabase Realtime may fire INSERT events to the sender too when the
+                // RLS SELECT policy includes `data->>'sender_id' = auth.uid()`. We only want
+                // to react to notifications that are actually ADDRESSED to the current user.
+                if (newNotification.user_id !== user.id) {
+                    console.warn('🔔 Notification not addressed to current user — ignoring (sender leak):', newNotification.id);
+                    return;
+                }
+
                 // Deduplicate notifications by ID
                 if (newNotification.id) {
                     if (notificationSeen.current.has(newNotification.id)) {

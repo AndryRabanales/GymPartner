@@ -746,8 +746,8 @@ const SetsTableCompact = ({ exercise, workoutStartedAt, isMine }: { exercise: Ex
                             {exercise.metrics?.hasWeight && (
                                 <div className="flex-1 min-w-[50px] font-mono font-bold text-white text-xs">
                                     {set.weightUnit === 'lb'
-                                        ? `${(set.weight_kg * 2.20462).toFixed(1)} lb`
-                                        : `${parseFloat(set.weight_kg.toFixed(2))} kg`
+                                        ? `${Math.round(set.weight_kg * 2.20462)} lb`
+                                        : `${parseFloat(set.weight_kg.toFixed(1))} kg`
                                     }
                                 </div>
                             )}

@@ -163,37 +163,57 @@ export const FriendsPage = () => {
 
         const friendUserId = friend.other_user.id;
         const activeSess = friend.activeSession;
+        const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
 
-        // DUAL-LAYER RESOLUTION:
-        // 1. Local resolution (works immediately, 100% immune to database latency/RLS)
-        let roomSessionId = activeSess.partner_session_id || activeSess.id;
-        let localHostId = activeSess.user_id;
+        // ── Step 1: Identify candidate host from local session data ──────────
+        // Rules:
+        //   • If the found session belongs to someone OTHER than the friend → that person is the host.
+        //   • If the session belongs to the friend AND has partner_session_id → friend is a guest,
+        //     partner_id holds the host's user_id.
+        //   • If the session belongs to the friend AND has partner_id but no partner_session_id yet
+        //     (sessions not fully linked) → partner_id is still the other party; we verify below.
+        //   • Otherwise the friend is the solo host.
+        let candidateHostId: string;
+        let candidateRoomId: string;
 
-        // If the active session is a guest session (it belongs to the friend but points to a partner session)
-        if (activeSess.user_id === friendUserId && activeSess.partner_session_id) {
-            roomSessionId = activeSess.partner_session_id;
-            localHostId = activeSess.partner_id;
-        } 
-        // If the active session belongs to someone else (the host) but our friend is the partner in it
-        else if (activeSess.user_id !== friendUserId) {
-            roomSessionId = activeSess.id;
-            localHostId = activeSess.user_id;
+        if (activeSess.user_id !== friendUserId) {
+            // Session returned belongs to another user — that user is the host
+            candidateHostId = activeSess.user_id;
+            candidateRoomId = activeSess.id;
+        } else if (activeSess.is_multiplayer && activeSess.partner_id) {
+            // Friend's own session but it's multiplayer — partner_id is the other party.
+            // If partner_session_id is set, friend is a confirmed guest; if not, we still
+            // treat partner_id as the host candidate and verify via DB.
+            candidateHostId = activeSess.partner_id;
+            candidateRoomId = activeSess.partner_session_id || activeSess.id;
+        } else {
+            // Friend is the solo/room host
+            candidateHostId = activeSess.user_id;
+            candidateRoomId = activeSess.id;
         }
 
-        // 2. Database verification layer (as an extra check, falling back to localHostId on error or RLS block)
-        let hostId = localHostId;
+        // ── Step 2: DB verification — query the candidate host's active session ──
+        // We always look up by user_id, NOT by session ID, so we are immune to
+        // partner_session_id not being set yet (race window after guest joins).
+        let hostId = candidateHostId;
+        let roomSessionId = candidateRoomId;
         try {
-            const { data: mainSession } = await supabase
+            const { data: hostSess } = await supabase
                 .from('workout_sessions')
-                .select('user_id')
-                .eq('id', roomSessionId)
+                .select('id, user_id')
+                .eq('user_id', candidateHostId)
+                .is('finished_at', null)
+                .gt('started_at', twelveHoursAgo)
+                .order('started_at', { ascending: false })
+                .limit(1)
                 .maybeSingle();
-            
-            if (mainSession && mainSession.user_id) {
-                hostId = mainSession.user_id;
+
+            if (hostSess?.user_id) {
+                hostId = hostSess.user_id;
+                roomSessionId = hostSess.id;
             }
         } catch (e) {
-            console.warn("Failed to query main session host, falling back to local host ID:", e);
+            console.warn("Failed to query host session, using candidate:", e);
         }
 
         if (hostId === user.id) {
@@ -201,25 +221,16 @@ export const FriendsPage = () => {
             return;
         }
 
-        // Obtain host's username to display to the user
-        const { data: hostProfile } = await supabase
-            .from('profiles')
-            .select('username')
-            .eq('id', hostId)
-            .single();
+        // Fetch names for display and notification
+        const [hostProfileRes, myProfileRes] = await Promise.all([
+            supabase.from('profiles').select('username').eq('id', hostId).single(),
+            supabase.from('profiles').select('username').eq('id', user.id).single(),
+        ]);
 
-        const hostName = hostProfile?.username || friend.other_user.username;
+        const hostName = hostProfileRes.data?.username || friend.other_user.username;
+        const displayName = myProfileRes.data?.username || 'Un amigo';
 
-        // Obtain our user name for notification
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('username')
-            .eq('id', user.id)
-            .single();
-            
-        const displayName = profile?.username || 'Un amigo';
-
-        // Send a coop_join_request notification ALWAYS to the host of the workout session
+        // Send a coop_join_request notification ALWAYS to the confirmed host
         const joinSuccess = await notificationService.createNotification(hostId, {
             type: 'coop_join_request',
             title: `🔥 Solicitud de Unión`,

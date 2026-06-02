@@ -46,21 +46,27 @@ export const WorkoutCatalog = ({ selected, onToggle, onClose }: Props) => {
     );
 
     // ── Helpers ──────────────────────────────────────────────────────────────
-    const getVariantIdFor = (base: BaseExercise): string =>
-        variantPrefs[base.id] ?? base.variants[0].id;
-
-    const getActiveVariant = (base: BaseExercise): ExerciseVariant => {
-        const id = getVariantIdFor(base);
-        return base.variants.find(v => v.id === id) ?? base.variants[0];
-    };
-
     const vid = (seedName: string) => `virtual-${seedName}`;
 
-    const getSeedName = (base: BaseExercise): string =>
-        getActiveVariant(base).seedName;
+    // Source of truth: which variant of this base exercise is currently in the selection set.
+    // Falls back to saved preference, then to the first variant.
+    const getActiveVariant = (base: BaseExercise): ExerciseVariant => {
+        for (const variant of base.variants) {
+            if (selected.has(vid(variant.seedName))) return variant;
+        }
+        const prefId = variantPrefs[base.id];
+        if (prefId) {
+            const pref = base.variants.find(v => v.id === prefId);
+            if (pref) return pref;
+        }
+        return base.variants[0];
+    };
+
+    const isVariantSelected = (variant: ExerciseVariant): boolean =>
+        selected.has(vid(variant.seedName));
 
     const isBaseSelected = (base: BaseExercise): boolean =>
-        selected.has(vid(getSeedName(base)));
+        base.variants.some(v => selected.has(vid(v.seedName)));
 
     const handleBaseClick = (base: BaseExercise) => {
         if (base.variants.length === 1) {
@@ -72,16 +78,19 @@ export const WorkoutCatalog = ({ selected, onToggle, onClose }: Props) => {
     };
 
     const handleVariantPick = (base: BaseExercise, variant: ExerciseVariant) => {
-        // Deselect old variant if was selected
-        const oldVid = vid(getSeedName(base));
-        if (selected.has(oldVid)) onToggle(oldVid);
+        // Deselect ALL other variants of this base exercise that are currently selected
+        base.variants.forEach(v => {
+            if (v.id !== variant.id && selected.has(vid(v.seedName))) {
+                onToggle(vid(v.seedName));
+            }
+        });
 
-        // Update preference
+        // Save preference
         saveVariantPref(base.id, variant.id);
         setVariantPrefs(prev => ({ ...prev, [base.id]: variant.id }));
 
-        // Select new variant
-        if (!selected.has(vid(variant.seedName))) onToggle(vid(variant.seedName));
+        // Toggle the chosen variant (select if not selected, deselect if already selected)
+        onToggle(vid(variant.seedName));
 
         setPickingVariantFor(null);
     };
@@ -138,8 +147,12 @@ export const WorkoutCatalog = ({ selected, onToggle, onClose }: Props) => {
                         {/* Curated base exercises */}
                         <div className="space-y-2 mb-4">
                             {curatedForMuscle.map(base => {
-                                const variant = getActiveVariant(base);
                                 const isSel = isBaseSelected(base);
+                                const selectedVariants = base.variants.filter(v => isVariantSelected(v));
+                                const activeVariant = getActiveVariant(base);
+                                const subtitleLabel = selectedVariants.length > 1
+                                    ? `${selectedVariants.length} variantes`
+                                    : activeVariant.label;
                                 return (
                                     <button
                                         key={base.id}
@@ -158,7 +171,7 @@ export const WorkoutCatalog = ({ selected, onToggle, onClose }: Props) => {
                                             {base.variants.length > 1 && (
                                                 <div className="flex items-center gap-1 mt-0.5">
                                                     <span className="text-neutral-500 text-[10px] font-bold uppercase">
-                                                        {variant.label}
+                                                        {subtitleLabel}
                                                     </span>
                                                     <ChevronDown size={10} className="text-neutral-600" />
                                                 </div>
@@ -267,21 +280,23 @@ export const WorkoutCatalog = ({ selected, onToggle, onClose }: Props) => {
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                             {pickingVariantFor.variants.map(variant => {
-                                const isCurrent = getVariantIdFor(pickingVariantFor) === variant.id;
-                                const isSel = selected.has(variant.seedName);
+                                const isSel = isVariantSelected(variant);
+                                const isDefault = !isBaseSelected(pickingVariantFor) && (variantPrefs[pickingVariantFor.id] ?? pickingVariantFor.variants[0].id) === variant.id;
                                 return (
                                     <button
                                         key={variant.id}
                                         onClick={() => handleVariantPick(pickingVariantFor, variant)}
                                         className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all
-                                            ${isCurrent || isSel
+                                            ${isSel
                                                 ? 'bg-gym-primary/15 border-gym-primary text-gym-primary'
-                                                : 'bg-neutral-800 border-neutral-700 text-white hover:border-neutral-500'
+                                                : isDefault
+                                                    ? 'bg-neutral-800/80 border-neutral-600 text-neutral-300'
+                                                    : 'bg-neutral-800 border-neutral-700 text-white hover:border-neutral-500'
                                             }`}
                                     >
                                         <span className="text-2xl">{variant.icon}</span>
                                         <span className="text-xs font-bold">{variant.label}</span>
-                                        {(isCurrent || isSel) && (
+                                        {isSel && (
                                             <Check size={12} className="text-gym-primary" strokeWidth={3} />
                                         )}
                                     </button>

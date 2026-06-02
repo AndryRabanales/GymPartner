@@ -262,6 +262,7 @@ export const WorkoutSession = () => {
     const cachedCoop = cachedCoopStr ? JSON.parse(cachedCoopStr) : {};
 
     const [isMultiplayer, setIsMultiplayer] = useState<boolean>(navState.isMultiplayer ?? cachedCoop.isMultiplayer ?? false);
+    const isMultiplayerRef = useRef<boolean>(navState.isMultiplayer ?? cachedCoop.isMultiplayer ?? false);
     const [multiplayerMode, setMultiplayerMode] = useState<'conjunto' | 'separado' | null>(navState.multiplayerMode ?? cachedCoop.multiplayerMode ?? null);
     const [partnerId, setPartnerId] = useState<string | null>(navState.partnerId ?? cachedCoop.partnerId ?? null);
     const [chatId, setChatId] = useState<string | null>(navState.chatId ?? cachedCoop.chatId ?? null);
@@ -269,6 +270,7 @@ export const WorkoutSession = () => {
     const [isInviter, setIsInviter] = useState<boolean>(navState.isInviter ?? cachedCoop.isInviter ?? true);
     
     useEffect(() => {
+        isMultiplayerRef.current = isMultiplayer;
         if (isMultiplayer) {
             isInviterRef.current = isInviter; // keep ref in sync
             localStorage.setItem('ginx_coop_state', JSON.stringify({ isMultiplayer, multiplayerMode, partnerId, chatId, partnerSessionId, isInviter }));
@@ -477,7 +479,10 @@ export const WorkoutSession = () => {
         return () => {
             const sessId = sessionIdRef.current;
             const exercisesCount = activeExercisesRef.current.length;
-            if (sessId && exercisesCount === 0) {
+            // Never delete a guest's session on unmount: guests start with 0 exercises and
+            // wait for sync_state from the host. Deleting here would break the room.
+            const isGuest = isMultiplayerRef.current && !isInviterRef.current;
+            if (sessId && exercisesCount === 0 && !isGuest) {
                 console.log("🧹 Unmount: Deleting empty/unstarted workout session:", sessId);
                 supabase.from('workout_sessions').delete().eq('id', sessId).then(() => {
                     localStorage.removeItem(`workout_draft_${sessId}`);
@@ -647,35 +652,6 @@ export const WorkoutSession = () => {
                 }
                 if (newPresences && newPresences.length > 0 && activeExercisesRef.current.length > 0) {
                     console.log('👥 New user joined presence. Hydrating them with active exercises...');
-                    channel.send({
-                        type: 'broadcast',
-                        event: 'sync_state',
-                        payload: { 
-                            exercises: activeExercisesRef.current, 
-                            sender: user.id,
-                            knownParticipants: participantsRef.current
-                        }
-                    }).catch(e => console.error(e));
-                    
-                    if (sessionIdRef.current) {
-                        channel.send({
-                            type: 'broadcast',
-                            event: 'sync_session_id',
-                            payload: { 
-                                sessionId: sessionIdRef.current, 
-                                startTime: startTimeRef.current?.toISOString(), 
-                                sender: user.id 
-                            }
-                        }).catch(e => console.error(e));
-                    }
-                }
-            })
-            .on('broadcast', { event: 'request_hydration' }, (payload) => {
-                const { sender } = payload.payload;
-                if (sender === user.id) return;
-                
-                if (activeExercisesRef.current.length > 0) {
-                    console.log('📢 Host sending hydration to guest:', sender);
                     channel.send({
                         type: 'broadcast',
                         event: 'sync_state',
@@ -1306,20 +1282,20 @@ export const WorkoutSession = () => {
     const toDisplayWeight = (kgVal: number, unit: 'kg' | 'lb' = 'kg'): string => {
         if (!kgVal) return '';
         if (unit === 'kg') {
-            // Avoid showing many decimals from lb→kg conversions (e.g. 11.33980925 → "11.34")
-            return parseFloat(kgVal.toFixed(2)).toString();
+            return parseFloat(kgVal.toFixed(1)).toString();
         }
-        // kg → lb: always show exactly 1 decimal (e.g. 25.0, 45.5, 100.0)
-        return (kgVal * 2.20462).toFixed(1);
+        // lb: always integer — no decimals ever
+        return Math.round(kgVal * 2.20462).toString();
     };
 
     const toInternalWeight = (inputVal: string, unit: 'kg' | 'lb' = 'kg'): number => {
-        const num = parseFloat(inputVal);
+        const num = parseFloat(inputVal.replace(',', '.'));
         if (isNaN(num)) return 0;
-        if (unit === 'kg') return num;
-        // lb -> kg (1 lb = 0.453592 kg)
-        // Store precisely
-        return num / 2.20462;
+        const maxInput = unit === 'lb' ? 1999 : 999;
+        const capped = Math.min(num, maxInput);
+        if (unit === 'kg') return capped;
+        // lb: round to integer first, then store as precise kg
+        return Math.round(capped) / 2.20462;
     };
 
     // Toggle Unit for Specific Exercise
@@ -4430,7 +4406,10 @@ export const WorkoutSession = () => {
                                                                                 <div className="min-w-[70px] w-[70px]">
                                                                                     <input
                                                                                         type="number"
-                                                                                        inputMode="decimal"
+                                                                                        inputMode={(exercise.weightUnit || 'kg') === 'lb' ? 'numeric' : 'decimal'}
+                                                                                        step={(exercise.weightUnit || 'kg') === 'lb' ? '1' : 'any'}
+                                                                                        min={0}
+                                                                                        max={(exercise.weightUnit || 'kg') === 'lb' ? 1999 : 999}
                                                                                         disabled={inputDisabled}
                                                                                         data-player-id={p.id}
                                                                                         data-set-index={setIndex}
