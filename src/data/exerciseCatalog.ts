@@ -43,7 +43,6 @@ const PECHO: BaseExercise[] = [
             { id: 'barra',      label: 'Barra',       seedName: 'Press Banca Plano (Barra)',      icon: '🏋️‍♂️' },
             { id: 'mancuernas', label: 'Mancuernas',  seedName: 'Press Banca Plano (Mancuernas)', icon: '🏋️' },
             { id: 'maquina',    label: 'Máquina',     seedName: 'Press de Pecho (Máquina)',       icon: '🤖' },
-            { id: 'cable',      label: 'Polea/Cable', seedName: 'Press Plano (Polea/Cable)',      icon: '⛓️' },
             { id: 'smith',      label: 'Smith',       seedName: 'Smith Press Plano',              icon: '⚙️' },
         ],
     },
@@ -429,9 +428,8 @@ const TRICEPS: BaseExercise[] = [
         muscle: 'TRÍCEPS', icon: '🏇',
         metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
         variants: [
-            { id: 'cuerda',    label: 'Cuerda',       seedName: 'Extensiones de Tríceps (Polea/Cuerda)',     icon: '🏇' },
-            { id: 'barra',     label: 'Barra Recta',  seedName: 'Extensiones de Tríceps (Barra Recta)',      icon: '🦯' },
-            { id: 'una_mano',  label: 'A Una Mano',   seedName: 'Extensión de Tríceps con Cable (Una Mano)', icon: '🏇' },
+            { id: 'cuerda',   label: 'Cuerda',     seedName: 'Extensiones de Tríceps (Polea/Cuerda)',     icon: '🏇' },
+            { id: 'una_mano', label: 'A Una Mano', seedName: 'Extensión de Tríceps con Cable (Una Mano)', icon: '🏇' },
         ],
     },
     {

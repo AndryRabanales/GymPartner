@@ -59,7 +59,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "ACCESSORY",
         "targetMuscle": "Abdominales",
         "icon": "🥨",
-        "image_url": "/ejercicioimg/ejercicios/Abdomen/AbdominalesInversos.png",
+        "image_url": "/ejercicioimg/ejercicios/Abdomen/Inversos/AbdominalesInversos.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -87,7 +87,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "ACCESSORY",
         "targetMuscle": "Abdominales",
         "icon": "🥨",
-        "image_url": "/ejercicioimg/ejercicios/Abdomen/CrunchAbdominal.png",
+        "image_url": "/ejercicioimg/ejercicios/Abdomen/Crunch/CrunchAbdominal.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -101,7 +101,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "STRENGTH_MACHINE",
         "targetMuscle": "Abdominales",
         "icon": "🤖",
-        "image_url": "/ejercicioimg/ejercicios/Abdomen/CrunchAbdominalEnMaquina.png",
+        "image_url": "/ejercicioimg/ejercicios/Abdomen/Crunch/CrunchAbdominalEnMaquina.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -115,7 +115,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "CABLE",
         "targetMuscle": "Abdominales",
         "icon": "🙇",
-        "image_url": "/ejercicioimg/ejercicios/Abdomen/CrunchPoleaAlta.png",
+        "image_url": "/ejercicioimg/ejercicios/Abdomen/Crunch/CrunchPoleaAlta.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -143,7 +143,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "ACCESSORY",
         "targetMuscle": "Abdominales",
         "icon": "🪵",
-        "image_url": "/ejercicioimg/ejercicios/Abdomen/Plancha.png",
+        "image_url": "/ejercicioimg/ejercicios/Abdomen/plancha/Plancha.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -157,7 +157,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "CABLE",
         "targetMuscle": "Bíceps",
         "icon": "⛓️",
-        "image_url": "/ejercicioimg/ejercicios/Biceps/Curl Martillo cuerdas .png",
+        "image_url": "/ejercicioimg/ejercicios/Biceps/Martillo/Curl Martillo cuerdas .png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -171,7 +171,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Bíceps",
         "icon": "🔨",
-        "image_url": "/ejercicioimg/ejercicios/Biceps/Curl Martillo Mancuernas.png",
+        "image_url": "/ejercicioimg/ejercicios/Biceps/Martillo/Curl Martillo Mancuernas.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -185,7 +185,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Bíceps",
         "icon": "💪",
-        "image_url": "/ejercicioimg/ejercicios/Biceps/CurlDeBiceps(1).png",
+        "image_url": "/ejercicioimg/ejercicios/Biceps/CurlNormal/CurlDeBiceps(1).png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -199,7 +199,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Bíceps",
         "icon": "🥖",
-        "image_url": "/ejercicioimg/ejercicios/Biceps/CurlDeBiceps.png",
+        "image_url": "/ejercicioimg/ejercicios/Biceps/CurlNormal/CurlDeBiceps.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -227,7 +227,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "CABLE",
         "targetMuscle": "Bíceps",
         "icon": "🐍",
-        "image_url": "/ejercicioimg/ejercicios/Biceps/CurlDeBicepsEnPolea.png",
+        "image_url": "/ejercicioimg/ejercicios/Biceps/CurlNormal/CurlDeBicepsEnPolea.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -241,7 +241,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Bíceps",
         "icon": "🙏",
-        "image_url": "/ejercicioimg/ejercicios/Biceps/CurlDeBicepsPredicadorBarra.png",
+        "image_url": "/ejercicioimg/ejercicios/Biceps/Predicador/CurlDeBicepsPredicadorBarra.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -255,7 +255,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "STRENGTH_MACHINE",
         "targetMuscle": "Bíceps",
         "icon": "🤖",
-        "image_url": "/ejercicioimg/ejercicios/Biceps/CurlDeBicepsPredicadorMaquina.png",
+        "image_url": "/ejercicioimg/ejercicios/Biceps/Predicador/CurlDeBicepsPredicadorMaquina.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -283,7 +283,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "CARDIO",
         "targetMuscle": "Cardio",
         "icon": "🚴",
-        "image_url": "/ejercicioimg/ejercicios/Cardio/CardioBicicleta.png",
+        "image_url": "/ejercicioimg/ejercicios/Cardio/Caminadoras/CardioBicicleta.png",
         "metrics": {
             "weight": false,
             "reps": false,
@@ -297,7 +297,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "CARDIO",
         "targetMuscle": "Cardio",
         "icon": "⛷️",
-        "image_url": "/ejercicioimg/ejercicios/Cardio/CardioEliptica.png",
+        "image_url": "/ejercicioimg/ejercicios/Cardio/Caminadoras/CardioEliptica.png",
         "metrics": {
             "weight": false,
             "reps": false,
@@ -311,7 +311,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "CARDIO",
         "targetMuscle": "Cardio",
         "icon": "🏃",
-        "image_url": "/ejercicioimg/ejercicios/Cardio/CardioEnCinta.png",
+        "image_url": "/ejercicioimg/ejercicios/Cardio/Caminadoras/CardioEnCinta.png",
         "metrics": {
             "weight": false,
             "reps": false,
@@ -325,7 +325,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "CARDIO",
         "targetMuscle": "Cardio",
         "icon": "🧗",
-        "image_url": "/ejercicioimg/ejercicios/Cardio/CardioEscalera.png",
+        "image_url": "/ejercicioimg/ejercicios/Cardio/Caminadoras/CardioEscalera.png",
         "metrics": {
             "weight": false,
             "reps": false,
@@ -367,7 +367,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "STRENGTH_MACHINE",
         "targetMuscle": "Espalda",
         "icon": "🤖",
-        "image_url": "/ejercicioimg/ejercicios/Espalda/Dominadas Asistidas Máquina.png",
+        "image_url": "/ejercicioimg/ejercicios/Espalda/Dominadas/Dominadas Asistidas Máquina.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -381,7 +381,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "ACCESSORY",
         "targetMuscle": "Espalda",
         "icon": "🧗",
-        "image_url": "/ejercicioimg/ejercicios/Espalda/Dominadas Pullups.png",
+        "image_url": "/ejercicioimg/ejercicios/Espalda/Dominadas/Dominadas Pullups.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -395,7 +395,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "CABLE",
         "targetMuscle": "Espalda",
         "icon": "🔻",
-        "image_url": "/ejercicioimg/ejercicios/Espalda/Jalón al Pecho Agarre Estrecho.png",
+        "image_url": "/ejercicioimg/ejercicios/Espalda/Jalon/Jalón al Pecho Agarre Estrecho.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -409,7 +409,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "CABLE",
         "targetMuscle": "Espalda",
         "icon": "🔻",
-        "image_url": "/ejercicioimg/ejercicios/Espalda/Jalón al Pecho Polea Alta.png",
+        "image_url": "/ejercicioimg/ejercicios/Espalda/Jalon/Jalón al Pecho Polea Alta.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -423,7 +423,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Espalda",
         "icon": "🧟",
-        "image_url": "/ejercicioimg/ejercicios/Espalda/Peso Muerto Deadlift.png",
+        "image_url": "/ejercicioimg/ejercicios/Isquiotibiales/Peso Muerto/Peso Muerto Deadlift.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -451,7 +451,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Espalda",
         "icon": "🚣",
-        "image_url": "/ejercicioimg/ejercicios/Espalda/Remo con Barra Pendlay.png",
+        "image_url": "/ejercicioimg/ejercicios/Espalda/Remo/Remo con Barra Pendlay.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -465,7 +465,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Espalda",
         "icon": "🚣",
-        "image_url": "/ejercicioimg/ejercicios/Espalda/Remo con Barra Yates.png",
+        "image_url": "/ejercicioimg/ejercicios/Espalda/Remo/Remo con Barra Yates.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -479,7 +479,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Espalda",
         "icon": "👜",
-        "image_url": "/ejercicioimg/ejercicios/Espalda/Remo con Mancuerna Unilateral.png",
+        "image_url": "/ejercicioimg/ejercicios/Espalda/Remo/Remo con Mancuerna Unilateral.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -493,7 +493,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "STRENGTH_MACHINE",
         "targetMuscle": "Espalda",
         "icon": "🚜",
-        "image_url": "/ejercicioimg/ejercicios/Espalda/Remo en Máquina Pecho Apoyado.png",
+        "image_url": "/ejercicioimg/ejercicios/Espalda/Remo sentado/Remo en Máquina Pecho Apoyado.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -507,7 +507,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Espalda",
         "icon": "⚓",
-        "image_url": "/ejercicioimg/ejercicios/Espalda/Remo en T Barra_Máquina.png",
+        "image_url": "/ejercicioimg/ejercicios/Espalda/Remo/Remo en T Barra_Máquina.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -521,7 +521,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "CABLE",
         "targetMuscle": "Espalda",
         "icon": "🛶",
-        "image_url": "/ejercicioimg/ejercicios/Espalda/Remo Gironda Polea Baja.png",
+        "image_url": "/ejercicioimg/ejercicios/Espalda/Remo sentado/Remo Gironda Polea Baja.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -535,7 +535,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Glúteos",
         "icon": "🌉",
-        "image_url": "/ejercicioimg/ejercicios/Gluteo/HiptrustBarraLibre.png",
+        "image_url": "/ejercicioimg/ejercicios/Gluteo/HipTrust/HiptrustBarraLibre.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -549,7 +549,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "STRENGTH_MACHINE",
         "targetMuscle": "Glúteos",
         "icon": "🌉",
-        "image_url": "/ejercicioimg/ejercicios/Gluteo/HiptrustEnMaquina.png",
+        "image_url": "/ejercicioimg/ejercicios/Gluteo/HipTrust/HiptrustEnMaquina.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -563,7 +563,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "STRENGTH_MACHINE",
         "targetMuscle": "Glúteos",
         "icon": "⚙️",
-        "image_url": "/ejercicioimg/ejercicios/Gluteo/HipTrustEnsMITH.png",
+        "image_url": "/ejercicioimg/ejercicios/Gluteo/HipTrust/HipTrustEnsMITH.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -577,7 +577,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "CABLE",
         "targetMuscle": "Glúteos",
         "icon": "🍑",
-        "image_url": "/ejercicioimg/ejercicios/Gluteo/PatadaDeGluteo.png",
+        "image_url": "/ejercicioimg/ejercicios/Gluteo/Patada/PatadaDeGluteo.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -591,7 +591,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "STRENGTH_MACHINE",
         "targetMuscle": "Glúteos",
         "icon": "🍑",
-        "image_url": "/ejercicioimg/ejercicios/Gluteo/PatadaDeGluteoEnMaquina.png",
+        "image_url": "/ejercicioimg/ejercicios/Gluteo/Patada/PatadaDeGluteoEnMaquina.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -605,7 +605,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Hombro",
         "icon": "🧟‍♂️",
-        "image_url": "/ejercicioimg/ejercicios/Hombro/Elevaciones Frontales Mancuernas.png",
+        "image_url": "/ejercicioimg/ejercicios/Hombro/Elevacion frontal/Elevaciones Frontales Mancuernas.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -619,7 +619,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "CABLE",
         "targetMuscle": "Hombro",
         "icon": "🧟‍♂️",
-        "image_url": "/ejercicioimg/ejercicios/Hombro/Elevaciones Frontales Polea.png",
+        "image_url": "/ejercicioimg/ejercicios/Hombro/Elevacion frontal/Elevaciones Frontales Polea.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -633,7 +633,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Hombro",
         "icon": "🐦",
-        "image_url": "/ejercicioimg/ejercicios/Hombro/Elevaciones Laterales Mancuernas.png",
+        "image_url": "/ejercicioimg/ejercicios/Hombro/elevacion lateral/Elevaciones Laterales Mancuernas.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -647,7 +647,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "STRENGTH_MACHINE",
         "targetMuscle": "Hombro",
         "icon": "🤖",
-        "image_url": "/ejercicioimg/ejercicios/Hombro/Elevaciones Laterales Máquina.png",
+        "image_url": "/ejercicioimg/ejercicios/Hombro/elevacion lateral/Elevaciones Laterales Máquina.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -661,7 +661,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "CABLE",
         "targetMuscle": "Hombro",
         "icon": "🐦",
-        "image_url": "/ejercicioimg/ejercicios/Hombro/Elevaciones Laterales Polea.png",
+        "image_url": "/ejercicioimg/ejercicios/Hombro/elevacion lateral/Elevaciones Laterales Polea.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -703,7 +703,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "STRENGTH_MACHINE",
         "targetMuscle": "Hombro",
         "icon": "🤖",
-        "image_url": "/ejercicioimg/ejercicios/Hombro/Press de Hombros Máquina.png",
+        "image_url": "/ejercicioimg/ejercicios/Hombro/Militar/Press de Hombros Máquina.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -717,7 +717,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Hombro",
         "icon": "💂",
-        "image_url": "/ejercicioimg/ejercicios/Hombro/Press Militar Barra.png",
+        "image_url": "/ejercicioimg/ejercicios/Hombro/Militar/Press Militar Barra.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -731,7 +731,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Hombro",
         "icon": "🏋️",
-        "image_url": "/ejercicioimg/ejercicios/Hombro/Press Militar Mancuernas.png",
+        "image_url": "/ejercicioimg/ejercicios/Hombro/Militar/Press Militar Mancuernas.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -759,7 +759,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "CABLE",
         "targetMuscle": "Pecho",
         "icon": "⚔️",
-        "image_url": "/ejercicioimg/ejercicios/pecho/CrossOverEnPoleaBaja.png",
+        "image_url": "/ejercicioimg/ejercicios/pecho/Crude de polea/CrossOverEnPoleaBaja.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -773,7 +773,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "CABLE",
         "targetMuscle": "Pecho",
         "icon": "⚔️",
-        "image_url": "/ejercicioimg/ejercicios/pecho/CruceDePoleasAltaCrossOver.png",
+        "image_url": "/ejercicioimg/ejercicios/pecho/Crude de polea/CruceDePoleasAltaCrossOver.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -801,7 +801,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "ACCESSORY",
         "targetMuscle": "Pecho",
         "icon": "🏗️",
-        "image_url": "/ejercicioimg/ejercicios/pecho/FondosDips(pecho).png",
+        "image_url": "/ejercicioimg/ejercicios/pecho/Fondos pecho/Fondos Dips.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -815,7 +815,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "STRENGTH_MACHINE",
         "targetMuscle": "Pecho",
         "icon": "🤖",
-        "image_url": "/ejercicioimg/ejercicios/pecho/FondosDipsAsistido(Pecho).png",
+        "image_url": "/ejercicioimg/ejercicios/pecho/Fondos pecho/FondosDipsAsistido(Pecho).png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -829,7 +829,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Pecho",
         "icon": "🏋️‍♂️",
-        "image_url": "/ejercicioimg/ejercicios/pecho/PressBancaPlanoLibre.png",
+        "image_url": "/ejercicioimg/ejercicios/pecho/Plano/PressBancaPlanoLibre.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -843,7 +843,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Pecho",
         "icon": "🏋️",
-        "image_url": "/ejercicioimg/ejercicios/pecho/PressBancaPlanoMancuerna.png",
+        "image_url": "/ejercicioimg/ejercicios/pecho/Plano/PressBancaPlanoMancuerna.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -857,7 +857,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Pecho",
         "icon": "📉",
-        "image_url": "/ejercicioimg/ejercicios/pecho/PressDeclinadoEnBarra.png",
+        "image_url": "/ejercicioimg/ejercicios/pecho/Declinado/PressDeclinadoEnBarra.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -885,7 +885,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Pecho",
         "icon": "📉",
-        "image_url": "/ejercicioimg/ejercicios/pecho/PressDeclinadoMancuerna.png",
+        "image_url": "/ejercicioimg/ejercicios/pecho/Declinado/PressDeclinadoMancuerna.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -899,7 +899,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Pecho",
         "icon": "🏋️‍♂️",
-        "image_url": "/ejercicioimg/ejercicios/pecho/PressInclinadoConBarra.png",
+        "image_url": "/ejercicioimg/ejercicios/pecho/Inclinado/PressInclinadoConBarra.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -913,7 +913,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Pecho",
         "icon": "🏋️",
-        "image_url": "/ejercicioimg/ejercicios/pecho/PressInclinadoConMancuerna.png",
+        "image_url": "/ejercicioimg/ejercicios/pecho/Inclinado/PressInclinadoConMancuerna.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -927,7 +927,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "CABLE",
         "targetMuscle": "Pecho",
         "icon": "⛓️",
-        "image_url": "/ejercicioimg/ejercicios/pecho/PressInclinadoConPolea.png",
+        "image_url": "/ejercicioimg/ejercicios/pecho/Declinado/PressInclinadoConPolea.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -941,7 +941,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "STRENGTH_MACHINE",
         "targetMuscle": "Pecho",
         "icon": "📐",
-        "image_url": "/ejercicioimg/ejercicios/pecho/PressInclinadoEnMaquina.png",
+        "image_url": "/ejercicioimg/ejercicios/pecho/Inclinado/PressInclinadoEnMaquina.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -955,7 +955,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "STRENGTH_MACHINE",
         "targetMuscle": "Pecho",
         "icon": "⚙️",
-        "image_url": "/ejercicioimg/ejercicios/pecho/PressInclinadoEnSmith.png",
+        "image_url": "/ejercicioimg/ejercicios/pecho/Inclinado/PressInclinadoEnSmith.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -969,7 +969,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "STRENGTH_MACHINE",
         "targetMuscle": "Pecho",
         "icon": "🤖",
-        "image_url": "/ejercicioimg/ejercicios/pecho/PressPlanoEnMaquina.png",
+        "image_url": "/ejercicioimg/ejercicios/pecho/Plano/PressPlanoEnMaquina.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -997,7 +997,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "STRENGTH_MACHINE",
         "targetMuscle": "Pecho",
         "icon": "⚙️",
-        "image_url": "/ejercicioimg/ejercicios/pecho/PressPlanoEnSmith.png",
+        "image_url": "/ejercicioimg/ejercicios/pecho/Plano/PressPlanoEnSmith.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -1011,7 +1011,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "STRENGTH_MACHINE",
         "targetMuscle": "Pierna",
         "icon": "🪑",
-        "image_url": "/ejercicioimg/ejercicios/Pierna/Curl Femoral Sentado Máquina.png",
+        "image_url": "/ejercicioimg/ejercicios/Isquiotibiales/Curl Femoral Sentado Máquina.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -1025,7 +1025,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "STRENGTH_MACHINE",
         "targetMuscle": "Pierna",
         "icon": "🥓",
-        "image_url": "/ejercicioimg/ejercicios/Pierna/Curl Femoral Tumbado Máquina.png",
+        "image_url": "/ejercicioimg/ejercicios/Isquiotibiales/Curl Femoral Tumbado Máquina.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -1109,7 +1109,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Pierna",
         "icon": "🇧🇬",
-        "image_url": "/ejercicioimg/ejercicios/Pierna/Sentadilla Bulgara.png",
+        "image_url": "/ejercicioimg/ejercicios/Pierna/Zancadas/Sentadilla Bulgara.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -1123,7 +1123,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Pierna",
         "icon": "🏋️",
-        "image_url": "/ejercicioimg/ejercicios/Pierna/Sentadilla Frontal.png",
+        "image_url": "/ejercicioimg/ejercicios/Pierna/Sentadilla/Sentadilla Frontal.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -1137,7 +1137,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "STRENGTH_MACHINE",
         "targetMuscle": "Pierna",
         "icon": "🪑",
-        "image_url": "/ejercicioimg/ejercicios/Pierna/Sentadilla Hack Máquina.png",
+        "image_url": "/ejercicioimg/ejercicios/Pierna/Sentadilla/Sentadilla Hack Máquina.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -1151,7 +1151,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Pierna",
         "icon": "🍑",
-        "image_url": "/ejercicioimg/ejercicios/Pierna/Sentadilla Libre Barra.png",
+        "image_url": "/ejercicioimg/ejercicios/Pierna/Sentadilla/Sentadilla Libre Barra.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -1165,7 +1165,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "STRENGTH_MACHINE",
         "targetMuscle": "Pierna",
         "icon": "🚶",
-        "image_url": "/ejercicioimg/ejercicios/Pierna/Zancadas con smith.png",
+        "image_url": "/ejercicioimg/ejercicios/Pierna/Zancadas/Zancadas con smith.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -1179,7 +1179,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Pierna",
         "icon": "🚶",
-        "image_url": "/ejercicioimg/ejercicios/Pierna/Zancadas_Lunges con Barra.png",
+        "image_url": "/ejercicioimg/ejercicios/Pierna/Zancadas/Zancadas_Lunges con Barra.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -1193,7 +1193,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Pierna",
         "icon": "🚶",
-        "image_url": "/ejercicioimg/ejercicios/Pierna/Zancadas_Lunges con Mancuernas.png",
+        "image_url": "/ejercicioimg/ejercicios/Pierna/Zancadas/Zancadas_Lunges con Mancuernas.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -1207,7 +1207,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Tríceps",
         "icon": "🏆",
-        "image_url": "/ejercicioimg/ejercicios/Triceps/Copa a dos manos Mancuerna.png",
+        "image_url": "/ejercicioimg/ejercicios/Triceps/copa/Copa a dos manos Mancuerna.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -1221,7 +1221,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Tríceps",
         "icon": "🏆",
-        "image_url": "/ejercicioimg/ejercicios/Triceps/Copa a una mano Mancuerna.png",
+        "image_url": "/ejercicioimg/ejercicios/Triceps/copa/Copa a una mano Mancuerna.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -1249,7 +1249,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "CABLE",
         "targetMuscle": "Tríceps",
         "icon": "🏇",
-        "image_url": "/ejercicioimg/ejercicios/Triceps/Extensiones de Tríceps Cuerda.png",
+        "image_url": "/ejercicioimg/ejercicios/Triceps/Extension tricep/Extensiones de Tríceps Cuerda.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -1277,7 +1277,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "ACCESSORY",
         "targetMuscle": "Tríceps",
         "icon": "🛋️",
-        "image_url": "/ejercicioimg/ejercicios/Triceps/Fondos en Bancos.png",
+        "image_url": "/ejercicioimg/ejercicios/Triceps/Fondos/Fondos en Bancos.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -1291,7 +1291,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "ACCESSORY",
         "targetMuscle": "Tríceps",
         "icon": "🛋️",
-        "image_url": "/ejercicioimg/ejercicios/Triceps/Fondos en Paralelas.png",
+        "image_url": "/ejercicioimg/ejercicios/Triceps/Fondos/Fondos en Paralelas.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -1319,7 +1319,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Tríceps",
         "icon": "🇫🇷",
-        "image_url": "/ejercicioimg/ejercicios/Triceps/Press Francés Barra Z.png",
+        "image_url": "/ejercicioimg/ejercicios/Triceps/Press frances/Press Francés Barra Z.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -1333,7 +1333,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Tríceps",
         "icon": "🇫🇷",
-        "image_url": "/ejercicioimg/ejercicios/Triceps/Press Francés Mancuernas.png",
+        "image_url": "/ejercicioimg/ejercicios/Triceps/Press frances/Press Francés Mancuernas.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -1347,7 +1347,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "CARDIO",
         "targetMuscle": "Cardio",
         "icon": "🚲",
-        "image_url": "/ejercicioimg/ejercicios/Cardio/CardioBicicleta.png",
+        "image_url": "/ejercicioimg/ejercicios/Cardio/Caminadoras/CardioBicicleta.png",
         "metrics": {
             "weight": false,
             "reps": false,
@@ -1361,7 +1361,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "CARDIO",
         "targetMuscle": "Cardio",
         "icon": "🏃",
-        "image_url": "/ejercicioimg/ejercicios/Cardio/CardioEliptica.png",
+        "image_url": "/ejercicioimg/ejercicios/Cardio/Caminadoras/CardioEliptica.png",
         "metrics": {
             "weight": false,
             "reps": false,
@@ -1375,7 +1375,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "CARDIO",
         "targetMuscle": "Cardio",
         "icon": "🏃",
-        "image_url": "/ejercicioimg/ejercicios/Cardio/CardioEnCinta.png",
+        "image_url": "/ejercicioimg/ejercicios/Cardio/Caminadoras/CardioEnCinta.png",
         "metrics": {
             "weight": false,
             "reps": false,
@@ -1389,7 +1389,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "CARDIO",
         "targetMuscle": "Cardio",
         "icon": "🪜",
-        "image_url": "/ejercicioimg/ejercicios/Cardio/CardioEscalera.png",
+        "image_url": "/ejercicioimg/ejercicios/Cardio/Caminadoras/CardioEscalera.png",
         "metrics": {
             "weight": false,
             "reps": false,
@@ -1432,7 +1432,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "CABLE",
         "targetMuscle": "Bíceps",
         "icon": "💪",
-        "image_url": "/ejercicioimg/ejercicios/Biceps/Curl de cable en polea alta de pie.png",
+        "image_url": "/ejercicioimg/ejercicios/Biceps/CurlNormal/CurlDeBicepsEnPolea.png",
         "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
     },
     {
@@ -1440,7 +1440,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "CABLE",
         "targetMuscle": "Bíceps",
         "icon": "💪",
-        "image_url": "/ejercicioimg/ejercicios/Biceps/Curl de cable en polea baja a una mano.png",
+        "image_url": "/ejercicioimg/ejercicios/Biceps/CurlNormal/Curl de cable en polea baja a una mano.png",
         "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
     },
     // ── Abdominales (nuevos) ─────────────────────────────────────────────
@@ -1449,7 +1449,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "ACCESSORY",
         "targetMuscle": "Abdominales",
         "icon": "🥨",
-        "image_url": "/ejercicioimg/ejercicios/Abdomen/Crunch oblicuo.png",
+        "image_url": "/ejercicioimg/ejercicios/Abdomen/Crunch oblicuo/Crunch oblicuo.png",
         "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
     },
     {
@@ -1457,7 +1457,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "ACCESSORY",
         "targetMuscle": "Abdominales",
         "icon": "🦵",
-        "image_url": "/ejercicioimg/ejercicios/Abdomen/Encogimientos de rodillas para abdominales.png",
+        "image_url": "/ejercicioimg/ejercicios/Abdomen/Crunch oblicuo/Encogimientos de rodillas para abdominales.png",
         "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
     },
     {
@@ -1465,7 +1465,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "ACCESSORY",
         "targetMuscle": "Abdominales",
         "icon": "🪵",
-        "image_url": "/ejercicioimg/ejercicios/Abdomen/Plancha con flexión.png",
+        "image_url": "/ejercicioimg/ejercicios/Abdomen/plancha/Plancha con flexión.png",
         "metrics": {"weight": false, "reps": true, "time": true, "distance": false, "rpe": false}
     },
     // ── Antebrazo (nuevos) ───────────────────────────────────────────────
@@ -1474,7 +1474,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Antebrazo",
         "icon": "💪",
-        "image_url": "/ejercicioimg/ejercicios/Antebrazo/Curl de barra invertido.png",
+        "image_url": "/ejercicioimg/ejercicios/Antebrazo/Pronacion/Curl de barra invertido.png",
         "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
     },
     {
@@ -1490,7 +1490,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Antebrazo",
         "icon": "🦾",
-        "image_url": "/ejercicioimg/ejercicios/Antebrazo/extensión de muñeca con barra sentado.png",
+        "image_url": "/ejercicioimg/ejercicios/Antebrazo/Pronacion/extensión de muñeca con barra sentado.png",
         "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
     },
     // ── Espalda (nuevos) ─────────────────────────────────────────────────
@@ -1499,7 +1499,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Espalda",
         "icon": "🏋️‍♂️",
-        "image_url": "/ejercicioimg/ejercicios/Espalda/Encogimiento de hombros con barra.png",
+        "image_url": "/ejercicioimg/ejercicios/Trapecios/Encogimientos de hombros con barra.png",
         "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
     },
     {
@@ -1507,7 +1507,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Espalda",
         "icon": "🏋️",
-        "image_url": "/ejercicioimg/ejercicios/Espalda/Encogimiento de hombros con mancuernas.png",
+        "image_url": "/ejercicioimg/ejercicios/Trapecios/Encogimientos de hombros con mancuernas.png",
         "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
     },
     {
@@ -1515,7 +1515,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Espalda",
         "icon": "⬡",
-        "image_url": "/ejercicioimg/ejercicios/Espalda/Peso muerto con barra hexagonal.png",
+        "image_url": "/ejercicioimg/ejercicios/Isquiotibiales/Peso Muerto/Peso muerto con barra hexagonal.png",
         "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
     },
     {
@@ -1523,7 +1523,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Espalda",
         "icon": "🤼",
-        "image_url": "/ejercicioimg/ejercicios/Espalda/Peso muerto sumo con barra.png",
+        "image_url": "/ejercicioimg/ejercicios/Isquiotibiales/Peso Muerto/Peso muerto sumo con barra.png",
         "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
     },
     // ── Gemelos (nuevos) ─────────────────────────────────────────────────
@@ -1532,7 +1532,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "STRENGTH_MACHINE",
         "targetMuscle": "Pantorrillas",
         "icon": "🦵",
-        "image_url": "/ejercicioimg/ejercicios/Gemelos/Elevacion de gemelos de pie en maquina .png",
+        "image_url": "/ejercicioimg/ejercicios/Gemelos/Parado/Elevacion de gemelos de pie en maquina .png",
         "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
     },
     {
@@ -1540,7 +1540,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "STRENGTH_MACHINE",
         "targetMuscle": "Pantorrillas",
         "icon": "⚙️",
-        "image_url": "/ejercicioimg/ejercicios/Gemelos/Elevacion de gemelos de pie en smith .png",
+        "image_url": "/ejercicioimg/ejercicios/Gemelos/Parado/Elevacion de gemelos de pie en smith .png",
         "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
     },
     {
@@ -1557,7 +1557,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "CABLE",
         "targetMuscle": "Glúteos",
         "icon": "🍑",
-        "image_url": "/ejercicioimg/ejercicios/Gluteo/Abducción con polea.png",
+        "image_url": "/ejercicioimg/ejercicios/Gluteo/Abducción de cadera con máquina de abducción de cadera.png",
         "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
     },
     {
@@ -1581,7 +1581,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Glúteos",
         "icon": "🔔",
-        "image_url": "/ejercicioimg/ejercicios/Gluteo/Columpios con kettlebell.png",
+        "image_url": "/ejercicioimg/ejercicios/Gluteo/Columpios con kettlebell (2).png",
         "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
     },
     {
@@ -1606,7 +1606,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Hombro",
         "icon": "🧟‍♂️",
-        "image_url": "/ejercicioimg/ejercicios/Hombro/Elevación frontal con disco a dos manos.png",
+        "image_url": "/ejercicioimg/ejercicios/Hombro/Elevacion frontal/Elevación frontal con disco a dos manos.png",
         "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
     },
     {
@@ -1614,7 +1614,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Hombro",
         "icon": "🧟‍♂️",
-        "image_url": "/ejercicioimg/ejercicios/Hombro/Elevación frontal con mancuerna a dos manos.png",
+        "image_url": "/ejercicioimg/ejercicios/Hombro/Elevacion frontal/Elevación frontal con mancuerna a dos manos.png",
         "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
     },
     {
@@ -1622,7 +1622,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "STRENGTH_MACHINE",
         "targetMuscle": "Hombro",
         "icon": "⚙️",
-        "image_url": "/ejercicioimg/ejercicios/Hombro/Press militar en smith .png",
+        "image_url": "/ejercicioimg/ejercicios/Hombro/Militar/Press militar en smith -Photoroom.png",
         "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
     },
     // ── Cuello (nuevos) ──────────────────────────────────────────────────
@@ -1639,7 +1639,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Cuello",
         "icon": "🏋️‍♂️",
-        "image_url": "/ejercicioimg/ejercicios/Cuello/Encogimientos de hombros con barra.png",
+        "image_url": "/ejercicioimg/ejercicios/Trapecios/Encogimientos de hombros con barra.png",
         "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
     },
     {
@@ -1647,7 +1647,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Cuello",
         "icon": "🏋️",
-        "image_url": "/ejercicioimg/ejercicios/Cuello/Encogimientos de hombros con mancuernas.png",
+        "image_url": "/ejercicioimg/ejercicios/Trapecios/Encogimientos de hombros con mancuernas.png",
         "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
     },
     {
@@ -1672,7 +1672,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "CABLE",
         "targetMuscle": "Tríceps",
         "icon": "🏇",
-        "image_url": "/ejercicioimg/ejercicios/Triceps/Extensión de tríceps con cable a una mano.png",
+        "image_url": "/ejercicioimg/ejercicios/Triceps/Extension tricep/Extensión de tríceps con cable a una mano.png",
         "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
     },
     {
@@ -1680,7 +1680,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Tríceps",
         "icon": "🇫🇷",
-        "image_url": "/ejercicioimg/ejercicios/Triceps/Press francés sentado con barra.png",
+        "image_url": "/ejercicioimg/ejercicios/Triceps/Press frances/Press francés sentado con barra.png",
         "metrics": {"weight": true, "reps": true, "time": false, "distance": false, "rpe": false}
     }
 ];;
