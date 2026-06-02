@@ -1629,49 +1629,57 @@ export const WorkoutSession = () => {
     // Stable IDs ("manifest-<id>") prevent the "cards replacing" bug: the card
     // stays in the same grid slot even when the displayed variant changes.
     const { curatedCatalogInventory, variantBadgeMap } = (() => {
-        const badges = new Map<string, { label: string; total: number; baseId: string; variants: any[] }>();
+        const prefs = getVariantPrefs();
+        const badges = new Map<string, { label: string; total: number; baseId: string; currentId: string; variants: any[] }>();
         const items: Equipment[] = [];
 
         for (const entry of IMAGE_MANIFEST) {
             if (entry.isLocked) continue;
 
-            const baseId = `manifest-${entry.id}`;
+            const stableId = `manifest-${entry.id}`;
+            const hasVariants = entry.variants.length > 1;
             const isCardio = entry.muscle === 'CARDIO';
             const metrics = isCardio
                 ? { weight: false, reps: false, time: true, distance: true, rpe: false }
                 : { weight: true, reps: true, time: false, distance: false, rpe: false };
 
-            if (entry.variants.length > 1) {
-                // Each unlocked variant becomes its own independently-selectable card.
-                // ID format: "manifest-<entryId>__<variantId>" (double underscore separator).
-                for (const variant of entry.variants) {
-                    if (variant.isLocked) continue;
-                    const variantItemId = `${baseId}__${variant.id}`;
-                    items.push({
-                        id:                  variantItemId,
-                        name:                `${entry.name} (${variant.name})`,
-                        category:            'ACCESSORY',
-                        target_muscle_group: entry.muscle,
-                        image_url:           variant.imagePath,
-                        metrics,
-                        quantity: 1, condition: 'GOOD', gym_id: 'manifest',
-                    } as Equipment);
-                }
-            } else {
-                // Single-variant exercise — keep the original stable ID
-                items.push({
-                    id:                  baseId,
-                    name:                entry.name,
-                    category:            'ACCESSORY',
-                    target_muscle_group: entry.muscle,
-                    image_url:           entry.imagePath,
-                    metrics,
-                    quantity: 1, condition: 'GOOD', gym_id: 'manifest',
-                } as Equipment);
+            let displayImagePath = entry.imagePath;
+
+            if (hasVariants) {
+                const prefVariantId = prefs[stableId];
+                const preferred = prefVariantId
+                    ? entry.variants.find(v => v.id === prefVariantId)
+                    : null;
+                const activeVariant = preferred ?? entry.variants.find(v => !v.isLocked) ?? entry.variants[0];
+                displayImagePath = activeVariant.imagePath;
+                // currentId lets ArsenalGrid compute the variant-specific selection ID
+                badges.set(stableId, {
+                    label:     activeVariant.name,
+                    total:     entry.variants.length,
+                    baseId:    stableId,
+                    currentId: activeVariant.id,
+                    variants:  entry.variants.map(v => ({
+                        id:        v.id,
+                        label:     v.name,
+                        seedName:  v.name,
+                        imagePath: v.imagePath,
+                        isLocked:  v.isLocked,
+                    })),
+                });
             }
+
+            items.push({
+                id:                  stableId,
+                name:                entry.name,
+                category:            'ACCESSORY',
+                target_muscle_group: entry.muscle,
+                image_url:           displayImagePath,
+                metrics,
+                quantity: 1, condition: 'GOOD', gym_id: 'manifest',
+            } as Equipment);
         }
 
-        // Also add any non-manifest items that are in the gym's real arsenal
+        // Also add any non-manifest items from the gym's real arsenal
         const manifestIds = new Set(items.map(i => i.id));
         const arsenalExtras = arsenal.filter(i => !manifestIds.has(i.id) && i.gym_id !== 'virtual' && i.gym_id !== 'manifest');
         arsenalExtras.forEach(i => items.push(i));

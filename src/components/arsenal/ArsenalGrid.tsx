@@ -45,7 +45,7 @@ interface ArsenalGridProps {
     /** Set of item IDs that have been manually overridden by the user */
     metricOverrides?: Set<string>;
     /** Map of normalized seed name → variant badge info (for catalog view) */
-    variantBadgeMap?: Map<string, { label: string; total: number; baseId: string; variants: any[] }>;
+    variantBadgeMap?: Map<string, { label: string; total: number; baseId: string; currentId?: string; variants: any[] }>;
     /** Called when the user cycles to the next variant via the badge arrow */
     onVariantCycle?: (oldId: string, newId: string, baseId: string, newVariant: any) => void;
     /** Set of item IDs that are locked (from ocultos/ folder) */
@@ -171,9 +171,16 @@ export const ArsenalGrid = ({
 
                         <div className={gridClassName}>
                             {items.map(item => {
-                                const isSelected = selectedItems.has(item.id);
+                                const variantInfo = variantBadgeMap?.get(item.id);
+                                const locked = lockedItemIds?.has(item.id) ?? false;
+                                // When a variant is active, selection is scoped to that specific variant
+                                // (format: "manifest-X__variantId"). Non-variant items use item.id directly.
+                                const effectiveSelectionId = variantInfo?.currentId
+                                    ? `${item.id}__${variantInfo.currentId}`
+                                    : item.id;
+                                const isSelected = selectedItems.has(effectiveSelectionId);
                                 let effectiveConfig = routineConfigs.get(item.id);
-                                
+
                                 // Preview global metrics for unselected items
                                 if (!isSelected && globalMetrics) {
                                     const isCardio = section === 'CARDIO' || getMuscleGroup(item, userSettings) === 'CARDIO';
@@ -189,18 +196,14 @@ export const ArsenalGrid = ({
                                         custom_metric: activeCustomMetric || null
                                     };
                                 }
-
-                                // variantBadgeMap is now keyed by the stable item.id ("curated-<baseId>")
-                                const variantInfo = variantBadgeMap?.get(item.id);
-                                const locked = lockedItemIds?.has(item.id) ?? false;
                                 return (
                                     <div
                                         key={item.id}
                                         className="cursor-pointer"
                                         onClick={(e) => {
-                                            if (locked) return; // lock overlay handles the click
+                                            if (locked) return;
                                             if ((e.target as HTMLElement).closest('[data-variant-btn="true"]')) return;
-                                            onToggleSelection(item.id);
+                                            onToggleSelection(effectiveSelectionId);
                                         }}
                                     >
                                         <ArsenalCard
@@ -216,14 +219,12 @@ export const ArsenalGrid = ({
                                             onUnlock={locked && onUnlockItem ? () => onUnlockItem(item.id) : undefined}
                                             onVariantCycle={!locked && variantInfo && onVariantCycle ? (direction) => {
                                                 const variants = variantInfo.variants;
-                                                // variantInfo.label contains the name of the currently active variant
                                                 const currentIdx = variants.findIndex((v: any) => v.label === variantInfo.label);
                                                 let nextIdx = direction === 'next' ? currentIdx + 1 : currentIdx - 1;
                                                 if (nextIdx < 0) nextIdx = variants.length - 1;
                                                 if (nextIdx >= variants.length) nextIdx = 0;
                                                 const next = variants[nextIdx];
-                                                const newId = `virtual-${next.seedName}`;
-                                                onVariantCycle(item.id, newId, variantInfo.baseId, next);
+                                                onVariantCycle(item.id, `${item.id}__${next.id}`, variantInfo.baseId, next);
                                             } : undefined}
                                         />
                                     </div>
