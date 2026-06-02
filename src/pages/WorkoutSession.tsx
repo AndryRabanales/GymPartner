@@ -968,12 +968,14 @@ export const WorkoutSession = () => {
 
                         for (let j = 0; j < exercise.sets.length; j++) {
                             const set = exercise.sets[j];
-                            const weightToSave    = Number(set.playerWeights?.[myId])   || 0;
-                            const repsToSave      = Number(set.playerReps?.[myId])      || 0;
-                            const timeToSave      = Number(set.playerTimes?.[myId])     || 0;
-                            const distanceToSave  = Number(set.playerDistances?.[myId]) || 0;
-                            const rpeToSave       = Number(set.playerRpes?.[myId])      || undefined;
-                            const isCompleted     = set.playerCompleted?.[myId]         || false;
+                            // Guest in session_finished is always the first guest (non-inviter)
+                            const guestIsFirstGuest = myId === firstGuestId;
+                            const weightToSave    = Number(set.playerWeights?.[myId]   ?? (guestIsFirstGuest ? (set.p2_weight   || 0) : 0)) || 0;
+                            const repsToSave      = Number(set.playerReps?.[myId]      ?? (guestIsFirstGuest ? (set.p2_reps     || 0) : 0)) || 0;
+                            const timeToSave      = Number(set.playerTimes?.[myId]     ?? (guestIsFirstGuest ? (set.p2_time     || 0) : 0)) || 0;
+                            const distanceToSave  = Number(set.playerDistances?.[myId] ?? (guestIsFirstGuest ? (set.p2_distance || 0) : 0)) || 0;
+                            const rpeToSave       = Number(set.playerRpes?.[myId]      ?? (guestIsFirstGuest ? (set.p2_rpe      || 0) : 0)) || undefined;
+                            const isCompleted     = set.playerCompleted?.[myId]        ?? (guestIsFirstGuest ? (set.p2_completed || false) : false);
 
                             // Skip if already saved or nothing to record
                             if (set.db_id) continue;
@@ -1945,9 +1947,53 @@ export const WorkoutSession = () => {
             const mergedInventory = [...items, ...personalItems.filter(i => !items.some(existing => existing.id === i.id))];
             setArsenal(mergedInventory);
 
-            // 3. PHASE 3: GPS-based gym detection using passport gyms only
-            // Skipped when navigating to a specific gym via route parameter.
-            if (!targetGymId) {
+            // ── PHASE 2.5: Guest gym sync from host ──────────────────────────────────
+            // When a guest joins a multiplayer room, use the host's gym silently:
+            //   • No picker, no GPS prompt — assume all participants are at the same place.
+            //   • Auto-register the gym in the guest's passport if they don't have it yet.
+            //   • Re-fetch inventory and routines scoped to the host's gym.
+            const isGuestInRoom = currentIsMultiplayer && !currentIsInviter;
+            if (isGuestInRoom) {
+                const hostGymId = partnerActiveResult?.data?.gym_id || null;
+                if (hostGymId) {
+                    const passportEntry  = gyms.find(g => g.gym_id === hostGymId);
+                    const dbGym          = (allGyms as any[]).find(g => g.id === hostGymId);
+                    const gymName        = passportEntry?.gym_name || dbGym?.name || 'Gimnasio del Grupo';
+
+                    // Auto-register in passport (background, non-blocking)
+                    if (!passportEntry && dbGym) {
+                        userService.addGymToPassport(userId, {
+                            place_id: dbGym.place_id || hostGymId,
+                            name: dbGym.name || gymName,
+                            address: dbGym.address || '',
+                            location: { lat: dbGym.lat, lng: dbGym.lng }
+                        }).catch(e => console.warn('⚠️ Auto-register host gym failed:', e));
+                    }
+
+                    // Override the guest's gym with the host's gym
+                    setResolvedGymId(hostGymId);
+                    setDetectedGymName(gymName);
+
+                    // Re-fetch inventory and routines for host's gym if different from Phase 1
+                    if (hostGymId !== resolvedInitialGymId) {
+                        const [hostItems, hostRoutines] = await Promise.all([
+                            equipmentService.getInventory(hostGymId),
+                            workoutService.getUserRoutines(userId, hostGymId)
+                        ]);
+                        setRoutines(hostRoutines);
+                        setArsenal(prev => {
+                            const merged = [...hostItems, ...prev.filter(i => !hostItems.some((x: any) => x.id === i.id))];
+                            return merged;
+                        });
+                    }
+                }
+            }
+
+            // 3. PHASE 3: GPS-based gym detection using passport gyms only.
+            // Skipped for:
+            //   • Guests in multiplayer rooms (gym already resolved from host in Phase 2.5)
+            //   • Explicit route parameter navigations
+            if (!targetGymId && !isGuestInRoom) {
                 (async () => {
                     try {
                         const gpsPosition = await getCurrentPosition({ enableHighAccuracy: true, timeout: 5000 })
@@ -3978,12 +4024,40 @@ export const WorkoutSession = () => {
                 // SAVE LOGIC (DYNAMIC N-PLAYER):
                 // 1. If it has no DB ID (not saved yet)
                 // 2. AND (It is completed OR has some data FOR THIS USER)
-                const isCompletedToSave = set.playerCompleted?.[myId] || false;
-                const weightToSave = Number(set.playerWeights?.[myId]) || 0;
-                const repsToSave = Number(set.playerReps?.[myId]) || 0;
-                const timeToSave = Number(set.playerTimes?.[myId]) || 0;
-                const distanceToSave = Number(set.playerDistances?.[myId]) || 0;
-                const rpeToSave = Number(set.playerRpes?.[myId]) || undefined;
+                //
+                // Fallback: if the playerX map doesn't have an entry for this user (e.g. a
+                // ghost set the user completed without touching the inputs), fall back to the
+                // scalar field the UI displays — same formula used in the row display.
+                const myIsHost = !isMultiplayer || isInviter;
+                const myIsFirstGuest = isMultiplayer && !isInviter && myId === firstGuestId;
+
+                const isCompletedToSave = set.playerCompleted?.[myId] ??
+                    (myIsHost ? set.completed : (myIsFirstGuest ? (set.p2_completed || false) : false));
+
+                const weightToSave = Number(
+                    set.playerWeights?.[myId] ??
+                    (myIsHost ? (set.weight || 0) : (myIsFirstGuest ? (set.p2_weight || 0) : 0))
+                ) || 0;
+
+                const repsToSave = Number(
+                    set.playerReps?.[myId] ??
+                    (myIsHost ? (set.reps || 0) : (myIsFirstGuest ? (set.p2_reps || 0) : 0))
+                ) || 0;
+
+                const timeToSave = Number(
+                    set.playerTimes?.[myId] ??
+                    (myIsHost ? (set.time || 0) : (myIsFirstGuest ? (set.p2_time || 0) : 0))
+                ) || 0;
+
+                const distanceToSave = Number(
+                    set.playerDistances?.[myId] ??
+                    (myIsHost ? (set.distance || 0) : (myIsFirstGuest ? (set.p2_distance || 0) : 0))
+                ) || 0;
+
+                const rpeToSave = Number(
+                    set.playerRpes?.[myId] ??
+                    (myIsHost ? (set.rpe || 0) : (myIsFirstGuest ? (set.p2_rpe || 0) : 0))
+                ) || undefined;
 
                 if (!set.db_id && (isCompletedToSave || weightToSave > 0 || repsToSave > 0 || timeToSave > 0 || distanceToSave > 0)) {
                     // We need the ID now
