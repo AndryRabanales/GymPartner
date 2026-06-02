@@ -754,22 +754,22 @@ class UserService {
     async toggleHomeBase(userId: string, gymId: string, isHomeBase: boolean): Promise<{ success: boolean; error?: string }> {
         try {
             if (isHomeBase) {
-                // Enforce single predeterminado: clear every other gym first
-                await supabase
-                    .from('user_gyms')
-                    .update({ is_home_base: false })
-                    .eq('user_id', userId)
-                    .neq('gym_id', gymId);
-
-                // Set the target
+                // Allow multiple predeterminados — just mark this gym without clearing others
                 const { error } = await supabase
                     .from('user_gyms')
                     .update({ is_home_base: true })
                     .match({ user_id: userId, gym_id: gymId });
                 if (error) throw error;
 
-                // Sync profiles.home_gym_id
-                await supabase.from('profiles').update({ home_gym_id: gymId }).eq('id', userId);
+                // Set profiles.home_gym_id only when the user had no home gym before
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('home_gym_id')
+                    .eq('id', userId)
+                    .single();
+                if (!profile?.home_gym_id) {
+                    await supabase.from('profiles').update({ home_gym_id: gymId }).eq('id', userId);
+                }
             } else {
                 const { error } = await supabase
                     .from('user_gyms')
@@ -777,9 +777,26 @@ class UserService {
                     .match({ user_id: userId, gym_id: gymId });
                 if (error) throw error;
 
-                const { data: profile } = await supabase.from('profiles').select('home_gym_id').eq('id', userId).single();
+                // If profiles.home_gym_id pointed to this gym, redirect it to another home gym
+                // (or null it out if none remain)
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('home_gym_id')
+                    .eq('id', userId)
+                    .single();
                 if (profile?.home_gym_id === gymId) {
-                    await supabase.from('profiles').update({ home_gym_id: null }).eq('id', userId);
+                    const { data: remaining } = await supabase
+                        .from('user_gyms')
+                        .select('gym_id')
+                        .eq('user_id', userId)
+                        .eq('is_home_base', true)
+                        .neq('gym_id', gymId)
+                        .limit(1)
+                        .maybeSingle();
+                    await supabase
+                        .from('profiles')
+                        .update({ home_gym_id: remaining?.gym_id ?? null })
+                        .eq('id', userId);
                 }
             }
 
