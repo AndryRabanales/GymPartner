@@ -575,21 +575,27 @@ const notificationSeen = useRef<Set<string>>(new Set());
                         />
                     ), { duration: 20000 });
                 } else if (newNotification.type === 'coop_accepted') {
-                    // Host: guest accepted the invite → navigate into the workout (host is already there or navigating back)
+                    // Host: guest accepted the invite → navigate into the workout.
+                    // Prefer notification.data.chat_id (the original room session ID set when
+                    // the invite was created) over getActiveSession, which could return a DIFFERENT
+                    // session if the host's original one was cleaned up as orphan.
                     toast.success(newNotification.message || "¡Aliado aceptó. Entrando a la sala...");
                     (async () => {
                         try {
+                            // chat_id is the room ID from the original invite — always trust it first
+                            const notifRoomId = newNotification.data?.chat_id;
                             const { data: activeSession } = await workoutService.getActiveSession(user.id);
-                            const roomId = activeSession?.id || newNotification.data?.chat_id;
+                            // Use notification room ID if valid; fall back to active session
+                            const roomId = notifRoomId || activeSession?.id;
                             navigate('/workout', {
                                 state: {
                                     isMultiplayer: true,
                                     multiplayerMode: newNotification.data?.mode || 'conjunto',
                                     partnerId: newNotification.data?.partner_id,
-                                    // room_id is the host's own session id
                                     chatId: roomId,
                                     isInviter: true,
-                                    forceNewSession: !activeSession
+                                    // Only force new session if neither notification room nor active session exist
+                                    forceNewSession: !notifRoomId && !activeSession
                                 }
                             });
                         } catch (err) {

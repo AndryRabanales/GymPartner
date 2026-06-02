@@ -488,6 +488,7 @@ export const WorkoutSession = () => {
     const isInviterRef = useRef<boolean>(true); // tracks isInviter without stale closure
     const lastIncomingState = useRef<string>('');
     const isStartingSessionRef = useRef<boolean>(false);
+    const isAddingExercisesRef = useRef<boolean>(false); // guard against concurrent handleBatchAdd calls
     // True while a guest is waiting for the host's first sync_state broadcast.
     // Keeps `loading` pinned to true so the empty state never flashes before exercises arrive.
     const waitingForGuestSyncRef = useRef<boolean>(false);
@@ -1213,7 +1214,9 @@ export const WorkoutSession = () => {
 
     // Send local updates (Debounced to prevent network spam and echo loops while typing)
     useEffect(() => {
-        if (!isMultiplayer || !channelRef.current || !user || activeExercises.length === 0) return;
+        // Skip when session is finishing or summary is showing — the channel may be torn
+        // down at any moment and a pending 500ms timer could fire after it's gone.
+        if (!isMultiplayer || !channelRef.current || !user || activeExercises.length === 0 || showSummary || isFinished) return;
         const currentStr = JSON.stringify(activeExercises);
         
         // Prevent echo loops
@@ -1547,6 +1550,10 @@ export const WorkoutSession = () => {
 
     const handleBatchAdd = async () => {
         if (selectedCatalogItems.size === 0 && activeExercises.length === 0) return;
+        // Prevent concurrent calls — double-tapping AGREGAR would create duplicate exercises
+        if (isAddingExercisesRef.current) return;
+        isAddingExercisesRef.current = true;
+        try {
 
         let activeArsenal = arsenal;
 
@@ -1681,6 +1688,9 @@ export const WorkoutSession = () => {
         setShowAddModal(false);
         setExtrasSection(null);
         setSearchTerm('');
+        } finally {
+            isAddingExercisesRef.current = false;
+        }
     };
 
 
@@ -1922,7 +1932,9 @@ export const WorkoutSession = () => {
 
         // Parallelize Initial Data Fetching
         try {
-            // Start 1s timer for animation immediately
+            // Reset the intro animation on every initializeBattle call (re-navigation)
+            // so it never gets stuck from a previous session's timer.
+            setShowIntroAnim(true);
             setTimeout(() => setShowIntroAnim(false), 1200);
 
             // 🛡️ PHASE 0: Aggressively clean orphan sessions BEFORE fetching the active session.
@@ -3378,15 +3390,20 @@ export const WorkoutSession = () => {
                 }
             }
 
+            // Use activeExercisesRef (latest state after re-render) instead of the
+            // stale `next` closure to avoid sending outdated exercise data.
             setTimeout(() => {
-                if (isMultiplayer && channelRef.current && user) {
-                    const stateStr = JSON.stringify(next);
-                    lastIncomingState.current = stateStr;
-                    channelRef.current.send({
-                        type: 'broadcast',
-                        event: 'sync_state',
-                        payload: { exercises: next, sender: user.id }
-                    }).catch(e => console.error(e));
+                if (isMultiplayer && channelRef.current && user && !showSummary && !isFinished) {
+                    const latestExercises = activeExercisesRef.current;
+                    if (latestExercises.length > 0) {
+                        const stateStr = JSON.stringify(latestExercises);
+                        lastIncomingState.current = stateStr;
+                        channelRef.current.send({
+                            type: 'broadcast',
+                            event: 'sync_state',
+                            payload: { exercises: latestExercises, sender: user.id }
+                        }).catch(e => console.error(e));
+                    }
                 }
             }, 0);
 
@@ -3450,15 +3467,20 @@ export const WorkoutSession = () => {
             set.playerLastUpdated[targetUserId] = Date.now();
             set.lastUpdatedAt = Date.now();
 
+            // Use activeExercisesRef (latest state after re-render) instead of the
+            // stale `next` closure to avoid sending outdated exercise data.
             setTimeout(() => {
-                if (isMultiplayer && channelRef.current && user) {
-                    const stateStr = JSON.stringify(next);
-                    lastIncomingState.current = stateStr;
-                    channelRef.current.send({
-                        type: 'broadcast',
-                        event: 'sync_state',
-                        payload: { exercises: next, sender: user.id }
-                    }).catch(e => console.error(e));
+                if (isMultiplayer && channelRef.current && user && !showSummary && !isFinished) {
+                    const latestExercises = activeExercisesRef.current;
+                    if (latestExercises.length > 0) {
+                        const stateStr = JSON.stringify(latestExercises);
+                        lastIncomingState.current = stateStr;
+                        channelRef.current.send({
+                            type: 'broadcast',
+                            event: 'sync_state',
+                            payload: { exercises: latestExercises, sender: user.id }
+                        }).catch(e => console.error(e));
+                    }
                 }
             }, 0);
 
@@ -3501,15 +3523,20 @@ export const WorkoutSession = () => {
             // CRDT: Update modification timestamp
             set.lastUpdatedAt = Date.now();
 
+            // Use activeExercisesRef (latest state after re-render) instead of the
+            // stale `next` closure to avoid sending outdated exercise data.
             setTimeout(() => {
-                if (isMultiplayer && channelRef.current && user) {
-                    const stateStr = JSON.stringify(next);
-                    lastIncomingState.current = stateStr;
-                    channelRef.current.send({
-                        type: 'broadcast',
-                        event: 'sync_state',
-                        payload: { exercises: next, sender: user.id }
-                    }).catch(e => console.error(e));
+                if (isMultiplayer && channelRef.current && user && !showSummary && !isFinished) {
+                    const latestExercises = activeExercisesRef.current;
+                    if (latestExercises.length > 0) {
+                        const stateStr = JSON.stringify(latestExercises);
+                        lastIncomingState.current = stateStr;
+                        channelRef.current.send({
+                            type: 'broadcast',
+                            event: 'sync_state',
+                            payload: { exercises: latestExercises, sender: user.id }
+                        }).catch(e => console.error(e));
+                    }
                 }
             }, 0);
 
@@ -5045,9 +5072,9 @@ export const WorkoutSession = () => {
                 )
             }
 
-            {/* Exercise Selector Modal — hidden when summary/finish overlay is active */}
+            {/* Exercise Selector Modal — hidden when any other overlay is active */}
             {
-                showAddModal && !showSummary && !showRoutineModal && (
+                showAddModal && !showSummary && !showRoutineModal && !showStartOptionsModal && !isFinished && (
                     <div className="fixed inset-0 bg-black/95 z-[90] flex flex-col animate-in fade-in duration-200 overflow-hidden">
                         {/* Header */}
                         <div className="flex-none p-2.5 pb-1 border-b border-white/5 bg-neutral-950">
@@ -5273,9 +5300,9 @@ export const WorkoutSession = () => {
                 onCancelSession={handleCancelSession}
             />
 
-            {/* 1. Save Routine Modal */}
+            {/* 1. Save Routine Modal — only when finishing, never alongside catalog or start options */}
             {
-                showRoutineModal && (
+                showRoutineModal && !showAddModal && !showStartOptionsModal && (
                     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-4">
                         <div className="bg-neutral-900 border border-neutral-800 p-6 rounded-2xl w-full max-w-sm shadow-2xl relative">
                             {/* Back arrow — returns to active workout */}
