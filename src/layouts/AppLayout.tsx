@@ -276,18 +276,23 @@ const CoopJoinRequestToast = ({
 
                         const hasActiveOnAccept = !!activeSession;
 
-                        // Redirect to the workout session
-                        navigate('/workout', { 
-                            state: { 
-                                isMultiplayer: true, 
-                                multiplayerMode: 'conjunto', 
-                                partnerId: senderId,
-                                chatId: roomSessionId,
-                                partnerSessionId: roomSessionId,
-                                isInviter: true,
-                                forceNewSession: !hasActiveOnAccept
-                            } 
-                        });
+                        // If the host is ALREADY in the workout page (training), do NOT navigate —
+                        // that would change location.key, potentially breaking their active session.
+                        // The new participant will join via the Realtime presence channel automatically.
+                        // Only navigate if the host is NOT currently in the workout.
+                        if (!window.location.pathname.includes('/workout')) {
+                            navigate('/workout', {
+                                state: {
+                                    isMultiplayer: true,
+                                    multiplayerMode: 'conjunto',
+                                    partnerId: senderId,
+                                    chatId: roomSessionId,
+                                    partnerSessionId: roomSessionId,
+                                    isInviter: true,
+                                    forceNewSession: !hasActiveOnAccept
+                                }
+                            });
+                        }
                     }}
                     className="flex-1 py-2 rounded-xl bg-gradient-to-br from-gym-primary to-yellow-500 text-neutral-950 font-black text-[10px] uppercase tracking-wider hover:shadow-[0_0_15px_rgba(255,215,0,0.35)] transition-all active:scale-95"
                 >

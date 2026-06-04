@@ -166,32 +166,48 @@ export const FriendsPage = () => {
         const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
 
         // ── Step 1: Identify the HOST from local session data ──────────────
-        // Key DB invariant:
-        //   HOST session:  partner_session_id = null  (or set LATER to guest's session)
+        //
+        // The query returns sessions via: user_id IN (friend) OR partner_id IN (friend)
+        // So the session could be owned BY the friend OR reference the friend as a partner.
+        //
+        // DB invariant:
+        //   HOST session:  partner_session_id = null (friend IS the host)
         //                  partner_id = guest's user_id
-        //   GUEST session: partner_session_id = HOST's session ID   (always set on create)
+        //   GUEST session: partner_session_id = HOST's session ID (always set at creation)
         //                  partner_id = HOST's user_id
         //
-        // Reliable detection:
-        //   • Session with partner_session_id SET    → belongs to a GUEST → host = partner_id
-        //   • Session with partner_session_id NULL   → belongs to the HOST (or solo)
-        //   • Session belongs to someone OTHER than friend → that person IS the host
+        // 4 cases to handle correctly:
+        //   A) friend owns S, no partner_session_id  → friend IS the host
+        //   B) friend owns S, has partner_session_id → friend IS a guest, partner_id = host
+        //   C) friend is partner_id in S, S has partner_session_id
+        //      → S is a GUEST session, partner_id = friend = host
+        //   D) friend is partner_id in S, S has no partner_session_id
+        //      → S is HOST's session, session owner = host (not friend)
         let candidateHostId: string;
         let candidateRoomId: string;
 
-        if (activeSess.user_id !== friendUserId) {
-            // Session returned belongs to another user — that user IS the host
-            candidateHostId = activeSess.user_id;
-            candidateRoomId = activeSess.id;
-        } else if (activeSess.partner_session_id) {
-            // Friend's own session AND has partner_session_id → friend IS a GUEST.
-            // partner_id on a GUEST session always points to the HOST's user_id.
-            candidateHostId = activeSess.partner_id;
-            candidateRoomId = activeSess.partner_session_id; // This IS the host's session
+        if (activeSess.user_id === friendUserId) {
+            // Friend OWNS this session (cases A and B)
+            if (activeSess.partner_session_id) {
+                // Case B: friend is a GUEST → partner_id is the HOST
+                candidateHostId = activeSess.partner_id;
+                candidateRoomId = activeSess.partner_session_id;
+            } else {
+                // Case A: friend IS the HOST
+                candidateHostId = friendUserId;
+                candidateRoomId = activeSess.id;
+            }
         } else {
-            // Friend's own session with no partner_session_id → friend IS the HOST (or solo).
-            candidateHostId = activeSess.user_id;   // = friendUserId
-            candidateRoomId = activeSess.id;
+            // Session was found via partner_id match — friend is referenced as partner (cases C and D)
+            if (activeSess.partner_session_id) {
+                // Case C: activeSess is a GUEST session; partner_id = friend = HOST
+                candidateHostId = friendUserId;
+                candidateRoomId = activeSess.partner_session_id; // host's session = room ID
+            } else {
+                // Case D: activeSess is the HOST's session; session owner is the host
+                candidateHostId = activeSess.user_id;
+                candidateRoomId = activeSess.id;
+            }
         }
 
         // ── Step 2: DB verification — query the candidate host's active session ──
