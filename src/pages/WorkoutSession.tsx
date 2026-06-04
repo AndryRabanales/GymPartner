@@ -491,6 +491,7 @@ export const WorkoutSession = () => {
     // True while a guest is waiting for the host's first sync_state broadcast.
     // Keeps `loading` pinned to true so the empty state never flashes before exercises arrive.
     const waitingForGuestSyncRef = useRef<boolean>(false);
+    const guestSyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const partnerSessionIdRef = useRef<string | null>(partnerSessionId);
     useEffect(() => {
         partnerSessionIdRef.current = partnerSessionId;
@@ -1141,17 +1142,32 @@ export const WorkoutSession = () => {
                     console.log('🔗 Received partner session ID via broadcast:', partnerSessionId);
                     partnerSessionIdRef.current = partnerSessionId;
                     setPartnerSessionId(partnerSessionId);
-                    
+
                     const currentSessionId = sessionIdRef.current;
                     if (currentSessionId) {
+                        // Only update partner_session_id if it is NOT already set.
+                        // In 3+ user rooms, every new guest broadcasts their session ID.
+                        // Without this guard, User 3's broadcast would OVERWRITE User 1's link
+                        // to User 2, breaking the existing room topology.
                         supabase
                             .from('workout_sessions')
-                            .update({ partner_session_id: partnerSessionId })
+                            .select('partner_session_id')
                             .eq('id', currentSessionId)
-                            .then(({ error }) => {
-                                if (error) console.error('Error linking partner session:', error);
-                                else console.log('✅ Linked partner session successfully!');
-                             });
+                            .maybeSingle()
+                            .then(({ data }) => {
+                                if (!data?.partner_session_id) {
+                                    supabase
+                                        .from('workout_sessions')
+                                        .update({ partner_session_id: partnerSessionId })
+                                        .eq('id', currentSessionId)
+                                        .then(({ error }) => {
+                                            if (error) console.error('Error linking partner session:', error);
+                                            else console.log('✅ Linked partner session successfully!');
+                                        });
+                                } else {
+                                    console.log('ℹ️ partner_session_id already set — skipping overwrite to preserve room topology.');
+                                }
+                            });
                     } else if (!isInviterRef.current && !sessionIdRef.current && !isStartingSessionRef.current) {
                         // Guest auto-starts their own session to activate their timer and enable logging
                         console.log('🚀 Guest auto-starting session on partner session ID sync...');
@@ -2422,6 +2438,18 @@ export const WorkoutSession = () => {
                             console.log('🚀 Guest auto-starting session because partner has active session...');
                             await startNewSession(partnerActive.gym_id || undefined, partnerActive.id, currentIsMultiplayer, currentMultiplayerMode, currentPartnerId);
                             setStartTime(new Date(partnerActive.started_at));
+
+                            // Failsafe: release loading after 12 seconds even if sync_state never arrives.
+                            // Without this, if the host has no exercises or is disconnected, the guest
+                            // is stuck on a blank loading screen indefinitely.
+                            if (guestSyncTimeoutRef.current) clearTimeout(guestSyncTimeoutRef.current);
+                            guestSyncTimeoutRef.current = setTimeout(() => {
+                                if (waitingForGuestSyncRef.current) {
+                                    console.warn('⏰ [GuestSync] No sync_state received in 12s — releasing loading.');
+                                    waitingForGuestSyncRef.current = false;
+                                    setLoading(false);
+                                }
+                            }, 12000);
                         }
                     // Only prompt for routine/exercises in solo mode with truly no exercises.
                     } else if (activeExercisesRef.current.length === 0 && !currentIsMultiplayer) {
@@ -3949,19 +3977,27 @@ export const WorkoutSession = () => {
             const userRoutines = await workoutService.getUserRoutines(userId, resolvedGymId);
             if (!userRoutines || userRoutines.length === 0) return false;
 
-            // Build a canonical fingerprint of the current session: sorted order_index → equipmentId chain
-            const currentIds = exercises.map(e => e.equipmentId).join('|');
+            // Compare by exercise NAME rather than ID.
+            // manifest-based exercises use IDs like "manifest-inclinado_pecho__barra" which
+            // never match `routine_exercises.exercise_id` (a gym_equipment UUID). Comparing
+            // by name is the only reliable way to detect duplicates across both systems.
+            const currentNames = exercises.map(e => e.equipmentName.trim().toLowerCase()).sort().join('|');
 
             for (const routine of userRoutines) {
                 const sortedExercises = (routine.routine_exercises || [])
                     .slice()
                     .sort((a: any, b: any) => (a.order_index ?? 0) - (b.order_index ?? 0));
-                const savedIds = sortedExercises.map((e: any) => e.exercise_id).join('|');
-                if (savedIds === currentIds) return true;
+                // Routine exercises have `name` (snapshot) or can be resolved from equipment
+                const savedNames = sortedExercises
+                    .map((e: any) => (e.name || e.equipment?.name || '').trim().toLowerCase())
+                    .filter(Boolean)
+                    .sort()
+                    .join('|');
+                if (savedNames === currentNames && currentNames.length > 0) return true;
             }
             return false;
         } catch {
-            return false; // On error, assume it doesn't exist (show the modal to be safe)
+            return false;
         }
     };
 
@@ -4005,52 +4041,57 @@ export const WorkoutSession = () => {
         if (name.trim()) {
             setIsSavingFlow(true);
 
-            // 0. Resolve Virtual IDs to Real UUIDs
-            // Just like MyArsenal, we must ensure every item exists in the DB before linking.
+            // 0. Resolve all exercise IDs to real gym_equipment UUIDs before saving.
+            // routine_exercises.exercise_id is a FK to gym_equipment.id — manifest-* and virtual-*
+            // IDs are NOT valid UUIDs and will fail the FK constraint silently.
             const resolvedExercises = await Promise.all(activeExercises.map(async (ex) => {
                 let finalId = ex.equipmentId;
+                const exerciseName = ex.equipmentName;
+                const targetGym = resolvedGymId;
 
-                if (finalId.startsWith('virtual-')) {
-                    // It's a seed item. Check if it exists in the current gym by name first.
-                    const seedName = ex.equipmentName; // Should match the seed name
-                    const targetGym = resolvedGymId;
+                const needsResolution = finalId.startsWith('virtual-') || finalId.startsWith('manifest-');
 
+                if (needsResolution) {
                     try {
-                        // Check if already exists in target gym (by name)
+                        // Look for an existing gym_equipment entry with the same name
                         const { data: existing } = await supabase
                             .from('gym_equipment')
                             .select('id')
                             .eq('gym_id', targetGym)
-                            .ilike('name', seedName)
+                            .ilike('name', exerciseName)
                             .maybeSingle();
 
-                        if (existing) {
+                        if (existing?.id) {
                             finalId = existing.id;
                         } else {
-                            // Create it!
-                            // Find seed data to get category/icon
-                            const seed = COMMON_EQUIPMENT_SEEDS.find(s => normalizeText(s.name) === normalizeText(seedName));
-
+                            // Create a new gym_equipment entry for this exercise
+                            const seed = COMMON_EQUIPMENT_SEEDS.find(
+                                s => normalizeText(s.name) === normalizeText(exerciseName)
+                            );
+                            // Determine category from imageManifest for manifest exercises
+                            let category = seed?.category || 'FREE_WEIGHT';
+                            if (finalId.startsWith('manifest-')) {
+                                const withoutPrefix = finalId.slice('manifest-'.length);
+                                const entryId = withoutPrefix.split('__')[0];
+                                const manifestEntry = IMAGE_MANIFEST.find(e => e.id === entryId);
+                                if (manifestEntry?.muscle === 'CARDIO') category = 'CARDIO';
+                            }
                             const newEq = await equipmentService.addEquipment({
-                                name: seedName,
-                                category: seed?.category || 'FREE_WEIGHT',
+                                name: exerciseName,
+                                category,
                                 gym_id: targetGym,
                                 quantity: 1,
                                 condition: 'GOOD',
                                 icon: (seed as any)?.icon
                             }, user!.id);
-
                             if (newEq) finalId = newEq.id;
                         }
                     } catch (err) {
-                        console.error("Error resolving virtual item:", err);
+                        console.error(`Error resolving exercise "${exerciseName}":`, err);
                     }
                 }
 
-                return {
-                    ...ex,
-                    equipmentId: finalId
-                };
+                return { ...ex, equipmentId: finalId };
             }));
 
             // Pass FULL activeExercises (resolved) to capture config (metrics, etc.)

@@ -80,7 +80,9 @@ export const StatsPage = () => {
                         )
                     `)
                     .eq('user_id', user.id)
-                    .not('end_time', 'is', null);
+                    // Include sessions finished via either column — end_time is the primary,
+                    // but some sessions (e.g. closed by closeRoom) only have finished_at set.
+                    .or('end_time.not.is.null,finished_at.not.is.null');
 
                 if (error) throw error;
 

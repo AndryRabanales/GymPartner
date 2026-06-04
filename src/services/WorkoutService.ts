@@ -299,12 +299,24 @@ class WorkoutService {
         return { success: true };
     }
 
-    // Cancel/Delete a session (The "Retreat")
+    // Cancel/Delete an EMPTY session (no logs) — The "Retreat" / abandon with no data
+    // IMPORTANT: NEVER deletes workout_logs. Sessions with logs are finalized (finished_at set),
+    // not deleted, so historical data is always preserved.
     async deleteSession(sessionId: string): Promise<{ success: boolean; error?: any }> {
-        // 1. Delete logs first (optional if cascade is set, but safer)
-        await supabase.from('workout_logs').delete().eq('session_id', sessionId);
+        // Safety check: only delete if the session has no logged sets.
+        // If sets exist, finalize instead of delete to avoid permanent data loss.
+        const { count } = await supabase
+            .from('workout_logs')
+            .select('*', { count: 'exact', head: true })
+            .eq('session_id', sessionId);
 
-        // 2. Delete session
+        if ((count || 0) > 0) {
+            // Session has data — finalize (set finished_at) instead of delete
+            console.warn(`⚠️ deleteSession called on session with ${count} logs — finalizing instead of deleting to preserve data.`);
+            return this.finishSession(sessionId, 'Sesión cancelada por el usuario');
+        }
+
+        // Safe to delete: no logs exist
         const { error } = await supabase
             .from('workout_sessions')
             .delete()

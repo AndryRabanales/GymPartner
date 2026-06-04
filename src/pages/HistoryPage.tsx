@@ -136,7 +136,7 @@ export const HistoryPage = () => {
                     )
                 `)
                 .eq('user_id', user.id)
-                .not('end_time', 'is', null)
+                .or('end_time.not.is.null,finished_at.not.is.null')
                 .order('started_at', { ascending: false });
 
             if (error) throw error;
@@ -148,11 +148,15 @@ export const HistoryPage = () => {
 
             let partnerSessionsMap = new Map<string, { finished: boolean; username: string }>();
             if (partnerSessionIds.length > 0) {
-                const { data: partnerData } = await supabase
+                const { data: partnerData, error: partnerErr } = await supabase
                     .from('workout_sessions')
                     .select('id, finished_at, end_time, user:profiles(username)')
                     .in('id', partnerSessionIds);
 
+                if (partnerErr) {
+                    // RLS may block access to partner sessions — log but don't crash
+                    console.warn('⚠️ [HistoryPage] Could not fetch partner sessions (RLS or network):', partnerErr.message);
+                }
                 if (partnerData) {
                     partnerData.forEach((ps: any) => {
                         const isFinished = !!(ps.finished_at || ps.end_time);

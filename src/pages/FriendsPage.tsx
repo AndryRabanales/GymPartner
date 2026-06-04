@@ -59,7 +59,10 @@ export const FriendsPage = () => {
             
             if (friendIds.length > 0) {
                 console.log("🕵️‍♂️ [FriendsPage] Buscando sesiones para friendIds:", friendIds);
-                const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
+                // Use 5 hours (same as getActiveSession for rooms) so FriendsPage and WorkoutSession
+                // agree on what is "active". Using 12h here caused a mismatch where FriendsPage
+                // would show a friend as training but the host's device couldn't find the session.
+                const twelveHoursAgo = new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString();
                 const { data: activeSessions, error: sessionErr } = await supabase
                     .from('workout_sessions')
                     .select('id, user_id, partner_id, started_at, is_multiplayer, multiplayer_mode, partner_session_id')
