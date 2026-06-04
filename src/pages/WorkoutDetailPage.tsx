@@ -77,7 +77,14 @@ export default function WorkoutDetailPage() {
     const [deleting, setDeleting] = useState(false);
     const [workout, setWorkout] = useState<WorkoutDetail | null>(null);
     const [currentUser, setCurrentUser] = useState<any | null>(null);
+    // Default to joint view for multiplayer sessions so all participants' data is always visible
     const [viewMode, setViewMode] = useState<'mine' | 'partner' | 'joint'>('mine');
+    // Set joint as default once we know it's multiplayer
+    useEffect(() => {
+        if (workout?.is_multiplayer && workout?.multiplayer_mode === 'conjunto') {
+            setViewMode('joint');
+        }
+    }, [workout?.is_multiplayer, workout?.multiplayer_mode]);
 
     useEffect(() => {
         supabase.auth.getUser().then(({ data: { user } }) => {

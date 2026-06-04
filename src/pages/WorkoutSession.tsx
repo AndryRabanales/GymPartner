@@ -1098,6 +1098,10 @@ export const WorkoutSession = () => {
                 finalizedParticipantsRef.current.add(sender);
                 // Remove them from participants list
                 setParticipants(prev => prev.filter(p => p.id !== sender));
+                // In separado mode, clear stale partner exercises so the spy view doesn't show ghost data
+                if (multiplayerMode === 'separado' && sender === partnerId) {
+                    setPartnerExercises([]);
+                }
                 // Stop rest timers for the leaving participant so their timer freezes (BUG-03)
                 setActiveExercises(prev => prev.map(ex => ({
                     ...ex,
@@ -3859,36 +3863,34 @@ export const WorkoutSession = () => {
 
     // Helper to resolve Exercise ID (Foreign Key for workout_logs)
     const resolveExerciseId = async (equipmentName: string): Promise<string | null> => {
+        if (!equipmentName?.trim()) return null;
         try {
-            // 1. Try finding in 'exercises' table by name
+            // 1. Exact case-insensitive match (ilike without wildcards = exact icase match)
             const { data: existing } = await supabase
                 .from('exercises')
                 .select('id')
-                .ilike('name', equipmentName)
+                .ilike('name', equipmentName.trim())
                 .limit(1)
-                .single();
+                .maybeSingle(); // maybeSingle avoids throwing on 0 results
 
-            if (existing) return existing.id;
+            if (existing?.id) return existing.id;
 
-            // 2. If not found, create it in 'exercises'
-            console.warn(`Creating new exercise entry for: ${equipmentName}`);
+            // 2. Not found — create a new exercises row so sets can be linked via FK
+            console.warn(`Creating new exercise entry for: "${equipmentName}"`);
             const { data: newExercise, error } = await supabase
                 .from('exercises')
-                .insert({
-                    name: equipmentName
-                    // REMOVED target_muscle_group because it likely causes undefined_column error used against strict schema
-                })
-                .select()
+                .insert({ name: equipmentName.trim() })
+                .select('id')
                 .single();
 
             if (error) {
-                console.error("Error creating exercise:", error);
+                console.error('Error creating exercise entry:', error);
                 return null;
             }
 
-            return newExercise.id;
+            return newExercise?.id ?? null;
         } catch (err) {
-            console.error("Exception resolving exercise ID:", err);
+            console.error('Exception resolving exercise ID:', err);
             return null;
         }
     };
@@ -4185,7 +4187,7 @@ export const WorkoutSession = () => {
 
                         savePromises.push(workoutService.logSet({
                             session_id: finalSessionId,
-                            exercise_id: targetId, // Use the resolved ID
+                            exercise_id: targetId,
                             set_number: j + 1,
                             sets: 1,
                             weight_kg: weightToSave,
@@ -4193,19 +4195,28 @@ export const WorkoutSession = () => {
                             time: timeToSave,
                             distance: distanceToSave,
                             rpe: rpeToSave,
-                            metrics_data: extendedMetrics, // Save custom metrics + timestamps
-                            category_snapshot: exercise.category || 'Custom', // SNAPSHOT: Current Category
+                            metrics_data: extendedMetrics,
+                            category_snapshot: exercise.category || 'Custom',
                             is_pr: false,
-                            owner_id: myId // NEW: Explicitly link set to the user who performed it
+                            owner_id: myId
                         }).then(res => {
                             if (res.data) {
-                                // Mark as saved in local state to avoid dupes if we were to stay on screen
                                 set.db_id = res.data.id;
+                            } else if (res.error) {
+                                // Surface DB errors so data loss is visible to the user
+                                console.error(`❌ Error saving set for ${exercise.equipmentName}:`, res.error);
+                                import('react-hot-toast').then(({ default: t }) =>
+                                    t.error(`⚠️ No se pudo guardar una serie de ${exercise.equipmentName}. Revisa tu conexión.`, { duration: 5000 })
+                                );
                             }
                         }));
                         savedCount++;
                     } else {
-                        console.error(`❌ Failed to resolve ID for ${exercise.equipmentName}, skipping save.`);
+                        console.error(`❌ Failed to resolve exercise ID for "${exercise.equipmentName}", set skipped.`);
+                        // Notify user that this exercise's sets were NOT saved
+                        import('react-hot-toast').then(({ default: t }) =>
+                            t.error(`⚠️ No se encontró "${exercise.equipmentName}" en la base de datos. Sus series no serán guardadas.`, { duration: 6000 })
+                        );
                     }
                 }
             }
@@ -4548,57 +4559,11 @@ export const WorkoutSession = () => {
                                     {/* Header */}
                                     <div className="p-4 flex justify-between items-start bg-white/5 border-b border-white/5 shrink-0">
                                         <div className="flex-1 min-w-0">
-                                            {(() => {
-                                                // Source of truth: IMAGE_MANIFEST (auto-generated from folder structure).
-                                                // exercise.equipmentName always stores the full name including variant:
-                                                //   "Inclinado (Barra)", "Curl Bíceps (Mancuernas)", etc.
-                                                // No hardcoded exerciseCatalog.ts fallback — imageManifest is the single source.
-                                                const manifestEntry = IMAGE_MANIFEST.find(e =>
-                                                    exercise.equipmentName === e.name ||
-                                                    e.variants.some(v => exercise.equipmentName === `${e.name} (${v.name})`)
-                                                );
-
-                                                if (manifestEntry && manifestEntry.variants.length > 1) {
-                                                    const activeV = manifestEntry.variants.find(v =>
-                                                        exercise.equipmentName === `${manifestEntry.name} (${v.name})`
-                                                    ) || manifestEntry.variants[0];
-
-                                                    return (
-                                                        <>
-                                                            {/* Full name including variant — "Inclinado (Barra)" not just "Inclinado" */}
-                                                            <h3 className="text-2xl font-black italic uppercase text-white leading-tight truncate">
-                                                                {exercise.equipmentName}
-                                                            </h3>
-                                                            {/* Inline variant swap — useful to change variant without going back to catalog */}
-                                                            {canModifyStructure && (
-                                                                <button
-                                                                    onClick={() => {
-                                                                        const currentIdx = manifestEntry.variants.findIndex(v => v.name === activeV.name);
-                                                                        const nextIdx = (currentIdx + 1) % manifestEntry.variants.length;
-                                                                        const nextV = manifestEntry.variants[nextIdx];
-                                                                        const newName = `${manifestEntry.name} (${nextV.name})`;
-                                                                        setActiveExercises(prev => prev.map((ex, idx) =>
-                                                                            idx !== mapIndex ? ex : { ...ex, equipmentName: newName, equipmentId: `manifest-${manifestEntry.id}__${nextV.id}` }
-                                                                        ));
-                                                                    }}
-                                                                    className="mt-1 inline-flex items-center gap-1.5 text-[10px] font-bold text-neutral-500 hover:text-gym-primary bg-neutral-800/40 hover:bg-gym-primary/10 border border-neutral-800 hover:border-gym-primary/40 px-2 py-0.5 rounded-full transition-all"
-                                                                    title="Cambiar variante"
-                                                                >
-                                                                    <span>{activeV.name}</span>
-                                                                    <ChevronLeft size={9} className="rotate-[-90deg] opacity-60" />
-                                                                </button>
-                                                            )}
-                                                        </>
-                                                    );
-                                                }
-
-                                                // Single-variant or non-manifest exercise: show name as-is
-                                                return (
-                                                    <h3 className="text-2xl font-black italic uppercase text-white leading-tight truncate">
-                                                        {exercise.equipmentName}
-                                                    </h3>
-                                                );
-                                            })()}
+                                            {/* Exercise name — full name including variant, no change-variant button.
+                                                Variants are selected in the catalog. During training the name is fixed. */}
+                                            <h3 className="text-2xl font-black italic uppercase text-white leading-tight truncate">
+                                                {exercise.equipmentName}
+                                            </h3>
                                             {canModifyStructure && (
                                                 <div className="flex gap-2 mt-2">
                                                     <button
