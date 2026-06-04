@@ -165,30 +165,32 @@ export const FriendsPage = () => {
         const activeSess = friend.activeSession;
         const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
 
-        // ── Step 1: Identify candidate host from local session data ──────────
-        // Rules:
-        //   • If the found session belongs to someone OTHER than the friend → that person is the host.
-        //   • If the session belongs to the friend AND has partner_session_id → friend is a guest,
-        //     partner_id holds the host's user_id.
-        //   • If the session belongs to the friend AND has partner_id but no partner_session_id yet
-        //     (sessions not fully linked) → partner_id is still the other party; we verify below.
-        //   • Otherwise the friend is the solo host.
+        // ── Step 1: Identify the HOST from local session data ──────────────
+        // Key DB invariant:
+        //   HOST session:  partner_session_id = null  (or set LATER to guest's session)
+        //                  partner_id = guest's user_id
+        //   GUEST session: partner_session_id = HOST's session ID   (always set on create)
+        //                  partner_id = HOST's user_id
+        //
+        // Reliable detection:
+        //   • Session with partner_session_id SET    → belongs to a GUEST → host = partner_id
+        //   • Session with partner_session_id NULL   → belongs to the HOST (or solo)
+        //   • Session belongs to someone OTHER than friend → that person IS the host
         let candidateHostId: string;
         let candidateRoomId: string;
 
         if (activeSess.user_id !== friendUserId) {
-            // Session returned belongs to another user — that user is the host
+            // Session returned belongs to another user — that user IS the host
             candidateHostId = activeSess.user_id;
             candidateRoomId = activeSess.id;
-        } else if (activeSess.is_multiplayer && activeSess.partner_id) {
-            // Friend's own session but it's multiplayer — partner_id is the other party.
-            // If partner_session_id is set, friend is a confirmed guest; if not, we still
-            // treat partner_id as the host candidate and verify via DB.
+        } else if (activeSess.partner_session_id) {
+            // Friend's own session AND has partner_session_id → friend IS a GUEST.
+            // partner_id on a GUEST session always points to the HOST's user_id.
             candidateHostId = activeSess.partner_id;
-            candidateRoomId = activeSess.partner_session_id || activeSess.id;
+            candidateRoomId = activeSess.partner_session_id; // This IS the host's session
         } else {
-            // Friend is the solo/room host
-            candidateHostId = activeSess.user_id;
+            // Friend's own session with no partner_session_id → friend IS the HOST (or solo).
+            candidateHostId = activeSess.user_id;   // = friendUserId
             candidateRoomId = activeSess.id;
         }
 

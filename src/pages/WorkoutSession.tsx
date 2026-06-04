@@ -1939,10 +1939,16 @@ export const WorkoutSession = () => {
 
         // Parallelize Initial Data Fetching
         try {
-            // Reset the intro animation on every initializeBattle call (re-navigation)
-            // so it never gets stuck from a previous session's timer.
-            setShowIntroAnim(true);
-            setTimeout(() => setShowIntroAnim(false), 1200);
+            // Show intro animation only on genuine cold-start (no active exercises, no session).
+            // Never show it when the user is already in an active workout or finalizing —
+            // that would create a 1.2s black screen that looks like "no exercises."
+            const shouldShowIntro = activeExercisesRef.current.length === 0 && !sessionIdRef.current;
+            if (shouldShowIntro) {
+                setShowIntroAnim(true);
+                setTimeout(() => setShowIntroAnim(false), 1200);
+            } else {
+                setShowIntroAnim(false);
+            }
 
             // 🛡️ PHASE 0: Aggressively clean orphan sessions BEFORE fetching the active session.
             // This ensures getActiveSession never returns a ghost with stale timer data.
@@ -2377,28 +2383,47 @@ export const WorkoutSession = () => {
                     const result = await startNewSession(targetGymId || undefined, undefined, currentIsMultiplayer, currentMultiplayerMode, currentPartnerId);
                     await loadRoutine(autoRoutine, result?.freshArsenal || mergedInventory);
                 } else {
-                    // Check if partner has an active session
-                    const partnerActive = partnerActiveResult?.data;
+                    // Check if partner has an active session.
+                    // For 3rd+ participants joining a room where the host already finished:
+                    // partnerActiveResult might be null (host's session has finished_at set).
+                    // In that case, we still need to start a session using the room ID from navState.
+                    let partnerActive = partnerActiveResult?.data;
+
+                    // Fallback: if the direct partner session is not found but navState has a room ID
+                    // (chatId or partnerSessionId), the host may have already left — query the room session
+                    // directly so the guest can still join the room and sync with remaining participants.
+                    if (!partnerActive && currentIsMultiplayer && !currentIsInviter) {
+                        const roomIdFromNav = navState.partnerSessionId || navState.chatId || chatId;
+                        if (roomIdFromNav) {
+                            const { data: roomSess } = await supabase
+                                .from('workout_sessions')
+                                .select('id, user_id, gym_id, started_at, partner_id, is_multiplayer')
+                                .eq('id', roomIdFromNav)
+                                .maybeSingle();
+                            if (roomSess) {
+                                console.log('🔗 Host session already finished — using room ID from nav state:', roomIdFromNav);
+                                partnerActive = roomSess;
+                            }
+                        }
+                    }
+
                     if (partnerActive) {
                         console.log("🔗 Found active partner session on init:", partnerActive.id);
                         partnerSessionIdRef.current = partnerActive.id;
                         setPartnerSessionId(partnerActive.id);
-                        
+
                         if (partnerActive.partner_id) {
                             setFirstGuestId(partnerActive.partner_id);
                         }
-                        
+
                         if (currentIsMultiplayer && currentMultiplayerMode === 'conjunto' && !currentIsInviter) {
-                            // Flag: keep loading=true until the host's sync_state arrives with exercises
+                            // Flag: keep loading=true until sync_state arrives with exercises
                             waitingForGuestSyncRef.current = true;
                             console.log('🚀 Guest auto-starting session because partner has active session...');
-                            // Wait for guest session to start so we have a sessionId and startTime
                             await startNewSession(partnerActive.gym_id || undefined, partnerActive.id, currentIsMultiplayer, currentMultiplayerMode, currentPartnerId);
                             setStartTime(new Date(partnerActive.started_at));
                         }
                     // Only prompt for routine/exercises in solo mode with truly no exercises.
-                    // Never auto-open the catalog for multiplayer (host waits for catalog selection,
-                    // guest waits for sync_state) to avoid the visual bug of the modal appearing on entry.
                     } else if (activeExercisesRef.current.length === 0 && !currentIsMultiplayer) {
                         if (localRoutines.length === 0) setShowAddModal(true);
                         else setShowStartOptionsModal(true);
@@ -4310,11 +4335,14 @@ export const WorkoutSession = () => {
                 localStorage.removeItem('ginx_coop_state');
                 sessionStorage.removeItem('ginx_temp_exit_active');
 
+                // Show summary immediately — the 1500ms delay caused a blank/empty screen
+                // for guests finishing after the host left. A short 300ms transition is enough
+                // to give visual feedback without making the user wait staring at nothing.
                 setTimeout(() => {
                     setLoading(false);
                     isLeavingPageRef.current = true;
                     setShowSummary(true);
-                }, 1500);
+                }, 300);
             } else {
                 console.error('❌ Error terminando sesión:', result.error);
                 setLoading(false);
@@ -4388,8 +4416,8 @@ export const WorkoutSession = () => {
                 </div>
             )}
 
-            {/* 0. INTRO ANIMATION (Matching Image Reference) */}
-            {showIntroAnim && (
+            {/* 0. INTRO ANIMATION — hidden during finish/summary to prevent black-screen flash */}
+            {showIntroAnim && !isFinished && !isFinalizing && !showSummary && (
                 <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center animate-out fade-out duration-300 delay-700">
                     <div className="flex flex-col items-center gap-8 px-6 text-center">
                         {/* Map Icon (Gold) */}
