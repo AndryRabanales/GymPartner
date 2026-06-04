@@ -11,8 +11,7 @@ import { userService } from '../services/UserService';
 import { workoutService } from '../services/WorkoutService';
 import { WorkoutCarousel } from '../components/workout/WorkoutCarousel';
 import { WorkoutCatalog } from '../components/workout/WorkoutCatalog';
-import { CURATED_EXERCISES, findBaseExercise, getVariantPrefs, saveVariantPref, getExtrasForMuscle } from '../data/exerciseCatalog';
-import type { ExerciseVariant } from '../data/exerciseCatalog';
+import { getExtrasForMuscle } from '../data/exerciseCatalog';
 import { IMAGE_MANIFEST } from '../data/imageManifest';
 import { useUnlockedExercises } from '../hooks/useUnlockedExercises';
 import { ArsenalGrid } from '../components/arsenal/ArsenalGrid';
@@ -1922,6 +1921,10 @@ export const WorkoutSession = () => {
         // Never run init logic while the session is finishing or the summary is showing —
         // doing so can open the catalog or start-options modal over the finish flow.
         if (isFinished || showSummary) return;
+        // If the user is actively training in multiplayer and exercises are loaded,
+        // skip re-initialization to prevent ghost catalog flashes and multiplayer resets.
+        // (This can trigger on location.key changes e.g. when checking notifications.)
+        if (isMultiplayerRef.current && activeExercisesRef.current.length > 0 && sessionIdRef.current) return;
 
         // Extract fresh state variables directly from location to avoid closure staleness on route navigation
         const navState = location.state as any || {};
@@ -2341,10 +2344,17 @@ export const WorkoutSession = () => {
                     setIsRoutineModified(false);
                 }
 
-                // Starting a fresh session: reset any stale cached multiplayer flags in local state/storage 
-                // UNLESS we are explicitly coming from a navigation invite/join action (which passes navState)
+                // Starting a fresh session: reset any stale cached multiplayer flags.
+                // CRITICAL guards — never reset if:
+                //   1. navState explicitly carries multiplayer (joining from notification)
+                //   2. There are already exercises loaded (user is mid-session)
+                //   3. ginx_coop_state is in localStorage (valid coop session still active)
+                // Resetting mid-session would make the summary think it's a solo session,
+                // hiding all partner data and triggering the exercise catalog (ghost flash).
                 const navState = location.state as any || {};
-                if (!navState.isMultiplayer) {
+                const hasCachedCoop = !!localStorage.getItem('ginx_coop_state');
+                const hasActiveExercises = activeExercisesRef.current.length > 0;
+                if (!navState.isMultiplayer && !hasCachedCoop && !hasActiveExercises) {
                     setIsMultiplayer(false);
                     setMultiplayerMode(null);
                     setPartnerId(null);
@@ -4539,73 +4549,54 @@ export const WorkoutSession = () => {
                                     <div className="p-4 flex justify-between items-start bg-white/5 border-b border-white/5 shrink-0">
                                         <div className="flex-1 min-w-0">
                                             {(() => {
-                                                // 1. Check Manifest (New Dynamic Way)
-                                                // Exact match only — avoids prefix ambiguity and substring collisions.
+                                                // Source of truth: IMAGE_MANIFEST (auto-generated from folder structure).
+                                                // exercise.equipmentName always stores the full name including variant:
+                                                //   "Inclinado (Barra)", "Curl Bíceps (Mancuernas)", etc.
+                                                // No hardcoded exerciseCatalog.ts fallback — imageManifest is the single source.
                                                 const manifestEntry = IMAGE_MANIFEST.find(e =>
                                                     exercise.equipmentName === e.name ||
                                                     e.variants.some(v => exercise.equipmentName === `${e.name} (${v.name})`)
                                                 );
 
-                                                // 2. Check Legacy (Old Virtual Way)
-                                                const base = findBaseExercise(exercise.equipmentName);
-                                                const legacyVariant = base?.variants.find(v => v.seedName === exercise.equipmentName);
-
                                                 if (manifestEntry && manifestEntry.variants.length > 1) {
-                                                    // Exact variant match — avoids "Barra" matching "Barra Olímpica" via includes()
                                                     const activeV = manifestEntry.variants.find(v =>
                                                         exercise.equipmentName === `${manifestEntry.name} (${v.name})`
                                                     ) || manifestEntry.variants[0];
+
                                                     return (
                                                         <>
+                                                            {/* Full name including variant — "Inclinado (Barra)" not just "Inclinado" */}
                                                             <h3 className="text-2xl font-black italic uppercase text-white leading-tight truncate">
-                                                                {manifestEntry.name}
+                                                                {exercise.equipmentName}
                                                             </h3>
-                                                            <button
-                                                                onClick={() => {
-                                                                    const currentIdx = manifestEntry.variants.findIndex(v => v.name === activeV.name);
-                                                                    const nextIdx = (currentIdx + 1) % manifestEntry.variants.length;
-                                                                    const nextV = manifestEntry.variants[nextIdx];
-                                                                    const newName = `${manifestEntry.name} (${nextV.name})`;
-                                                                    saveVariantPref(`manifest-${manifestEntry.id}`, nextV.id);
-                                                                    setActiveExercises(prev => prev.map((ex, idx) =>
-                                                                        idx !== mapIndex ? ex : { ...ex, equipmentName: newName, equipmentId: `manifest-${manifestEntry.id}__${nextV.id}` }
-                                                                    ));
-                                                                }}
-                                                                className="mt-1 inline-flex items-center gap-1.5 text-[11px] font-bold text-neutral-400 hover:text-gym-primary bg-neutral-800/60 hover:bg-gym-primary/10 border border-neutral-700 hover:border-gym-primary/40 px-2.5 py-1 rounded-full transition-all"
-                                                            >
-                                                                <span>💪</span>
-                                                                <span>{activeV.name}</span>
-                                                                <ChevronLeft size={10} className="rotate-[-90deg]" />
-                                                            </button>
+                                                            {/* Inline variant swap — useful to change variant without going back to catalog */}
+                                                            {canModifyStructure && (
+                                                                <button
+                                                                    onClick={() => {
+                                                                        const currentIdx = manifestEntry.variants.findIndex(v => v.name === activeV.name);
+                                                                        const nextIdx = (currentIdx + 1) % manifestEntry.variants.length;
+                                                                        const nextV = manifestEntry.variants[nextIdx];
+                                                                        const newName = `${manifestEntry.name} (${nextV.name})`;
+                                                                        setActiveExercises(prev => prev.map((ex, idx) =>
+                                                                            idx !== mapIndex ? ex : { ...ex, equipmentName: newName, equipmentId: `manifest-${manifestEntry.id}__${nextV.id}` }
+                                                                        ));
+                                                                    }}
+                                                                    className="mt-1 inline-flex items-center gap-1.5 text-[10px] font-bold text-neutral-500 hover:text-gym-primary bg-neutral-800/40 hover:bg-gym-primary/10 border border-neutral-800 hover:border-gym-primary/40 px-2 py-0.5 rounded-full transition-all"
+                                                                    title="Cambiar variante"
+                                                                >
+                                                                    <span>{activeV.name}</span>
+                                                                    <ChevronLeft size={9} className="rotate-[-90deg] opacity-60" />
+                                                                </button>
+                                                            )}
                                                         </>
                                                     );
                                                 }
 
-                                                // Legacy fallback
+                                                // Single-variant or non-manifest exercise: show name as-is
                                                 return (
-                                                    <>
-                                                        <h3 className="text-2xl font-black italic uppercase text-white leading-tight truncate">
-                                                            {base ? base.name : exercise.equipmentName}
-                                                        </h3>
-                                                        {base && base.variants.length > 1 && (
-                                                            <button
-                                                                onClick={() => {
-                                                                    const currentIdx = base.variants.findIndex(v => v.seedName === exercise.equipmentName);
-                                                                    const nextIdx = (currentIdx + 1) % base.variants.length;
-                                                                    const nextVariant = base.variants[nextIdx];
-                                                                    saveVariantPref(base.id, nextVariant.id);
-                                                                    setActiveExercises(prev => prev.map((ex, idx) =>
-                                                                        idx !== mapIndex ? ex : { ...ex, equipmentName: nextVariant.seedName, equipmentId: `virtual-${nextVariant.seedName}` }
-                                                                    ));
-                                                                }}
-                                                                className="mt-1 inline-flex items-center gap-1.5 text-[11px] font-bold text-neutral-400 hover:text-gym-primary bg-neutral-800/60 hover:bg-gym-primary/10 border border-neutral-700 hover:border-gym-primary/40 px-2.5 py-1 rounded-full transition-all"
-                                                            >
-                                                                <span>{legacyVariant?.icon ?? '💪'}</span>
-                                                                <span>{legacyVariant?.label ?? exercise.equipmentName}</span>
-                                                                <ChevronLeft size={10} className="rotate-[-90deg]" />
-                                                            </button>
-                                                        )}
-                                                    </>
+                                                    <h3 className="text-2xl font-black italic uppercase text-white leading-tight truncate">
+                                                        {exercise.equipmentName}
+                                                    </h3>
                                                 );
                                             })()}
                                             {canModifyStructure && (
@@ -5435,16 +5426,28 @@ export const WorkoutSession = () => {
                 showSummary && (() => {
                     const myId = user?.id || '';
                     const myName = (user?.user_metadata?.full_name || user?.user_metadata?.username || 'Yo').split(' ')[0];
+
                     // Use allTimeParticipantsRef so we include users who already left the room.
-                    // This ensures the summary shows everyone's data even after participants disconnect.
-                    const allPlayers = (isMultiplayer && multiplayerMode === 'conjunto' && allTimeParticipantsRef.current.length > 0)
+                    // Also fall back to checking if partnerId exists even if participants were reset —
+                    // this prevents the isMultiplayer guard from silently dropping partner data if
+                    // initializeBattle reset isMultiplayer to false between finish and summary render.
+                    const hasPartner = allTimeParticipantsRef.current.length > 1 || !!partnerId;
+                    const isCoopSummary = (isMultiplayer || hasPartner) && multiplayerMode === 'conjunto';
+                    const allPlayers = (isCoopSummary && allTimeParticipantsRef.current.length > 0)
                         ? allTimeParticipantsRef.current
                         : [{ id: myId, username: myName, avatar_url: user?.user_metadata?.avatar_url }];
                     const isGroupMode = allPlayers.length > 1;
 
+                    // Use lastNonEmptyExercisesRef as safety net — if activeExercises was cleared
+                    // by a race condition between finishSession and the summary render, we still
+                    // have the last known exercise snapshot to display results from.
+                    const summaryExs = activeExercises.length > 0
+                        ? activeExercises
+                        : lastNonEmptyExercisesRef.current;
+
                     // Compaction Formula based on exercise volume
-                    const totalSets = activeExercises.reduce((sum, ex) => sum + (ex.sets?.length || 0), 0);
-                    const totalExs = activeExercises.length;
+                    const totalSets = summaryExs.reduce((sum, ex) => sum + (ex.sets?.length || 0), 0);
+                    const totalExs = summaryExs.length;
                     
                     let compLevel = 0;
                     if (totalExs > 5 || totalSets > 15) {
@@ -5655,7 +5658,7 @@ export const WorkoutSession = () => {
                                 {/* ====== TAB: GRUPAL ====== */}
                                 {(summaryTab === 'grupal' && isGroupMode) && (
                                     <div className={`flex flex-col ${cardSpacing}`}>
-                                        {activeExercises.map((ex, exIdx) => {
+                                        {summaryExs.map((ex, exIdx) => {
                                             const hasAnyData = ex.sets.some(s =>
                                                 allPlayers.some(p =>
                                                     Number(s.playerWeights?.[p.id]) > 0 ||
@@ -5741,7 +5744,7 @@ export const WorkoutSession = () => {
                                 {/* ====== TAB: INDIVIDUAL ====== */}
                                 {(summaryTab === 'individual' || !isGroupMode) && (
                                     <div className={`flex flex-col ${cardSpacing}`}>
-                                        {activeExercises.map((ex, exIdx) => {
+                                        {summaryExs.map((ex, exIdx) => {
                                             // Scalar fallback mirrors the display formula used in the input rows:
                                             // playerWeights[myId] → p2_weight (firstGuest) → set.weight (host/solo) → 0
                                             const myIsHost2 = !isMultiplayer || isInviter;
