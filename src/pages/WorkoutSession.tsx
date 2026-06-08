@@ -1323,7 +1323,23 @@ export const WorkoutSession = () => {
         const hostId = partnerId; // capture narrowed string for closure
 
         const poll = async () => {
-            if (cancelled || attempts >= MAX_ATTEMPTS) return;
+            if (cancelled) return;
+            if (attempts >= MAX_ATTEMPTS) {
+                // Don't fail silently: a guest stuck here would otherwise stare at an
+                // endless loading screen with zero feedback ("me llegó la solicitud
+                // pero no cargó el coop"). Tell them plainly what's happening — the
+                // host simply hasn't started their workout yet — so they know it's
+                // not broken and can retry once the host actually begins.
+                console.warn('⏱️ [Guest Poll] Timed out waiting for host session after', MAX_ATTEMPTS, 'attempts.');
+                import('react-hot-toast').then(({ default: t }) =>
+                    t('⏳ Tu compañero aún no inició su entrenamiento. Cuando lo haga, vuelve a intentar unirte desde la invitación.', {
+                        duration: 7000,
+                        icon: '⏳',
+                        style: { background: '#171717', color: '#fff', border: '1px solid rgba(234,179,8,0.3)', fontSize: '11px', fontWeight: 'bold' }
+                    })
+                );
+                return;
+            }
             attempts++;
             try {
                 const { data } = await workoutService.getActiveSession(hostId);
