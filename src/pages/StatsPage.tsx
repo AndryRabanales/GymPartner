@@ -20,10 +20,9 @@ interface Stats {
     oneRepMaxes: any[];
     volumeTrendData: any[]; // New field
     consistencyData: any[]; // New field
-    social: {             // New field
+    social: {             // New field — spec §1.6: "likes" no es una métrica de Stats
         followers: number;
         following: number;
-        likes: number;
     };
 }
 
@@ -87,7 +86,7 @@ export const StatsPage = () => {
                 if (error) throw error;
 
                 if (!sessions || sessions.length === 0) {
-                    setStats({ totalWorkouts: 0, totalVolume: 0, totalTimeMinutes: 0, muscleBalanceData: [], oneRepMaxes: [], volumeTrendData: [], consistencyData: [], social: { followers: 0, following: 0, likes: 0 } });
+                    setStats({ totalWorkouts: 0, totalVolume: 0, totalTimeMinutes: 0, muscleBalanceData: [], oneRepMaxes: [], volumeTrendData: [], consistencyData: [], social: { followers: 0, following: 0 } });
                     setLoading(false);
                     return;
                 }
@@ -172,8 +171,7 @@ export const StatsPage = () => {
                     consistencyData,
                     social: {
                         followers: socialStats.followersCount,
-                        following: socialStats.followingCount,
-                        likes: socialStats.totalLikes
+                        following: socialStats.followingCount
                     }
                 });
                 setLoading(false);
@@ -187,7 +185,7 @@ export const StatsPage = () => {
                     oneRepMaxes: [],
                     volumeTrendData: [],
                     consistencyData: [],
-                    social: { followers: 0, following: 0, likes: 0 }
+                    social: { followers: 0, following: 0 }
                 });
                 setLoading(false);
             }
@@ -321,14 +319,13 @@ export const StatsPage = () => {
                         Influencia Social
                     </h3>
 
-                    <div className="grid grid-cols-3 gap-4 relative z-10">
+                    {/* spec §1.6 (líneas 198, 212): el panel de "Influencia Social" NUNCA
+                        muestra ni calcula un contador de "likes" — esa métrica no existe
+                        en ninguna parte de Stats. Solo Seguidores / Siguiendo. */}
+                    <div className="grid grid-cols-2 gap-4 relative z-10">
                         <div className="bg-black/30 p-4 rounded-2xl border border-white/5 text-center">
                             <p className="text-xs text-neutral-500 font-bold uppercase tracking-wider mb-1">Seguidores</p>
                             <span className="text-3xl font-black text-white">{stats.social.followers}</span>
-                        </div>
-                        <div className="bg-black/30 p-4 rounded-2xl border border-white/5 text-center">
-                            <p className="text-xs text-neutral-500 font-bold uppercase tracking-wider mb-1">Likes</p>
-                            <span className="text-3xl font-black text-white">{stats.social.likes}</span>
                         </div>
                         <div className="bg-black/30 p-4 rounded-2xl border border-white/5 text-center">
                             <p className="text-xs text-neutral-500 font-bold uppercase tracking-wider mb-1">Siguiendo</p>

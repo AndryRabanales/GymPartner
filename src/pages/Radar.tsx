@@ -548,10 +548,12 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
                                     </div>
                                 </div>
 
-                                {/* MATCH Stamp */}
+                                {/* MATCH Stamp — spec §1.5/línea 277: el Radar nunca debe mostrar
+                                    un "me gusta"/"LIKE" hacia personas; el gesto de deslizar a la
+                                    derecha envía una invitación de entrenamiento (match), no un like. */}
                                 <div className="absolute top-[125px] right-[30%] translate-x-1/2 z-50 pointer-events-none opacity-0 select-none animate-[likeStampFade_3s_ease-in-out_infinite]">
                                     <div className="border-4 border-gym-primary text-gym-primary font-black text-4xl px-5 py-1.5 rounded-2xl uppercase tracking-widest bg-black/70 backdrop-blur-sm shadow-2xl">
-                                        LIKE
+                                        MATCH
                                     </div>
                                 </div>
                             </>

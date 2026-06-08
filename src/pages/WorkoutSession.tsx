@@ -375,6 +375,17 @@ export const WorkoutSession = () => {
     const [showCoopExitModal, setShowCoopExitModal] = useState(false);
     const [showForceExitModal, setShowForceExitModal] = useState(false);
     const [showCancelModal, setShowCancelModal] = useState(false);
+    // ── PAUSAR SESIÓN COMPLETA (spec §1.2, líneas 45/49) ─────────────────────
+    // "...pausar la sesión completa... Pausar y reanudar conserva exactamente
+    // los datos y el tiempo transcurrido — no se pierde ni se duplica
+    // información al reanudar." Implementado de forma puramente aditiva: NO
+    // toca el cronómetro base (startTime, sigue siendo la fuente de verdad
+    // para sync multijugador / geo-validación / persistencia); solo resta el
+    // tiempo acumulado en pausa al calcular lo que se MUESTRA y congela el
+    // display + bloquea el registro de series mientras está pausada.
+    const [isSessionPaused, setIsSessionPaused] = useState(false);
+    const pausedAtRef = useRef<number | null>(null);
+    const accumulatedPauseMsRef = useRef<number>(0);
     const [showSummary, setShowSummary] = useState(false);
     const [summaryTab, setSummaryTab] = useState<'grupal' | 'individual'>('grupal');
     const [exerciseFillFlow, setExerciseFillFlow] = useState<{ exerciseName: string; timestamp: number }[]>([]);
@@ -794,7 +805,25 @@ export const WorkoutSession = () => {
 
                                     const locTime = loc.lastUpdatedAt || 0;
                                      const inTime = inSet.lastUpdatedAt || 0;
-                                     const useLoc = locTime >= inTime && locTime > 0;
+
+                                     // Deterministic LWW resolver shared by every timestamp comparison below.
+                                     // A strictly-newer timestamp always wins (normal case). The bug this fixes:
+                                     // on a genuine TIE (both devices stamped the same millisecond — quite
+                                     // possible with concurrent edits, e.g. both partners tap "complete" at once),
+                                     // the old code (`locTime >= inTime`) made BOTH sides resolve to "local wins",
+                                     // so each device kept ITS OWN value forever — a permanent disagreement
+                                     // ("split-brain") that looks exactly like "a veces no sincroniza". Here we
+                                     // break ties with a stable, symmetric rule (smaller user id wins) so every
+                                     // participant's device computes the SAME winner and converges.
+                                     // `zeroTieFavorsLocal` preserves the original per-call-site behavior for the
+                                     // legacy edge case where neither side ever stamped a timestamp (old sessions).
+                                     const resolveLww = (lT: number, iT: number, zeroTieFavorsLocal: boolean) => {
+                                         if (lT !== iT) return lT > iT;
+                                         if (lT === 0) return zeroTieFavorsLocal;
+                                         return user.id < sender;
+                                     };
+
+                                     const useLoc = resolveLww(locTime, inTime, false);
 
                                      const lastUpd = { ...(loc.playerLastUpdated || {}) };
                                      for (const pid of Object.keys(inSet.playerLastUpdated || {})) {
@@ -818,7 +847,7 @@ export const WorkoutSession = () => {
                                              if (hasLoc && hasIn) {
                                                  const locPTime = loc.playerLastUpdated?.[key] || 0;
                                                  const inPTime = inSet.playerLastUpdated?.[key] || 0;
-                                                 res[key] = locPTime >= inPTime ? locVal : inVal;
+                                                 res[key] = resolveLww(locPTime, inPTime, true) ? locVal : inVal;
                                              } else if (hasIn) {
                                                  res[key] = inVal;
                                              }
@@ -985,6 +1014,50 @@ export const WorkoutSession = () => {
                 isLeavingPageRef.current = true;
                 // Eject user
                 navigate('/');
+            })
+            .on('broadcast', { event: 'host_cancelled_continue_solo' }, async (payload) => {
+                const { sender } = payload.payload;
+                if (sender === user.id) return; // Ignore echoes
+
+                // spec §1.3-B/F: si el host CANCELA (no finaliza), el grupo "continúa sin
+                // interrupciones ni pérdida de datos". La reasignación completa de host es
+                // un cambio de arquitectura mayor (requiere migrar el canal/sala en vivo);
+                // como aproximación segura y fiel al espíritu del requisito, cada participante
+                // restante conserva TODOS sus datos y su sesión sigue activa, convertida a
+                // modo individual — nadie es expulsado ni pierde su progreso.
+                console.warn('⚠️ [Host Cancelled] El host canceló su entrenamiento — continuamos en modo individual sin perder datos.');
+                toast.success('El anfitrión canceló su sesión. Tu progreso se mantiene — continúas de forma individual.', { duration: 6000 });
+
+                try {
+                    if (sessionIdRef.current) {
+                        await supabase
+                            .from('workout_sessions')
+                            .update({
+                                is_multiplayer: false,
+                                multiplayer_mode: null,
+                                partner_id: null,
+                                partner_session_id: null
+                            })
+                            .eq('id', sessionIdRef.current);
+                    }
+                } catch (e) {
+                    console.error('Error converting orphaned coop session to individual mode:', e);
+                }
+
+                localStorage.removeItem('ginx_coop_state');
+                sessionStorage.removeItem('ginx_temp_exit_active');
+
+                // Drop multiplayer state — the channel effect tears itself down automatically
+                // (cleanup runs on [isMultiplayer, partnerId, syncRoomId] change) and the
+                // session keeps running locally exactly where it was, with all data intact.
+                setIsMultiplayer(false);
+                setMultiplayerMode(null);
+                setPartnerId(null);
+                setChatId(null);
+                setSyncRoomId(null);
+                setIsInviter(true);
+                isInviterRef.current = true;
+                setParticipants([]);
             })
             .on('broadcast', { event: 'session_finished' }, async (payload) => {
                 const { sender } = payload.payload;
@@ -1937,7 +2010,10 @@ export const WorkoutSession = () => {
             const now = new Date();
             const diff = Math.max(0, now.getTime() - new Date(startTime).getTime());
 
-            // ⏱️ AUTO-KILL: Force-end sessions that exceed 5 hours
+            // ⏱️ AUTO-KILL: Force-end sessions that exceed 5 hours.
+            // Uses the RAW elapsed time (never the paused-adjusted display) —
+            // pausing the visible clock must never let a session live past the
+            // hard limit and become a zombie.
             if (diff >= MAX_SESSION_MS) {
                 console.warn('⏰ Sesión superó el límite de 5 horas. Cerrando automáticamente...');
                 setIsFinished(true);
@@ -1954,9 +2030,22 @@ export const WorkoutSession = () => {
                 return;
             }
 
-            const hours = Math.floor(diff / (1000 * 60 * 60));
-            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+            // 🕐 DISPLAY: subtract all paused time (completed pauses + the one
+            // currently in progress, if any) so the shown clock freezes the
+            // instant the user pauses and resumes from EXACTLY that value with
+            // zero loss/duplication — spec §1.2 línea 49: "Pausar y reanudar
+            // conserva exactamente los datos y el tiempo transcurrido". While
+            // paused, `diff` and `pausedMs` grow at the same rate, so
+            // `displayDiff` stays perfectly constant — no extra branching needed.
+            let pausedMs = accumulatedPauseMsRef.current;
+            if (pausedAtRef.current) {
+                pausedMs += (now.getTime() - pausedAtRef.current);
+            }
+            const displayDiff = Math.max(0, diff - pausedMs);
+
+            const hours = Math.floor(displayDiff / (1000 * 60 * 60));
+            const minutes = Math.floor((displayDiff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((displayDiff % (1000 * 60)) / 1000);
 
             if (hours > 0) {
                 setElapsedTime(`${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
@@ -3938,14 +4027,18 @@ export const WorkoutSession = () => {
         }
 
         isLeavingPageRef.current = true;
-        // Host broadcasts session_terminated to guests so they are safely clean-booted
+        // spec §1.3-F: "la cancelación del host nunca debe cerrar la sesión para los
+        // demás" — el grupo "continúa sin interrupciones ni pérdida de datos". Por eso,
+        // al cancelar, el host avisa a los demás con un evento NO destructivo: cada
+        // participante conserva su sesión y su progreso, y continúa en modo individual
+        // (en vez del antiguo "Destruction Protocol" que borraba y expulsaba a todos).
         if (isMultiplayer && isInviter && channelRef.current && user) {
-            console.log('📢 Host broadcasting session_terminated to guests during cancellation...');
+            console.log('📢 Host cancelando — avisando a los demás para que continúen en modo individual sin perder datos...');
             channelRef.current.send({
                 type: 'broadcast',
-                event: 'session_terminated',
+                event: 'host_cancelled_continue_solo',
                 payload: { sender: user.id }
-            }).catch(e => console.error('Error broadcasting session_terminated:', e));
+            }).catch(e => console.error('Error broadcasting host_cancelled_continue_solo:', e));
         }
 
         const oldSessionId = sessionId;
@@ -3969,6 +4062,38 @@ export const WorkoutSession = () => {
     };
 
     // NEW: Handle Restart
+    // ── PAUSAR / REANUDAR SESIÓN COMPLETA (spec §1.2 líneas 45/49) ────────────
+    // Congela el cronómetro mostrado y bloquea el registro de series — sin
+    // tocar `startTime` (que sigue siendo la fuente de verdad para sync
+    // multijugador, geo-validación y persistencia), por lo que NINGÚN dato
+    // existente se pierde ni se duplica al reanudar: solo se "resta" el
+    // tiempo pausado del reloj que ve el usuario (ver Timer Effect arriba).
+    const handlePauseSession = () => {
+        if (isSessionPaused || isFinished) return;
+        pausedAtRef.current = Date.now();
+        setIsSessionPaused(true);
+        setShowExitMenu(false);
+        import('react-hot-toast').then(({ default: t }) =>
+            t('⏸️ Sesión en pausa — tu progreso y el tiempo transcurrido quedan exactamente como están.', {
+                duration: 3500,
+                icon: '⏸️',
+                style: { background: '#171717', color: '#fff', border: '1px solid rgba(234,179,8,0.3)', fontSize: '11px', fontWeight: 'bold' }
+            })
+        );
+    };
+
+    const handleResumeSession = () => {
+        if (!isSessionPaused) return;
+        if (pausedAtRef.current) {
+            accumulatedPauseMsRef.current += (Date.now() - pausedAtRef.current);
+            pausedAtRef.current = null;
+        }
+        setIsSessionPaused(false);
+        import('react-hot-toast').then(({ default: t }) =>
+            t.success('▶️ Sesión reanudada — continúas exactamente donde la dejaste.', { duration: 3000 })
+        );
+    };
+
     const handleRestartSession = async () => {
         if (!sessionId) return;
         if (window.confirm("¿Reiniciar entrenamiento? Se borrarán todas las series de hoy.")) {
@@ -4274,6 +4399,9 @@ export const WorkoutSession = () => {
 
         // 💾 AUTO-SAVE: Save any unsaved sets that have data
         let savedCount = 0;
+        // spec §1.2: cuántas series quedaron encoladas para sincronización
+        // automática por falta de conexión (ver workoutService.queuePendingSet).
+        let pendingSyncCount = 0;
         const savePromises: Promise<any>[] = [];
 
         for (let i = 0; i < activeExercises.length; i++) {
@@ -4356,7 +4484,7 @@ export const WorkoutSession = () => {
                             _rest_status: activeRestStatus === 'running' ? 'completed' : activeRestStatus
                         } as any;
 
-                        savePromises.push(workoutService.logSet({
+                        const setPayload = {
                             session_id: finalSessionId,
                             exercise_id: targetId,
                             set_number: j + 1,
@@ -4370,15 +4498,22 @@ export const WorkoutSession = () => {
                             category_snapshot: exercise.category || 'Custom',
                             is_pr: false,
                             owner_id: myId
-                        }).then(res => {
+                        };
+
+                        savePromises.push(workoutService.logSet(setPayload).then(res => {
                             if (res.data) {
                                 set.db_id = res.data.id;
                             } else if (res.error) {
-                                // Surface DB errors so data loss is visible to the user
-                                console.error(`❌ Error saving set for ${exercise.equipmentName}:`, res.error);
-                                import('react-hot-toast').then(({ default: t }) =>
-                                    t.error(`⚠️ No se pudo guardar una serie de ${exercise.equipmentName}. Revisa tu conexión.`, { duration: 5000 })
-                                );
+                                // spec §1.2: "quedarse sin conexión... nunca pierde ningún
+                                // dato ya registrado... al recuperar la conexión, todos los
+                                // datos se sincronizan automáticamente". En vez de descartar
+                                // la serie (pérdida silenciosa de datos), la encolamos para
+                                // reintento automático — flushPendingSets() (disparado desde
+                                // AppLayout en cada arranque y en cada evento 'online') la
+                                // sincroniza sola, sin que el usuario tenga que hacer nada.
+                                console.error(`❌ Error saving set for ${exercise.equipmentName}, queued for offline sync:`, res.error);
+                                workoutService.queuePendingSet(finalSessionId, setPayload);
+                                pendingSyncCount++;
                             }
                         }));
                         savedCount++;
@@ -4396,6 +4531,19 @@ export const WorkoutSession = () => {
         if (savedCount > 0) {
             console.log(`📦 Guardando ${savedCount} sets pendientes...`);
             await Promise.all(savePromises);
+        }
+
+        // spec §1.2: una sola notificación clara y tranquilizadora — en vez de un
+        // toast de error por cada serie — explicando que NADA se perdió: quedaron
+        // guardadas localmente y se sincronizarán solas en cuanto vuelva la conexión.
+        if (pendingSyncCount > 0) {
+            import('react-hot-toast').then(({ default: t }) =>
+                t(`📡 ${pendingSyncCount} serie${pendingSyncCount > 1 ? 's' : ''} sin conexión — se guardaron en tu dispositivo y se sincronizarán solas apenas vuelvas a tener internet. No perdiste nada.`, {
+                    duration: 7000,
+                    icon: '🔄',
+                    style: { background: '#171717', color: '#fff', border: '1px solid rgba(234,179,8,0.3)', fontSize: '11px', fontWeight: 'bold' }
+                })
+            );
         }
 
         console.log('🏁 Terminando sesión en DB:', finalSessionId);
@@ -4719,6 +4867,15 @@ export const WorkoutSession = () => {
                             {/* OPTION MENU OVERLAY */}
                             {showExitMenu && (
                                 <div className="absolute top-14 left-4 z-50 bg-neutral-900 border border-neutral-800 rounded-xl shadow-2xl p-2 w-48 flex flex-col gap-1 animate-in slide-in-from-top-2">
+                                    {/* spec §1.2 línea 45: "...pausar la sesión completa..." */}
+                                    <button
+                                        onClick={isSessionPaused ? handleResumeSession : handlePauseSession}
+                                        className="flex items-center gap-3 w-full p-3 text-left text-sm font-bold text-white hover:bg-neutral-800 rounded-lg transition-colors"
+                                    >
+                                        {isSessionPaused
+                                            ? <><Play size={16} fill="currentColor" /> Reanudar sesión</>
+                                            : <><Pause size={16} /> Pausar sesión</>}
+                                    </button>
                                     <button
                                         onClick={handleRestartSession}
                                         className="flex items-center gap-3 w-full p-3 text-left text-sm font-bold text-white hover:bg-neutral-800 rounded-lg transition-colors"
@@ -4737,6 +4894,34 @@ export const WorkoutSession = () => {
                                 </div>
                             )}
                         </div>
+
+                        {/* PAUSE OVERLAY — spec §1.2 líneas 45/49: "pausar la sesión completa...
+                            conserva exactamente los datos y el tiempo transcurrido". Bloquea
+                            el registro mientras está en pausa; el reloj queda congelado al
+                            valor exacto (ver Timer Effect, que resta el tiempo pausado) y
+                            continúa sin saltos ni duplicaciones al pulsar "Reanudar". */}
+                        {isSessionPaused && (
+                            <div className="fixed inset-0 z-[180] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-6 animate-in fade-in duration-300">
+                                <div className="bg-neutral-900 border border-yellow-500/20 p-8 rounded-[2rem] w-full max-w-sm text-center shadow-2xl flex flex-col items-center gap-6">
+                                    <div className="w-16 h-16 bg-yellow-500/10 rounded-full flex items-center justify-center border border-yellow-500/30">
+                                        <Pause className="text-yellow-500 w-8 h-8" fill="currentColor" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-2xl font-black text-white italic uppercase tracking-tighter mb-2">Sesión en pausa</h2>
+                                        <p className="text-neutral-400 text-sm">Tu progreso y el tiempo transcurrido quedan exactamente como están — nada se pierde ni se duplica al reanudar.</p>
+                                    </div>
+                                    <div className="bg-neutral-800/50 border border-neutral-700 rounded-2xl px-6 py-3">
+                                        <span className="font-mono font-bold text-2xl text-white tracking-widest">{elapsedTime}</span>
+                                    </div>
+                                    <button
+                                        onClick={handleResumeSession}
+                                        className="w-full bg-gym-primary hover:bg-gym-primary/90 text-black font-black uppercase italic tracking-tighter py-4 rounded-2xl flex items-center justify-center gap-2 transition-colors"
+                                    >
+                                        <Play size={18} fill="currentColor" /> Reanudar entrenamiento
+                                    </button>
+                                </div>
+                            </div>
+                        )}
 
                         <WorkoutCarousel
                             currentIndex={currentExerciseIndex}

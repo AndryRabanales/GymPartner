@@ -336,6 +336,43 @@ export const AppLayout = () => {
             .catch(() => {}); // non-blocking — never interrupt the user
     }, [user?.id]);
 
+    // ── OFFLINE SYNC: recover sets queued during a connectionless finish ──────
+    // spec §1.2: "al recuperar la conexión, todos los datos registrados offline
+    // se sincronizan automáticamente con el servidor sin necesidad de acción del
+    // usuario — la sincronización ocurre en segundo plano, el usuario nunca
+    // necesita iniciar manualmente una 'sincronización pendiente'."
+    //
+    // WorkoutSession queues any set that fails to save at finish-time (e.g. no
+    // signal) via workoutService.queuePendingSet — instead of losing it. This
+    // effect lives here (the always-mounted app shell, not the workout page)
+    // so recovery keeps working even after the user navigates away: it tries
+    // once on load, and again every time the browser regains connectivity.
+    useEffect(() => {
+        if (!user) return;
+
+        let cancelled = false;
+        const flush = async () => {
+            try {
+                const { recovered } = await workoutService.flushPendingSets();
+                if (!cancelled && recovered > 0) {
+                    toast.success(
+                        `✅ ${recovered} serie${recovered > 1 ? 's' : ''} pendiente${recovered > 1 ? 's' : ''} de tu último entrenamiento se sincronizaron correctamente.`,
+                        { duration: 6000 }
+                    );
+                }
+            } catch {
+                // silent — will retry on the next 'online' event or app load
+            }
+        };
+
+        flush(); // try immediately (covers reconnection that happened while app was closed)
+        window.addEventListener('online', flush);
+        return () => {
+            cancelled = true;
+            window.removeEventListener('online', flush);
+        };
+    }, [user?.id]);
+
     useEffect(() => {
         if (!user) return;
 

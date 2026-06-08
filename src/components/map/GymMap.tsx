@@ -326,7 +326,8 @@ export const GymMap = () => {
     };
 
     const handleToggleFavorite = async () => {
-        if (!selectedGym || !user || !selectedGym.id) return;
+        // spec §1.5: el "me gusta" solo aplica a gimnasios ya visitados (Mis Gimnasios)
+        if (!selectedGym || !user || !selectedGym.id || !selectedGym.is_unlocked) return;
 
         const newFavState = !isFavorite;
         setIsFavorite(newFavState);
@@ -343,7 +344,7 @@ export const GymMap = () => {
 
     useEffect(() => {
         const fetchFavoriteData = async () => {
-            if (selectedGym && selectedGym.id && user) {
+            if (selectedGym && selectedGym.id && selectedGym.is_unlocked && user) {
                 const count = await userService.getGymFavoritesCount(selectedGym.id);
                 const isFav = await userService.checkIsFavorite(user.id, selectedGym.id);
                 setFavoriteCount(count);
@@ -810,8 +811,10 @@ export const GymMap = () => {
                                     </button>
                                 )}
 
-                                {/* FAVORITE SECTION (Always Visible) */}
-                                {selectedGym.id && (
+                                {/* FAVORITE SECTION — spec §1.5: el "me gusta" (❤) SOLO existe para
+                                    gimnasios YA VISITADOS (en "Mis Gimnasios" / pasaporte personal),
+                                    nunca para territorios bloqueados que el usuario aún no ha pisado. */}
+                                {selectedGym.id && selectedGym.is_unlocked && (
                                     <div className="pt-2 border-t border-white/10 flex items-center justify-between">
                                         <div className="flex items-center gap-2 text-xs text-neutral-400">
                                             <Heart size={14} className={isFavorite ? "text-red-500 fill-red-500" : ""} />

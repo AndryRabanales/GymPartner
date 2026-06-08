@@ -1230,6 +1230,91 @@ class WorkoutService {
             return [];
         }
     }
+
+    // ── OFFLINE SYNC QUEUE (spec §1.2) ──────────────────────────────────────
+    // "Quedarse sin conexión a internet durante un entrenamiento individual
+    // nunca cancela la sesión ni pierde ningún dato ya registrado — el usuario
+    // puede finalizar normalmente y todo queda guardado. Al recuperar la
+    // conexión, todos los datos registrados offline se sincronizan
+    // automáticamente con el servidor sin necesidad de acción del usuario."
+    //
+    // Before this, a logSet() failure at finish-time only showed an error
+    // toast — the set's data was permanently lost the moment the local draft
+    // was cleared. Now WorkoutSession queues the EXACT payload here instead,
+    // and flushPendingSets() (invoked on app load + on the 'online' event from
+    // AppLayout) silently recovers and saves it the moment connectivity returns.
+
+    // Queue a set payload that failed to save so it can be retried later.
+    queuePendingSet(sessionId: string, payload: WorkoutSetData): void {
+        try {
+            const key = `ginx_pending_sets_${sessionId}`;
+            const existing: WorkoutSetData[] = JSON.parse(localStorage.getItem(key) || '[]');
+            existing.push(payload);
+            localStorage.setItem(key, JSON.stringify(existing));
+
+            const indexKey = 'ginx_pending_sync_sessions';
+            const idx: string[] = JSON.parse(localStorage.getItem(indexKey) || '[]');
+            if (!idx.includes(sessionId)) {
+                idx.push(sessionId);
+                localStorage.setItem(indexKey, JSON.stringify(idx));
+            }
+        } catch (e) {
+            console.error('Error queuing pending set for offline sync:', e);
+        }
+    }
+
+    // Retry every queued set across every session. Safe to call repeatedly
+    // (on app start AND on every 'online' event) — sets that save successfully
+    // are removed from the queue; the rest stay queued for the next attempt.
+    async flushPendingSets(): Promise<{ recovered: number; stillPending: number }> {
+        let recovered = 0;
+        let stillPending = 0;
+        const indexKey = 'ginx_pending_sync_sessions';
+
+        try {
+            const sessionIds: string[] = JSON.parse(localStorage.getItem(indexKey) || '[]');
+            if (sessionIds.length === 0) return { recovered, stillPending };
+
+            const stillPendingSessionIds: string[] = [];
+
+            for (const sessionId of sessionIds) {
+                const key = `ginx_pending_sets_${sessionId}`;
+                const queued: WorkoutSetData[] = JSON.parse(localStorage.getItem(key) || '[]');
+                if (queued.length === 0) {
+                    localStorage.removeItem(key);
+                    continue;
+                }
+
+                const remaining: WorkoutSetData[] = [];
+                for (const payload of queued) {
+                    try {
+                        const res = await this.logSet(payload);
+                        if (res.data) {
+                            recovered++;
+                        } else {
+                            remaining.push(payload);
+                        }
+                    } catch {
+                        remaining.push(payload);
+                    }
+                }
+
+                if (remaining.length > 0) {
+                    localStorage.setItem(key, JSON.stringify(remaining));
+                    stillPendingSessionIds.push(sessionId);
+                    stillPending += remaining.length;
+                } else {
+                    localStorage.removeItem(key);
+                }
+            }
+
+            localStorage.setItem(indexKey, JSON.stringify(stillPendingSessionIds));
+        } catch (e) {
+            console.error('Error flushing pending offline sets:', e);
+        }
+
+        return { recovered, stillPending };
+    }
 }
 
 export const workoutService = new WorkoutService();
