@@ -282,23 +282,47 @@ const CoopJoinRequestToast = ({
 
                         const hasActiveOnAccept = !!activeSession;
 
-                        // If the host is ALREADY in the workout page (training), do NOT navigate —
-                        // that would change location.key, potentially breaking their active session.
-                        // The new participant will join via the Realtime presence channel automatically.
-                        // Only navigate if the host is NOT currently in the workout.
-                        if (!window.location.pathname.includes('/workout')) {
-                            navigate('/workout', {
-                                state: {
-                                    isMultiplayer: true,
-                                    multiplayerMode: 'conjunto',
-                                    partnerId: senderId,
-                                    chatId: roomSessionId,
-                                    partnerSessionId: roomSessionId,
-                                    isInviter: true,
-                                    forceNewSession: !hasActiveOnAccept
-                                }
-                            });
-                        }
+                        // ⚠️ CRITICAL: ALWAYS push fresh location.state — even when the host is
+                        // already on /workout actively training (the exact "usuario 1 inicia
+                        // entrenamiento, usuario 2 entra" scenario the user keeps hitting).
+                        //
+                        // WorkoutSession.tsx's local isMultiplayer/partnerId/syncRoomId/
+                        // multiplayerMode state is ONLY ever updated by the useEffect that
+                        // watches [location.state, user?.id] (around line 309). There is NO
+                        // postgres_changes listener on workout_sessions and no other event that
+                        // lets an already-mounted host "automatically" pick up a new guest —
+                        // the old comment here ("the new participant will join via the Realtime
+                        // presence channel automatically") was simply WRONG: without a fresh
+                        // navigate() call, isMultiplayer stays false, partnerId stays null, the
+                        // gated channel-setup effect (`if (!isMultiplayer || !partnerId || ...)
+                        // return;`) never runs, the coop-workout-${syncRoomId} channel is NEVER
+                        // created on the host's side, and the guest broadcasts into an empty/
+                        // nonexistent room — exactly "llega la notificación a usuario 1 pero no
+                        // carga nada".
+                        //
+                        // Navigating to the SAME route ('/workout') is SAFE and does NOT remount
+                        // WorkoutSession (no `key` prop differentiates the <Route> element in
+                        // App.tsx — see `<Route path="workout" element={<WorkoutSession />} />`),
+                        // it only updates location.state/location.key, re-triggering the sync
+                        // effect while preserving all in-memory exercise/timer state. This exactly
+                        // mirrors the proven-working `coop_accepted` handler above (line ~633),
+                        // which ALSO calls navigate('/workout', {...}) unconditionally.
+                        //
+                        // forceNewSession is `false` whenever the host has an active session
+                        // (hasActiveOnAccept), so the "Preserve Session" branch in WorkoutSession's
+                        // location.state effect runs — the host's current exercises/routine are
+                        // explicitly PRESERVED, never wiped.
+                        navigate('/workout', {
+                            state: {
+                                isMultiplayer: true,
+                                multiplayerMode: 'conjunto',
+                                partnerId: senderId,
+                                chatId: roomSessionId,
+                                partnerSessionId: roomSessionId,
+                                isInviter: true,
+                                forceNewSession: !hasActiveOnAccept
+                            }
+                        });
                     }}
                     className="flex-1 py-2 rounded-xl bg-gradient-to-br from-gym-primary to-yellow-500 text-neutral-950 font-black text-[10px] uppercase tracking-wider hover:shadow-[0_0_15px_rgba(255,215,0,0.35)] transition-all active:scale-95"
                 >

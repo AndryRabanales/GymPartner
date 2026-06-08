@@ -448,41 +448,72 @@ class WorkoutService {
         const fourHoursAgo  = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString();
         const fiveHoursAgo  = new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString();
 
-        // First: check for a recent coop session (5-hour window)
-        const { data: coopData, error: coopError } = await supabase
-            .from('workout_sessions')
-            .select('*')
-            .eq('user_id', userId)
-            .is('finished_at', null)
-            .eq('is_multiplayer', true)
-            .gt('started_at', fiveHoursAgo)
-            .order('started_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
+        // ⚠️ GHOST-SESSION FIX: query BOTH the most recent coop session (5h window)
+        // AND the most recent session overall (4h window) in parallel, then return
+        // whichever was started MORE RECENTLY.
+        //
+        // The previous version ALWAYS returned an is_multiplayer=true session — even
+        // if it was hours older than a brand-new solo session the user just started.
+        // That meant a leftover/orphaned coop session ("entrenamiento fantasma") from
+        // an earlier interrupted room could SHADOW the session the user is actually,
+        // currently training in right now.
+        //
+        // Concretely this broke the join flow: FriendsPage.handleJoinWorkout resolves
+        // `roomSessionId` via a plain "most recently started" query (no is_multiplayer
+        // filter), while CoopJoinRequestToast's accept handler resolved `resolvedSession`
+        // via THIS method — which could point at a totally different (ghost) session row.
+        // Host and guest would then end up listening on two different
+        // `coop-workout-${roomId}` realtime channels — guest broadcasts into an empty
+        // room, host never sees anything ("llega la notificación pero no carga nada").
+        //
+        // Always preferring the most-recently-started unfinished session makes this
+        // method agree with FriendsPage's resolution (and with "the session the user
+        // is obviously in right now") in every case.
+        const [coopRes, recentRes] = await Promise.all([
+            supabase
+                .from('workout_sessions')
+                .select('*')
+                .eq('user_id', userId)
+                .is('finished_at', null)
+                .eq('is_multiplayer', true)
+                .gt('started_at', fiveHoursAgo)
+                .order('started_at', { ascending: false })
+                .limit(1)
+                .maybeSingle(),
+            supabase
+                .from('workout_sessions')
+                .select('*')
+                .eq('user_id', userId)
+                .is('finished_at', null)
+                .gt('started_at', fourHoursAgo)
+                .order('started_at', { ascending: false })
+                .limit(1)
+                .maybeSingle(),
+        ]);
 
+        const { data: coopData, error: coopError } = coopRes;
+        const { data: recentData, error: recentError } = recentRes;
+
+        if (coopError && recentError) {
+            console.error('getActiveSession: both queries failed', { coopError, recentError });
+            return { data: null, error: recentError || coopError };
+        }
+        if (recentError) {
+            console.warn('getActiveSession: recent-session query failed, falling back to coop result', recentError);
+        }
         if (coopError) {
-            console.error('getActiveSession: coop query failed', coopError);
-            return { data: null, error: coopError };
-        }
-        if (coopData) return { data: coopData, error: null };
-
-        // Fallback: solo session (4h window)
-        const { data, error } = await supabase
-            .from('workout_sessions')
-            .select('*')
-            .eq('user_id', userId)
-            .is('finished_at', null)
-            .gt('started_at', fourHoursAgo)
-            .order('started_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-        if (error) {
-            console.error("Error getting active session:", error);
-            return { data: null, error };
+            console.warn('getActiveSession: coop query failed, falling back to recent result', coopError);
         }
 
-        return { data, error: null };
+        if (coopData && recentData) {
+            // Both exist — the row with the LATER started_at is the one the user is
+            // actually in right now (could be the same row, or the coop one, or the
+            // newer solo one — never blindly prefer multiplayer over recency).
+            const coopIsNewer = new Date(coopData.started_at).getTime() > new Date(recentData.started_at).getTime();
+            return { data: coopIsNewer ? coopData : recentData, error: null };
+        }
+
+        return { data: coopData || recentData || null, error: null };
     }
 
     // ─── ROOM METHODS ─────────────────────────────────────────────────────────

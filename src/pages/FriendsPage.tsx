@@ -68,11 +68,20 @@ export const FriendsPage = () => {
                     .select('id, user_id, partner_id, started_at, is_multiplayer, multiplayer_mode, partner_session_id')
                     .or(`user_id.in.(${friendIds.join(',')}),partner_id.in.(${friendIds.join(',')})`)
                     .is('finished_at', null)
-                    .gt('started_at', twelveHoursAgo);
-                
+                    .gt('started_at', twelveHoursAgo)
+                    .order('started_at', { ascending: false });
+
                 console.log("🕵️‍♂️ [FriendsPage] activeSessions encontradas en DB:", activeSessions, "Error:", sessionErr);
 
                 if (activeSessions) {
+                    // ⚠️ GHOST-SESSION FIX: a friend can have MULTIPLE unfinished session rows
+                    // at once (e.g. a stale/orphaned coop room from an earlier interrupted
+                    // session, plus the brand-new one they're training in right now). Without
+                    // an explicit order, .find() picked whichever row Postgres happened to
+                    // return first — frequently the OLD ghost row — causing handleJoinWorkout
+                    // to resolve the wrong host/room and silently misroute the join request.
+                    // Sorting by started_at DESC (above) guarantees .find() always picks the
+                    // MOST RECENTLY STARTED session — i.e. the one the friend is actually in.
                     friendIds.forEach(fId => {
                         const sess = activeSessions.find(s => s.user_id === fId || s.partner_id === fId);
                         if (sess) {
