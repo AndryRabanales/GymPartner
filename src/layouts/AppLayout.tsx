@@ -415,6 +415,28 @@ export const AppLayout = () => {
                     return;
                 }
 
+                // ─── POSTPONE / SNOOZE ─────────────────────────────────────────
+                // The rescue prompt is mandatory — users can't permanently dismiss an
+                // unfinished session/room without explicitly continuing it or
+                // closing/finishing it. "Recordar más tarde" only grants a TEMPORARY
+                // reprieve: it re-arms automatically once the snooze window elapses
+                // (checked both here, on every navigation, AND via the periodic
+                // interval set up below for users who don't navigate), so the system
+                // always "obliga al usuario a regresar" to make a final call —
+                // continuar, cerrar/finalizar, o volver a posponer.
+                const snoozeKey = `ginx_rescue_snooze_${session.id}`;
+                const snoozeUntilRaw = localStorage.getItem(snoozeKey);
+                if (snoozeUntilRaw) {
+                    const snoozeUntil = parseInt(snoozeUntilRaw, 10);
+                    if (!isNaN(snoozeUntil) && Date.now() < snoozeUntil) {
+                        setShowRescueModal(false);
+                        return;
+                    }
+                    // Snooze window elapsed — clear it so the prompt resurfaces for good
+                    // (it won't be silently re-snoozed by stale leftover data).
+                    localStorage.removeItem(snoozeKey);
+                }
+
                 // ─── COOP ROOM SESSIONS ────────────────────────────────────────
                 // Respect temp-exit flag for coop too: if the user deliberately left
                 // via "Salir Temporalmente", don't interrupt them while browsing.
@@ -452,6 +474,13 @@ export const AppLayout = () => {
         };
 
         checkRescuableSession();
+
+        // Re-check periodically — independent of navigation — so a postponed prompt
+        // resurfaces the instant its snooze window elapses, even if the user just
+        // sits on the same screen the whole time. This is what turns "posponer"
+        // into a real, bounded snooze instead of a silent permanent dismissal.
+        const recheckInterval = setInterval(checkRescuableSession, 60000);
+        return () => clearInterval(recheckInterval);
     }, [user, location.pathname]);
 
     const tokenRef = useRef<string | null>(null);

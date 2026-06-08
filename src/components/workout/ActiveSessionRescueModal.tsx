@@ -4,6 +4,12 @@ import { AlertTriangle, Play, Trash2, Clock, MapPin, Loader2, Users, DoorOpen } 
 import { workoutService } from '../../services/WorkoutService';
 import { supabase } from '../../lib/supabase';
 
+// "Posponer" only grants a TEMPORARY reprieve — never a silent permanent dismissal.
+// Long enough to let the user finish whatever briefly pulled them away, short enough
+// that the system keeps "obligando" them to return and make a final call
+// (continuar, cerrar/finalizar, o volver a posponer).
+const RESCUE_SNOOZE_MS = 15 * 60 * 1000; // 15 minutes
+
 interface ActiveSessionRescueModalProps {
   isOpen: boolean;
   sessionId: string;
@@ -121,7 +127,15 @@ export const ActiveSessionRescueModal: React.FC<ActiveSessionRescueModalProps> =
 
   // ─── Actions ───────────────────────────────────────────────────────────────
 
+  // Clears any pending snooze the moment the user makes a FINAL call (continue or
+  // cancel/finish) — keeps localStorage from accumulating one stale
+  // `ginx_rescue_snooze_*` entry per past session over a user's lifetime.
+  const clearSnooze = () => {
+    try { localStorage.removeItem(`ginx_rescue_snooze_${sessionId}`); } catch { /* ignore */ }
+  };
+
   const handleRejoinRoom = () => {
+    clearSnooze();
     onResolve();
     sessionStorage.removeItem('ginx_temp_exit_active');
 
@@ -181,6 +195,7 @@ export const ActiveSessionRescueModal: React.FC<ActiveSessionRescueModalProps> =
       localStorage.removeItem('ginx_active_session');
       localStorage.removeItem(`workout_draft_${sessionId}`);
       sessionStorage.removeItem('ginx_temp_exit_active');
+      clearSnooze();
       onResolve();
     } catch (err) {
       console.error('Error leaving room:', err);
@@ -191,9 +206,25 @@ export const ActiveSessionRescueModal: React.FC<ActiveSessionRescueModalProps> =
   };
 
   const handleResumeSolo = () => {
+    clearSnooze();
     onResolve();
     sessionStorage.removeItem('ginx_temp_exit_active');
     navigate(`/workout/${gymId || 'personal'}`, { state: { sessionId, forceNewSession: false } });
+  };
+
+  // ─── Postpone ──────────────────────────────────────────────────────────────
+  // Defers the decision WITHOUT resolving the unfinished session/room. This is
+  // intentionally NOT a permanent dismissal: AppLayout's rescue-check effect
+  // re-arms this modal automatically once RESCUE_SNOOZE_MS elapses (checked both
+  // on navigation and via a periodic interval), so the user is always forced to
+  // eventually choose: continuar, cerrar/finalizar, o volver a posponer.
+  const handlePostpone = () => {
+    try {
+      localStorage.setItem(`ginx_rescue_snooze_${sessionId}`, String(Date.now() + RESCUE_SNOOZE_MS));
+    } catch {
+      // Storage unavailable — worst case the modal simply re-shows sooner, which is safe.
+    }
+    onResolve();
   };
 
   const handleDeleteSolo = async () => {
@@ -204,6 +235,7 @@ export const ActiveSessionRescueModal: React.FC<ActiveSessionRescueModalProps> =
       localStorage.removeItem(`workout_draft_${sessionId}`);
       localStorage.removeItem('ginx_active_session');
       sessionStorage.removeItem('ginx_temp_exit_active');
+      clearSnooze();
       onResolve();
     } catch (err) {
       console.error('Error deleting session:', err);
@@ -329,6 +361,7 @@ export const ActiveSessionRescueModal: React.FC<ActiveSessionRescueModalProps> =
                   localStorage.removeItem('ginx_active_session');
                   localStorage.removeItem(`workout_draft_${sessionId}`);
                   sessionStorage.removeItem('ginx_temp_exit_active');
+                  clearSnooze();
                   onResolve();
                 }}
                 disabled={loadingAction}
@@ -348,6 +381,21 @@ export const ActiveSessionRescueModal: React.FC<ActiveSessionRescueModalProps> =
               >
                 <Play size={18} fill="currentColor" />
                 RETOMAR ENTRENAMIENTO
+              </button>
+            )}
+
+            {/* Postpone: defer the call WITHOUT making it disappear for good —
+                the system re-arms this prompt automatically (see RESCUE_SNOOZE_MS),
+                forcing the user back to a real decision later: continuar, cerrar/
+                finalizar, o volver a posponer. */}
+            {(roomStatus === 'room_open' || roomStatus === 'solo') && (
+              <button
+                onClick={handlePostpone}
+                disabled={loadingAction}
+                className="w-full flex items-center justify-center gap-2 py-3 bg-neutral-800/60 border border-white/5 text-neutral-300 hover:bg-neutral-800 hover:text-white font-black uppercase tracking-wider text-[11px] rounded-2xl transition-all active:scale-95 disabled:opacity-50"
+              >
+                <Clock size={16} />
+                RECORDAR MÁS TARDE
               </button>
             )}
 
