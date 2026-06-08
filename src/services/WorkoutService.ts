@@ -552,14 +552,77 @@ class WorkoutService {
     }
 
     /**
+     * Opens a short-lived realtime channel for the room and broadcasts
+     * `session_finished`, then waits briefly so connected guests have time to
+     * receive it, save their pending sets, and flip to their summary screen
+     * BEFORE we bulk-finalize their session rows in the DB (closeRoom step 2).
+     *
+     * WHY THIS EXISTS: WorkoutSession.tsx already has a complete handler for
+     * `broadcast: { event: 'session_finished' }` (saves the guest's own
+     * playerWeights/Reps/etc via logSet, shows "¡Progreso guardado!", then
+     * shows the summary) — but NOTHING in the codebase ever sent that event.
+     * closeRoom() simply set `finished_at` on every guest's row directly via
+     * a bulk UPDATE, with no workout_logs ever written for them: every guest
+     * silently lost 100% of their set data the moment a host closed the room,
+     * despite the confirm dialog promising "cada participante conservará su
+     * progreso en su historial". This wires the existing (until now dead)
+     * guest-side handler up at its single source so that promise is kept.
+     *
+     * Best-effort: any failure here must NEVER block the actual room closure —
+     * worst case (e.g. a guest is offline) is identical to the prior behavior.
+     */
+    private async broadcastSessionFinished(roomId: string): Promise<void> {
+        let channel: ReturnType<typeof supabase.channel> | null = null;
+        try {
+            channel = supabase.channel(`coop-workout-${roomId}`);
+            await new Promise<void>((resolve) => {
+                let settled = false;
+                const finish = () => { if (!settled) { settled = true; resolve(); } };
+                channel!.subscribe((status) => {
+                    if (status === 'SUBSCRIBED') {
+                        channel!.send({
+                            type: 'broadcast',
+                            event: 'session_finished',
+                            // Sentinel id — guaranteed not to equal any real user.id, so
+                            // every connected guest's `if (sender === user.id) return;`
+                            // guard passes through and their save routine runs.
+                            payload: { sender: 'host-close-room' }
+                        }).finally(finish);
+                    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+                        finish();
+                    }
+                });
+                // Safety net — never let closeRoom hang if the channel never subscribes.
+                setTimeout(finish, 4000);
+            });
+            // Give guests' clients time to receive the broadcast, resolve exercise
+            // ids, write their workout_logs rows, and show "¡Progreso guardado!".
+            await new Promise(resolve => setTimeout(resolve, 3000));
+        } catch (e) {
+            console.warn('closeRoom: failed to broadcast session_finished to guests (non-fatal):', e);
+        } finally {
+            if (channel) {
+                try { await supabase.removeChannel(channel); } catch { /* ignore */ }
+            }
+        }
+    }
+
+    /**
      * Host closes the room.
+     * 0. Broadcasts `session_finished` so connected guests can save their own
+     *    pending sets first (see broadcastSessionFinished above — this is the
+     *    fix for guests silently losing all their data on room close).
      * 1. Finalizes host's own session (isManual=true for GX award).
-     * 2. Finalizes ALL guest sessions (isManual=false — guests get GX via their own
-     *    finalization flow triggered by the `session_finished` broadcast).
+     * 2. Finalizes ALL guest sessions (isManual=false — they already saved their
+     *    own logs via the broadcast above; GX is awarded directly below).
      * 3. Sends a `room_closed` notification to every guest's user_id.
      */
     async closeRoom(roomId: string, notes?: string, routineName?: string, geoVerified?: boolean): Promise<{ success: boolean }> {
         const now = new Date().toISOString();
+
+        // 0. Let connected guests persist their own workout_logs before their
+        // session rows get finalized below — see broadcastSessionFinished's doc.
+        await this.broadcastSessionFinished(roomId);
 
         // 1. Finalize host session with GX
         const hostResult = await this.finishSession(roomId, notes, routineName, true, geoVerified);

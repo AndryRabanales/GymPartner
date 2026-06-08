@@ -1074,6 +1074,13 @@ export const WorkoutSession = () => {
                 const exercisesToSave = activeExercisesRef.current.length > 0
                     ? activeExercisesRef.current
                     : lastNonEmptyExercisesRef.current;
+                // Mirrors handleFinalizeSession's offline-safety net (spec §1.2): if logSet
+                // fails here (e.g. the host closed the room right as our connection dropped),
+                // queue the exact payload instead of losing it — flushPendingSets() (run on
+                // app load + every 'online' event from AppLayout) recovers it silently.
+                // Declared here (not inside the `if` below) so the toast check after it
+                // can still see the final count.
+                let guestPendingSyncCount = 0;
                 if (guestSessionId && exercisesToSave.length > 0) {
                     const myId = user.id;
                     const savePromises: Promise<any>[] = [];
@@ -1124,7 +1131,7 @@ export const WorkoutSession = () => {
                             const restStart  = set.playerRestLastStartTime?.[myId];
                             if (restStatus === 'running' && restStart) restDuration += Date.now() - restStart;
 
-                            savePromises.push(workoutService.logSet({
+                            const guestSetPayload = {
                                 session_id:        guestSessionId,
                                 exercise_id:       resolvedExId,
                                 set_number:        j + 1,
@@ -1140,10 +1147,19 @@ export const WorkoutSession = () => {
                                     ...(exercise.weightUnit === 'lb' ? { _weight_unit: 'lb' } : {}),
                                     _rest_duration_ms: restDuration,
                                     _rest_status: restStatus === 'running' ? 'completed' : restStatus
-                                },
+                                } as any, // same cast handleFinalizeSession's extendedMetrics uses — metrics_data
+                                          // legitimately carries strings/timestamps beyond WorkoutSetData's Record<string, number>
                                 category_snapshot: exercise.category || 'Custom',
                                 is_pr:             false,
                                 owner_id:          myId
+                            };
+
+                            savePromises.push(workoutService.logSet(guestSetPayload).then(res => {
+                                if (res.error && !res.data) {
+                                    console.error('❌ [Guest] Error saving set on session_finished, queued for offline sync:', res.error);
+                                    workoutService.queuePendingSet(guestSessionId, guestSetPayload);
+                                    guestPendingSyncCount++;
+                                }
                             }));
                         }
                     }
@@ -1155,6 +1171,18 @@ export const WorkoutSession = () => {
                 }
 
                 toast.success("¡Progreso guardado!", { id: 'guest-save' });
+
+                // spec §1.2: same reassuring "nothing was lost, it'll sync on its own"
+                // messaging used in handleFinalizeSession for the symmetric offline case.
+                if (guestPendingSyncCount > 0) {
+                    import('react-hot-toast').then(({ default: t }) =>
+                        t(`📡 ${guestPendingSyncCount} serie${guestPendingSyncCount > 1 ? 's' : ''} sin conexión — se guardaron en tu dispositivo y se sincronizarán solas apenas vuelvas a tener internet. No perdiste nada.`, {
+                            duration: 7000,
+                            icon: '🔄',
+                            style: { background: '#171717', color: '#fff', border: '1px solid rgba(234,179,8,0.3)', fontSize: '11px', fontWeight: 'bold' }
+                        })
+                    );
+                }
 
                 const finalSessionId = sessionIdRef.current;
                 if (finalSessionId) localStorage.removeItem(`workout_draft_${finalSessionId}`);
