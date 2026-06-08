@@ -1,17 +1,19 @@
 import { supabase } from '../lib/supabase';
 
+// La racha es un contador ACUMULATIVO DE POR VIDA: nunca decrece ni se reinicia.
+// Suma +1 por cada día calendario en que el usuario completa al menos 20 minutos
+// de entrenamiento geo-validado (la misma condición que otorga el GX diario de
+// entrenamiento). No existe estado "en riesgo", "congelada" ni "perdida".
 export interface UserStreak {
     user_id: string;
     current_streak: number;
     longest_streak: number;
     last_workout_date: string; // YYYY-MM-DD
-    status: 'active' | 'at_risk' | 'frozen' | 'lost';
-    recovery_deadline?: string;
 }
 
 export const streakService = {
     /**
-     * Get the current streak for a user
+     * Get the current (lifetime) streak counter for a user
      */
     async getUserStreak(userId: string): Promise<UserStreak | null> {
         const { data, error } = await supabase
@@ -31,42 +33,15 @@ export const streakService = {
     },
 
     /**
-     * Check if the user is in immediate danger of losing their streak
-     * (i.e., status is 'at_risk')
+     * Record a qualifying training day (>= 20 min, geo-validated — same condition
+     * that grants the daily training GX) and grow the lifetime streak counter.
+     * Idempotent per calendar day: calling this more than once on the same day
+     * has no further effect. The counter NEVER decreases or resets.
      */
-    isAtRisk(streak: UserStreak): boolean {
-        return streak.status === 'at_risk' && !!streak.recovery_deadline;
-    },
-
-    /**
-     * Get the time remaining for rescue formatted as HH:MM:SS
-     * Returns null if not applicable or expired
-     */
-    getTimeRemaining(deadline: string): string | null {
-        const end = new Date(deadline).getTime();
-        const now = new Date().getTime();
-        const diff = end - now;
-
-        if (diff <= 0) return null;
-
-        const hours = Math.floor(diff / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-        return `${hours}h ${minutes}m`; // Simplified format
-    },
-
-    /**
-     * Record daily app entry and update user streak immediately
-     */
-    async recordAppEntry(userId: string): Promise<UserStreak | null> {
+    async recordTrainingDay(userId: string): Promise<UserStreak | null> {
         try {
-            // Get today and yesterday in local YYYY-MM-DD
             const today = new Date().toLocaleDateString('en-CA');
-            const yesterdayObj = new Date();
-            yesterdayObj.setDate(yesterdayObj.getDate() - 1);
-            const yesterday = yesterdayObj.toLocaleDateString('en-CA');
 
-            // 1. Fetch current streak
             const { data, error } = await supabase
                 .from('user_streaks')
                 .select('*')
@@ -74,12 +49,11 @@ export const streakService = {
                 .maybeSingle();
 
             if (error) {
-                console.error('Error fetching streak in recordAppEntry:', error);
+                console.error('Error fetching streak in recordTrainingDay:', error);
                 return null;
             }
 
             if (!data) {
-                // 2. Create new streak record starting today
                 const newRecord = {
                     user_id: userId,
                     current_streak: 1,
@@ -102,25 +76,17 @@ export const streakService = {
             }
 
             const current = data as UserStreak;
-            const lastActiveDate = current.last_workout_date;
 
-            if (lastActiveDate === today) {
-                // Already opened today. Nothing to update!
+            if (current.last_workout_date === today) {
+                // Ya se contó un día calificado hoy — máximo 1 punto por día.
                 return current;
             }
 
-            let newStreak = 1;
-            let newLongest = current.longest_streak;
-
-            if (lastActiveDate === yesterday) {
-                // Consecutive daily entry!
-                newStreak = current.current_streak + 1;
-                newLongest = Math.max(current.longest_streak, newStreak);
-            }
+            const newStreak = current.current_streak + 1;
 
             const updatedRecord = {
                 current_streak: newStreak,
-                longest_streak: newLongest,
+                longest_streak: Math.max(current.longest_streak, newStreak),
                 last_workout_date: today,
                 status: 'active',
                 recovery_deadline: null
@@ -141,7 +107,7 @@ export const streakService = {
             return updated as UserStreak;
 
         } catch (e) {
-            console.error('Exception inside recordAppEntry:', e);
+            console.error('Exception inside recordTrainingDay:', e);
             return null;
         }
     }

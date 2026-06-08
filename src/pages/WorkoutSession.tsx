@@ -487,6 +487,11 @@ export const WorkoutSession = () => {
     const isInviterRef = useRef<boolean>(true); // tracks isInviter without stale closure
     const lastIncomingState = useRef<string>('');
     const isStartingSessionRef = useRef<boolean>(false);
+    // Geo-validación CONTINUA (spec §3): true si en algún momento de la sesión
+    // el GPS detectó que el usuario salió del radio de su gym. Una vez en true,
+    // el GX/racha de entrenamiento de hoy NO se otorgan, sin importar que el
+    // chequeo final al cerrar la sesión vuelva a pasar.
+    const geoLeftRadiusRef = useRef<boolean>(false);
     const isAddingExercisesRef = useRef<boolean>(false); // guard against concurrent handleBatchAdd calls
     // True while a guest is waiting for the host's first sync_state broadcast.
     // Keeps `loading` pinned to true so the empty state never flashes before exercises arrive.
@@ -1231,6 +1236,39 @@ export const WorkoutSession = () => {
         };
     }, [isMultiplayer, partnerId, syncRoomId, user, multiplayerMode, showSummary]);
 
+    // ─── Guest discovery polling ──────────────────────────────────────────────
+    // When a guest accepts a coop_invite, the host hasn't created their session yet.
+    // We poll the DB until the host's session appears, then set syncRoomId to open
+    // the correct Realtime channel. Max 40 attempts × 3 s = 2 minutes.
+    useEffect(() => {
+        if (!isMultiplayer || isInviter || syncRoomId || !partnerId || !user || showSummary) return;
+
+        let cancelled = false;
+        let timer: ReturnType<typeof setTimeout>;
+        let attempts = 0;
+        const MAX_ATTEMPTS = 40;
+        const hostId = partnerId; // capture narrowed string for closure
+
+        const poll = async () => {
+            if (cancelled || attempts >= MAX_ATTEMPTS) return;
+            attempts++;
+            try {
+                const { data } = await workoutService.getActiveSession(hostId);
+                if (data && !cancelled) {
+                    console.log('🔗 [Guest Poll] Host session found:', data.id);
+                    setPartnerSessionId(data.id);
+                    setSyncRoomId(data.id);
+                    return; // channel effect re-runs when syncRoomId changes
+                }
+            } catch (_) { /* non-fatal */ }
+            if (!cancelled) timer = setTimeout(poll, 3000);
+        };
+
+        // Brief delay to let both sides navigate before first DB check
+        timer = setTimeout(poll, 1500);
+        return () => { cancelled = true; clearTimeout(timer); };
+    }, [isMultiplayer, isInviter, syncRoomId, partnerId, user?.id, showSummary]);
+
     // Send local updates (Debounced to prevent network spam and echo loops while typing)
     useEffect(() => {
         // Skip when session is finishing or summary is showing — the channel may be torn
@@ -1883,8 +1921,10 @@ export const WorkoutSession = () => {
     const [elapsedTime, setElapsedTime] = useState("00:00");
     const [ambiguousGyms, setAmbiguousGyms] = useState<any[]>([]);
     // 'multiple_defaults' → user has several predeterminados nearby (R7)
-    // 'no_default'        → no predeterminado nearby; selection will save as one (R4)
-    const [ambiguousReason, setAmbiguousReason] = useState<'multiple_defaults' | 'no_default' | null>(null);
+    // 'no_default'        → user has NO predeterminado at all; selection will save as one (R4)
+    // 'pick_for_today'    → user already HAS a predeterminado (just not nearby) — pick where
+    //                       to train today WITHOUT touching the permanent predeterminado
+    const [ambiguousReason, setAmbiguousReason] = useState<'multiple_defaults' | 'no_default' | 'pick_for_today' | null>(null);
     const [isFinished, setIsFinished] = useState(false);
 
     // Timer Effect (RESTORED)
@@ -1929,6 +1969,54 @@ export const WorkoutSession = () => {
         const interval = setInterval(tick, 200); // High-frequency tick (200ms) to ensure perfect cross-device synchronization
         return () => clearInterval(interval);
     }, [startTime, isFinished, sessionId]);
+
+    // Reset the continuous geo-validation flag whenever a (new/restored) session begins
+    useEffect(() => {
+        geoLeftRadiusRef.current = false;
+    }, [sessionId]);
+
+    // Geo-validación CONTINUA (spec §3): el GPS debe confirmar que el usuario
+    // permanece dentro del radio de su gym durante TODA la sesión — no solo al
+    // finalizar. Si en algún momento se detecta que salió del radio, se marca
+    // la sesión como no geo-validada y el GX/racha de hoy no se otorgan,
+    // sin importar que un chequeo posterior vuelva a pasar.
+    useEffect(() => {
+        if (!sessionId || !resolvedGymId || isFinished) return;
+
+        const GEO_RADIUS_M = 1500; // misma tolerancia que la verificación final (margen GPS indoor)
+        let cancelled = false;
+
+        const checkContinuousPresence = async () => {
+            if (geoLeftRadiusRef.current) return; // ya marcado — no hace falta seguir chequeando
+            try {
+                const [userPos, gymRow] = await Promise.all([
+                    getCurrentPosition({ enableHighAccuracy: true, timeout: 5000 }).catch(() => null),
+                    supabase.from('gyms').select('lat, lng').eq('id', resolvedGymId).maybeSingle().then(r => r.data)
+                ]);
+
+                if (cancelled || !userPos || !gymRow?.lat || !gymRow?.lng) return;
+
+                const dist = haversineDistance(userPos.lat, userPos.lng, Number(gymRow.lat), Number(gymRow.lng));
+                if (dist > GEO_RADIUS_M) {
+                    geoLeftRadiusRef.current = true;
+                    console.warn(`📍 Geo-validación continua: te alejaste del gym (${Math.round(dist)}m) — hoy no sumarás GX/racha de entrenamiento.`);
+                    import('react-hot-toast').then(({ default: t }) =>
+                        t('Te alejaste del gym — hoy no sumarás GX/racha de entrenamiento 📍', {
+                            duration: 5000,
+                            icon: '⚠️',
+                            style: { background: '#171717', color: '#fff', border: '1px solid rgba(239,68,68,0.3)', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }
+                        })
+                    );
+                }
+            } catch {
+                // GPS momentáneamente no disponible — no penalizar por fallas transitorias
+            }
+        };
+
+        checkContinuousPresence(); // chequeo inicial
+        const interval = setInterval(checkContinuousPresence, 3 * 60 * 1000); // cada 3 minutos
+        return () => { cancelled = true; clearInterval(interval); };
+    }, [sessionId, resolvedGymId, isFinished]);
 
     // Init Logic
     useEffect(() => {
@@ -2138,10 +2226,18 @@ export const WorkoutSession = () => {
                                 setAmbiguousGyms(nearbyDefaults.map(({ g, distM }) => toPickerShape(g, distM, false)));
 
                             } else if (nearbyOthers.length >= 1) {
-                                // R4: passport gyms within range but none is default →
-                                // ask the user to pick one; the chosen gym becomes their new default.
-                                setAmbiguousReason('no_default');
-                                setAmbiguousGyms(nearbyOthers.map(({ g, distM }) => toPickerShape(g, distM, true)));
+                                if (homeGym) {
+                                    // El usuario YA tiene un predeterminado (aunque no esté cerca hoy).
+                                    // Regla de unicidad: jamás se reasigna por proximidad — solo
+                                    // se ofrece elegir dónde entrenar HOY, sin tocar el predeterminado.
+                                    setAmbiguousReason('pick_for_today');
+                                    setAmbiguousGyms(nearbyOthers.map(({ g, distM }) => toPickerShape(g, distM, false)));
+                                } else {
+                                    // R4: el usuario no tiene NINGÚN predeterminado →
+                                    // flujo de "primera vez": el gimnasio elegido se guarda como predeterminado.
+                                    setAmbiguousReason('no_default');
+                                    setAmbiguousGyms(nearbyOthers.map(({ g, distM }) => toPickerShape(g, distM, true)));
+                                }
 
                             } else {
                                 // No passport gym within 60 m — always free workout.
@@ -2241,6 +2337,14 @@ export const WorkoutSession = () => {
             if (shouldRestore) {
                 setSessionId(active.id);
                 setStartTime(new Date(active.started_at));
+
+                // Upgrade solo session to multiplayer in DB when host accepts invite while training
+                if (currentIsMultiplayer && !active.is_multiplayer && currentPartnerId) {
+                    supabase.from('workout_sessions').update({
+                        is_multiplayer: true,
+                        partner_id: currentPartnerId
+                    }).eq('id', active.id).catch(e => console.warn('Failed to upgrade session to multiplayer:', e));
+                }
 
                 // If active session has a gym_id and it is different from targetGymId, re-fetch items and routines
                 let currentItems = items;
@@ -2451,8 +2555,9 @@ export const WorkoutSession = () => {
                                 }
                             }, 12000);
                         }
-                    // Only prompt for routine/exercises in solo mode with truly no exercises.
-                    } else if (activeExercisesRef.current.length === 0 && !currentIsMultiplayer) {
+                    // Prompt for exercises/routine in solo mode OR when host has no active session yet.
+                    // Guests in multiplayer mode wait for the host's sync_state instead.
+                    } else if (activeExercisesRef.current.length === 0 && (!currentIsMultiplayer || currentIsInviter)) {
                         if (localRoutines.length === 0) setShowAddModal(true);
                         else setShowStartOptionsModal(true);
                     }
@@ -4298,7 +4403,9 @@ export const WorkoutSession = () => {
         try {
             const flowNotes = `Flujo de Llenado: ${exerciseFillFlow.map(f => f.exerciseName).join(' ➔ ')}`;
 
-            // ── GEO CHECK: verify user is near their gym (only if session has a gym) ──
+            // ── GEO CHECK: verify user remained near their gym for the WHOLE session ──
+            // Spec §3: continuous geo-validation — a passing check here can NEVER
+            // override evidence (geoLeftRadiusRef) that the user left mid-session.
             let geoVerified: boolean | undefined = undefined;
             if (resolvedGymId) {
                 try {
@@ -4310,18 +4417,27 @@ export const WorkoutSession = () => {
                     if (userPos && gymRow?.lat && gymRow?.lng) {
                         const dist = haversineDistance(userPos.lat, userPos.lng, Number(gymRow.lat), Number(gymRow.lng));
                         geoVerified = dist <= 1500; // 1.5 km — margen para GPS indoor
-                        if (!geoVerified) {
-                            import('react-hot-toast').then(({ default: t }) =>
-                                t.error('No estás cerca del gym — sin GX por este entrenamiento 📍', {
-                                    duration: 5000,
-                                    style: { background: '#171717', color: '#fff', border: '1px solid rgba(239,68,68,0.3)', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }
-                                })
-                            );
-                        }
                     }
-                    // If GPS unavailable or gym has no coords → geoVerified stays undefined → GX awarded normally
+                    // If GPS unavailable or gym has no coords → final check stays undefined
+                    // (the continuous flag below still applies).
                 } catch {
-                    // geo unavailable → award GX anyway (don't punish for GPS issues)
+                    // geo unavailable at the end → don't punish for transient GPS issues here;
+                    // the continuous check below remains authoritative.
+                }
+
+                // Continuous validation overrides: leaving the radius at any point during
+                // the session disqualifies today's GX/streak, even if the final check passes.
+                if (geoLeftRadiusRef.current) {
+                    geoVerified = false;
+                }
+
+                if (geoVerified === false) {
+                    import('react-hot-toast').then(({ default: t }) =>
+                        t.error('No permaneciste cerca del gym durante toda la sesión — sin GX/racha por este entrenamiento 📍', {
+                            duration: 5000,
+                            style: { background: '#171717', color: '#fff', border: '1px solid rgba(239,68,68,0.3)', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }
+                        })
+                    );
                 }
             }
 
@@ -4417,6 +4533,12 @@ export const WorkoutSession = () => {
                                     <h2 className="text-2xl font-black text-white italic uppercase tracking-tighter mb-2">¿En cuál entrenas?</h2>
                                     <p className="text-neutral-400 text-sm">Tienes varios gyms predeterminados cerca. Elige uno para esta sesión.</p>
                                     <p className="text-neutral-600 text-xs mt-1">Para no volver a ver esto, deja un único predeterminado desde <span className="text-yellow-500">Mis Gyms</span>.</p>
+                                </>
+                            ) : ambiguousReason === 'pick_for_today' ? (
+                                <>
+                                    <h2 className="text-2xl font-black text-white italic uppercase tracking-tighter mb-2">¿Dónde entrenas hoy?</h2>
+                                    <p className="text-neutral-400 text-sm">Detectamos gyms de tu pasaporte cerca, pero distintos a tu Sede Principal.</p>
+                                    <p className="text-neutral-600 text-xs mt-1">Esta elección es solo para hoy — tu predeterminado no cambiará.</p>
                                 </>
                             ) : (
                                 <>

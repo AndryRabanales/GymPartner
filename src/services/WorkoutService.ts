@@ -180,7 +180,16 @@ class WorkoutService {
 
                         // Award GX points
                         await userService.addGxPoints(session.user_id, pointsAwarded, reason);
-                        
+
+                        // Grow the lifetime streak counter (+1/day, never decreases) —
+                        // exact same qualifying condition as the daily training GX above.
+                        try {
+                            const { streakService } = await import('./StreakService');
+                            await streakService.recordTrainingDay(session.user_id);
+                        } catch (streakErr) {
+                            console.warn('Could not record streak training day:', streakErr);
+                        }
+
                         // Increment checkins_count in profile
                         const { data: profile } = await supabase
                             .from('profiles')

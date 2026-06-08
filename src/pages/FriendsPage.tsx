@@ -147,8 +147,8 @@ export const FriendsPage = () => {
             data: {
                 sender_id: user.id,
                 sender_name: displayName,
-                chat_id: friend.id,
                 mode: mode
+                // Note: no chat_id here — room ID is established when host creates their session
             }
         });
 

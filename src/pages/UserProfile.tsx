@@ -935,7 +935,17 @@ export const UserProfile = () => {
                                         title={gym.is_home_base ? "Quitar de Sede Principal" : "Hacer Sede Principal"}
                                         onClick={async (e) => {
                                             e.stopPropagation();
-                                            await userService.toggleHomeBase(user!.id, gym.gym_id, !gym.is_home_base);
+                                            const wantsToBeDefault = !gym.is_home_base;
+                                            // Regla de unicidad: el predeterminado es permanente — para
+                                            // cambiarlo, el usuario debe primero quitar el actual.
+                                            if (wantsToBeDefault) {
+                                                const currentDefault = userGyms.find(g => g.is_home_base && g.gym_id !== gym.gym_id);
+                                                if (currentDefault) {
+                                                    alert(`Ya tienes "${currentDefault.gym_name}" como Sede Principal. Quítala primero para poder elegir otra.`);
+                                                    return;
+                                                }
+                                            }
+                                            await userService.toggleHomeBase(user!.id, gym.gym_id, wantsToBeDefault);
                                             loadUserData();
                                         }}
                                     >

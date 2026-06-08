@@ -6,7 +6,6 @@ import { UploadModal } from '../components/social/UploadModal';
 import { BottomNav } from '../components/navigation/BottomNav';
 import { useBottomNav } from '../context/BottomNavContext';
 import { NotificationBell } from '../components/ui/NotificationBell';
-import { RescueModal } from '../components/gamification/RescueModal';
 import { GPointsDisplay } from '../components/gamification/GPointsDisplay';
 
 import { ActiveWorkoutBubble } from '../components/workout/ActiveWorkoutBubble';
@@ -112,20 +111,19 @@ const CoopInviteToast = ({
                             message: `¡${user.user_metadata.full_name || 'Alguien'} ha aceptado tu desafío! Entrando al gimnasio...`,
                             data: {
                                 partner_id: user.id,
-                                mode: mode,
-                                chat_id: newNotification.data?.chat_id
+                                mode: mode
+                                // No chat_id — room ID will be the host's session ID, discovered via polling
                             }
                         });
 
-                        navigate('/workout', { 
-                            state: { 
-                                isMultiplayer: true, 
-                                multiplayerMode: mode, 
+                        navigate('/workout', {
+                            state: {
+                                isMultiplayer: true,
+                                multiplayerMode: mode,
                                 partnerId: senderId,
-                                chatId: newNotification.data?.chat_id,
                                 isInviter: false,
                                 forceNewSession: true
-                            } 
+                            }
                         });
                     }}
                     className="flex-1 py-2 rounded-xl bg-gradient-to-br from-gym-primary to-yellow-500 text-neutral-950 font-black text-[10px] uppercase tracking-wider hover:shadow-[0_0_15px_rgba(255,215,0,0.35)] transition-all active:scale-95"
@@ -248,6 +246,14 @@ const CoopJoinRequestToast = ({
                             console.warn(`⚠️ Session ID mismatch (requested: ${targetSessionId}, active: ${resolvedSession.id}). Aligning to active session.`);
                         }
                         await notificationService.updateInvitationStatus(newNotification, 'accepted');
+
+                        // Match (spec §2-B): aceptar una solicitud de unión a Co-op también
+                        // forma el match entre ambos usuarios — desbloquea el chat directo.
+                        // acceptInvitation ya aplica la regla de unicidad por pareja: si ya
+                        // existe un match (de Radar, otro Co-op, etc.) no crea otro ni repite el +1 GX.
+                        notificationService.acceptInvitation(senderId).catch((e: any) =>
+                            console.error('❌ Error forming match on coop join accept:', e)
+                        );
 
                         // Update our own active session to multiplayer in the DB!
                         await supabase
@@ -581,26 +587,20 @@ const notificationSeen = useRef<Set<string>>(new Set());
                     ), { duration: 20000 });
                 } else if (newNotification.type === 'coop_accepted') {
                     // Host: guest accepted the invite → navigate into the workout.
-                    // Prefer notification.data.chat_id (the original room session ID set when
-                    // the invite was created) over getActiveSession, which could return a DIFFERENT
-                    // session if the host's original one was cleaned up as orphan.
+                    // The room ID = host's session ID, established when host creates their session.
+                    // The guest discovers this via DB polling — no pre-coordination needed.
                     toast.success(newNotification.message || "¡Aliado aceptó. Entrando a la sala...");
                     (async () => {
                         try {
-                            // chat_id is the room ID from the original invite — always trust it first
-                            const notifRoomId = newNotification.data?.chat_id;
                             const { data: activeSession } = await workoutService.getActiveSession(user.id);
-                            // Use notification room ID if valid; fall back to active session
-                            const roomId = notifRoomId || activeSession?.id;
                             navigate('/workout', {
                                 state: {
                                     isMultiplayer: true,
                                     multiplayerMode: newNotification.data?.mode || 'conjunto',
                                     partnerId: newNotification.data?.partner_id,
-                                    chatId: roomId,
                                     isInviter: true,
-                                    // Only force new session if neither notification room nor active session exist
-                                    forceNewSession: !notifRoomId && !activeSession
+                                    // Only force a new session if the host has no active session
+                                    forceNewSession: !activeSession
                                 }
                             });
                         } catch (err) {
@@ -810,7 +810,6 @@ const notificationSeen = useRef<Set<string>>(new Set());
                 <Outlet />
             </main>
 
-            <RescueModal />
             {isUploadModalOpen && <UploadModal onClose={() => setIsUploadModalOpen(false)} onSuccess={() => setIsUploadModalOpen(false)} />}
             <ActiveWorkoutBubble />
             <ActiveSessionRescueModal

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Flame, Snowflake } from 'lucide-react';
+import { Flame } from 'lucide-react';
 import { streakService } from '../../services/StreakService';
 import type { UserStreak } from '../../services/StreakService';
 
@@ -28,46 +28,26 @@ export const StreakFlame = ({ userId, showLabel = true, size = 'md' }: StreakFla
     // Default zero state
     if (!streak || streak.current_streak === 0) {
         return (
-            <div className="flex items-center gap-1 opacity-50 grayscale" title="Sin Racha Activa">
+            <div className="flex items-center gap-1 opacity-50 grayscale" title="Sin Racha">
                 <Flame size={size === 'lg' ? 24 : size === 'md' ? 20 : 16} />
                 {showLabel && <span className="font-bold text-neutral-500">0</span>}
             </div>
         );
     }
 
-    const isAtRisk = streak.status === 'at_risk';
-    const isFrozen = streak.status === 'frozen';
-
     return (
         <div className={`
             flex items-center rounded-full border backdrop-blur-md shadow-lg transition-all
             ${size === 'sm' ? 'gap-1 px-2 py-0.5' : 'gap-1.5 px-2.5 py-1'}
-            ${isAtRisk
-                ? 'bg-red-500/10 border-red-500/50 text-red-500 animate-pulse'
-                : isFrozen
-                    ? 'bg-blue-400/10 border-blue-400/50 text-blue-400'
-                    : 'bg-orange-500/10 border-orange-500/50 text-orange-500 hover:bg-orange-500/20'
-            }
+            bg-orange-500/10 border-orange-500/50 text-orange-500 hover:bg-orange-500/20
         `}
-            title={isAtRisk ? '¡RACHA EN RIESGO! Entrena YA.' : isFrozen ? 'Racha Congelada' : 'Racha Activa'}
+            title={`Racha: ${streak.current_streak} día(s) de entrenamiento`}
         >
-            {isAtRisk ? (
-                <Flame size={size === 'lg' ? 24 : size === 'md' ? 20 : 16} className="animate-bounce" />
-            ) : isFrozen ? (
-                <Snowflake size={size === 'lg' ? 24 : size === 'md' ? 20 : 16} />
-            ) : (
-                <Flame size={size === 'lg' ? 24 : size === 'md' ? 20 : 16} fill="currentColor" className="animate-[pulse_3s_ease-in-out_infinite]" />
-            )}
+            <Flame size={size === 'lg' ? 24 : size === 'md' ? 20 : 16} fill="currentColor" className="animate-[pulse_3s_ease-in-out_infinite]" />
 
             <span className={`font-black ${size === 'lg' ? 'text-xl' : size === 'md' ? 'text-sm' : 'text-xs'}`}>
                 {streak.current_streak}
             </span>
-
-            {isAtRisk && (
-                <span className="hidden sm:inline text-[10px] font-bold uppercase tracking-wide">
-                    SALVAR
-                </span>
-            )}
         </div>
     );
 };

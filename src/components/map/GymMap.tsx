@@ -291,6 +291,14 @@ export const GymMap = () => {
     const handleSetHomeBase = async () => {
         if (!selectedGym || !user || !selectedGym.id) return;
 
+        // Regla de unicidad: el predeterminado es permanente — para cambiarlo,
+        // el usuario debe primero quitar el actual (no se permite "saltar" directo a otro).
+        const currentDefault = userGyms.find(g => g.is_home_base && g.gym_id !== selectedGym!.id);
+        if (currentDefault) {
+            alert(`Ya tienes "${currentDefault.gym_name}" como Sede Principal. Quítala primero desde tu perfil para poder elegir otra.`);
+            return;
+        }
+
         const result = await userService.toggleHomeBase(user.id, selectedGym.id, true);
 
         if (result.success) {

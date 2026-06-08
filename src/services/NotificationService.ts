@@ -343,7 +343,25 @@ export const notificationService = {
             console.error("Error cleaning up duplicate sibling invites on accept:", cleanErr);
         }
 
-        // 1. Create Chat (or get existing due to UNIQUE index)
+        // Regla de unicidad del match (spec §2-B): el match se forma UNA SOLA VEZ
+        // por pareja de usuarios en toda su relación — un reencuentro (nueva
+        // invitación, Radar, Co-op) jamás debe regenerar el chat/match ni repetir
+        // el +1 GX. Por eso buscamos un chat existente en CUALQUIER orden del par
+        // ANTES de crear uno nuevo u otorgar puntos.
+        const pairFilter = `and(user_a.eq.${user.id},user_b.eq.${senderId}),and(user_a.eq.${senderId},user_b.eq.${user.id})`;
+
+        const { data: existingChat } = await supabase
+            .from('chats')
+            .select('id')
+            .or(pairFilter)
+            .maybeSingle();
+
+        if (existingChat) {
+            // Reencuentro: el match ya existía — no se crea registro ni se otorga GX de nuevo.
+            return existingChat.id;
+        }
+
+        // 1. Create Chat (first-ever match between this pair)
         const { data: chat, error } = await supabase
             .from('chats')
             .insert({
@@ -354,13 +372,13 @@ export const notificationService = {
             .single();
 
         if (error) {
-            // If error is duplicate key, fetch existing
+            // Race condition: another request created it concurrently — fetch existing, no GX
             if (error.code === '23505') {
                 const { data: existing } = await supabase
                     .from('chats')
                     .select('id')
-                    .or(`and(user_a.eq.${user.id},user_b.eq.${senderId}),and(user_a.eq.${senderId},user_b.eq.${user.id})`)
-                    .single();
+                    .or(pairFilter)
+                    .maybeSingle();
                 return existing?.id || null;
             }
             console.error('Error creating chat:', error);
@@ -385,7 +403,7 @@ export const notificationService = {
                 .update({ last_message_at: new Date().toISOString() })
                 .eq('id', chat.id);
 
-            // Award 1 GX to both users for matching
+            // Award 1 GX to both users — ONLY the first time this pair ever matches
             await Promise.all([
                 userService.addGxPoints(user.id, 1, 'match_accepted'),
                 userService.addGxPoints(senderId, 1, 'match_accepted'),

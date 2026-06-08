@@ -246,7 +246,8 @@ class UserService {
     }
 
     /**
-     * Process a referral reward (+250 XP)
+     * Process a referral reward (+5 GX per spec's point table — recurrent, no cap,
+     * never duplicated for the same referred person).
      * Called when a new user registers with a ?ref=CODE
      */
     async processReferral(newUserId: string, referrerId: string): Promise<boolean> {
@@ -255,18 +256,10 @@ class UserService {
 
             console.log(`🎁 Processing Referral: ${referrerId} -> ${newUserId}`);
 
-            // 1. Award XP to Referrer (250 XP)
-            const { error: xpError } = await supabase.rpc('increment_xp', {
-                u_id: referrerId,
-                amount: 250
-            });
+            // Award GX to the referrer (active gamification score, NOT legacy G-Points/XP)
+            await this.addGxPoints(referrerId, 5, 'referral');
 
-            if (xpError) throw xpError;
-
-            // 2. Award G-Points to Referrer (100 G-Points)
-            await this.addGPoints(referrerId, 100, 'referral');
-
-            // 3. Mark New User as Referred (Prevents duplicates)
+            // Mark New User as Referred (Prevents duplicates)
             const { error: updateError } = await supabase.auth.updateUser({
                 data: {
                     referred_by: referrerId,
@@ -750,26 +743,29 @@ class UserService {
         }
     }
 
-    // Set or remove a gym as the user's single predeterminado
+    // Set or remove the user's SINGLE predeterminado gym.
+    // Regla de unicidad permanente: solo puede existir un predeterminado a la vez,
+    // nunca se reasigna por proximidad, y al quitarlo el usuario queda SIN
+    // predeterminado — la app jamás asigna otro de forma automática (vuelve al
+    // flujo de "primera vez": detección GPS o selección manual).
     async toggleHomeBase(userId: string, gymId: string, isHomeBase: boolean): Promise<{ success: boolean; error?: string }> {
         try {
             if (isHomeBase) {
-                // Allow multiple predeterminados — just mark this gym without clearing others
+                // Garantizar unicidad: desmarcar cualquier otro gimnasio antes de asignar este
+                const { error: clearError } = await supabase
+                    .from('user_gyms')
+                    .update({ is_home_base: false })
+                    .eq('user_id', userId)
+                    .neq('gym_id', gymId);
+                if (clearError) throw clearError;
+
                 const { error } = await supabase
                     .from('user_gyms')
                     .update({ is_home_base: true })
                     .match({ user_id: userId, gym_id: gymId });
                 if (error) throw error;
 
-                // Set profiles.home_gym_id only when the user had no home gym before
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('home_gym_id')
-                    .eq('id', userId)
-                    .single();
-                if (!profile?.home_gym_id) {
-                    await supabase.from('profiles').update({ home_gym_id: gymId }).eq('id', userId);
-                }
+                await supabase.from('profiles').update({ home_gym_id: gymId }).eq('id', userId);
             } else {
                 const { error } = await supabase
                     .from('user_gyms')
@@ -777,25 +773,17 @@ class UserService {
                     .match({ user_id: userId, gym_id: gymId });
                 if (error) throw error;
 
-                // If profiles.home_gym_id pointed to this gym, redirect it to another home gym
-                // (or null it out if none remain)
+                // Quitar el predeterminado deja al usuario SIN predeterminado —
+                // jamás se reasigna otro automáticamente.
                 const { data: profile } = await supabase
                     .from('profiles')
                     .select('home_gym_id')
                     .eq('id', userId)
                     .single();
                 if (profile?.home_gym_id === gymId) {
-                    const { data: remaining } = await supabase
-                        .from('user_gyms')
-                        .select('gym_id')
-                        .eq('user_id', userId)
-                        .eq('is_home_base', true)
-                        .neq('gym_id', gymId)
-                        .limit(1)
-                        .maybeSingle();
                     await supabase
                         .from('profiles')
-                        .update({ home_gym_id: remaining?.gym_id ?? null })
+                        .update({ home_gym_id: null })
                         .eq('id', userId);
                 }
             }
