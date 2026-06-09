@@ -1045,7 +1045,7 @@ export const WorkoutSession = () => {
                 if (sender === user.id) return; // Ignore echoes
                 
                 console.warn('⚠️ [Destruction Protocol] Received session_terminated signal from host');
-                toast.error("Misión abortada por el anfitrión.");
+                import('react-hot-toast').then(({ default: t }) => t.error("Misión abortada por el anfitrión."));
                 
                 // Clear local cache immediately
                 localStorage.removeItem(`workout_draft_${sessionIdRef.current}`);
@@ -1072,7 +1072,7 @@ export const WorkoutSession = () => {
                 // restante conserva TODOS sus datos y su sesión sigue activa, convertida a
                 // modo individual — nadie es expulsado ni pierde su progreso.
                 console.warn('⚠️ [Host Cancelled] El host canceló su entrenamiento — continuamos en modo individual sin perder datos.');
-                toast.success('El anfitrión canceló su sesión. Tu progreso se mantiene — continúas de forma individual.', { duration: 6000 });
+                import('react-hot-toast').then(({ default: t }) => t.success('El anfitrión canceló su sesión. Tu progreso se mantiene — continúas de forma individual.', { duration: 6000 }));
 
                 try {
                     if (sessionIdRef.current) {
@@ -1108,20 +1108,19 @@ export const WorkoutSession = () => {
             .on('broadcast', { event: 'session_finished' }, async (payload) => {
                 const { sender } = payload.payload;
                 if (sender === user.id) return; // Ignore own echo (host side)
-
-                // Guard: run once — if already leaving (e.g. guest pressed Finalizar themselves
-                // right as host closed), skip to avoid double-summary or data corruption.
+                // Guard: run once per room close
                 if (isLeavingPageRef.current) return;
-                isLeavingPageRef.current = true;
 
-                console.log('🏁 [Guest] Host closed the room. Saving guest sets before summary...');
-                toast.loading("Guardando tu progreso...", { id: 'guest-save' });
+                console.log('🏁 [Guest] Host closed the room — saving sets now, guest presses Finalizar when ready.');
 
-                let guestPendingSyncCount = 0;
-
-                // ── ALWAYS reach setShowSummary(true) even if saving fails ──────────
-                // Wrap in try/finally so any thrown error (network, unexpected exception,
-                // Promise.all rejection) can never leave the guest stuck on a blank screen.
+                // ── Save sets immediately while exercises are in memory ──────────────
+                // We save NOW (before the guest presses Finalizar) because closeRoom()
+                // already set finished_at on the guest's session in DB — if we wait,
+                // there's a risk the user navigates away and data is lost.
+                // We do NOT show summary automatically: the guest stays on the workout
+                // screen, sees a toast, and presses Finalizar when they're ready.
+                // handleFinalizeSession's guest branch already handles already-closed
+                // sessions gracefully (returns success even if finished_at is set).
                 try {
                     const guestSessionId = sessionIdRef.current;
                     const exercisesToSave = activeExercisesRef.current.length > 0
@@ -1152,17 +1151,12 @@ export const WorkoutSession = () => {
                                     resolvedExId = await (async () => {
                                         try {
                                             const { data } = await supabase
-                                                .from('exercises')
-                                                .select('id')
-                                                .ilike('name', exercise.equipmentName)
-                                                .limit(1)
-                                                .single();
+                                                .from('exercises').select('id')
+                                                .ilike('name', exercise.equipmentName).limit(1).single();
                                             if (data?.id) return data.id;
                                             const { data: created } = await supabase
-                                                .from('exercises')
-                                                .insert({ name: exercise.equipmentName })
-                                                .select()
-                                                .single();
+                                                .from('exercises').insert({ name: exercise.equipmentName })
+                                                .select().single();
                                             return created?.id ?? null;
                                         } catch { return null; }
                                     })();
@@ -1175,16 +1169,11 @@ export const WorkoutSession = () => {
                                 if (restStatus === 'running' && restStart) restDuration += Date.now() - restStart;
 
                                 const guestSetPayload = {
-                                    session_id:        guestSessionId,
-                                    exercise_id:       resolvedExId,
-                                    set_number:        j + 1,
-                                    sets:              1,
-                                    weight_kg:         weightToSave,
-                                    reps:              repsToSave,
-                                    time:              timeToSave,
-                                    distance:          distanceToSave,
-                                    rpe:               rpeToSave,
-                                    metrics_data:      {
+                                    session_id: guestSessionId, exercise_id: resolvedExId,
+                                    set_number: j + 1, sets: 1,
+                                    weight_kg: weightToSave, reps: repsToSave,
+                                    time: timeToSave, distance: distanceToSave, rpe: rpeToSave,
+                                    metrics_data: {
                                         ...(set.custom || {}),
                                         ...(isCompleted ? { _checklist_timestamp: set.playerCompletedAt?.[myId] || Date.now() } : {}),
                                         ...(exercise.weightUnit === 'lb' ? { _weight_unit: 'lb' } : {}),
@@ -1192,52 +1181,40 @@ export const WorkoutSession = () => {
                                         _rest_status: restStatus === 'running' ? 'completed' : restStatus
                                     } as any,
                                     category_snapshot: exercise.category || 'Custom',
-                                    is_pr:             false,
-                                    owner_id:          myId
+                                    is_pr: false, owner_id: myId
                                 };
 
-                                // Use .catch so a single failed logSet never rejects the whole Promise.all
                                 savePromises.push(
                                     workoutService.logSet(guestSetPayload)
                                         .then(res => {
                                             if (res.error && !res.data) {
                                                 workoutService.queuePendingSet(guestSessionId, guestSetPayload);
-                                                guestPendingSyncCount++;
                                             }
                                         })
-                                        .catch(() => {
-                                            // Network failure — queue for later sync, never block summary
-                                            workoutService.queuePendingSet(guestSessionId, guestSetPayload);
-                                            guestPendingSyncCount++;
-                                        })
+                                        .catch(() => workoutService.queuePendingSet(guestSessionId, guestSetPayload))
                                 );
                             }
                         }
-
-                        if (savePromises.length > 0) {
-                            await Promise.all(savePromises);
-                        }
+                        if (savePromises.length > 0) await Promise.all(savePromises);
                     }
                 } catch (err) {
-                    console.error('❌ [Guest session_finished] Unexpected error saving sets — showing summary anyway:', err);
-                } finally {
-                    // ── ALWAYS execute: summary must show regardless of save outcome ──
-                    toast.success(
-                        guestPendingSyncCount > 0
-                            ? `📡 ${guestPendingSyncCount} serie(s) se sincronizarán cuando vuelva la conexión.`
-                            : '¡Progreso guardado!',
-                        { id: 'guest-save', duration: 4000 }
-                    );
-
-                    const finalSessionId = sessionIdRef.current;
-                    if (finalSessionId) localStorage.removeItem(`workout_draft_${finalSessionId}`);
-                    localStorage.removeItem('workout_session_state');
-                    localStorage.removeItem('ginx_coop_state');
-                    sessionStorage.removeItem('ginx_temp_exit_active');
-
-                    setLoading(false);
-                    setShowSummary(true);
+                    console.error('❌ [Guest session_finished] Error pre-saving sets:', err);
                 }
+
+                // ── Notify guest — they press Finalizar when ready ───────────────────
+                // Sets are already saved above. handleFinalizeSession handles the
+                // already-closed session gracefully and shows the summary.
+                import('react-hot-toast').then(({ default: t }) =>
+                    t.custom((tt) => (
+                        <div className={`${tt.visible ? 'animate-enter' : 'animate-leave'} max-w-sm w-full bg-neutral-950/95 backdrop-blur-2xl border border-yellow-500/40 rounded-2xl p-4 flex items-center gap-3`}>
+                            <span className="text-2xl">🏁</span>
+                            <div className="flex-1">
+                                <p className="text-sm font-black text-white uppercase tracking-wide">El host finalizó la sala</p>
+                                <p className="text-[11px] text-neutral-400 mt-0.5">Tus series están guardadas. Presiona <strong className="text-yellow-500">Finalizar</strong> para ver tu resumen.</p>
+                            </div>
+                        </div>
+                    ), { duration: 12000 })
+                );
             })
             .on('broadcast', { event: 'participant_left' }, (payload) => {
                 const { sender } = payload.payload;
@@ -1245,7 +1222,7 @@ export const WorkoutSession = () => {
                 // Find participant name for the toast
                 const leavingParticipant = participantsRef.current.find(p => p.id === sender);
                 const leavingName = leavingParticipant?.username || 'Un participante';
-                toast(`${leavingName} finalizó su entrenamiento.`, { icon: '🏁' });
+                import('react-hot-toast').then(({ default: t }) => t(`${leavingName} finalizó su entrenamiento.`, { icon: '🏁' }));
                 // Mark this participant as finalized so:
                 // • CRDT merge never overwrites their data
                 // • rowLocked becomes true for all their rows in the UI
@@ -1515,12 +1492,22 @@ export const WorkoutSession = () => {
             try {
                 const open = await workoutService.isRoomOpen(syncRoomId);
                 if (!open && !isLeavingPageRef.current) {
-                    console.warn('⚠️ [Guest Poll] Room is closed — host finished without us receiving session_finished. Showing summary.');
-                    isLeavingPageRef.current = true;
-                    localStorage.removeItem('ginx_coop_state');
-                    sessionStorage.removeItem('ginx_temp_exit_active');
-                    setLoading(false);
-                    setShowSummary(true);
+                    console.warn('⚠️ [Guest Poll] Room closed — host finished. Notifying guest to press Finalizar.');
+                    // Do NOT force showSummary here — guest may still be logging sets.
+                    // A persistent toast prompts them; handleFinalizeSession handles
+                    // already-closed sessions gracefully (returns success).
+                    import('react-hot-toast').then(({ default: t }) =>
+                        t('🏁 El host finalizó la sala. Presiona Finalizar para ver tu resumen.', {
+                            duration: 15000,
+                            style: {
+                                background: '#0a0a0a',
+                                color: '#fff',
+                                border: '1px solid rgba(234,179,8,0.4)',
+                                borderRadius: '16px',
+                            },
+                            icon: '⚠️'
+                        })
+                    );
                 }
             } catch { /* non-fatal */ }
         };
