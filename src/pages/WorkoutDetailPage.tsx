@@ -68,6 +68,8 @@ interface WorkoutDetail {
     partner_duration_minutes?: number;
     // All room participants (includes all users, not just direct partner)
     room_participants?: RoomParticipant[];
+    // Display name of the viewing user (never "Yo")
+    my_name?: string;
 }
 
 export default function WorkoutDetailPage() {
