@@ -1,4 +1,4 @@
-import { MapPin, LogIn, LogOut } from 'lucide-react';
+import { MapPin, LogIn, LogOut, Trash2, AlertTriangle } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
@@ -239,6 +239,35 @@ const CoopJoinRequestToast = ({
                             }
                         }
 
+                        // ── Check defensivo de capacidad (spec §1.3-G) ────────────────────
+                        // Protege contra race conditions: si dos personas envían solicitud
+                        // simultáneamente cuando la sala está a 7, ambas podrían pasar el
+                        // check del lado del solicitante. El host verifica antes de aceptar.
+                        try {
+                            const { count: guestNow } = await supabase
+                                .from('workout_sessions')
+                                .select('id', { count: 'exact', head: true })
+                                .eq('partner_session_id', resolvedSession.id)
+                                .is('finished_at', null);
+
+                            if ((guestNow || 0) >= 7) { // 7 invitados + 1 host = 8 total
+                                toast.dismiss(t.id);
+                                // Marcar como rechazado y notificar al solicitante
+                                await notificationService.updateInvitationStatus(newNotification, 'rejected');
+                                await supabase.from('notifications').insert({
+                                    user_id: senderId,
+                                    type: 'system',
+                                    title: '⚡ SALA LLENA',
+                                    message: 'La sala alcanzó su límite de 8 participantes justo cuando intentabas unirte. Inténtalo más tarde.',
+                                    data: {}
+                                });
+                                toast.error("⚡ Sala llena — No se puede aceptar más participantes (máximo 8).");
+                                return;
+                            }
+                        } catch (capErr) {
+                            console.warn("No se pudo verificar capacidad antes de aceptar, continuando:", capErr);
+                        }
+
                         const targetSessionId = newNotification.data?.session_id;
 
                         // Align session mismatch gracefully instead of blocking the user
@@ -339,12 +368,58 @@ export const AppLayout = () => {
     const { isBottomNavVisible } = useBottomNav();
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const location = useLocation();
     const navigate = useNavigate();
     const [rescueSessionId, setRescueSessionId] = useState<string | null>(null);
     const [rescueGymId, setRescueGymId] = useState<string | null>(null);
     const [rescueStartedAt, setRescueStartedAt] = useState<string | null>(null);
     const [showRescueModal, setShowRescueModal] = useState<boolean>(false);
+
+    // ─── Delete Account ────────────────────────────────────────────────────────
+    const handleDeleteAccount = async () => {
+        if (!user || !supabase) return;
+        setIsDeleting(true);
+        try {
+            const uid = user.id;
+
+            // 1. Collect all session IDs owned by this user
+            const { data: sessions } = await supabase
+                .from('workout_sessions')
+                .select('id')
+                .eq('user_id', uid);
+            const sessionIds = (sessions ?? []).map((s: any) => s.id);
+
+            // 2. Delete workout logs linked to those sessions
+            if (sessionIds.length > 0) {
+                await supabase.from('workout_logs').delete().in('session_id', sessionIds);
+            }
+
+            // 3. Delete workout sessions
+            await supabase.from('workout_sessions').delete().eq('user_id', uid);
+
+            // 4. Delete notifications (sent to or by the user)
+            await supabase.from('notifications').delete().eq('user_id', uid);
+
+            // 5. Delete chat messages sent by the user
+            await supabase.from('chat_messages').delete().eq('sender_id', uid);
+
+            // 6. Delete profile row — this is the primary PII container
+            await supabase.from('profiles').delete().eq('id', uid);
+
+            // Note: the Supabase auth user row (auth.users) requires a server-side
+            // admin call to fully remove. The profile deletion above removes all PII.
+            // Contact ginxapp@gmail.com for full auth record removal if needed.
+
+            // 7. Sign out (clears localStorage + session)
+            await signOut();
+        } catch (err) {
+            console.error('❌ [DeleteAccount] Error:', err);
+            setIsDeleting(false);
+            toast.error('Error al eliminar la cuenta. Por favor, contacta a ginxapp@gmail.com.');
+        }
+    };
 
     // ── On startup: clean zombie/orphan sessions so they never accumulate ──────
     // This runs once per login session. cleanOrphanSessions normally only runs
@@ -763,9 +838,10 @@ const notificationSeen = useRef<Set<string>>(new Set());
     const isChatPage = location.pathname === '/inbox' || location.pathname.startsWith('/chat/');
     const isReelsPage = location.pathname === '/reels';
     const isArsenalPage = location.pathname === '/arsenal';
+    const isLoginPage = location.pathname === '/login';
     const isWorkoutPage = location.pathname === '/workout' || location.pathname.includes('/territory/');
     
-    const shouldHideHeader = isRadarPage || isRankingPage || isChatPage || isReelsPage || isArsenalPage || isWorkoutPage;
+    const shouldHideHeader = isRadarPage || isRankingPage || isChatPage || isReelsPage || isArsenalPage || isWorkoutPage || isLoginPage;
 
     // Hide BottomNav during workout sessions, gym territory pages, arsenal, stats, history, and single chat pages
     const isContentPage = location.pathname === '/arsenal' || location.pathname === '/stats' || location.pathname === '/history' || location.pathname.startsWith('/history/');
@@ -857,6 +933,17 @@ const notificationSeen = useRef<Set<string>>(new Set());
                                                                      <GPointsDisplay />
                                                                  </div>
  
+                                                                 {/* Eliminar Cuenta Button */}
+                                                                 <button
+                                                                     onClick={() => {
+                                                                         setShowDeleteModal(true);
+                                                                         setIsUserMenuOpen(false);
+                                                                     }}
+                                                                     className="w-full text-left px-4 py-3 text-sm text-neutral-500 hover:text-red-400 hover:bg-red-500/5 transition-colors font-bold flex items-center gap-3 rounded-xl"
+                                                                 >
+                                                                     <Trash2 size={16} /> Eliminar cuenta
+                                                                 </button>
+
                                                                  {/* Cerrar Sesión Button */}
                                                                  <button
                                                                      onClick={() => {
@@ -911,6 +998,54 @@ const notificationSeen = useRef<Set<string>>(new Set());
             />
             {shouldShowBottomNav && <BottomNav onUploadClick={() => setIsUploadModalOpen(true)} />}
             <Toaster position="top-center" reverseOrder={false} />
+
+            {/* ── Delete Account Confirmation Modal ─────────────────────────────── */}
+            {showDeleteModal && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[200] p-6">
+                    <div className="bg-neutral-900 border border-red-500/20 rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                        {/* Header */}
+                        <div className="flex items-center gap-3 mb-5">
+                            <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center flex-shrink-0">
+                                <AlertTriangle size={20} className="text-red-400" />
+                            </div>
+                            <div>
+                                <h3 className="text-white font-black text-sm uppercase tracking-wide">Eliminar Cuenta</h3>
+                                <p className="text-red-400 text-[11px] font-bold uppercase tracking-wide mt-0.5">Acción irreversible</p>
+                            </div>
+                        </div>
+
+                        {/* Warning text */}
+                        <p className="text-neutral-400 text-xs leading-relaxed mb-3">
+                            Esta acción <strong className="text-white">borrará permanentemente</strong> todos tus datos:
+                        </p>
+                        <ul className="text-neutral-500 text-xs space-y-1.5 mb-5">
+                            <li className="flex items-center gap-2"><span className="text-red-500/60">•</span> Perfil y datos personales</li>
+                            <li className="flex items-center gap-2"><span className="text-red-500/60">•</span> Historial de entrenamientos y estadísticas</li>
+                            <li className="flex items-center gap-2"><span className="text-red-500/60">•</span> Mensajes y conversaciones</li>
+                            <li className="flex items-center gap-2"><span className="text-red-500/60">•</span> Puntos GX, logros y rachas</li>
+                            <li className="flex items-center gap-2"><span className="text-red-500/60">•</span> Notificaciones</li>
+                        </ul>
+
+                        {/* Actions */}
+                        <div className="flex flex-col gap-2">
+                            <button
+                                onClick={handleDeleteAccount}
+                                disabled={isDeleting}
+                                className="w-full bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 hover:text-red-300 font-black text-xs py-3 rounded-xl transition-colors disabled:opacity-50 uppercase tracking-widest"
+                            >
+                                {isDeleting ? 'Eliminando datos...' : 'Sí, eliminar mi cuenta'}
+                            </button>
+                            <button
+                                onClick={() => setShowDeleteModal(false)}
+                                disabled={isDeleting}
+                                className="w-full text-neutral-500 hover:text-neutral-400 text-xs font-bold py-2.5 transition-colors rounded-xl hover:bg-white/3"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
         </div>
     );

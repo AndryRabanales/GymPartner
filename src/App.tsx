@@ -20,6 +20,8 @@ import { ChatPage } from './pages/ChatPage';
 import { InboxPage } from './pages/InboxPage';
 import { PublicProfile } from './pages/PublicProfile';
 import { FriendsPage } from './pages/FriendsPage';
+import { PrivacyPolicy } from './pages/PrivacyPolicy';
+import { TermsPage } from './pages/TermsPage';
 import { BottomNavProvider } from './context/BottomNavContext';
 
 
@@ -34,6 +36,10 @@ function App() {
       <BottomNavProvider>
         <BrowserRouter>
           <Routes>
+            {/* Public routes — no auth or layout wrapper needed */}
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<TermsPage />} />
+
             <Route path="/" element={<AppLayout />}>
               <Route index element={<UserProfile />} />
               <Route path="reels" element={<ReelsPage />} />

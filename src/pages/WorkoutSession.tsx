@@ -1430,6 +1430,69 @@ export const WorkoutSession = () => {
                     return; // channel effect re-runs when syncRoomId changes
                 }
             } catch (_) { /* non-fatal */ }
+
+            // ── TD-02: host ya terminó antes de que el guest se uniera ────────────
+            // Cada 4 intentos (~12 s) verificamos si el host tiene una sesión
+            // TERMINADA recientemente. Si es así, no tiene sentido seguir esperando
+            // — convertimos la sesión del guest a solo (mismo patrón que el handler
+            // host_cancelled_continue_solo, ya probado en producción).
+            if (attempts % 4 === 0 && !cancelled) {
+                try {
+                    const fifteenMinAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+                    const { data: finishedSess } = await supabase
+                        .from('workout_sessions')
+                        .select('id, finished_at')
+                        .eq('user_id', hostId)
+                        .not('finished_at', 'is', null)
+                        .gt('finished_at', fifteenMinAgo)
+                        .order('finished_at', { ascending: false })
+                        .limit(1)
+                        .maybeSingle();
+
+                    if (finishedSess && !cancelled) {
+                        cancelled = true; // detener el polling antes de tocar estado
+                        console.warn('⚠️ [TD-02] El host ya finalizó su sesión — convirtiendo al guest a modo individual.');
+
+                        // Convertir sesión del guest a solo si ya fue creada
+                        try {
+                            if (sessionIdRef.current) {
+                                await supabase
+                                    .from('workout_sessions')
+                                    .update({
+                                        is_multiplayer: false,
+                                        multiplayer_mode: null,
+                                        partner_id: null,
+                                        partner_session_id: null
+                                    })
+                                    .eq('id', sessionIdRef.current);
+                            }
+                        } catch (e) {
+                            console.error('TD-02: error al convertir sesión a individual:', e);
+                        }
+
+                        localStorage.removeItem('ginx_coop_state');
+                        sessionStorage.removeItem('ginx_temp_exit_active');
+                        setIsMultiplayer(false);
+                        setMultiplayerMode(null);
+                        setPartnerId(null);
+                        setChatId(null);
+                        setSyncRoomId(null);
+                        setIsInviter(true);
+                        isInviterRef.current = true;
+                        setParticipants([]);
+
+                        import('react-hot-toast').then(({ default: t }) =>
+                            t('⚠️ Tu compañero ya terminó su sesión antes de que pudieras unirte. Continuarás de forma individual.', {
+                                duration: 8000,
+                                icon: '⚠️',
+                                style: { background: '#171717', color: '#fff', border: '1px solid rgba(234,179,8,0.3)', fontSize: '11px', fontWeight: 'bold' }
+                            })
+                        );
+                        return;
+                    }
+                } catch (_) { /* non-fatal — no bloquear el polling */ }
+            }
+
             if (!cancelled) timer = setTimeout(poll, 3000);
         };
 

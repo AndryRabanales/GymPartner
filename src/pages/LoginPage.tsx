@@ -1,6 +1,7 @@
 import { useAuth } from '../context/AuthContext';
 import { ExternalLink } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 
 // ── Detect Meta / Instagram in-app browser ──────────────────────────────────
 function detectMetaIAB() {
@@ -205,62 +206,63 @@ export const LoginPage = () => {
     }
 
     return (
-        <div className="min-h-[80vh] flex items-center justify-center p-4">
-            <div className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-3xl p-8 shadow-2xl relative overflow-hidden text-center">
+        <div className="fixed inset-0 bg-neutral-950 flex flex-col items-center justify-center overflow-hidden">
+            {/* Ambient glow */}
+            <div className="absolute w-[300px] h-[300px] bg-gym-primary/8 rounded-full blur-[100px] top-0 left-1/2 -translate-x-1/2 pointer-events-none" />
 
-                <div className="relative z-10 mb-8">
-                    <div className="w-24 h-24 bg-neutral-950 border border-neutral-800 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-md overflow-hidden p-0">
-                        <img src="/ginxIcon.png" alt="Ginx Logo" className="w-full h-full object-cover animate-pulse" />
+            <div className="relative z-10 w-full max-w-sm px-5 flex flex-col items-center gap-5">
+
+                {/* Logo */}
+                <div className="flex flex-col items-center gap-2">
+                    <div className="w-16 h-16 bg-neutral-950 border border-neutral-800 rounded-2xl flex items-center justify-center shadow-md overflow-hidden">
+                        <img src="/ginxIcon.png" alt="Ginx" className="w-full h-full object-cover" />
                     </div>
-                    <h1 className="text-3xl font-bold text-white mb-2">Acceso Ginx</h1>
-                    <p className="text-neutral-400 text-sm">Elige tu método de acceso rápido para continuar.</p>
+                    <h1 className="text-2xl font-black text-white tracking-tight">Acceso <span className="text-gym-primary italic">GINX</span></h1>
+                    <p className="text-neutral-400 text-xs text-center">Elige tu método de acceso rápido para continuar.</p>
                 </div>
 
                 {error && (
-                    <div className="mb-6 bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl text-sm">
+                    <div className="w-full bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-xl text-xs text-center">
                         {error}
                     </div>
                 )}
 
-                <div className="flex flex-col gap-3">
-                    {/* Google */}
+                {/* Buttons */}
+                <div className="w-full flex flex-col gap-3">
                     <button
                         onClick={handleGoogleLogin}
-                        className="w-full bg-white text-black font-bold py-3.5 rounded-xl hover:bg-neutral-200 transition-all flex items-center justify-center gap-3 shadow-md"
+                        className="w-full bg-white text-black font-black py-3.5 rounded-xl hover:bg-neutral-100 active:scale-95 transition-all flex items-center justify-center gap-3 shadow-md"
                     >
                         <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
-                        <span className="text-sm font-black uppercase tracking-wider">Entrar con Google</span>
+                        <span className="text-sm uppercase tracking-wider">Entrar con Google</span>
                     </button>
 
-                    {/* Meta */}
                     <button
                         onClick={handleMetaLogin}
-                        className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold py-3.5 rounded-xl hover:from-blue-500 hover:to-blue-600 transition-all flex items-center justify-center gap-3 shadow-md"
+                        className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white font-black py-3.5 rounded-xl hover:from-blue-500 hover:to-blue-600 active:scale-95 transition-all flex items-center justify-center gap-3 shadow-md"
                     >
                         <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
                             <path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z" />
                         </svg>
-                        <span className="text-sm font-black uppercase tracking-wider">Entrar con Meta</span>
+                        <span className="text-sm uppercase tracking-wider">Entrar con Meta</span>
                     </button>
                 </div>
 
                 {/* Dev bypass — localhost only */}
                 {import.meta.env.DEV && (
-                    <div className="mt-6 pt-4 border-t border-white/5">
-                        <button
-                            onClick={() => signInAsDev && signInAsDev()}
-                            className="w-full bg-neutral-800 text-neutral-400 font-bold py-3 rounded-xl hover:bg-neutral-700 hover:text-white transition-all flex items-center justify-center gap-2 text-sm border border-neutral-700 border-dashed"
-                        >
-                            <span>🛠️ Modo Desarrollo (Localhost Bypass)</span>
-                        </button>
-                        <p className="text-[10px] text-neutral-500 mt-2">
-                            Usa esto si Supabase te redirige a producción.
-                        </p>
-                    </div>
+                    <button
+                        onClick={() => signInAsDev && signInAsDev()}
+                        className="w-full bg-neutral-800/60 text-neutral-400 font-bold py-2.5 rounded-xl hover:bg-neutral-700 hover:text-white active:scale-95 transition-all flex items-center justify-center gap-2 text-xs border border-neutral-700 border-dashed"
+                    >
+                        🛠️ Dev Bypass
+                    </button>
                 )}
 
-                <p className="mt-6 text-xs text-neutral-600">
-                    Al continuar, aceptas nuestros términos de servicio.
+                <p className="text-[10px] text-neutral-600 leading-relaxed text-center px-4">
+                    Al continuar aceptas nuestros{' '}
+                    <Link to="/terms" className="text-neutral-500 underline">Términos</Link>
+                    {' '}y{' '}
+                    <Link to="/privacy" className="text-neutral-500 underline">Privacidad</Link>.
                 </p>
             </div>
         </div>

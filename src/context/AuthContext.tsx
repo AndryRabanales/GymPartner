@@ -3,6 +3,168 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 import { userService } from '../services/UserService';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Age Gate Screen — shown to new users before profile creation
+// Must be defined outside AuthProvider to avoid re-creation on every render
+// ─────────────────────────────────────────────────────────────────────────────
+type AgeGateScreenProps = {
+    onConfirm: (dob: Date) => Promise<void>;
+    onDecline: () => void;
+};
+
+const AgeGateScreen = ({ onConfirm, onDecline }: AgeGateScreenProps) => {
+    const [dob, setDob] = useState('');
+    const [ageError, setAgeError] = useState<string | null>(null);
+    const [submitting, setSubmitting] = useState(false);
+
+    // Acceptable date range: 10–120 years old
+    const today = new Date();
+    const maxDate = new Date(today.getFullYear() - 10, today.getMonth(), today.getDate())
+        .toISOString().split('T')[0];
+    const minDate = '1920-01-01';
+
+    const handleSubmit = async () => {
+        if (!dob) {
+            setAgeError('Por favor ingresa tu fecha de nacimiento.');
+            return;
+        }
+        // Parse at noon local time to avoid timezone off-by-one
+        const birth = new Date(dob + 'T12:00:00');
+        const now = new Date();
+        let age = now.getFullYear() - birth.getFullYear();
+        const m = now.getMonth() - birth.getMonth();
+        if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
+
+        if (age < 16) {
+            setAgeError(
+                'GINX requiere una edad mínima de 16 años. Al ser una app que facilita contacto directo entre usuarios, mensajería y encuentros físicos en gimnasios, es un requisito legal.'
+            );
+            return;
+        }
+        setAgeError(null);
+        setSubmitting(true);
+        try {
+            await onConfirm(birth);
+        } catch {
+            setAgeError('Error al verificar tu edad. Inténtalo de nuevo.');
+            setSubmitting(false);
+        }
+    };
+
+    return (
+        <div
+            className="fixed inset-0 flex flex-col items-center justify-center p-6"
+            style={{ background: '#0a0a0a', fontFamily: 'system-ui, -apple-system, sans-serif', zIndex: 99999 }}
+        >
+            <div className="w-full max-w-sm flex flex-col items-center text-center gap-6">
+                {/* Brand */}
+                <div className="flex flex-col items-center gap-2">
+                    <div
+                        style={{
+                            width: 64, height: 64, borderRadius: 16,
+                            background: 'rgba(250,204,21,0.08)',
+                            border: '1px solid rgba(250,204,21,0.25)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 30
+                        }}
+                    >
+                        ⚡
+                    </div>
+                    <span style={{ color: '#ffd700', fontSize: 11, fontWeight: 900, letterSpacing: '0.2em', textTransform: 'uppercase' }}>
+                        GINX
+                    </span>
+                </div>
+
+                {/* Title */}
+                <div>
+                    <h1 style={{ color: '#fff', fontSize: 22, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.02em', margin: '0 0 8px' }}>
+                        Verificación de Edad
+                    </h1>
+                    <p style={{ color: '#737373', fontSize: 13, lineHeight: 1.6, margin: 0 }}>
+                        Para usar GINX debes tener al menos{' '}
+                        <strong style={{ color: '#ffd700' }}>16 años</strong>.
+                        Ingresa tu fecha de nacimiento para continuar.
+                    </p>
+                </div>
+
+                {/* Input */}
+                <div style={{ width: '100%' }}>
+                    <input
+                        type="date"
+                        value={dob}
+                        onChange={e => { setDob(e.target.value); setAgeError(null); }}
+                        min={minDate}
+                        max={maxDate}
+                        style={{
+                            width: '100%', background: '#171717',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: 12, padding: '12px 16px',
+                            color: '#fff', fontSize: 14,
+                            outline: 'none', colorScheme: 'dark',
+                            boxSizing: 'border-box'
+                        }}
+                    />
+                </div>
+
+                {/* Error */}
+                {ageError && (
+                    <div style={{
+                        width: '100%', background: 'rgba(239,68,68,0.08)',
+                        border: '1px solid rgba(239,68,68,0.25)',
+                        borderRadius: 12, padding: '12px 16px',
+                        color: '#f87171', fontSize: 12, textAlign: 'left', lineHeight: 1.5
+                    }}>
+                        {ageError}
+                    </div>
+                )}
+
+                {/* Buttons */}
+                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <button
+                        onClick={handleSubmit}
+                        disabled={submitting || !dob}
+                        style={{
+                            width: '100%', background: !dob || submitting ? '#404040' : '#ffd700',
+                            color: !dob || submitting ? '#737373' : '#000',
+                            border: 'none', borderRadius: 12,
+                            padding: '14px 16px', fontSize: 13,
+                            fontWeight: 900, letterSpacing: '0.05em',
+                            textTransform: 'uppercase', cursor: !dob || submitting ? 'not-allowed' : 'pointer',
+                            transition: 'all 0.15s'
+                        }}
+                    >
+                        {submitting ? 'Verificando...' : 'Confirmar y Continuar'}
+                    </button>
+                    <button
+                        onClick={onDecline}
+                        disabled={submitting}
+                        style={{
+                            background: 'none', border: 'none',
+                            color: '#525252', fontSize: 12, fontWeight: 700,
+                            cursor: 'pointer', padding: '6px', transition: 'color 0.15s'
+                        }}
+                    >
+                        Cancelar y cerrar sesión
+                    </button>
+                </div>
+
+                {/* Privacy link */}
+                <p style={{ color: '#404040', fontSize: 11, lineHeight: 1.5, marginTop: -8 }}>
+                    Al continuar aceptas nuestra{' '}
+                    <a
+                        href="/privacy"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: '#737373', textDecoration: 'underline' }}
+                    >
+                        Política de Privacidad
+                    </a>
+                </p>
+            </div>
+        </div>
+    );
+};
+
 interface AuthContextType {
     user: User | null;
     session: Session | null;
@@ -31,6 +193,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [loading, setLoading] = useState(true);
     const isProcessingReferral = useRef(false);
     const hasInitialized = useRef(false);
+
+    // ── Age Gate ──────────────────────────────────────────────────────────────
+    // When a brand-new user signs in (no profile exists yet), we pause the app
+    // render and show <AgeGateScreen> until they confirm their age.
+    const [needsAgeVerification, setNeedsAgeVerification] = useState(false);
+    const pendingNewUserRef = useRef<User | null>(null);
 
     useEffect(() => {
         console.log('🔑 [AuthContext] Initializing...');
@@ -177,7 +345,48 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return () => clearInterval(interval);
     }, [user]);
 
+    // ─── Helper: create profile row + process referral (called after age OK) ───
+    const doCreateProfile = async (currentUser: User) => {
+        if (!supabase) return;
+        console.log('🆕 [Profile] Creating profile for:', currentUser.id);
+        const meta = currentUser.user_metadata ?? {};
+        const fullName: string = meta.full_name || meta.name || 'Guerrero';
+        const baseUsername: string = meta.username || meta.user_name || fullName;
+        const suffix = Math.floor(1000 + Math.random() * 9000);
+        const username = `${baseUsername.toLowerCase().replace(/[^a-z0-9_]/g, '_').substring(0, 22)}_${suffix}`;
+        const avatarUrl: string | null = meta.avatar_url || null;
+
+        const { error: insertErr } = await supabase
+            .from('profiles')
+            .insert({ id: currentUser.id, username, avatar_url: avatarUrl, checkins_count: 0, g_points: 0 });
+
+        if (insertErr) {
+            console.error('❌ [Profile] Insert failed:', insertErr);
+        } else {
+            console.log('✅ [Profile] Created successfully:', username);
+        }
+
+        // Process any pending referral for this brand-new user
+        if (!isProcessingReferral.current) {
+            const storedRef = sessionStorage.getItem('gym_referral_id');
+            if (storedRef && storedRef !== currentUser.id && !currentUser.user_metadata?.referred_by) {
+                isProcessingReferral.current = true;
+                sessionStorage.removeItem('gym_referral_id');
+                try {
+                    const ok = await userService.processReferral(currentUser.id, storedRef);
+                    console.log(ok ? '✅ Referral processed.' : '⚠️ Referral failed.');
+                } catch (e) {
+                    console.error('❌ Referral error:', e);
+                } finally {
+                    isProcessingReferral.current = false;
+                }
+            }
+        }
+    };
+
     // ─── Helper: ensure profile row exists in public.profiles ───
+    // For NEW users: pauses the app and shows AgeGateScreen first.
+    // For EXISTING users: skips profile creation, processes referrals only.
     const ensureProfileExists = async (currentUser: User) => {
         if (!supabase) return;
 
@@ -195,28 +404,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             }
 
             if (!existing) {
-                console.log('🆕 [Profile] No profile found. Creating...');
-                const meta = currentUser.user_metadata ?? {};
-                const fullName: string = meta.full_name || meta.name || 'Guerrero';
-                const baseUsername: string = meta.username || meta.user_name || fullName;
-                const suffix = Math.floor(1000 + Math.random() * 9000);
-                const username = `${baseUsername.toLowerCase().replace(/[^a-z0-9_]/g, '_').substring(0, 22)}_${suffix}`;
-                const avatarUrl: string | null = meta.avatar_url || null;
-
-                const { error: insertErr } = await supabase
-                    .from('profiles')
-                    .insert({ id: currentUser.id, username, avatar_url: avatarUrl, checkins_count: 0, g_points: 0 });
-
-                if (insertErr) {
-                    console.error('❌ [Profile] Insert failed:', insertErr);
-                } else {
-                    console.log('✅ [Profile] Created successfully:', username);
-                }
-            } else {
-                console.log('✅ [Profile] Already exists.');
+                // Brand-new user — show age gate before creating profile.
+                // Profile creation is deferred to doCreateProfile() via handleAgeConfirm.
+                console.log('🔒 [AgeGate] New user detected — showing age verification.');
+                pendingNewUserRef.current = currentUser;
+                setNeedsAgeVerification(true);
+                return;
             }
 
-            // Referral processing
+            console.log('✅ [Profile] Already exists.');
+
+            // Existing user — process any pending referral
             if (!isProcessingReferral.current) {
                 const storedRef = sessionStorage.getItem('gym_referral_id');
                 if (storedRef && storedRef !== currentUser.id && !currentUser.user_metadata?.referred_by) {
@@ -235,6 +433,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         } catch (e) {
             console.error('❌ [Profile] Unexpected error:', e);
         }
+    };
+
+    // ─── Age Gate callbacks (passed to AgeGateScreen) ──────────────────────
+    const handleAgeConfirm = async (_dob: Date) => {
+        // Age already validated in AgeGateScreen before this is called (age >= 16).
+        // Create profile and dismiss the gate.
+        const currentUser = pendingNewUserRef.current;
+        if (currentUser) {
+            await doCreateProfile(currentUser);
+        }
+        pendingNewUserRef.current = null;
+        setNeedsAgeVerification(false);
+    };
+
+    const handleAgeDecline = () => {
+        // User cancelled or failed age check — sign them out cleanly.
+        pendingNewUserRef.current = null;
+        setNeedsAgeVerification(false);
+        setUser(null);
+        setSession(null);
+        hasInitialized.current = false;
+        if (supabase) supabase.auth.signOut().catch(() => { });
+        window.location.href = '/';
     };
 
     // ─── Sign-in helpers ───
@@ -337,7 +558,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     return (
         <AuthContext.Provider value={{ user, session, loading, signInWithGoogle, signInWithMeta, signInWithEmail, signInAsDev, signOut }}>
-            {loading ? null : children}
+            {loading ? null : needsAgeVerification ? (
+                <AgeGateScreen onConfirm={handleAgeConfirm} onDecline={handleAgeDecline} />
+            ) : children}
         </AuthContext.Provider>
     );
 };

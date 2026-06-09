@@ -251,6 +251,31 @@ export const FriendsPage = () => {
             return;
         }
 
+        // ── Verificar capacidad de la sala (spec §1.3-G: máximo 8 participantes) ──
+        // Contar las sesiones de invitados activas que apuntan a esta sala.
+        // Si host (1) + invitados activos >= 8, mostrar "sala llena" SIN enviar
+        // ninguna notificación al host.
+        try {
+            const { count: activeGuestCount } = await supabase
+                .from('workout_sessions')
+                .select('id', { count: 'exact', head: true })
+                .eq('partner_session_id', roomSessionId)
+                .is('finished_at', null);
+
+            const totalInRoom = 1 + (activeGuestCount || 0); // 1 host + invitados activos
+
+            if (totalInRoom >= 8) {
+                toast.error(
+                    "⚡ SALA LLENA — Esta sala ya alcanzó su límite de 8 participantes. Inténtalo más tarde si alguien sale.",
+                    { id: "join-req", duration: 5000 }
+                );
+                return;
+            }
+        } catch (capacityErr) {
+            console.warn("No se pudo verificar capacidad de la sala, continuando de todas formas:", capacityErr);
+            // No bloquear si la query falla — el host puede rechazar manualmente
+        }
+
         // Fetch names for display and notification
         const [hostProfileRes, myProfileRes] = await Promise.all([
             supabase.from('profiles').select('username').eq('id', hostId).single(),

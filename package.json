@@ -15,7 +15,10 @@
     "start": "node server.js",
     "start:railway": "node server.js",
     "verify:modules": "node scripts/test-modules-complete.mjs",
-    "verify:quick": "node scripts/quick-test.mjs"
+    "verify:quick": "node scripts/quick-test.mjs",
+    "cap:sync": "npm run build && npx cap sync",
+    "cap:android": "npm run build && npx cap sync && npx cap open android",
+    "cap:ios": "npm run build && npx cap sync && npx cap open ios"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.4",
