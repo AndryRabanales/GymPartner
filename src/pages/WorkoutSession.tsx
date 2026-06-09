@@ -1109,136 +1109,135 @@ export const WorkoutSession = () => {
                 const { sender } = payload.payload;
                 if (sender === user.id) return; // Ignore own echo (host side)
 
+                // Guard: run once — if already leaving (e.g. guest pressed Finalizar themselves
+                // right as host closed), skip to avoid double-summary or data corruption.
+                if (isLeavingPageRef.current) return;
+                isLeavingPageRef.current = true;
+
                 console.log('🏁 [Guest] Host closed the room. Saving guest sets before summary...');
                 toast.loading("Guardando tu progreso...", { id: 'guest-save' });
 
-                // closeRoom() sets finished_at for guest sessions but does NOT write workout_logs.
-                // Guests must save their own sets here before the summary screen.
-                const guestSessionId = sessionIdRef.current;
-                // Fallback to lastNonEmptyExercisesRef in case a race condition cleared activeExercisesRef
-                // before this event arrived (e.g. empty sync_state from host's participants effect).
-                const exercisesToSave = activeExercisesRef.current.length > 0
-                    ? activeExercisesRef.current
-                    : lastNonEmptyExercisesRef.current;
-                // Mirrors handleFinalizeSession's offline-safety net (spec §1.2): if logSet
-                // fails here (e.g. the host closed the room right as our connection dropped),
-                // queue the exact payload instead of losing it — flushPendingSets() (run on
-                // app load + every 'online' event from AppLayout) recovers it silently.
-                // Declared here (not inside the `if` below) so the toast check after it
-                // can still see the final count.
                 let guestPendingSyncCount = 0;
-                if (guestSessionId && exercisesToSave.length > 0) {
-                    const myId = user.id;
-                    const savePromises: Promise<any>[] = [];
 
-                    for (const exercise of exercisesToSave) {
-                        let resolvedExId: string | null = null;
+                // ── ALWAYS reach setShowSummary(true) even if saving fails ──────────
+                // Wrap in try/finally so any thrown error (network, unexpected exception,
+                // Promise.all rejection) can never leave the guest stuck on a blank screen.
+                try {
+                    const guestSessionId = sessionIdRef.current;
+                    const exercisesToSave = activeExercisesRef.current.length > 0
+                        ? activeExercisesRef.current
+                        : lastNonEmptyExercisesRef.current;
 
-                        for (let j = 0; j < exercise.sets.length; j++) {
-                            const set = exercise.sets[j];
-                            // Use firstGuestIdRef.current (not firstGuestId state) to avoid stale
-                            // closure — the channel effect captures state once at registration time.
-                            const guestIsFirstGuest = myId === firstGuestIdRef.current;
-                            const weightToSave    = Number(set.playerWeights?.[myId]   ?? (guestIsFirstGuest ? (set.p2_weight   || 0) : 0)) || 0;
-                            const repsToSave      = Number(set.playerReps?.[myId]      ?? (guestIsFirstGuest ? (set.p2_reps     || 0) : 0)) || 0;
-                            const timeToSave      = Number(set.playerTimes?.[myId]     ?? (guestIsFirstGuest ? (set.p2_time     || 0) : 0)) || 0;
-                            const distanceToSave  = Number(set.playerDistances?.[myId] ?? (guestIsFirstGuest ? (set.p2_distance || 0) : 0)) || 0;
-                            const rpeToSave       = Number(set.playerRpes?.[myId]      ?? (guestIsFirstGuest ? (set.p2_rpe      || 0) : 0)) || undefined;
-                            const isCompleted     = set.playerCompleted?.[myId]        ?? (guestIsFirstGuest ? (set.p2_completed || false) : false);
+                    if (guestSessionId && exercisesToSave.length > 0) {
+                        const myId = user.id;
+                        const savePromises: Promise<any>[] = [];
 
-                            // Skip if already saved or nothing to record
-                            if (set.db_id) continue;
-                            if (!isCompleted && weightToSave === 0 && repsToSave === 0 && timeToSave === 0) continue;
+                        for (const exercise of exercisesToSave) {
+                            let resolvedExId: string | null = null;
 
-                            // Resolve exercise DB ID (lazy, once per exercise)
-                            if (!resolvedExId) {
-                                resolvedExId = await (async () => {
-                                    try {
-                                        const { data } = await supabase
-                                            .from('exercises')
-                                            .select('id')
-                                            .ilike('name', exercise.equipmentName)
-                                            .limit(1)
-                                            .single();
-                                        if (data?.id) return data.id;
-                                        const { data: created } = await supabase
-                                            .from('exercises')
-                                            .insert({ name: exercise.equipmentName })
-                                            .select()
-                                            .single();
-                                        return created?.id ?? null;
-                                    } catch { return null; }
-                                })();
-                            }
-                            if (!resolvedExId) continue;
+                            for (let j = 0; j < exercise.sets.length; j++) {
+                                const set = exercise.sets[j];
+                                const guestIsFirstGuest = myId === firstGuestIdRef.current;
+                                const weightToSave    = Number(set.playerWeights?.[myId]   ?? (guestIsFirstGuest ? (set.p2_weight   || 0) : 0)) || 0;
+                                const repsToSave      = Number(set.playerReps?.[myId]      ?? (guestIsFirstGuest ? (set.p2_reps     || 0) : 0)) || 0;
+                                const timeToSave      = Number(set.playerTimes?.[myId]     ?? (guestIsFirstGuest ? (set.p2_time     || 0) : 0)) || 0;
+                                const distanceToSave  = Number(set.playerDistances?.[myId] ?? (guestIsFirstGuest ? (set.p2_distance || 0) : 0)) || 0;
+                                const rpeToSave       = Number(set.playerRpes?.[myId]      ?? (guestIsFirstGuest ? (set.p2_rpe      || 0) : 0)) || undefined;
+                                const isCompleted     = set.playerCompleted?.[myId]        ?? (guestIsFirstGuest ? (set.p2_completed || false) : false);
 
-                            let restDuration = Number(set.playerRestAccumulated?.[myId]) || 0;
-                            const restStatus = set.playerRestStatus?.[myId];
-                            const restStart  = set.playerRestLastStartTime?.[myId];
-                            if (restStatus === 'running' && restStart) restDuration += Date.now() - restStart;
+                                if (set.db_id) continue;
+                                if (!isCompleted && weightToSave === 0 && repsToSave === 0 && timeToSave === 0) continue;
 
-                            const guestSetPayload = {
-                                session_id:        guestSessionId,
-                                exercise_id:       resolvedExId,
-                                set_number:        j + 1,
-                                sets:              1,
-                                weight_kg:         weightToSave,
-                                reps:              repsToSave,
-                                time:              timeToSave,
-                                distance:          distanceToSave,
-                                rpe:               rpeToSave,
-                                metrics_data:      {
-                                    ...(set.custom || {}),
-                                    ...(isCompleted ? { _checklist_timestamp: set.playerCompletedAt?.[myId] || Date.now() } : {}),
-                                    ...(exercise.weightUnit === 'lb' ? { _weight_unit: 'lb' } : {}),
-                                    _rest_duration_ms: restDuration,
-                                    _rest_status: restStatus === 'running' ? 'completed' : restStatus
-                                } as any, // same cast handleFinalizeSession's extendedMetrics uses — metrics_data
-                                          // legitimately carries strings/timestamps beyond WorkoutSetData's Record<string, number>
-                                category_snapshot: exercise.category || 'Custom',
-                                is_pr:             false,
-                                owner_id:          myId
-                            };
-
-                            savePromises.push(workoutService.logSet(guestSetPayload).then(res => {
-                                if (res.error && !res.data) {
-                                    console.error('❌ [Guest] Error saving set on session_finished, queued for offline sync:', res.error);
-                                    workoutService.queuePendingSet(guestSessionId, guestSetPayload);
-                                    guestPendingSyncCount++;
+                                if (!resolvedExId) {
+                                    resolvedExId = await (async () => {
+                                        try {
+                                            const { data } = await supabase
+                                                .from('exercises')
+                                                .select('id')
+                                                .ilike('name', exercise.equipmentName)
+                                                .limit(1)
+                                                .single();
+                                            if (data?.id) return data.id;
+                                            const { data: created } = await supabase
+                                                .from('exercises')
+                                                .insert({ name: exercise.equipmentName })
+                                                .select()
+                                                .single();
+                                            return created?.id ?? null;
+                                        } catch { return null; }
+                                    })();
                                 }
-                            }));
+                                if (!resolvedExId) continue;
+
+                                let restDuration = Number(set.playerRestAccumulated?.[myId]) || 0;
+                                const restStatus = set.playerRestStatus?.[myId];
+                                const restStart  = set.playerRestLastStartTime?.[myId];
+                                if (restStatus === 'running' && restStart) restDuration += Date.now() - restStart;
+
+                                const guestSetPayload = {
+                                    session_id:        guestSessionId,
+                                    exercise_id:       resolvedExId,
+                                    set_number:        j + 1,
+                                    sets:              1,
+                                    weight_kg:         weightToSave,
+                                    reps:              repsToSave,
+                                    time:              timeToSave,
+                                    distance:          distanceToSave,
+                                    rpe:               rpeToSave,
+                                    metrics_data:      {
+                                        ...(set.custom || {}),
+                                        ...(isCompleted ? { _checklist_timestamp: set.playerCompletedAt?.[myId] || Date.now() } : {}),
+                                        ...(exercise.weightUnit === 'lb' ? { _weight_unit: 'lb' } : {}),
+                                        _rest_duration_ms: restDuration,
+                                        _rest_status: restStatus === 'running' ? 'completed' : restStatus
+                                    } as any,
+                                    category_snapshot: exercise.category || 'Custom',
+                                    is_pr:             false,
+                                    owner_id:          myId
+                                };
+
+                                // Use .catch so a single failed logSet never rejects the whole Promise.all
+                                savePromises.push(
+                                    workoutService.logSet(guestSetPayload)
+                                        .then(res => {
+                                            if (res.error && !res.data) {
+                                                workoutService.queuePendingSet(guestSessionId, guestSetPayload);
+                                                guestPendingSyncCount++;
+                                            }
+                                        })
+                                        .catch(() => {
+                                            // Network failure — queue for later sync, never block summary
+                                            workoutService.queuePendingSet(guestSessionId, guestSetPayload);
+                                            guestPendingSyncCount++;
+                                        })
+                                );
+                            }
+                        }
+
+                        if (savePromises.length > 0) {
+                            await Promise.all(savePromises);
                         }
                     }
-
-                    if (savePromises.length > 0) {
-                        await Promise.all(savePromises);
-                        console.log(`✅ [Guest] ${savePromises.length} sets guardados.`);
-                    }
-                }
-
-                toast.success("¡Progreso guardado!", { id: 'guest-save' });
-
-                // spec §1.2: same reassuring "nothing was lost, it'll sync on its own"
-                // messaging used in handleFinalizeSession for the symmetric offline case.
-                if (guestPendingSyncCount > 0) {
-                    import('react-hot-toast').then(({ default: t }) =>
-                        t(`📡 ${guestPendingSyncCount} serie${guestPendingSyncCount > 1 ? 's' : ''} sin conexión — se guardaron en tu dispositivo y se sincronizarán solas apenas vuelvas a tener internet. No perdiste nada.`, {
-                            duration: 7000,
-                            icon: '🔄',
-                            style: { background: '#171717', color: '#fff', border: '1px solid rgba(234,179,8,0.3)', fontSize: '11px', fontWeight: 'bold' }
-                        })
+                } catch (err) {
+                    console.error('❌ [Guest session_finished] Unexpected error saving sets — showing summary anyway:', err);
+                } finally {
+                    // ── ALWAYS execute: summary must show regardless of save outcome ──
+                    toast.success(
+                        guestPendingSyncCount > 0
+                            ? `📡 ${guestPendingSyncCount} serie(s) se sincronizarán cuando vuelva la conexión.`
+                            : '¡Progreso guardado!',
+                        { id: 'guest-save', duration: 4000 }
                     );
+
+                    const finalSessionId = sessionIdRef.current;
+                    if (finalSessionId) localStorage.removeItem(`workout_draft_${finalSessionId}`);
+                    localStorage.removeItem('workout_session_state');
+                    localStorage.removeItem('ginx_coop_state');
+                    sessionStorage.removeItem('ginx_temp_exit_active');
+
+                    setLoading(false);
+                    setShowSummary(true);
                 }
-
-                const finalSessionId = sessionIdRef.current;
-                if (finalSessionId) localStorage.removeItem(`workout_draft_${finalSessionId}`);
-                localStorage.removeItem('workout_session_state');
-                localStorage.removeItem('ginx_coop_state');
-                sessionStorage.removeItem('ginx_temp_exit_active');
-
-                isLeavingPageRef.current = true;
-                setLoading(false);
-                setShowSummary(true);
             })
             .on('broadcast', { event: 'participant_left' }, (payload) => {
                 const { sender } = payload.payload;
@@ -1500,6 +1499,36 @@ export const WorkoutSession = () => {
         timer = setTimeout(poll, 1500);
         return () => { cancelled = true; clearTimeout(timer); };
     }, [isMultiplayer, isInviter, syncRoomId, partnerId, user?.id, showSummary]);
+
+    // ─── Guest safety-net polling ─────────────────────────────────────────────
+    // If the Realtime channel was never connected (polling timed out, network
+    // blip) the guest never receives session_finished and is left staring at a
+    // blank workout screen. Every 20 s we verify the room is still open in DB.
+    // When it's not — the host finished without us knowing — we trigger the same
+    // cleanup + summary flow that session_finished would have triggered.
+    useEffect(() => {
+        if (!isMultiplayer || isInviter || !syncRoomId || !user || showSummary) return;
+
+        let cancelled = false;
+        const checkRoom = async () => {
+            if (cancelled || isLeavingPageRef.current || showSummary) return;
+            try {
+                const open = await workoutService.isRoomOpen(syncRoomId);
+                if (!open && !isLeavingPageRef.current) {
+                    console.warn('⚠️ [Guest Poll] Room is closed — host finished without us receiving session_finished. Showing summary.');
+                    isLeavingPageRef.current = true;
+                    localStorage.removeItem('ginx_coop_state');
+                    sessionStorage.removeItem('ginx_temp_exit_active');
+                    setLoading(false);
+                    setShowSummary(true);
+                }
+            } catch { /* non-fatal */ }
+        };
+
+        // First check after 20 s (give the broadcast channel time to deliver the event first)
+        const interval = setInterval(checkRoom, 20000);
+        return () => { cancelled = true; clearInterval(interval); };
+    }, [isMultiplayer, isInviter, syncRoomId, user?.id, showSummary]);
 
     // Send local updates (Debounced to prevent network spam and echo loops while typing)
     useEffect(() => {
