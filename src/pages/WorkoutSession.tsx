@@ -487,12 +487,7 @@ export const WorkoutSession = () => {
 
             setParticipants(prev => {
                 if (prev.length > 2) return prev;
-                // Don't re-add any participant who has already finalized and left the room.
-                // This prevents a stale partnerName/Avatar dep change from ghosting them back.
-                const safeOrdered = ordered.filter(
-                    p => p.id === user.id || !finalizedParticipantsRef.current.has(p.id)
-                );
-                return safeOrdered.length > 0 ? safeOrdered : prev;
+                return ordered.length > 0 ? ordered : prev;
             });
         }
     }, [isMultiplayer, multiplayerMode, user, partnerId, partnerName, partnerAvatar, isInviter]);
@@ -516,8 +511,7 @@ export const WorkoutSession = () => {
 
     // True while this user has already finalized their session but is still waiting for
     // remaining room participants to finish before the summary screen is shown.
-    const waitingForPartnersRef = useRef<boolean>(false);
-    const [waitingForPartners, setWaitingForPartners] = useState<boolean>(false);
+    // waitingForPartners removed: users go directly to summary on finalize
     const partnerSessionIdRef = useRef<string | null>(partnerSessionId);
     useEffect(() => {
         partnerSessionIdRef.current = partnerSessionId;
@@ -638,10 +632,8 @@ export const WorkoutSession = () => {
                         }
                     }
 
-                    // Ensure partner fallback — but NEVER re-add a partner who already sent
-                    // participant_left (they finalized their session and left the room).
-                    // Without this guard the presence sync would ghost them back after removal.
-                    if (partnerId && !uniqueList.some(p => p.id === partnerId) && !finalizedParticipantsRef.current.has(partnerId)) {
+                    // Ensure partner fallback — keep finalized partners visible as locked rows.
+                    if (partnerId && !uniqueList.some(p => p.id === partnerId)) {
                         uniqueList.push({
                             id: partnerId,
                             username: partnerName !== 'Compañero' ? partnerName : 'Compañero',
@@ -1213,27 +1205,13 @@ export const WorkoutSession = () => {
                 const leavingParticipant = participantsRef.current.find(p => p.id === sender);
                 const leavingName = leavingParticipant?.username || 'Un participante';
                 toast(`${leavingName} finalizó su entrenamiento.`, { icon: '🏁' });
-                // Mark this participant as finalized so the CRDT merge never overwrites their data
+                // Mark this participant as finalized so:
+                // • CRDT merge never overwrites their data
+                // • rowLocked becomes true for all their rows in the UI
+                // • addSet skips them → new sets show "-" for their column
                 finalizedParticipantsRef.current.add(sender);
-                // Remove them from participants list and check if we're waiting for all to finish
-                setParticipants(prev => {
-                    const updated = prev.filter(p => p.id !== sender);
-                    // If this user already finished and is waiting for the last partner:
-                    // check if there are now zero other active participants. If so, trigger summary.
-                    if (waitingForPartnersRef.current) {
-                        const remainingOthers = updated.filter(p => p.id !== user.id);
-                        if (remainingOthers.length === 0) {
-                            waitingForPartnersRef.current = false;
-                            setWaitingForPartners(false);
-                            // Small delay so partner's DB writes have time to commit before we load summary
-                            setTimeout(() => {
-                                isLeavingPageRef.current = true;
-                                setShowSummary(true);
-                            }, 800);
-                        }
-                    }
-                    return updated;
-                });
+                // Intentionally do NOT remove from participants: keep them visible
+                // as locked/read-only rows so remaining users can see their records.
                 // In separado mode, clear stale partner exercises so the spy view doesn't show ghost data
                 if (multiplayerMode === 'separado' && sender === partnerId) {
                     setPartnerExercises([]);
@@ -4013,10 +3991,11 @@ export const WorkoutSession = () => {
         const originalRpes = previousSet?.playerRpes || {};
 
         if (isMultiplayer && participantsRef.current.length > 0) {
-            // Always carry over previous-set data for ALL participants, online or not.
-            // If a participant is offline, their last known values are still in the set —
-            // pre-filling them means the partner can see and adjust those values normally.
+            // Carry over previous-set data for active (non-finalized) participants only.
+            // Finalized participants are intentionally skipped: their data is frozen and
+            // their column will show "-" (empty) in any set added after they left.
             participantsRef.current.forEach(p => {
+                if (finalizedParticipantsRef.current.has(p.id)) return; // frozen
                 prevPWeights[p.id]    = originalWeights[p.id]    !== undefined ? originalWeights[p.id]    : 0;
                 prevPReps[p.id]       = originalReps[p.id]       !== undefined ? originalReps[p.id]       : 0;
                 prevPTimes[p.id]      = originalTimes[p.id]      !== undefined ? originalTimes[p.id]      : 0;
@@ -4753,26 +4732,7 @@ export const WorkoutSession = () => {
                 localStorage.removeItem('ginx_coop_state');
                 sessionStorage.removeItem('ginx_temp_exit_active');
 
-                // ── MULTIPLAYER: hold summary until all room participants have finished ──
-                // Each user saves their own logs independently. If we show the summary
-                // before the last partner saves theirs, their data shows as empty in history.
-                // We listen for participant_left from every remaining active participant;
-                // the handler above flips waitingForPartnersRef→false and calls setShowSummary
-                // once the last one leaves. The "Continuar sin esperar" button is the escape hatch.
-                if (isMultiplayer && multiplayerMode === 'conjunto') {
-                    const stillActive = participantsRef.current.filter(
-                        p => p.id !== user?.id && p.isOnline !== false
-                    );
-                    if (stillActive.length > 0) {
-                        console.log(`⏳ Waiting for ${stillActive.length} partner(s) to finish before showing summary.`);
-                        waitingForPartnersRef.current = true;
-                        setWaitingForPartners(true);
-                        setLoading(false);
-                        return; // participant_left handler will call setShowSummary when ready
-                    }
-                }
-
-                // Solo or all partners already left → show summary immediately
+                // Go directly to summary — no waiting screen.
                 setTimeout(() => {
                     setLoading(false);
                     isLeavingPageRef.current = true;
@@ -5167,13 +5127,18 @@ export const WorkoutSession = () => {
                                                                     // participants. Only an explicit playerLocked flag or read-only mode can do that.
                                                                     // isAbandoned is intentionally NOT used to disable inputs.
 
-                                                                    const rowWeight = safeNum(set.playerWeights?.[p.id] ?? (isHost ? set.weight : (isFirstGuest ? (set.p2_weight || 0) : 0)), 0);
-                                                                    const rowReps = safeNum(set.playerReps?.[p.id] ?? (isHost ? set.reps : (isFirstGuest ? (set.p2_reps || 0) : 0)), 0);
-                                                                    const rowTime = safeNum(set.playerTimes?.[p.id] ?? (isHost ? set.time : (isFirstGuest ? (set.p2_time || 0) : 0)), 0);
-                                                                    const rowDistance = safeNum(set.playerDistances?.[p.id] ?? (isHost ? set.distance : (isFirstGuest ? (set.p2_distance || 0) : 0)), 0);
-                                                                    const rowRpe = safeNum(set.playerRpes?.[p.id] ?? (isHost ? set.rpe : (isFirstGuest ? (set.p2_rpe || 0) : 0)), 0);
+                                                                    // Finalized participants (who left early) have no playerXxx entry in sets
+                                                                    // added after they left → show 0 (renders as empty/"−") instead of the
+                                                                    // stale scalar fallback value.
+                                                                    const isFinalizedPlayer = finalizedParticipantsRef.current.has(p.id);
+                                                                    const rowWeight = (isFinalizedPlayer && set.playerWeights?.[p.id] === undefined) ? 0 : safeNum(set.playerWeights?.[p.id] ?? (isHost ? set.weight : (isFirstGuest ? (set.p2_weight || 0) : 0)), 0);
+                                                                    const rowReps = (isFinalizedPlayer && set.playerReps?.[p.id] === undefined) ? 0 : safeNum(set.playerReps?.[p.id] ?? (isHost ? set.reps : (isFirstGuest ? (set.p2_reps || 0) : 0)), 0);
+                                                                    const rowTime = (isFinalizedPlayer && set.playerTimes?.[p.id] === undefined) ? 0 : safeNum(set.playerTimes?.[p.id] ?? (isHost ? set.time : (isFirstGuest ? (set.p2_time || 0) : 0)), 0);
+                                                                    const rowDistance = (isFinalizedPlayer && set.playerDistances?.[p.id] === undefined) ? 0 : safeNum(set.playerDistances?.[p.id] ?? (isHost ? set.distance : (isFirstGuest ? (set.p2_distance || 0) : 0)), 0);
+                                                                    const rowRpe = (isFinalizedPlayer && set.playerRpes?.[p.id] === undefined) ? 0 : safeNum(set.playerRpes?.[p.id] ?? (isHost ? set.rpe : (isFirstGuest ? (set.p2_rpe || 0) : 0)), 0);
                                                                     const rowCompleted = set.playerCompleted?.[p.id] ?? (isHost ? set.completed : (isFirstGuest ? (set.p2_completed || false) : false));
-                                                                    const rowLocked = set.playerLocked?.[p.id] ?? (isHost ? set.locked : (isFirstGuest ? (set.p2_locked || false) : false));
+                                                                    // Finalized participants are always locked, even for sets added after they left
+                                                                    const rowLocked = !!(set.playerLocked?.[p.id] ?? (isHost ? set.locked : (isFirstGuest ? (set.p2_locked || false) : false))) || isFinalizedPlayer;
                                                                     const rowCompletedAt = set.playerCompletedAt?.[p.id] ?? (isHost ? set.completedAt : (isFirstGuest ? set.p2_completedAt : undefined));
                                                                     
                                                                     // Disable inputs if: explicitly locked, read-only mode,
@@ -5892,71 +5857,7 @@ export const WorkoutSession = () => {
                 )
             }
 
-            {/* ── WAITING FOR PARTNERS OVERLAY ─────────────────────────────────────────
-                Shown after this user finishes but before the last partner does.
-                The summary is intentionally held so history loads with all data.
-                "Continuar sin esperar" lets the user skip immediately.
-            ───────────────────────────────────────────────────────────────────────── */}
-            {waitingForPartners && !showSummary && (
-                <div className="fixed inset-0 z-[300] bg-black/95 backdrop-blur-2xl flex flex-col items-center justify-center p-6 animate-in fade-in duration-500">
-                    <div className="flex flex-col items-center gap-6 max-w-xs w-full text-center">
-                        {/* Animated icon */}
-                        <div className="relative w-20 h-20">
-                            <div className="absolute inset-0 rounded-full border-2 border-gym-primary/30 animate-ping" />
-                            <div className="relative w-20 h-20 bg-gym-primary/10 border border-gym-primary/30 rounded-full flex items-center justify-center">
-                                <span className="text-4xl">⚔️</span>
-                            </div>
-                        </div>
-
-                        <div>
-                            <p className="text-gym-primary font-black text-xs uppercase tracking-[0.2em] mb-2">SALA ACTIVA</p>
-                            <h2 className="text-white font-black text-2xl uppercase italic tracking-tight leading-none mb-3">
-                                ¡TÚ TERMINASTE!
-                            </h2>
-                            <p className="text-neutral-300 text-sm font-bold uppercase tracking-wide">
-                                Esperando a que los demás finalicen...
-                            </p>
-                        </div>
-
-                        {/* Active participants still in room */}
-                        <div className="flex flex-col gap-2 w-full">
-                            {participants
-                                .filter(p => p.id !== user?.id)
-                                .map((p) => (
-                                    <div key={p.id} className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl px-4 py-3">
-                                        {p.avatarUrl ? (
-                                            <img src={p.avatarUrl} alt={p.username} className="w-8 h-8 rounded-full object-cover border border-gym-primary/30" />
-                                        ) : (
-                                            <div className="w-8 h-8 rounded-full bg-gym-primary/20 flex items-center justify-center">
-                                                <span className="text-gym-primary font-black text-xs uppercase">{(p.username || '?')[0]}</span>
-                                            </div>
-                                        )}
-                                        <span className="text-white font-bold text-sm uppercase tracking-wide flex-1 text-left">{p.username || 'Compañero'}</span>
-                                        <span className="text-gym-primary font-black text-[10px] uppercase tracking-widest animate-pulse">EN CURSO</span>
-                                    </div>
-                                ))
-                            }
-                        </div>
-
-                        <p className="text-neutral-500 text-[11px] font-bold uppercase tracking-wider">
-                            Tu historial se completará cuando todos terminen
-                        </p>
-
-                        {/* Skip button */}
-                        <button
-                            onClick={() => {
-                                waitingForPartnersRef.current = false;
-                                setWaitingForPartners(false);
-                                isLeavingPageRef.current = true;
-                                setShowSummary(true);
-                            }}
-                            className="w-full py-3 rounded-2xl bg-neutral-900 border border-white/10 text-neutral-400 font-black text-[11px] uppercase tracking-widest hover:bg-neutral-800 hover:text-white transition-all active:scale-95"
-                        >
-                            Continuar sin esperar
-                        </button>
-                    </div>
-                </div>
-            )}
+            {/* Waiting screen removed: User goes directly to summary on finalize */}
 
             {/* 4. SUMMARY SCREEN - Cuphead Videogame Retro Arcade Style */}
             {

@@ -24,20 +24,9 @@ BEGIN
       user_id = auth.uid()
       OR
       -- 2. El compañero me tiene como partner_id en su sesión
+      -- (evitamos subconsultas auto-referenciales sobre workout_sessions
+      --  para no causar recursión infinita en el evaluador RLS de Postgres)
       partner_id = auth.uid()
-      OR
-      -- 3. Yo tengo su sesión como mi partner_session_id
-      id IN (
-        SELECT partner_session_id
-        FROM public.workout_sessions
-        WHERE user_id = auth.uid()
-          AND partner_session_id IS NOT NULL
-      )
-      OR
-      -- 4. Ellos tienen mi sesión como su partner_session_id
-      partner_session_id IN (
-        SELECT id FROM public.workout_sessions WHERE user_id = auth.uid()
-      )
     );
   END IF;
 END $$;
