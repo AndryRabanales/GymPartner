@@ -4818,17 +4818,14 @@ export const WorkoutSession = () => {
 
             let result: { success: boolean; error?: any };
 
-            // ── MULTIPLAYER (host OR guest): leave the room independently ──────────
-            // The room stays alive for remaining participants. Any user — including the host —
-            // saves only their own session. The room closes naturally when everyone has left,
-            // or after the 5-hour auto-expiry (enforced on entry in initializeBattle).
-            if (isMultiplayer && finalSessionId) {
-                console.log('🏃 [Multiplayer] User leaving room, finalizing own session:', finalSessionId);
+            if (isMultiplayer && isInviter && finalSessionId) {
+                // ── HOST finalizes: broadcast final snapshot + close the whole room ──
+                // closeRoom() sets finished_at on the host session (awarding host GX),
+                // bulk-finalizes all guest sessions, and sends room_closed notifications
+                // to any offline guests so they see a clear "sala cerrada" message.
+                console.log('🏁 [Host] Closing room:', finalSessionId);
 
                 if (channelRef.current && user) {
-                    // Broadcast final exercise snapshot so remaining participants keep full data.
-                    // Include this user's ID in finalizedParticipants so the signal is redundant
-                    // with participant_left — if one is lost, the other still locks the cells.
                     const snapshot = activeExercisesRef.current;
                     if (snapshot.length > 0) {
                         await channelRef.current.send({
@@ -4844,9 +4841,36 @@ export const WorkoutSession = () => {
                             }
                         }).catch(e => console.error('Error broadcasting final sync_state:', e));
                     }
+                    // Notify guests the room is closing
+                    await channelRef.current.send({
+                        type: 'broadcast',
+                        event: 'session_finished',
+                        payload: { sender: user.id }
+                    }).catch(e => console.error('Error broadcasting session_finished:', e));
+                }
 
-                    // Tell remaining participants this user is leaving.
-                    // Await so the message is confirmed sent before we proceed to cleanup.
+                result = await workoutService.closeRoom(finalSessionId, flowNotes, currentRoutineName, geoVerified);
+
+            } else if (isMultiplayer && !isInviter && finalSessionId) {
+                // ── GUEST finalizes: broadcast departure + finalize own session only ──
+                console.log('🏃 [Guest] Leaving room, finalizing own session:', finalSessionId);
+
+                if (channelRef.current && user) {
+                    const snapshot = activeExercisesRef.current;
+                    if (snapshot.length > 0) {
+                        await channelRef.current.send({
+                            type: 'broadcast',
+                            event: 'sync_state',
+                            payload: {
+                                exercises: snapshot,
+                                sender: user.id,
+                                knownParticipants: participantsRef.current,
+                                routineName: currentRoutineNameRef.current,
+                                isRoutineModified: isRoutineModifiedRef.current,
+                                finalizedParticipants: [user.id]
+                            }
+                        }).catch(e => console.error('Error broadcasting final sync_state:', e));
+                    }
                     await channelRef.current.send({
                         type: 'broadcast',
                         event: 'participant_left',
@@ -4854,11 +4878,10 @@ export const WorkoutSession = () => {
                     }).catch(e => console.error('Error broadcasting participant_left:', e));
                 }
 
-                // Finalize only this user's session (awards their GX, sets finished_at)
                 result = await workoutService.finishSession(finalSessionId, flowNotes, currentRoutineName, true, geoVerified);
 
-            // ── SOLO: Standard finalization ───────────────────────────────────────
             } else {
+                // ── SOLO: Standard finalization ───────────────────────────────────
                 result = await workoutService.finishSession(finalSessionId, flowNotes, currentRoutineName, true, geoVerified);
             }
 
