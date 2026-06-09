@@ -144,6 +144,14 @@ export default function WorkoutDetailPage() {
 
             if (sessionError) throw sessionError;
 
+            // Fetch current user's display name (never show "Yo")
+            const { data: myProfile } = await supabase
+                .from('profiles')
+                .select('username')
+                .eq('id', session.user_id)
+                .maybeSingle();
+            const myName: string = myProfile?.username || 'Atleta';
+
             // Auto-heal matching partner session ID if it isn't set yet
             let resolvedPartnerSessionId = session.partner_session_id;
             if (session.is_multiplayer && !resolvedPartnerSessionId && session.partner_id) {
@@ -502,7 +510,8 @@ export default function WorkoutDetailPage() {
                 partner_exercises: partnerExercises,
                 partner_volume: partnerVol,
                 partner_duration_minutes: partnerDuration,
-                room_participants: roomParticipants.length > 0 ? roomParticipants : undefined
+                room_participants: roomParticipants.length > 0 ? roomParticipants : undefined,
+                my_name: myName
             });
 
             setLoading(false);
@@ -748,7 +757,7 @@ export default function WorkoutDetailPage() {
 
                             // All participants including me, each as { name, ex, colorClass }
                             const allParticipantsForEx = [
-                                { name: 'Yo', ex: myEx, color: playerColors[0], isMine: true },
+                                { name: workout.my_name || 'Atleta', ex: myEx, color: playerColors[0], isMine: true },
                                 ...allOtherParticipants.map((p, idx) => ({
                                     name: p.name,
                                     ex: p.exercises.find(e => e.exercise_id === exId),
@@ -794,7 +803,7 @@ export default function WorkoutDetailPage() {
                                         {allParticipantsForEx.map((p, idx) => (
                                             <div key={idx} className="p-3 md:p-4 space-y-2">
                                                 <div className={`text-[10px] font-black ${p.color} uppercase tracking-widest px-2 flex justify-between`}>
-                                                    <span>{p.isMine ? 'Yo ⚡' : `${p.name.substring(0, 10)} ⚔️`}</span>
+                                                    <span>{p.isMine ? `${p.name} ⚡` : `${p.name.substring(0, 10)} ⚔️`}</span>
                                                     <span className="text-neutral-500 font-normal lowercase">({p.ex?.sets.length || 0} sets)</span>
                                                 </div>
                                                 {p.ex ? (
