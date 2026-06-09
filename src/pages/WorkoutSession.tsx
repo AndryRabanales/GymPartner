@@ -4849,7 +4849,8 @@ export const WorkoutSession = () => {
                     }).catch(e => console.error('Error broadcasting session_finished:', e));
                 }
 
-                result = await workoutService.closeRoom(finalSessionId, flowNotes, currentRoutineName, geoVerified);
+                // skipBroadcast=true: we already sent session_finished above via our live channel
+                result = await workoutService.closeRoom(finalSessionId, flowNotes, currentRoutineName, geoVerified, true);
 
             } else if (isMultiplayer && !isInviter && finalSessionId) {
                 // ── GUEST finalizes: broadcast departure + finalize own session only ──

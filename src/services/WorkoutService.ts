@@ -648,12 +648,16 @@ class WorkoutService {
      *    own logs via the broadcast above; GX is awarded directly below).
      * 3. Sends a `room_closed` notification to every guest's user_id.
      */
-    async closeRoom(roomId: string, notes?: string, routineName?: string, geoVerified?: boolean): Promise<{ success: boolean }> {
+    async closeRoom(roomId: string, notes?: string, routineName?: string, geoVerified?: boolean, skipBroadcast = false): Promise<{ success: boolean }> {
         const now = new Date().toISOString();
 
         // 0. Let connected guests persist their own workout_logs before their
         // session rows get finalized below — see broadcastSessionFinished's doc.
-        await this.broadcastSessionFinished(roomId);
+        // skipBroadcast=true when the caller (WorkoutSession handleFinalizeSession)
+        // already sent session_finished via its own live channel — avoids double delivery.
+        if (!skipBroadcast) {
+            await this.broadcastSessionFinished(roomId);
+        }
 
         // 1. Finalize host session with GX
         const hostResult = await this.finishSession(roomId, notes, routineName, true, geoVerified);
