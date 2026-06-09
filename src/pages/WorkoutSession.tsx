@@ -2676,6 +2676,25 @@ export const WorkoutSession = () => {
                             await startNewSession(partnerActive.gym_id || undefined, partnerActive.id, currentIsMultiplayer, currentMultiplayerMode, currentPartnerId);
                             setStartTime(new Date(partnerActive.started_at));
 
+                            // ─── RE-REQUEST HYDRATION AFTER SESSION START ────────────────────────────
+                            // startNewSession() always resets activeExercises=[] (line ~2789).
+                            // If the host had already broadcast sync_state before or during
+                            // startNewSession (the common case: channel SUBSCRIBED fires ~100-500ms
+                            // after mount, well before the multi-step DB calls in startNewSession
+                            // complete), those exercises were silently wiped by the reset.
+                            // Re-requesting here guarantees the host re-sends the room's current
+                            // exercises now that the guest session is fully initialized and
+                            // waitingForGuestSyncRef is still true, so the next arrival correctly
+                            // releases loading AND populates activeExercises.
+                            if (channelRef.current) {
+                                console.log('🔄 [GuestSync] Re-requesting hydration after session start (post-reset safety)...');
+                                channelRef.current.send({
+                                    type: 'broadcast',
+                                    event: 'request_hydration',
+                                    payload: { sender: userId }
+                                }).catch(e => console.error('Error re-requesting hydration after session start:', e));
+                            }
+
                             // Failsafe: release loading after 12 seconds even if sync_state never arrives.
                             // Without this, if the host has no exercises or is disconnected, the guest
                             // is stuck on a blank loading screen indefinitely.
