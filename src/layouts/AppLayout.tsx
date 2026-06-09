@@ -471,7 +471,7 @@ export const AppLayout = () => {
                 if (!cancelled && recovered > 0) {
                     toast.success(
                         `✅ ${recovered} serie${recovered > 1 ? 's' : ''} pendiente${recovered > 1 ? 's' : ''} de tu último entrenamiento se sincronizaron correctamente.`,
-                        { duration: 6000 }
+                        { duration: 3000 }
                     );
                 }
             } catch {
@@ -717,7 +717,7 @@ const notificationSeen = useRef<Set<string>>(new Set());
         </div>
         <button onClick={() => toast.dismiss(t.id)} className="text-xs text-neutral-400 hover:text-white">✕</button>
     </div>
-), {duration: 6000});
+), {duration: 3000});
                 } else if (newNotification.type === 'system' && newNotification.title?.includes('FINALIZADO')) {
                     // Don't show "FINALIZADO" toast while user is inside an active workout session.
                     // This prevents a false "partner finished" notification caused by screen locks
@@ -751,7 +751,7 @@ const notificationSeen = useRef<Set<string>>(new Set());
                                 </button>
                             </div>
                         </div>
-                    ), { duration: 6000 });
+                    ), { duration: 3000 });
                 } else if (newNotification.type === 'coop_invite') {
                     // Rich toast using the existing CoopInviteToast component
                     const modeLabel = newNotification.data?.mode === 'conjunto' ? 'CONJUNTO' : 'SEPARADO';
@@ -835,7 +835,7 @@ const notificationSeen = useRef<Set<string>>(new Set());
                             </p>
                             <button onClick={() => toast.dismiss(t.id)} className="mt-3 text-[10px] text-neutral-400 hover:text-white font-bold uppercase tracking-wider">Cerrar</button>
                         </div>
-                    ), { duration: 8000 });
+                    ), { duration: 3000 });
                     // Clear any stale coop state
                     localStorage.removeItem('ginx_coop_state');
                 }
@@ -1012,7 +1012,7 @@ const notificationSeen = useRef<Set<string>>(new Set());
                 onResolve={() => setShowRescueModal(false)}
             />
             {shouldShowBottomNav && <BottomNav onUploadClick={() => setIsUploadModalOpen(true)} />}
-            <Toaster position="top-center" reverseOrder={false} />
+            <Toaster position="top-center" reverseOrder={false} toastOptions={{ duration: 3000 }} />
 
             {/* ── Delete Account Confirmation Modal ─────────────────────────────── */}
             {showDeleteModal && (
