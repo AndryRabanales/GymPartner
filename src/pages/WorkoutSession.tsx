@@ -508,6 +508,11 @@ export const WorkoutSession = () => {
     // Keeps `loading` pinned to true so the empty state never flashes before exercises arrive.
     const waitingForGuestSyncRef = useRef<boolean>(false);
     const guestSyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // True while this user has already finalized their session but is still waiting for
+    // remaining room participants to finish before the summary screen is shown.
+    const waitingForPartnersRef = useRef<boolean>(false);
+    const [waitingForPartners, setWaitingForPartners] = useState<boolean>(false);
     const partnerSessionIdRef = useRef<string | null>(partnerSessionId);
     useEffect(() => {
         partnerSessionIdRef.current = partnerSessionId;
@@ -1200,11 +1205,28 @@ export const WorkoutSession = () => {
                 // Find participant name for the toast
                 const leavingParticipant = participantsRef.current.find(p => p.id === sender);
                 const leavingName = leavingParticipant?.username || 'Un participante';
-                toast(`${leavingName} abandonó la sala.`, { icon: '👋' });
+                toast(`${leavingName} finalizó su entrenamiento.`, { icon: '🏁' });
                 // Mark this participant as finalized so the CRDT merge never overwrites their data
                 finalizedParticipantsRef.current.add(sender);
-                // Remove them from participants list
-                setParticipants(prev => prev.filter(p => p.id !== sender));
+                // Remove them from participants list and check if we're waiting for all to finish
+                setParticipants(prev => {
+                    const updated = prev.filter(p => p.id !== sender);
+                    // If this user already finished and is waiting for the last partner:
+                    // check if there are now zero other active participants. If so, trigger summary.
+                    if (waitingForPartnersRef.current) {
+                        const remainingOthers = updated.filter(p => p.id !== user.id);
+                        if (remainingOthers.length === 0) {
+                            waitingForPartnersRef.current = false;
+                            setWaitingForPartners(false);
+                            // Small delay so partner's DB writes have time to commit before we load summary
+                            setTimeout(() => {
+                                isLeavingPageRef.current = true;
+                                setShowSummary(true);
+                            }, 800);
+                        }
+                    }
+                    return updated;
+                });
                 // In separado mode, clear stale partner exercises so the spy view doesn't show ghost data
                 if (multiplayerMode === 'separado' && sender === partnerId) {
                     setPartnerExercises([]);
@@ -2693,6 +2715,27 @@ export const WorkoutSession = () => {
                                     event: 'request_hydration',
                                     payload: { sender: userId }
                                 }).catch(e => console.error('Error re-requesting hydration after session start:', e));
+                            }
+
+                            // ─── BROADCAST GUEST SESSION ID ─────────────────────────────────────────
+                            // startNewSession() set sessionIdRef.current synchronously (line ~2835).
+                            // The channel's SUBSCRIBED callback only fires once (at subscribe time),
+                            // when sessionId was still null — so it never sent sync_session_id.
+                            // Sending it now ensures the host (and everyone else) receives it and
+                            // updates their workout_sessions.partner_session_id column, which is what
+                            // WorkoutDetailPage uses to load partner logs in the history view.
+                            const newGuestSessionId = sessionIdRef.current;
+                            if (newGuestSessionId && channelRef.current) {
+                                console.log('🔗 [GuestSync] Broadcasting guest session ID to room:', newGuestSessionId);
+                                channelRef.current.send({
+                                    type: 'broadcast',
+                                    event: 'sync_session_id',
+                                    payload: {
+                                        sessionId: newGuestSessionId,
+                                        startTime: new Date(partnerActive.started_at).toISOString(),
+                                        sender: userId
+                                    }
+                                }).catch(e => console.error('Error broadcasting guest session ID:', e));
                             }
 
                             // Failsafe: release loading after 12 seconds even if sync_state never arrives.
@@ -4703,9 +4746,26 @@ export const WorkoutSession = () => {
                 localStorage.removeItem('ginx_coop_state');
                 sessionStorage.removeItem('ginx_temp_exit_active');
 
-                // Show summary immediately — the 1500ms delay caused a blank/empty screen
-                // for guests finishing after the host left. A short 300ms transition is enough
-                // to give visual feedback without making the user wait staring at nothing.
+                // ── MULTIPLAYER: hold summary until all room participants have finished ──
+                // Each user saves their own logs independently. If we show the summary
+                // before the last partner saves theirs, their data shows as empty in history.
+                // We listen for participant_left from every remaining active participant;
+                // the handler above flips waitingForPartnersRef→false and calls setShowSummary
+                // once the last one leaves. The "Continuar sin esperar" button is the escape hatch.
+                if (isMultiplayer && multiplayerMode === 'conjunto') {
+                    const stillActive = participantsRef.current.filter(
+                        p => p.id !== user?.id && p.isOnline !== false
+                    );
+                    if (stillActive.length > 0) {
+                        console.log(`⏳ Waiting for ${stillActive.length} partner(s) to finish before showing summary.`);
+                        waitingForPartnersRef.current = true;
+                        setWaitingForPartners(true);
+                        setLoading(false);
+                        return; // participant_left handler will call setShowSummary when ready
+                    }
+                }
+
+                // Solo or all partners already left → show summary immediately
                 setTimeout(() => {
                     setLoading(false);
                     isLeavingPageRef.current = true;
@@ -5824,6 +5884,72 @@ export const WorkoutSession = () => {
                     </div>
                 )
             }
+
+            {/* ── WAITING FOR PARTNERS OVERLAY ─────────────────────────────────────────
+                Shown after this user finishes but before the last partner does.
+                The summary is intentionally held so history loads with all data.
+                "Continuar sin esperar" lets the user skip immediately.
+            ───────────────────────────────────────────────────────────────────────── */}
+            {waitingForPartners && !showSummary && (
+                <div className="fixed inset-0 z-[300] bg-black/95 backdrop-blur-2xl flex flex-col items-center justify-center p-6 animate-in fade-in duration-500">
+                    <div className="flex flex-col items-center gap-6 max-w-xs w-full text-center">
+                        {/* Animated icon */}
+                        <div className="relative w-20 h-20">
+                            <div className="absolute inset-0 rounded-full border-2 border-gym-primary/30 animate-ping" />
+                            <div className="relative w-20 h-20 bg-gym-primary/10 border border-gym-primary/30 rounded-full flex items-center justify-center">
+                                <span className="text-4xl">⚔️</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <p className="text-gym-primary font-black text-xs uppercase tracking-[0.2em] mb-2">SALA ACTIVA</p>
+                            <h2 className="text-white font-black text-2xl uppercase italic tracking-tight leading-none mb-3">
+                                ¡TÚ TERMINASTE!
+                            </h2>
+                            <p className="text-neutral-300 text-sm font-bold uppercase tracking-wide">
+                                Esperando a que los demás finalicen...
+                            </p>
+                        </div>
+
+                        {/* Active participants still in room */}
+                        <div className="flex flex-col gap-2 w-full">
+                            {participants
+                                .filter(p => p.id !== user?.id)
+                                .map((p) => (
+                                    <div key={p.id} className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl px-4 py-3">
+                                        {p.avatarUrl ? (
+                                            <img src={p.avatarUrl} alt={p.username} className="w-8 h-8 rounded-full object-cover border border-gym-primary/30" />
+                                        ) : (
+                                            <div className="w-8 h-8 rounded-full bg-gym-primary/20 flex items-center justify-center">
+                                                <span className="text-gym-primary font-black text-xs uppercase">{(p.username || '?')[0]}</span>
+                                            </div>
+                                        )}
+                                        <span className="text-white font-bold text-sm uppercase tracking-wide flex-1 text-left">{p.username || 'Compañero'}</span>
+                                        <span className="text-gym-primary font-black text-[10px] uppercase tracking-widest animate-pulse">EN CURSO</span>
+                                    </div>
+                                ))
+                            }
+                        </div>
+
+                        <p className="text-neutral-500 text-[11px] font-bold uppercase tracking-wider">
+                            Tu historial se completará cuando todos terminen
+                        </p>
+
+                        {/* Skip button */}
+                        <button
+                            onClick={() => {
+                                waitingForPartnersRef.current = false;
+                                setWaitingForPartners(false);
+                                isLeavingPageRef.current = true;
+                                setShowSummary(true);
+                            }}
+                            className="w-full py-3 rounded-2xl bg-neutral-900 border border-white/10 text-neutral-400 font-black text-[11px] uppercase tracking-widest hover:bg-neutral-800 hover:text-white transition-all active:scale-95"
+                        >
+                            Continuar sin esperar
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* 4. SUMMARY SCREEN - Cuphead Videogame Retro Arcade Style */}
             {
