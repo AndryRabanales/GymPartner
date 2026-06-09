@@ -5210,9 +5210,17 @@ export const WorkoutSession = () => {
                                                                     const isFinalizedPlayer = finalizedParticipantsState.has(p.id);
                                                                     // Ghost slot: set was added AFTER this player finalized — no data at all.
                                                                     // Show "-" display cells instead of editable inputs.
-                                                                    // Any finalized player → every cell shows "-", no inputs, no actions.
-                                                                    // Data is preserved internally for history but not shown as editable values.
-                                                                    const isGhostSlot = isFinalizedPlayer;
+                                                                    // Ghost slot: set was added AFTER this player finalized — no data at all.
+                                                                    // These cells show "-" (non-interactive).
+                                                                    // Sets that existed BEFORE the player finalized keep their real values
+                                                                    // but are rendered as locked (disabled) inputs — still visible, not editable.
+                                                                    const isGhostSlot = isFinalizedPlayer && (
+                                                                        set.playerWeights?.[p.id] === undefined &&
+                                                                        set.playerReps?.[p.id] === undefined &&
+                                                                        set.playerTimes?.[p.id] === undefined &&
+                                                                        set.playerDistances?.[p.id] === undefined &&
+                                                                        set.playerRpes?.[p.id] === undefined
+                                                                    );
                                                                     const rowWeight = (isFinalizedPlayer && set.playerWeights?.[p.id] === undefined) ? 0 : safeNum(set.playerWeights?.[p.id] ?? (isHost ? set.weight : (isFirstGuest ? (set.p2_weight || 0) : 0)), 0);
                                                                     const rowReps = (isFinalizedPlayer && set.playerReps?.[p.id] === undefined) ? 0 : safeNum(set.playerReps?.[p.id] ?? (isHost ? set.reps : (isFirstGuest ? (set.p2_reps || 0) : 0)), 0);
                                                                     const rowTime = (isFinalizedPlayer && set.playerTimes?.[p.id] === undefined) ? 0 : safeNum(set.playerTimes?.[p.id] ?? (isHost ? set.time : (isFirstGuest ? (set.p2_time || 0) : 0)), 0);
