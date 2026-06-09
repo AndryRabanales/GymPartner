@@ -290,6 +290,8 @@ export const WorkoutSession = () => {
     // Tracks exercises deliberately removed during this session so incoming sync_state
     // cannot re-add them (race condition fix for multiplayer).
     const deletedExerciseIdsRef = useRef<Set<string>>(new Set());
+    // Tracks set IDs deliberately removed so incoming sync_state cannot re-add them.
+    const deletedSetIdsRef = useRef<Set<string>>(new Set());
     const startTimeRef = useRef<Date | null>(null);
     useEffect(() => {
         // Clear temporary exit active flag when entering/returning to the workout session screen
@@ -790,13 +792,23 @@ export const WorkoutSession = () => {
                                 const localEx = prev.find(e => e.id === inEx.id) ||
                                                 prev.find(e => e.equipmentId === inEx.equipmentId);
                                 if (!localEx) return inEx;
-                                
-                                const maxSets = Math.max(localEx.sets.length, inEx.sets.length);
+
+                                // Filter out sets that were explicitly deleted locally —
+                                // prevents CRDT merge from re-adding them when a stale
+                                // sync_state arrives before (or races with) remove_set.
+                                const filteredLocalSets = localEx.sets.filter((s: any) =>
+                                    !deletedSetIdsRef.current.has(s.id)
+                                );
+                                const filteredInSets = inEx.sets.filter((s: any) =>
+                                    !deletedSetIdsRef.current.has(s.id)
+                                );
+
+                                const maxSets = Math.max(filteredLocalSets.length, filteredInSets.length);
                                 const mergedSets = [];
-                                
+
                                 for (let sIdx = 0; sIdx < maxSets; sIdx++) {
-                                    const inSet = inEx.sets[sIdx];
-                                    const loc = localEx.sets[sIdx];
+                                    const inSet = filteredInSets[sIdx];
+                                    const loc = filteredLocalSets[sIdx];
                                     
                                     if (!loc) {
                                         mergedSets.push(inSet);
@@ -962,6 +974,16 @@ export const WorkoutSession = () => {
                 deletedExerciseIdsRef.current.add(exerciseId);
                 setActiveExercises(prev => prev.filter(e => e.id !== exerciseId));
                 setIsRoutineModified(true);
+            })
+            .on('broadcast', { event: 'remove_set' }, (payload) => {
+                const { exerciseId, setId, sender } = payload.payload;
+                if (sender === user.id) return; // Ignore echoes
+                // Track locally so CRDT merge cannot re-add this set from a stale sync_state
+                deletedSetIdsRef.current.add(setId);
+                setActiveExercises(prev => prev.map(ex => {
+                    if (ex.id !== exerciseId) return ex;
+                    return { ...ex, sets: ex.sets.filter((s: any) => s.id !== setId) };
+                }));
             })
             .on('broadcast', { event: 'request_hydration' }, (payload) => {
                 const { sender } = payload.payload;
@@ -3243,7 +3265,17 @@ export const WorkoutSession = () => {
             sets: ex.sets.map(s => ({ ...s }))
         }));
 
-        // 1. Check if we need to resume the PREVIOUS set's timer
+        // 1. Capture set ID and exercise ID before splicing (needed for broadcast & CRDT guard)
+        const targetSet = updatedExercises[exerciseIndex].sets[setIndex];
+        const setId = targetSet?.id as string | undefined;
+        const exerciseId = updatedExercises[exerciseIndex].id;
+
+        // Track the deleted set ID so CRDT merge cannot re-add it from a stale sync_state
+        if (setId) {
+            deletedSetIdsRef.current.add(setId);
+        }
+
+        // 2. Check if we need to resume the PREVIOUS set's timer
         if (setIndex > 0) {
             const prevSet = updatedExercises[exerciseIndex].sets[setIndex - 1];
             // If prev set was blocking (completed state), resume it
@@ -3261,6 +3293,15 @@ export const WorkoutSession = () => {
 
         updatedExercises[exerciseIndex].sets.splice(setIndex, 1);
         setActiveExercises(updatedExercises);
+
+        // Broadcast immediately (bypass the debounce) so partners remove it right away
+        if (isMultiplayer && channelRef.current && user && setId) {
+            channelRef.current.send({
+                type: 'broadcast',
+                event: 'remove_set',
+                payload: { exerciseId, setId, sender: user.id }
+            }).catch(e => console.error('Error broadcasting set removal:', e));
+        }
     };
 
         // [NEW] Toggle Completion with Timestamp & Lock Logic (Deep Copy)
@@ -5133,13 +5174,9 @@ export const WorkoutSession = () => {
                                                                     const isFinalizedPlayer = finalizedParticipantsRef.current.has(p.id);
                                                                     // Ghost slot: set was added AFTER this player finalized — no data at all.
                                                                     // Show "-" display cells instead of editable inputs.
-                                                                    const isGhostSlot = isFinalizedPlayer && (
-                                                                        set.playerWeights?.[p.id] === undefined &&
-                                                                        set.playerReps?.[p.id] === undefined &&
-                                                                        set.playerTimes?.[p.id] === undefined &&
-                                                                        set.playerDistances?.[p.id] === undefined &&
-                                                                        set.playerRpes?.[p.id] === undefined
-                                                                    );
+                                                                    // Any finalized player → every cell shows "-", no inputs, no actions.
+                                                                    // Data is preserved internally for history but not shown as editable values.
+                                                                    const isGhostSlot = isFinalizedPlayer;
                                                                     const rowWeight = (isFinalizedPlayer && set.playerWeights?.[p.id] === undefined) ? 0 : safeNum(set.playerWeights?.[p.id] ?? (isHost ? set.weight : (isFirstGuest ? (set.p2_weight || 0) : 0)), 0);
                                                                     const rowReps = (isFinalizedPlayer && set.playerReps?.[p.id] === undefined) ? 0 : safeNum(set.playerReps?.[p.id] ?? (isHost ? set.reps : (isFirstGuest ? (set.p2_reps || 0) : 0)), 0);
                                                                     const rowTime = (isFinalizedPlayer && set.playerTimes?.[p.id] === undefined) ? 0 : safeNum(set.playerTimes?.[p.id] ?? (isHost ? set.time : (isFirstGuest ? (set.p2_time || 0) : 0)), 0);
