@@ -730,8 +730,24 @@ export const WorkoutSession = () => {
                 }
             })
             .on('broadcast', { event: 'sync_state' }, (payload) => {
-                const { exercises, sender, knownParticipants, routineName, isRoutineModified: incomingRoutineModified } = payload.payload;
+                const { exercises, sender, knownParticipants, routineName, isRoutineModified: incomingRoutineModified, finalizedParticipants: incomingFinalized } = payload.payload;
                 if (sender === user.id) return; // Ignore echoes
+
+                // Absorb finalized-participant list from every incoming sync_state.
+                // This is the primary redundant signal: even if participant_left was lost,
+                // the next sync_state carrying finalizedParticipants will lock the cells.
+                if (incomingFinalized && Array.isArray(incomingFinalized) && incomingFinalized.length > 0) {
+                    let hasNew = false;
+                    (incomingFinalized as string[]).forEach((id) => {
+                        if (id !== user.id && !finalizedParticipantsRef.current.has(id)) {
+                            finalizedParticipantsRef.current.add(id);
+                            hasNew = true;
+                        }
+                    });
+                    if (hasNew) {
+                        setFinalizedParticipantsState(new Set([...finalizedParticipantsRef.current]));
+                    }
+                }
 
                 if (routineName !== undefined && routineName !== null) {
                     console.log('🔄 Synchronized routine name via broadcast:', routineName);
@@ -1439,11 +1455,14 @@ export const WorkoutSession = () => {
                 channelRef.current.send({
                     type: 'broadcast',
                     event: 'sync_state',
-                    payload: { 
-                        exercises: activeExercises, 
+                    payload: {
+                        exercises: activeExercises,
                         sender: user.id,
                         routineName: currentRoutineName,
-                        isRoutineModified: isRoutineModified
+                        isRoutineModified: isRoutineModified,
+                        // Carry known-finalized list so recipients can lock cells
+                        // even if they missed participant_left
+                        finalizedParticipants: [...finalizedParticipantsRef.current]
                     }
                 }).catch(e => console.error(e));
             }
@@ -3561,6 +3580,11 @@ export const WorkoutSession = () => {
         fieldKey: 'weight' | 'reps' | 'time' | 'distance' | 'rpe' | 'completed' | 'locked',
         value: any
     ) => {
+        // Hard guard: never allow writes to a finalized participant's data.
+        // This is the last line of defence — the UI already hides inputs for
+        // finalized players, but this prevents any race-condition write.
+        if (finalizedParticipantsRef.current.has(targetUserId)) return;
+
         // A participant being offline (phone off, no WiFi) must NEVER block the partner
         // from filling their data. Editing is only restricted after the workout ends
         // or is cancelled — which is enforced by navigation away from this page.
@@ -4739,10 +4763,12 @@ export const WorkoutSession = () => {
                 console.log('🏃 [Multiplayer] User leaving room, finalizing own session:', finalSessionId);
 
                 if (channelRef.current && user) {
-                    // Broadcast final exercise snapshot so remaining participants keep full data
+                    // Broadcast final exercise snapshot so remaining participants keep full data.
+                    // Include this user's ID in finalizedParticipants so the signal is redundant
+                    // with participant_left — if one is lost, the other still locks the cells.
                     const snapshot = activeExercisesRef.current;
                     if (snapshot.length > 0) {
-                        channelRef.current.send({
+                        await channelRef.current.send({
                             type: 'broadcast',
                             event: 'sync_state',
                             payload: {
@@ -4750,13 +4776,15 @@ export const WorkoutSession = () => {
                                 sender: user.id,
                                 knownParticipants: participantsRef.current,
                                 routineName: currentRoutineNameRef.current,
-                                isRoutineModified: isRoutineModifiedRef.current
+                                isRoutineModified: isRoutineModifiedRef.current,
+                                finalizedParticipants: [user.id]
                             }
                         }).catch(e => console.error('Error broadcasting final sync_state:', e));
                     }
 
-                    // Tell remaining participants this user is leaving
-                    channelRef.current.send({
+                    // Tell remaining participants this user is leaving.
+                    // Await so the message is confirmed sent before we proceed to cleanup.
+                    await channelRef.current.send({
                         type: 'broadcast',
                         event: 'participant_left',
                         payload: { sender: user.id }
