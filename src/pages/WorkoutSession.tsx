@@ -4879,7 +4879,13 @@ export const WorkoutSession = () => {
                     }).catch(e => console.error('Error broadcasting participant_left:', e));
                 }
 
-                result = await workoutService.finishSession(finalSessionId, flowNotes, currentRoutineName, true, geoVerified);
+                const guestResult = await workoutService.finishSession(finalSessionId, flowNotes, currentRoutineName, true, geoVerified);
+                // If the host already closed the room (closeRoom bulk-finalized this guest's
+                // session before the guest pressed Finalizar), finishSession may return
+                // success:false because finished_at was already set. We treat that as
+                // success:true anyway — the sets are saved, the session IS closed, so the
+                // guest should always reach their summary screen.
+                result = guestResult.success ? guestResult : { success: true };
 
             } else {
                 // ── SOLO: Standard finalization ───────────────────────────────────
@@ -5062,7 +5068,10 @@ export const WorkoutSession = () => {
             <div className={`p-4 relative z-10 ${isMultiplayer ? 'pt-16' : ''}`}>
                 {/* Empty State / Routine Selection */}
                 {/* Empty State / Fallback if Modal is Closed */}
-                {activeExercises.length === 0 && !showAddModal && !loading && !showIntroAnim && (
+                {/* Guests NEVER see the catalog — they wait for the host's sync_state.
+                    Adding !(isMultiplayer && !isInviter) prevents the "flash" where
+                    the empty state renders for a moment before exercises arrive. */}
+                {activeExercises.length === 0 && !showAddModal && !loading && !showIntroAnim && !(isMultiplayer && !isInviter) && (
                     <div className="h-[80vh] flex flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in duration-300">
                         <div className="bg-neutral-900/50 p-8 rounded-full border border-neutral-800 mb-8 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
                             <Swords size={80} className="text-neutral-600" strokeWidth={1} />

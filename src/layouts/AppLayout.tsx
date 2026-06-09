@@ -421,18 +421,33 @@ export const AppLayout = () => {
         }
     };
 
-    // ── On startup: clean zombie/orphan sessions so they never accumulate ──────
-    // This runs once per login session. cleanOrphanSessions normally only runs
-    // inside initializeBattle (workout page entry), leaving zombies alive on all
-    // other pages. Running it here on mount ensures old sessions are closed as
-    // soon as the user opens the app, regardless of which page they land on.
+    // ── On startup + on app foreground: clean zombie/orphan sessions ───────────
+    // Runs on mount AND every time the app comes back from background (visibilitychange).
+    // This is the safety net: even if the app crashes mid-session, the next time
+    // the user opens it the orphaned sessions get closed automatically.
     useEffect(() => {
         if (!user) return;
-        workoutService.cleanOrphanSessions(user.id)
-            .then(closedIds => {
-                closedIds.forEach(id => localStorage.removeItem(`workout_draft_${id}`));
-            })
-            .catch(() => {}); // non-blocking — never interrupt the user
+
+        const runCleanup = () => {
+            workoutService.cleanOrphanSessions(user.id)
+                .then(closedIds => {
+                    closedIds.forEach(id => localStorage.removeItem(`workout_draft_${id}`));
+                })
+                .catch(() => {}); // non-blocking — never interrupt the user
+        };
+
+        // Run immediately on mount (covers cold opens and refreshes)
+        runCleanup();
+
+        // Re-run when app comes back from background — covers the case where the
+        // user locked their phone mid-session and re-opens the app later.
+        const handleVisibilityForCleanup = () => {
+            if (document.visibilityState === 'visible') {
+                runCleanup();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityForCleanup);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityForCleanup);
     }, [user?.id]);
 
     // ── OFFLINE SYNC: recover sets queued during a connectionless finish ──────
