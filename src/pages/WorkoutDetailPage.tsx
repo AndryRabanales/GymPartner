@@ -124,6 +124,7 @@ export default function WorkoutDetailPage() {
     };
 
     const loadWorkoutDetail = async (id: string) => {
+        setLoading(true);
         try {
             // Get session data
             const { data: session, error: sessionError } = await supabase
@@ -419,7 +420,7 @@ export default function WorkoutDetailPage() {
 
                 // Fetch profiles + logs for each participant in parallel
                 await Promise.all(otherSessions.map(async (ps) => {
-                    const [{ data: prof }, { data: pLogs }] = await Promise.all([
+                    const [{ data: prof }, { data: pLogs, error: pLogsErr }] = await Promise.all([
                         supabase.from('profiles').select('username, avatar_url').eq('id', ps.user_id).maybeSingle(),
                         supabase
                             .from('workout_logs')
@@ -432,6 +433,7 @@ export default function WorkoutDetailPage() {
                             .order('exercise_id')
                             .order('set_number')
                     ]);
+                    if (pLogsErr) console.warn(`⚠️ Could not fetch logs for participant ${ps.user_id} (RLS?):`, pLogsErr.message);
 
                     const pExMap = new Map<string, ExerciseDetail>();
                     let pVol = 0;
@@ -746,7 +748,14 @@ export default function WorkoutDetailPage() {
 
                         const playerColors = ['text-gym-primary', 'text-blue-400', 'text-purple-400', 'text-green-400', 'text-orange-400'];
 
-                        return allExerciseIds.map((exId) => {
+                        // Detect partners who haven't finalized yet — their logs are empty until they finish
+                        const hasInProgress = allOtherParticipants.some(p => p.status === 'in_progress');
+                        const inProgressNames = allOtherParticipants
+                            .filter(p => p.status === 'in_progress')
+                            .map(p => p.name)
+                            .join(', ');
+
+                        const cards = allExerciseIds.map((exId) => {
                             const myEx = workout.exercises.find(e => e.exercise_id === exId);
                             const name = myEx?.exercise_name
                                 || allOtherParticipants.find(p => p.exercises.find(e => e.exercise_id === exId))?.exercises.find(e => e.exercise_id === exId)?.exercise_name
@@ -755,14 +764,15 @@ export default function WorkoutDetailPage() {
                                 || allOtherParticipants.find(p => p.exercises.find(e => e.exercise_id === exId))?.exercises.find(e => e.exercise_id === exId)?.muscle_group
                                 || 'General';
 
-                            // All participants including me, each as { name, ex, colorClass }
+                            // All participants including me, each as { name, ex, colorClass, status }
                             const allParticipantsForEx = [
-                                { name: workout.my_name || 'Atleta', ex: myEx, color: playerColors[0], isMine: true },
+                                { name: workout.my_name || 'Atleta', ex: myEx, color: playerColors[0], isMine: true, status: 'finished' as 'finished' | 'in_progress' },
                                 ...allOtherParticipants.map((p, idx) => ({
                                     name: p.name,
                                     ex: p.exercises.find(e => e.exercise_id === exId),
                                     color: playerColors[(idx + 1) % playerColors.length],
-                                    isMine: false
+                                    isMine: false,
+                                    status: p.status
                                 }))
                             ];
 
@@ -808,6 +818,8 @@ export default function WorkoutDetailPage() {
                                                 </div>
                                                 {p.ex ? (
                                                     <SetsTableCompact exercise={p.ex} workoutStartedAt={workout.started_at} isMine={p.isMine} />
+                                                ) : p.status === 'in_progress' ? (
+                                                    <div className="text-center py-4 text-[10px] text-yellow-600/70 italic font-bold uppercase tracking-wider">⏳ aún en sesión</div>
                                                 ) : (
                                                     <div className="text-center py-4 text-[10px] text-neutral-700 italic font-bold uppercase tracking-wider">— no registró —</div>
                                                 )}
@@ -817,6 +829,30 @@ export default function WorkoutDetailPage() {
                                 </div>
                             );
                         });
+
+                        return (
+                            <>
+                                {hasInProgress && (
+                                    <div className="mb-4 bg-yellow-950/30 border border-yellow-600/30 rounded-2xl p-4 flex items-center justify-between gap-4">
+                                        <div className="min-w-0">
+                                            <p className="text-yellow-500/80 text-[11px] font-black uppercase tracking-wider">
+                                                ⏳ {inProgressNames} — aún en sesión
+                                            </p>
+                                            <p className="text-neutral-500 text-[10px] mt-0.5">
+                                                Sus datos aparecerán aquí cuando terminen. Actualiza para ver el historial completo.
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={() => { if (sessionId) loadWorkoutDetail(sessionId); }}
+                                            className="shrink-0 bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-500 font-black uppercase text-[10px] tracking-wider px-3 py-2 rounded-xl transition-colors border border-yellow-600/20 whitespace-nowrap"
+                                        >
+                                            Actualizar
+                                        </button>
+                                    </div>
+                                )}
+                                {cards}
+                            </>
+                        );
                     })()
                 )}
             </div>
