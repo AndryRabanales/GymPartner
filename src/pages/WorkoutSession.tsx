@@ -5208,12 +5208,10 @@ export const WorkoutSession = () => {
                                                                     // stale scalar fallback value.
                                                                     // Use state (not ref) so React re-renders when a participant finalizes
                                                                     const isFinalizedPlayer = finalizedParticipantsState.has(p.id);
-                                                                    // Ghost slot: set was added AFTER this player finalized — no data at all.
-                                                                    // Show "-" display cells instead of editable inputs.
-                                                                    // Ghost slot: set was added AFTER this player finalized — no data at all.
-                                                                    // These cells show "-" (non-interactive).
-                                                                    // Sets that existed BEFORE the player finalized keep their real values
-                                                                    // but are rendered as locked (disabled) inputs — still visible, not editable.
+                                                                    // Ghost slot: set was added AFTER this player finalized — no data initialised.
+                                                                    // Both cases render a <div> instead of <input> (no editable element at all):
+                                                                    //   • ghost  → shows "-"
+                                                                    //   • frozen → shows the real value the player recorded before leaving
                                                                     const isGhostSlot = isFinalizedPlayer && (
                                                                         set.playerWeights?.[p.id] === undefined &&
                                                                         set.playerReps?.[p.id] === undefined &&
@@ -5260,8 +5258,10 @@ export const WorkoutSession = () => {
                                                                             )}
                                                                             {exercise.metrics.weight && (
                                                                                 <div className="min-w-[70px] w-[70px]">
-                                                                                    {isGhostSlot ? (
-                                                                                        <div className="w-full bg-neutral-900/40 text-center font-black text-[16px] rounded-lg py-2 text-neutral-600 select-none">-</div>
+                                                                                    {isFinalizedPlayer ? (
+                                                                                        <div className="w-full bg-neutral-900/40 text-center font-black text-[16px] rounded-lg py-2 text-neutral-500 select-none">
+                                                                                            {isGhostSlot ? '-' : (rowWeight > 0 ? toDisplayWeight(rowWeight, exercise.weightUnit || 'kg') : '0')}
+                                                                                        </div>
                                                                                     ) : (
                                                                                         <input
                                                                                             type="number"
@@ -5285,8 +5285,10 @@ export const WorkoutSession = () => {
                                                                             )}
                                                                             {exercise.metrics.reps && (
                                                                                 <div className="min-w-[70px] w-[70px]">
-                                                                                    {isGhostSlot ? (
-                                                                                        <div className="w-full bg-neutral-900/40 text-center font-black text-[16px] rounded-lg py-2 text-neutral-600 select-none">-</div>
+                                                                                    {isFinalizedPlayer ? (
+                                                                                        <div className="w-full bg-neutral-900/40 text-center font-black text-[16px] rounded-lg py-2 text-neutral-500 select-none">
+                                                                                            {isGhostSlot ? '-' : String(rowReps)}
+                                                                                        </div>
                                                                                     ) : (
                                                                                         <input
                                                                                             type="number"
@@ -5307,8 +5309,10 @@ export const WorkoutSession = () => {
                                                                             )}
                                                                             {exercise.metrics.time && (
                                                                                 <div className="min-w-[70px] w-[70px]">
-                                                                                    {isGhostSlot ? (
-                                                                                        <div className="w-full bg-neutral-900/40 text-center font-black text-[16px] rounded-lg py-2 text-neutral-600 select-none">-</div>
+                                                                                    {isFinalizedPlayer ? (
+                                                                                        <div className="w-full bg-neutral-900/40 text-center font-black text-[16px] rounded-lg py-2 text-neutral-500 select-none">
+                                                                                            {isGhostSlot ? '-' : String(rowTime)}
+                                                                                        </div>
                                                                                     ) : (
                                                                                         <input
                                                                                             type="number"
@@ -5329,8 +5333,10 @@ export const WorkoutSession = () => {
                                                                             )}
                                                                             {exercise.metrics.distance && (
                                                                                 <div className="min-w-[70px] w-[70px]">
-                                                                                    {isGhostSlot ? (
-                                                                                        <div className="w-full bg-neutral-900/40 text-center font-black text-[16px] rounded-lg py-2 text-neutral-600 select-none">-</div>
+                                                                                    {isFinalizedPlayer ? (
+                                                                                        <div className="w-full bg-neutral-900/40 text-center font-black text-[16px] rounded-lg py-2 text-neutral-500 select-none">
+                                                                                            {isGhostSlot ? '-' : String(rowDistance)}
+                                                                                        </div>
                                                                                     ) : (
                                                                                         <input
                                                                                             type="number"
@@ -5351,8 +5357,10 @@ export const WorkoutSession = () => {
                                                                             )}
                                                                             {exercise.metrics.rpe && (
                                                                                 <div className="min-w-[60px] w-[60px]">
-                                                                                    {isGhostSlot ? (
-                                                                                        <div className="w-full bg-neutral-900/40 text-center font-black text-[16px] rounded-lg py-2 text-neutral-600 select-none">-</div>
+                                                                                    {isFinalizedPlayer ? (
+                                                                                        <div className="w-full bg-neutral-900/40 text-center font-black text-[16px] rounded-lg py-2 text-neutral-500 select-none">
+                                                                                            {isGhostSlot ? '-' : (rowRpe > 0 ? String(rowRpe) : '-')}
+                                                                                        </div>
                                                                                     ) : (
                                                                                         <input
                                                                                             type="number"
@@ -5377,8 +5385,8 @@ export const WorkoutSession = () => {
                                                                                 if (!exercise.metrics[key as keyof typeof exercise.metrics]) return null;
                                                                                 return (
                                                                                     <div key={key} className="min-w-[75px] w-[75px]">
-                                                                                        {isGhostSlot ? (
-                                                                                            <div className="w-full bg-neutral-900/40 text-center font-black text-[16px] rounded-lg py-2 text-neutral-600 select-none">-</div>
+                                                                                        {isFinalizedPlayer ? (
+                                                                                            <div className="w-full bg-neutral-900/40 text-center font-black text-[16px] rounded-lg py-2 text-neutral-500 select-none">-</div>
                                                                                         ) : (
                                                                                             <input
                                                                                                 type="number"
