@@ -425,7 +425,11 @@ export const WorkoutSession = () => {
     const allTimeParticipantsRef = useRef<any[]>([]);
     // Tracks participants who have FINISHED and left. Their playerWeights/Reps/etc.
     // data is frozen in the CRDT merge — no incoming sync can overwrite their final values.
+    // IMPORTANT: BOTH the ref and the state are needed:
+    //   • ref  → used in non-render code (mergeMap, addSet) where state is stale
+    //   • state → triggers a re-render so the UI immediately shows "-" cells on finalization
     const finalizedParticipantsRef = useRef<Set<string>>(new Set());
+    const [finalizedParticipantsState, setFinalizedParticipantsState] = useState<Set<string>>(new Set());
     const [partnerName, setPartnerName] = useState<string>('Compañero');
     const [partnerAvatar, setPartnerAvatar] = useState<string | null>(null);
     const [participants, setParticipants] = useState<any[]>([]);
@@ -1232,6 +1236,9 @@ export const WorkoutSession = () => {
                 // • rowLocked becomes true for all their rows in the UI
                 // • addSet skips them → new sets show "-" for their column
                 finalizedParticipantsRef.current.add(sender);
+                // Sync to state so React re-renders immediately and the UI switches
+                // User 1's cells to "-" divs (ref mutation alone does not trigger renders).
+                setFinalizedParticipantsState(prev => new Set([...prev, sender]));
                 // Intentionally do NOT remove from participants: keep them visible
                 // as locked/read-only rows so remaining users can see their records.
                 // In separado mode, clear stale partner exercises so the spy view doesn't show ghost data
@@ -5171,7 +5178,8 @@ export const WorkoutSession = () => {
                                                                     // Finalized participants (who left early) have no playerXxx entry in sets
                                                                     // added after they left → show 0 (renders as empty/"−") instead of the
                                                                     // stale scalar fallback value.
-                                                                    const isFinalizedPlayer = finalizedParticipantsRef.current.has(p.id);
+                                                                    // Use state (not ref) so React re-renders when a participant finalizes
+                                                                    const isFinalizedPlayer = finalizedParticipantsState.has(p.id);
                                                                     // Ghost slot: set was added AFTER this player finalized — no data at all.
                                                                     // Show "-" display cells instead of editable inputs.
                                                                     // Any finalized player → every cell shows "-", no inputs, no actions.
