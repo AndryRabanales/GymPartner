@@ -487,7 +487,12 @@ export const WorkoutSession = () => {
 
             setParticipants(prev => {
                 if (prev.length > 2) return prev;
-                return ordered;
+                // Don't re-add any participant who has already finalized and left the room.
+                // This prevents a stale partnerName/Avatar dep change from ghosting them back.
+                const safeOrdered = ordered.filter(
+                    p => p.id === user.id || !finalizedParticipantsRef.current.has(p.id)
+                );
+                return safeOrdered.length > 0 ? safeOrdered : prev;
             });
         }
     }, [isMultiplayer, multiplayerMode, user, partnerId, partnerName, partnerAvatar, isInviter]);
@@ -633,8 +638,10 @@ export const WorkoutSession = () => {
                         }
                     }
 
-                    // Ensure partner fallback
-                    if (partnerId && !uniqueList.some(p => p.id === partnerId)) {
+                    // Ensure partner fallback — but NEVER re-add a partner who already sent
+                    // participant_left (they finalized their session and left the room).
+                    // Without this guard the presence sync would ghost them back after removal.
+                    if (partnerId && !uniqueList.some(p => p.id === partnerId) && !finalizedParticipantsRef.current.has(partnerId)) {
                         uniqueList.push({
                             id: partnerId,
                             username: partnerName !== 'Compañero' ? partnerName : 'Compañero',
