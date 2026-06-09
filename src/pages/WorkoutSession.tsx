@@ -5131,6 +5131,15 @@ export const WorkoutSession = () => {
                                                                     // added after they left → show 0 (renders as empty/"−") instead of the
                                                                     // stale scalar fallback value.
                                                                     const isFinalizedPlayer = finalizedParticipantsRef.current.has(p.id);
+                                                                    // Ghost slot: set was added AFTER this player finalized — no data at all.
+                                                                    // Show "-" display cells instead of editable inputs.
+                                                                    const isGhostSlot = isFinalizedPlayer && (
+                                                                        set.playerWeights?.[p.id] === undefined &&
+                                                                        set.playerReps?.[p.id] === undefined &&
+                                                                        set.playerTimes?.[p.id] === undefined &&
+                                                                        set.playerDistances?.[p.id] === undefined &&
+                                                                        set.playerRpes?.[p.id] === undefined
+                                                                    );
                                                                     const rowWeight = (isFinalizedPlayer && set.playerWeights?.[p.id] === undefined) ? 0 : safeNum(set.playerWeights?.[p.id] ?? (isHost ? set.weight : (isFirstGuest ? (set.p2_weight || 0) : 0)), 0);
                                                                     const rowReps = (isFinalizedPlayer && set.playerReps?.[p.id] === undefined) ? 0 : safeNum(set.playerReps?.[p.id] ?? (isHost ? set.reps : (isFirstGuest ? (set.p2_reps || 0) : 0)), 0);
                                                                     const rowTime = (isFinalizedPlayer && set.playerTimes?.[p.id] === undefined) ? 0 : safeNum(set.playerTimes?.[p.id] ?? (isHost ? set.time : (isFirstGuest ? (set.p2_time || 0) : 0)), 0);
@@ -5170,103 +5179,78 @@ export const WorkoutSession = () => {
                                                                             )}
                                                                             {exercise.metrics.weight && (
                                                                                 <div className="min-w-[70px] w-[70px]">
-                                                                                    <input
-                                                                                        type="number"
-                                                                                        inputMode={(exercise.weightUnit || 'kg') === 'lb' ? 'numeric' : 'decimal'}
-                                                                                        step={(exercise.weightUnit || 'kg') === 'lb' ? '1' : 'any'}
-                                                                                        min={0}
-                                                                                        max={(exercise.weightUnit || 'kg') === 'lb' ? 1999 : 999}
-                                                                                        disabled={inputDisabled}
-                                                                                        data-player-id={p.id}
-                                                                                        data-set-index={setIndex}
-                                                                                        data-exercise-index={mapIndex}
-                                                                                        value={rowWeight === 0 ? '' : toDisplayWeight(rowWeight, exercise.weightUnit || 'kg')}
-                                                                                        onChange={(e) => updatePlayerSet(mapIndex, setIndex, p.id, 'weight', toInternalWeight(e.target.value, exercise.weightUnit || 'kg'))}
-                                                                                        onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
-                                                                                        onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
-                                                                                        className={`w-full bg-neutral-800 text-center font-black text-[16px] rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${rowCompleted ? 'text-neutral-500 bg-neutral-900/40' : 'text-white'} ${rowLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                                                        placeholder="0"
-                                                                                    />
+                                                                                    {isGhostSlot ? (
+                                                                                        <div className="w-full bg-neutral-900/40 text-center font-black text-[16px] rounded-lg py-2 text-neutral-600 select-none">-</div>
+                                                                                    ) : (
+                                                                                        <input
+                                                                                            type="number"
+                                                                                            inputMode={(exercise.weightUnit || 'kg') === 'lb' ? 'numeric' : 'decimal'}
+                                                                                            step={(exercise.weightUnit || 'kg') === 'lb' ? '1' : 'any'}
+                                                                                            min={0}
+                                                                                            max={(exercise.weightUnit || 'kg') === 'lb' ? 1999 : 999}
+                                                                                            disabled={inputDisabled}
+                                                                                            data-player-id={p.id}
+                                                                                            data-set-index={setIndex}
+                                                                                            data-exercise-index={mapIndex}
+                                                                                            value={rowWeight === 0 ? '' : toDisplayWeight(rowWeight, exercise.weightUnit || 'kg')}
+                                                                                            onChange={(e) => updatePlayerSet(mapIndex, setIndex, p.id, 'weight', toInternalWeight(e.target.value, exercise.weightUnit || 'kg'))}
+                                                                                            onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
+                                                                                            onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
+                                                                                            className={`w-full bg-neutral-800 text-center font-black text-[16px] rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${rowCompleted ? 'text-neutral-500 bg-neutral-900/40' : 'text-white'} ${rowLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                                            placeholder="0"
+                                                                                        />
+                                                                                    )}
                                                                                 </div>
                                                                             )}
                                                                             {exercise.metrics.reps && (
                                                                                 <div className="min-w-[70px] w-[70px]">
-                                                                                    <input
-                                                                                        type="number"
-                                                                                        inputMode="numeric"
-                                                                                        disabled={inputDisabled}
-                                                                                        data-player-id={p.id}
-                                                                                        data-set-index={setIndex}
-                                                                                        data-exercise-index={mapIndex}
-                                                                                        value={rowReps === 0 ? '' : rowReps}
-                                                                                        onChange={(e) => updatePlayerSet(mapIndex, setIndex, p.id, 'reps', e.target.value)}
-                                                                                        onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
-                                                                                        onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
-                                                                                        className={`w-full bg-neutral-800 text-center font-black text-[16px] rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${rowCompleted ? 'text-neutral-500 bg-neutral-900/40' : 'text-white'} ${rowLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                                                        placeholder="0"
-                                                                                    />
+                                                                                    {isGhostSlot ? (
+                                                                                        <div className="w-full bg-neutral-900/40 text-center font-black text-[16px] rounded-lg py-2 text-neutral-600 select-none">-</div>
+                                                                                    ) : (
+                                                                                        <input
+                                                                                            type="number"
+                                                                                            inputMode="numeric"
+                                                                                            disabled={inputDisabled}
+                                                                                            data-player-id={p.id}
+                                                                                            data-set-index={setIndex}
+                                                                                            data-exercise-index={mapIndex}
+                                                                                            value={rowReps === 0 ? '' : rowReps}
+                                                                                            onChange={(e) => updatePlayerSet(mapIndex, setIndex, p.id, 'reps', e.target.value)}
+                                                                                            onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
+                                                                                            onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
+                                                                                            className={`w-full bg-neutral-800 text-center font-black text-[16px] rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${rowCompleted ? 'text-neutral-500 bg-neutral-900/40' : 'text-white'} ${rowLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                                            placeholder="0"
+                                                                                        />
+                                                                                    )}
                                                                                 </div>
                                                                             )}
                                                                             {exercise.metrics.time && (
                                                                                 <div className="min-w-[70px] w-[70px]">
-                                                                                    <input
-                                                                                        type="number"
-                                                                                        inputMode="numeric"
-                                                                                        disabled={inputDisabled}
-                                                                                        data-player-id={p.id}
-                                                                                        data-set-index={setIndex}
-                                                                                        data-exercise-index={mapIndex}
-                                                                                        value={rowTime === 0 ? '' : rowTime}
-                                                                                        onChange={(e) => updatePlayerSet(mapIndex, setIndex, p.id, 'time', e.target.value)}
-                                                                                        onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
-                                                                                        onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
-                                                                                        className="w-full bg-neutral-800 text-center font-black text-[16px] rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none"
-                                                                                        placeholder="0s"
-                                                                                    />
+                                                                                    {isGhostSlot ? (
+                                                                                        <div className="w-full bg-neutral-900/40 text-center font-black text-[16px] rounded-lg py-2 text-neutral-600 select-none">-</div>
+                                                                                    ) : (
+                                                                                        <input
+                                                                                            type="number"
+                                                                                            inputMode="numeric"
+                                                                                            disabled={inputDisabled}
+                                                                                            data-player-id={p.id}
+                                                                                            data-set-index={setIndex}
+                                                                                            data-exercise-index={mapIndex}
+                                                                                            value={rowTime === 0 ? '' : rowTime}
+                                                                                            onChange={(e) => updatePlayerSet(mapIndex, setIndex, p.id, 'time', e.target.value)}
+                                                                                            onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
+                                                                                            onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
+                                                                                            className="w-full bg-neutral-800 text-center font-black text-[16px] rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none"
+                                                                                            placeholder="0s"
+                                                                                        />
+                                                                                    )}
                                                                                 </div>
                                                                             )}
                                                                             {exercise.metrics.distance && (
                                                                                 <div className="min-w-[70px] w-[70px]">
-                                                                                    <input
-                                                                                        type="number"
-                                                                                        inputMode="decimal"
-                                                                                        disabled={inputDisabled}
-                                                                                        data-player-id={p.id}
-                                                                                        data-set-index={setIndex}
-                                                                                        data-exercise-index={mapIndex}
-                                                                                        value={rowDistance === 0 ? '' : rowDistance}
-                                                                                        onChange={(e) => updatePlayerSet(mapIndex, setIndex, p.id, 'distance', e.target.value)}
-                                                                                        onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
-                                                                                        onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
-                                                                                        className="w-full bg-neutral-800 text-center font-black text-[16px] rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none"
-                                                                                        placeholder="0m"
-                                                                                    />
-                                                                                </div>
-                                                                            )}
-                                                                            {exercise.metrics.rpe && (
-                                                                                <div className="min-w-[60px] w-[60px]">
-                                                                                    <input
-                                                                                        type="number"
-                                                                                        inputMode="numeric"
-                                                                                        max={10}
-                                                                                        disabled={inputDisabled}
-                                                                                        data-player-id={p.id}
-                                                                                        data-set-index={setIndex}
-                                                                                        data-exercise-index={mapIndex}
-                                                                                        value={rowRpe === 0 ? '' : rowRpe}
-                                                                                        onChange={(e) => updatePlayerSet(mapIndex, setIndex, p.id, 'rpe', e.target.value)}
-                                                                                        onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
-                                                                                        onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
-                                                                                        className="w-full bg-neutral-800 text-center font-black text-[16px] rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none"
-                                                                                        placeholder="-"
-                                                                                    />
-                                                                                </div>
-                                                                            )}
-                                                                            {Object.keys(exercise.metrics).map(key => {
-                                                                                if (['weight', 'reps', 'time', 'distance', 'rpe'].includes(key)) return null;
-                                                                                if (!exercise.metrics[key as keyof typeof exercise.metrics]) return null;
-                                                                                return (
-                                                                                    <div key={key} className="min-w-[75px] w-[75px]">
+                                                                                    {isGhostSlot ? (
+                                                                                        <div className="w-full bg-neutral-900/40 text-center font-black text-[16px] rounded-lg py-2 text-neutral-600 select-none">-</div>
+                                                                                    ) : (
                                                                                         <input
                                                                                             type="number"
                                                                                             inputMode="decimal"
@@ -5274,56 +5258,112 @@ export const WorkoutSession = () => {
                                                                                             data-player-id={p.id}
                                                                                             data-set-index={setIndex}
                                                                                             data-exercise-index={mapIndex}
-                                                                                            value={set.custom?.[key] || ''}
-                                                                                            onChange={(e) => updateSet(mapIndex, setIndex, key, e.target.value, true)} // isCustom=true
+                                                                                            value={rowDistance === 0 ? '' : rowDistance}
+                                                                                            onChange={(e) => updatePlayerSet(mapIndex, setIndex, p.id, 'distance', e.target.value)}
                                                                                             onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
                                                                                             onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
-                                                                                            className="w-full bg-neutral-800 text-center font-black text-[16px] rounded-lg py-2 text-white focus:ring-2 focus:ring-gym-primary outline-none"
+                                                                                            className="w-full bg-neutral-800 text-center font-black text-[16px] rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none"
+                                                                                            placeholder="0m"
                                                                                         />
+                                                                                    )}
+                                                                                </div>
+                                                                            )}
+                                                                            {exercise.metrics.rpe && (
+                                                                                <div className="min-w-[60px] w-[60px]">
+                                                                                    {isGhostSlot ? (
+                                                                                        <div className="w-full bg-neutral-900/40 text-center font-black text-[16px] rounded-lg py-2 text-neutral-600 select-none">-</div>
+                                                                                    ) : (
+                                                                                        <input
+                                                                                            type="number"
+                                                                                            inputMode="numeric"
+                                                                                            max={10}
+                                                                                            disabled={inputDisabled}
+                                                                                            data-player-id={p.id}
+                                                                                            data-set-index={setIndex}
+                                                                                            data-exercise-index={mapIndex}
+                                                                                            value={rowRpe === 0 ? '' : rowRpe}
+                                                                                            onChange={(e) => updatePlayerSet(mapIndex, setIndex, p.id, 'rpe', e.target.value)}
+                                                                                            onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
+                                                                                            onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
+                                                                                            className="w-full bg-neutral-800 text-center font-black text-[16px] rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none"
+                                                                                            placeholder="-"
+                                                                                        />
+                                                                                    )}
+                                                                                </div>
+                                                                            )}
+                                                                            {Object.keys(exercise.metrics).map(key => {
+                                                                                if (['weight', 'reps', 'time', 'distance', 'rpe'].includes(key)) return null;
+                                                                                if (!exercise.metrics[key as keyof typeof exercise.metrics]) return null;
+                                                                                return (
+                                                                                    <div key={key} className="min-w-[75px] w-[75px]">
+                                                                                        {isGhostSlot ? (
+                                                                                            <div className="w-full bg-neutral-900/40 text-center font-black text-[16px] rounded-lg py-2 text-neutral-600 select-none">-</div>
+                                                                                        ) : (
+                                                                                            <input
+                                                                                                type="number"
+                                                                                                inputMode="decimal"
+                                                                                                disabled={inputDisabled}
+                                                                                                data-player-id={p.id}
+                                                                                                data-set-index={setIndex}
+                                                                                                data-exercise-index={mapIndex}
+                                                                                                value={set.custom?.[key] || ''}
+                                                                                                onChange={(e) => updateSet(mapIndex, setIndex, key, e.target.value, true)} // isCustom=true
+                                                                                                onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
+                                                                                                onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
+                                                                                                className="w-full bg-neutral-800 text-center font-black text-[16px] rounded-lg py-2 text-white focus:ring-2 focus:ring-gym-primary outline-none"
+                                                                                            />
+                                                                                        )}
                                                                                     </div>
                                                                                 );
                                                                             })}
 
                                                                             {/* Actions Column (Palomita/Lock/Time) - Kept tightly aligned */}
                                                                             <div className="flex-1 flex items-center justify-end gap-1.5 min-w-[60px] pl-1">
-                                                                                <button
-                                                                                    onClick={() => togglePlayerSetComplete(mapIndex, setIndex, p.id)}
-                                                                                    disabled={inputDisabled}
-                                                                                    className={`p-1.5 rounded-full border-2 transition-all shrink-0 ${rowCompleted
-                                                                                        ? rowLocked
-                                                                                            ? 'bg-neutral-800 border-neutral-700 text-neutral-500 cursor-not-allowed opacity-80'
-                                                                                            : 'bg-green-500 border-green-500 text-black shadow-[0_0_10px_rgba(34,197,94,0.4)]'
-                                                                                        : 'bg-transparent border-neutral-700 text-neutral-600 hover:border-neutral-500'
-                                                                                        }`}
-                                                                                    title={rowLocked ? "Desbloquea primero" : (rowCompleted ? "Marcar incompleto" : "Marcar listo")}
-                                                                                >
-                                                                                    <Check size={14} strokeWidth={4} />
-                                                                                </button>
+                                                                                {isGhostSlot ? (
+                                                                                    // Ghost slot: player finalized before this set was added — no action available
+                                                                                    <span className="text-neutral-700 font-black text-[16px] select-none pr-1">-</span>
+                                                                                ) : (
+                                                                                    <>
+                                                                                        <button
+                                                                                            onClick={() => togglePlayerSetComplete(mapIndex, setIndex, p.id)}
+                                                                                            disabled={inputDisabled}
+                                                                                            className={`p-1.5 rounded-full border-2 transition-all shrink-0 ${rowCompleted
+                                                                                                ? rowLocked
+                                                                                                    ? 'bg-neutral-800 border-neutral-700 text-neutral-500 cursor-not-allowed opacity-80'
+                                                                                                    : 'bg-green-500 border-green-500 text-black shadow-[0_0_10px_rgba(34,197,94,0.4)]'
+                                                                                                : 'bg-transparent border-neutral-700 text-neutral-600 hover:border-neutral-500'
+                                                                                                }`}
+                                                                                            title={rowLocked ? "Desbloquea primero" : (rowCompleted ? "Marcar incompleto" : "Marcar listo")}
+                                                                                        >
+                                                                                            <Check size={14} strokeWidth={4} />
+                                                                                        </button>
 
-                                                                                {(rowCompleted && !rowReadOnly) && (
-                                                                                    <button
-                                                                                        onClick={() => togglePlayerLock(mapIndex, setIndex, p.id)}
-                                                                                        disabled={lockToggleDisabled}
-                                                                                        className={`p-1 rounded-full transition-colors shrink-0 ${rowLocked ? 'text-red-500 bg-red-500/10' : 'text-neutral-500 hover:text-white'} ${lockToggleDisabled ? 'opacity-30 cursor-not-allowed' : ''}`}
-                                                                                        title={rowLocked ? "Desbloquear para editar" : "Bloquear"}
-                                                                                    >
-                                                                                        {rowLocked ? <Lock size={12} /> : <LockOpen size={12} />}
-                                                                                    </button>
-                                                                                )}
+                                                                                        {(rowCompleted && !rowReadOnly) && (
+                                                                                            <button
+                                                                                                onClick={() => togglePlayerLock(mapIndex, setIndex, p.id)}
+                                                                                                disabled={lockToggleDisabled}
+                                                                                                className={`p-1 rounded-full transition-colors shrink-0 ${rowLocked ? 'text-red-500 bg-red-500/10' : 'text-neutral-500 hover:text-white'} ${lockToggleDisabled ? 'opacity-30 cursor-not-allowed' : ''}`}
+                                                                                                title={rowLocked ? "Desbloquear para editar" : "Bloquear"}
+                                                                                            >
+                                                                                                {rowLocked ? <Lock size={12} /> : <LockOpen size={12} />}
+                                                                                            </button>
+                                                                                        )}
 
-                                                                                {rowCompleted && rowCompletedAt && (
-                                                                                    <span className="text-[8px] font-black text-green-500 tabular-nums tracking-tighter shrink-0 bg-green-500/10 px-1 py-0.5 rounded">
-                                                                                        {(() => {
-                                                                                            const completedTime = parseTimestamp(rowCompletedAt);
-                                                                                            if (completedTime <= 0) return '00:00';
-                                                                                            const start = startTime?.getTime() || Date.now();
-                                                                                            const diff = completedTime - start;
-                                                                                            if (diff < 0) return '00:00';
-                                                                                            const m = Math.floor(diff / 60000);
-                                                                                            const s = Math.floor((diff % 60000) / 1000);
-                                                                                            return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-                                                                                        })()}
-                                                                                    </span>
+                                                                                        {rowCompleted && rowCompletedAt && (
+                                                                                            <span className="text-[8px] font-black text-green-500 tabular-nums tracking-tighter shrink-0 bg-green-500/10 px-1 py-0.5 rounded">
+                                                                                                {(() => {
+                                                                                                    const completedTime = parseTimestamp(rowCompletedAt);
+                                                                                                    if (completedTime <= 0) return '00:00';
+                                                                                                    const start = startTime?.getTime() || Date.now();
+                                                                                                    const diff = completedTime - start;
+                                                                                                    if (diff < 0) return '00:00';
+                                                                                                    const m = Math.floor(diff / 60000);
+                                                                                                    const s = Math.floor((diff % 60000) / 1000);
+                                                                                                    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+                                                                                                })()}
+                                                                                            </span>
+                                                                                        )}
+                                                                                    </>
                                                                                 )}
                                                                             </div>
                                                                         </div>
