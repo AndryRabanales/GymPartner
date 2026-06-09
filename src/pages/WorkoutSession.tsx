@@ -487,12 +487,23 @@ export const WorkoutSession = () => {
                 { id: partnerId, username: pName, avatarUrl: pAvatar, isOnline: true }
             ];
 
-            const ordered = isInviter 
+            const ordered = isInviter
                 ? [list[0], list[1]]
                 : [list[1], list[0]];
 
             setParticipants(prev => {
-                if (prev.length > 2) return prev;
+                // Once the room already has 2+ participants (e.g. presence sync
+                // already populated [host, guest1]), DO NOT overwrite the array —
+                // that would happen every time the host accepts ANOTHER guest
+                // (partnerId gets reassigned to the newest joiner's id), wiping
+                // out previously-joined guests and corrupting firstGuestId/CRDT
+                // mapping. Instead, just make sure the (possibly new) partner is
+                // present — append them if missing, otherwise leave as-is.
+                if (prev.length >= 2) {
+                    if (prev.some(p => p.id === partnerId)) return prev;
+                    const newcomer = isInviter ? list[1] : list[0];
+                    return [...prev, newcomer];
+                }
                 return ordered.length > 0 ? ordered : prev;
             });
         }
