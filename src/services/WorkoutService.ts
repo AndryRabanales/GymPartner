@@ -116,26 +116,49 @@ class WorkoutService {
     }
 
     // Finish the session (The "Victory")
-    async finishSession(sessionId: string, notes?: string, routineName?: string, isManual: boolean = false, geoVerified?: boolean): Promise<{ success: boolean; error?: any }> {
+    // setFinishedAt=false: do everything (save notes/routine name, award GX,
+    // record streak, send notifications) EXCEPT writing `finished_at`/`end_time`.
+    // Used in multiplayer rooms when this participant is NOT the last one to
+    // finalize — their session must stay invisible in "Historial" until the
+    // last participant finishes (see room_all_finished / markSessionFinished).
+    async finishSession(sessionId: string, notes?: string, routineName?: string, isManual: boolean = false, geoVerified?: boolean, setFinishedAt: boolean = true): Promise<{ success: boolean; error?: any }> {
         const now = new Date().toISOString();
-        const updatePayload: any = {
-            end_time: now,
-            finished_at: now,
-            notes
-        };
 
-        if (routineName) {
-            updatePayload.routine_name = routineName;
-        }
+        if (setFinishedAt) {
+            const updatePayload: any = {
+                end_time: now,
+                finished_at: now,
+                notes
+            };
 
-        const { error } = await supabase
-            .from('workout_sessions')
-            .update(updatePayload)
-            .eq('id', sessionId);
+            if (routineName) {
+                updatePayload.routine_name = routineName;
+            }
 
-        if (error) {
-            console.error('Error finishing session:', error);
-            return { success: false, error };
+            const { error } = await supabase
+                .from('workout_sessions')
+                .update(updatePayload)
+                .eq('id', sessionId);
+
+            if (error) {
+                console.error('Error finishing session:', error);
+                return { success: false, error };
+            }
+        } else if (notes || routineName) {
+            // Persist notes/routine name without touching finished_at/end_time
+            const softUpdatePayload: any = {};
+            if (notes) softUpdatePayload.notes = notes;
+            if (routineName) softUpdatePayload.routine_name = routineName;
+
+            const { error } = await supabase
+                .from('workout_sessions')
+                .update(softUpdatePayload)
+                .eq('id', sessionId);
+
+            if (error) {
+                console.warn('Error saving notes/routine name (setFinishedAt=false):', error);
+                // Non-fatal: continue with GX/notifications below
+            }
         }
 
         // If this is an automatic/background close, skip G-points and notifications
@@ -305,6 +328,77 @@ class WorkoutService {
             console.error('Error sending finish live notification:', notifyErr);
         }
 
+        return { success: true };
+    }
+
+    // Lightweight, RLS-safe (self-row only) timestamp stamp used when a
+    // multiplayer participant learns — via the `room_all_finished` broadcast —
+    // that the LAST participant in the room has finalized. Marks THIS
+    // session as finished so it now appears in "Historial".
+    async markSessionFinished(sessionId: string, finishedAtIso?: string): Promise<{ success: boolean; error?: any }> {
+        const finishedAt = finishedAtIso || new Date().toISOString();
+        const { error } = await supabase
+            .from('workout_sessions')
+            .update({ finished_at: finishedAt, end_time: finishedAt })
+            .eq('id', sessionId)
+            .is('finished_at', null);
+
+        if (error) {
+            console.error('Error marking session finished:', error);
+            return { success: false, error };
+        }
+        return { success: true };
+    }
+
+    // Best-effort fallback used when a GUEST turns out to be the LAST
+    // participant to finalize a coop room. Mirrors the bulk-update step that
+    // closeRoom() already performs for host→guests, but in the opposite
+    // direction (guest→host / guest→other guests). If the RLS policy on
+    // workout_sessions doesn't allow cross-user updates from a non-host,
+    // this silently no-ops — the primary mechanism (room_all_finished
+    // broadcast → each client self-stamps via markSessionFinished) covers
+    // any participant still connected/on the summary screen.
+    async finalizeOtherRoomSessions(roomId: string, excludeSessionId: string): Promise<void> {
+        const now = new Date().toISOString();
+        try {
+            if (roomId !== excludeSessionId) {
+                await supabase
+                    .from('workout_sessions')
+                    .update({ finished_at: now, end_time: now })
+                    .eq('id', roomId)
+                    .is('finished_at', null);
+            }
+            await supabase
+                .from('workout_sessions')
+                .update({ finished_at: now, end_time: now })
+                .eq('partner_session_id', roomId)
+                .neq('id', excludeSessionId)
+                .is('finished_at', null);
+        } catch (e) {
+            console.warn('finalizeOtherRoomSessions: best-effort cross-user update failed (RLS?):', e);
+        }
+    }
+
+    // HARD delete used ONLY when a participant hits "Cancelar Entrenamiento"
+    // in a multiplayer room. Unlike deleteSession(), this NEVER finalizes as
+    // a fallback — the canceller must end up with ZERO history, regardless
+    // of whether they already logged sets.
+    async forceDeleteSession(sessionId: string): Promise<{ success: boolean; error?: any }> {
+        try {
+            await supabase.from('workout_logs').delete().eq('session_id', sessionId);
+        } catch (e) {
+            console.warn('forceDeleteSession: error deleting workout_logs (continuing):', e);
+        }
+
+        const { error } = await supabase
+            .from('workout_sessions')
+            .delete()
+            .eq('id', sessionId);
+
+        if (error) {
+            console.error('Error force-deleting session:', error);
+            return { success: false, error };
+        }
         return { success: true };
     }
 
@@ -648,7 +742,12 @@ class WorkoutService {
      *    own logs via the broadcast above; GX is awarded directly below).
      * 3. Sends a `room_closed` notification to every guest's user_id.
      */
-    async closeRoom(roomId: string, notes?: string, routineName?: string, geoVerified?: boolean, skipBroadcast = false): Promise<{ success: boolean }> {
+    // alreadyFinalizedUserIds: guests who already pressed "Finalizar" themselves
+    // (Phase 5 — soft-finalize with setFinishedAt=false). They were already
+    // awarded GX/streak/notifications at THAT moment — closeRoom must still
+    // bulk-stamp their finished_at/end_time below (2b), but must NOT re-run
+    // GX/notifications for them (would double-award).
+    async closeRoom(roomId: string, notes?: string, routineName?: string, geoVerified?: boolean, skipBroadcast = false, alreadyFinalizedUserIds: string[] = []): Promise<{ success: boolean }> {
         const now = new Date().toISOString();
 
         // 0. Let connected guests persist their own workout_logs before their
@@ -704,6 +803,11 @@ class WorkoutService {
                 const hostName = hostProfile?.username || 'el anfitrión';
 
                 for (const gSess of (guestSessions || [])) {
+                    // Already self-finalized (and already awarded GX) before the host
+                    // closed the room — only the bulk finished_at/end_time stamp (2b)
+                    // applies to them; skip GX/notifications to avoid double-awarding.
+                    if (alreadyFinalizedUserIds.includes(gSess.user_id)) continue;
+
                     const durationMinutes = (Date.now() - new Date(gSess.started_at).getTime()) / 60000;
 
                     if (durationMinutes >= 20) {

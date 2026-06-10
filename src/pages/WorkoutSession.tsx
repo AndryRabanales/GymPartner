@@ -430,6 +430,13 @@ export const WorkoutSession = () => {
     //   • state → triggers a re-render so the UI immediately shows "-" cells on finalization
     const finalizedParticipantsRef = useRef<Set<string>>(new Set());
     const [finalizedParticipantsState, setFinalizedParticipantsState] = useState<Set<string>>(new Set());
+    // Tracks participants who hit "Cancelar Entrenamiento". Their data is
+    // stripped from shared state and they no longer count toward "soy el
+    // último en finalizar" (Phase 5 — historial isolation on cancel).
+    const cancelledParticipantsRef = useRef<Set<string>>(new Set());
+    // Guards against double-processing the `room_all_finished` broadcast
+    // (Phase 5 — delayed historial visibility).
+    const roomFullyFinishedRef = useRef<boolean>(false);
     const [partnerName, setPartnerName] = useState<string>('Compañero');
     const [partnerAvatar, setPartnerAvatar] = useState<string | null>(null);
     const [participants, setParticipants] = useState<any[]>([]);
@@ -741,7 +748,7 @@ export const WorkoutSession = () => {
                 }
             })
             .on('broadcast', { event: 'sync_state' }, (payload) => {
-                const { exercises, sender, knownParticipants, routineName, isRoutineModified: incomingRoutineModified, finalizedParticipants: incomingFinalized } = payload.payload;
+                const { exercises, sender, knownParticipants, routineName, isRoutineModified: incomingRoutineModified, finalizedParticipants: incomingFinalized, cancelledParticipants: incomingCancelled } = payload.payload;
                 if (sender === user.id) return; // Ignore echoes
 
                 // Absorb finalized-participant list from every incoming sync_state.
@@ -758,6 +765,17 @@ export const WorkoutSession = () => {
                     if (hasNew) {
                         setFinalizedParticipantsState(new Set([...finalizedParticipantsRef.current]));
                     }
+                }
+
+                // Same redundant-signal pattern for cancelled participants — covers the
+                // case where the dedicated participant_cancelled broadcast was missed.
+                if (incomingCancelled && Array.isArray(incomingCancelled) && incomingCancelled.length > 0) {
+                    (incomingCancelled as string[]).forEach((id) => {
+                        if (id !== user.id && !cancelledParticipantsRef.current.has(id)) {
+                            cancelledParticipantsRef.current.add(id);
+                            setParticipants(prev => prev.filter(p => p.id !== id));
+                        }
+                    });
                 }
 
                 if (routineName !== undefined && routineName !== null) {
@@ -885,6 +903,9 @@ export const WorkoutSession = () => {
                                              // Never overwrite a finalized participant's data with incoming sync values.
                                              // Their values were locked when they called finishSession and left the room.
                                              if (finalizedParticipantsRef.current.has(key)) continue;
+                                             // A participant who hit "Cancelar Entrenamiento" is fully removed —
+                                             // never re-merge their data even if a stale sync_state arrives late.
+                                             if (cancelledParticipantsRef.current.has(key)) continue;
                                              const inVal = inMap[key];
                                              const locVal = locMap[key];
 
@@ -1273,6 +1294,80 @@ export const WorkoutSession = () => {
                     })
                 })));
             })
+            .on('broadcast', { event: 'participant_cancelled' }, (payload) => {
+                const { sender } = payload.payload;
+                if (sender === user.id) return;
+
+                const cancellingParticipant = participantsRef.current.find(p => p.id === sender);
+                const cancellingName = cancellingParticipant?.username || 'Un participante';
+                import('react-hot-toast').then(({ default: t }) => t(`${cancellingName} canceló su entrenamiento.`, { icon: '🚫' }));
+
+                // Cancelled participants get ZERO history and are fully removed from
+                // the shared room: never re-merge their data, never count them toward
+                // "soy el último en finalizar", and hide their column entirely.
+                cancelledParticipantsRef.current.add(sender);
+                finalizedParticipantsRef.current.delete(sender);
+                setFinalizedParticipantsState(prev => {
+                    if (!prev.has(sender)) return prev;
+                    const next = new Set(prev);
+                    next.delete(sender);
+                    return next;
+                });
+
+                // Removing from `participants` automatically hides their column in the
+                // table render loop (which iterates participants.map(...)) and causes
+                // firstGuestId to be recomputed without them.
+                setParticipants(prev => prev.filter(p => p.id !== sender));
+
+                const PLAYER_MAP_KEYS = [
+                    'playerWeights', 'playerReps', 'playerTimes', 'playerDistances', 'playerRpes',
+                    'playerCompleted', 'playerLocked', 'playerCompletedAt', 'playerLastUpdated',
+                    'playerRestStatus', 'playerRestAccumulated', 'playerRestLastStartTime'
+                ];
+
+                setActiveExercises(prev => prev.map(ex => ({
+                    ...ex,
+                    sets: ex.sets.map((s: any) => {
+                        const updated: any = { ...s };
+                        for (const mapKey of PLAYER_MAP_KEYS) {
+                            if (updated[mapKey] && Object.prototype.hasOwnProperty.call(updated[mapKey], sender)) {
+                                const cleanedMap = { ...updated[mapKey] };
+                                delete cleanedMap[sender];
+                                updated[mapKey] = cleanedMap;
+                            }
+                        }
+                        // Reset legacy p1 (host) fields if the canceller was the host
+                        if (sender === partnerId) {
+                            updated.weight = 0; updated.reps = 0; updated.time = 0; updated.distance = 0;
+                            updated.rpe = undefined; updated.completed = false; updated.locked = false;
+                            updated.completedAt = undefined; updated.restStatus = 'idle'; updated.restLastStartTime = undefined;
+                        }
+                        // Reset legacy p2 (first guest) fields if the canceller was the first guest
+                        if (sender === firstGuestIdRef.current) {
+                            updated.p2_weight = 0; updated.p2_reps = 0; updated.p2_time = 0; updated.p2_distance = 0;
+                            updated.p2_rpe = undefined; updated.p2_completed = false; updated.p2_locked = false;
+                            updated.p2_completedAt = undefined; updated.p2_restStatus = 'idle'; updated.p2_restLastStartTime = undefined;
+                        }
+                        return updated;
+                    })
+                })));
+            })
+            .on('broadcast', { event: 'room_all_finished' }, (payload) => {
+                const { sender, finishedAt } = payload.payload;
+                if (sender === user.id) return;
+                if (roomFullyFinishedRef.current) return;
+                roomFullyFinishedRef.current = true;
+
+                // The LAST participant in the room finalized — stamp MY OWN session's
+                // finished_at/end_time now (RLS-safe self-update) so it appears in
+                // "Historial" alongside everyone else's, all at the same moment.
+                const mySessionId = sessionIdRef.current;
+                if (mySessionId) {
+                    workoutService.markSessionFinished(mySessionId, finishedAt).catch((e) => {
+                        console.warn('room_all_finished: failed to self-stamp finished_at:', e);
+                    });
+                }
+            })
             .on('broadcast', { event: 'participant_temp_exit' }, (payload) => {
                 const { sender } = payload.payload;
                 if (sender === user.id) return;
@@ -1552,7 +1647,10 @@ export const WorkoutSession = () => {
                         isRoutineModified: isRoutineModified,
                         // Carry known-finalized list so recipients can lock cells
                         // even if they missed participant_left
-                        finalizedParticipants: [...finalizedParticipantsRef.current]
+                        finalizedParticipants: [...finalizedParticipantsRef.current],
+                        // Carry known-cancelled list so recipients hide that participant's
+                        // column even if they missed participant_cancelled
+                        cancelledParticipants: [...cancelledParticipantsRef.current]
                     }
                 }).catch(e => console.error(e));
             }
@@ -4295,6 +4393,17 @@ export const WorkoutSession = () => {
             }).catch(e => console.error('Error broadcasting host_cancelled_continue_solo:', e));
         }
 
+        // Phase 5: "si da alguno en cancelar entrenamiento ya no recibe nada y los
+        // otros ya no pueden ver sus datos" — notify everyone else (host or guest)
+        // so they strip this user's data from the shared room/table.
+        if (isMultiplayer && channelRef.current && user) {
+            channelRef.current.send({
+                type: 'broadcast',
+                event: 'participant_cancelled',
+                payload: { sender: user.id }
+            }).catch(e => console.error('Error broadcasting participant_cancelled:', e));
+        }
+
         const oldSessionId = sessionId;
         localStorage.removeItem(`workout_draft_${oldSessionId}`);
         localStorage.removeItem(STORAGE_KEY);
@@ -4306,7 +4415,14 @@ export const WorkoutSession = () => {
         setLoading(true);
 
         try {
-            await workoutService.deleteSession(oldSessionId);
+            if (isMultiplayer) {
+                // Phase 5: a multiplayer participant who cancels gets ZERO history —
+                // unlike deleteSession(), this never "finalizes instead" even if sets
+                // were already logged.
+                await workoutService.forceDeleteSession(oldSessionId);
+            } else {
+                await workoutService.deleteSession(oldSessionId);
+            }
         } catch (err) {
             console.error("Failed to delete session in DB cleanly:", err);
         } finally {
@@ -4845,13 +4961,21 @@ export const WorkoutSession = () => {
 
             let result: { success: boolean; error?: any };
 
-            if (isMultiplayer && isInviter && finalSessionId) {
-                // ── HOST finalizes: broadcast final snapshot + close the whole room ──
-                // closeRoom() sets finished_at on the host session (awarding host GX),
-                // bulk-finalizes all guest sessions, and sends room_closed notifications
-                // to any offline guests so they see a clear "sala cerrada" message.
-                console.log('🏁 [Host] Closing room:', finalSessionId);
+            if (isMultiplayer && finalSessionId) {
+                // ── Phase 5: delay "Historial" visibility until the LAST connected
+                // participant finalizes ─────────────────────────────────────────────
+                // `participants` is cumulative (never shrinks, only isOnline flips to
+                // false on disconnect) — so "everyone currently around" is the
+                // online subset, minus anyone who already cancelled.
+                const onlineCount = participantsRef.current.filter(
+                    p => p.isOnline && !cancelledParticipantsRef.current.has(p.id)
+                ).length;
+                const isLastToFinalize = (finalizedParticipantsRef.current.size + 1) >= Math.max(onlineCount, 1);
 
+                console.log(`🏁 [${isInviter ? 'Host' : 'Guest'}] Finalizing. isLast=${isLastToFinalize} (finalized=${finalizedParticipantsRef.current.size}+1 / online=${onlineCount})`);
+
+                // Always broadcast our final snapshot so the others freeze our data
+                // at exactly what we're about to save.
                 if (channelRef.current && user) {
                     const snapshot = activeExercisesRef.current;
                     if (snapshot.length > 0) {
@@ -4864,55 +4988,81 @@ export const WorkoutSession = () => {
                                 knownParticipants: participantsRef.current,
                                 routineName: currentRoutineNameRef.current,
                                 isRoutineModified: isRoutineModifiedRef.current,
-                                finalizedParticipants: [user.id]
+                                finalizedParticipants: [user.id],
+                                cancelledParticipants: [...cancelledParticipantsRef.current]
                             }
                         }).catch(e => console.error('Error broadcasting final sync_state:', e));
                     }
-                    // Notify guests the room is closing
-                    await channelRef.current.send({
-                        type: 'broadcast',
-                        event: 'session_finished',
-                        payload: { sender: user.id }
-                    }).catch(e => console.error('Error broadcasting session_finished:', e));
                 }
 
-                // skipBroadcast=true: we already sent session_finished above via our live channel
-                result = await workoutService.closeRoom(finalSessionId, flowNotes, currentRoutineName, geoVerified, true);
+                if (isLastToFinalize) {
+                    // ── I'm the LAST one — close the room for everyone right now ──────
+                    if (isInviter) {
+                        console.log('🏁 [Host] Last to finalize — closing room:', finalSessionId);
+                        if (channelRef.current && user) {
+                            // Notify any straggler guests the room is closing (legacy path —
+                            // they pre-save their pending sets on receipt).
+                            await channelRef.current.send({
+                                type: 'broadcast',
+                                event: 'session_finished',
+                                payload: { sender: user.id }
+                            }).catch(e => console.error('Error broadcasting session_finished:', e));
+                        }
+                        // skipBroadcast=true: we already sent session_finished above via our live channel.
+                        // alreadyFinalizedUserIds: guests who soft-finalized earlier (setFinishedAt=false)
+                        // already got their GX/notifications — closeRoom must not double-award them.
+                        result = await workoutService.closeRoom(
+                            finalSessionId, flowNotes, currentRoutineName, geoVerified, true,
+                            [...finalizedParticipantsRef.current]
+                        );
+                    } else {
+                        console.log('🏁 [Guest] Last to finalize — closing room:', finalSessionId);
+                        if (channelRef.current && user) {
+                            await channelRef.current.send({
+                                type: 'broadcast',
+                                event: 'participant_left',
+                                payload: { sender: user.id }
+                            }).catch(e => console.error('Error broadcasting participant_left:', e));
+                        }
+                        const guestResult = await workoutService.finishSession(finalSessionId, flowNotes, currentRoutineName, true, geoVerified, true);
+                        result = guestResult.success ? guestResult : { success: true };
 
-            } else if (isMultiplayer && !isInviter && finalSessionId) {
-                // ── GUEST finalizes: broadcast departure + finalize own session only ──
-                console.log('🏃 [Guest] Leaving room, finalizing own session:', finalSessionId);
+                        // Best-effort: stamp finished_at on the host's + other guests' rows too
+                        // (mirrors closeRoom's host→guests bulk update, in reverse). If RLS
+                        // blocks cross-user updates this silently no-ops — the room_all_finished
+                        // broadcast below is the primary mechanism for connected participants.
+                        if (syncRoomId) {
+                            await workoutService.finalizeOtherRoomSessions(syncRoomId, finalSessionId).catch(() => {});
+                        }
+                    }
 
-                if (channelRef.current && user) {
-                    const snapshot = activeExercisesRef.current;
-                    if (snapshot.length > 0) {
+                    // Tell everyone still on their summary screen (channel still open) to
+                    // self-stamp finished_at NOW — this is what makes (c)/(d) work for any
+                    // early finisher who hasn't navigated away yet.
+                    if (channelRef.current && user) {
                         await channelRef.current.send({
                             type: 'broadcast',
-                            event: 'sync_state',
-                            payload: {
-                                exercises: snapshot,
-                                sender: user.id,
-                                knownParticipants: participantsRef.current,
-                                routineName: currentRoutineNameRef.current,
-                                isRoutineModified: isRoutineModifiedRef.current,
-                                finalizedParticipants: [user.id]
-                            }
-                        }).catch(e => console.error('Error broadcasting final sync_state:', e));
+                            event: 'room_all_finished',
+                            payload: { sender: user.id, finishedAt: new Date().toISOString() }
+                        }).catch(e => console.error('Error broadcasting room_all_finished:', e));
                     }
-                    await channelRef.current.send({
-                        type: 'broadcast',
-                        event: 'participant_left',
-                        payload: { sender: user.id }
-                    }).catch(e => console.error('Error broadcasting participant_left:', e));
+                } else {
+                    // ── NOT the last one — save my data, get my GX now, but keep
+                    // finished_at/end_time NULL so I don't show up in "Historial" yet.
+                    console.log(`🏃 [${isInviter ? 'Host' : 'Guest'}] Not last — soft-finalizing (waiting for the rest):`, finalSessionId);
+                    if (channelRef.current && user) {
+                        await channelRef.current.send({
+                            type: 'broadcast',
+                            event: 'participant_left',
+                            payload: { sender: user.id }
+                        }).catch(e => console.error('Error broadcasting participant_left:', e));
+                    }
+                    const softResult = await workoutService.finishSession(finalSessionId, flowNotes, currentRoutineName, true, geoVerified, false);
+                    // If finished_at was somehow already set (e.g. host already closed the
+                    // room concurrently), softResult may report success:false — treat as
+                    // success anyway, our data is saved either way.
+                    result = softResult.success ? softResult : { success: true };
                 }
-
-                const guestResult = await workoutService.finishSession(finalSessionId, flowNotes, currentRoutineName, true, geoVerified);
-                // If the host already closed the room (closeRoom bulk-finalized this guest's
-                // session before the guest pressed Finalizar), finishSession may return
-                // success:false because finished_at was already set. We treat that as
-                // success:true anyway — the sets are saved, the session IS closed, so the
-                // guest should always reach their summary screen.
-                result = guestResult.success ? guestResult : { success: true };
 
             } else {
                 // ── SOLO: Standard finalization ───────────────────────────────────
