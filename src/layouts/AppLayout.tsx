@@ -341,11 +341,26 @@ const CoopJoinRequestToast = ({
                         // (hasActiveOnAccept), so the "Preserve Session" branch in WorkoutSession's
                         // location.state effect runs — the host's current exercises/routine are
                         // explicitly PRESERVED, never wiped.
+                        // ⚠️ IMPORTANT: keep `partnerId` STABLE across multiple guest
+                        // acceptances. WorkoutSession.tsx's channel-setup useEffect has
+                        // `partnerId` in its dependency array — if it CHANGES (e.g. gets
+                        // reassigned to the newest joiner's id every time the host accepts
+                        // guest #2, #3, ...), the realtime `coop-workout-${roomId}` channel
+                        // gets torn down and RECREATED on the host's side mid-session,
+                        // disrupting the already-connected guests' presence/state sync
+                        // (this was the root cause of "los guest no pueden editar los datos
+                        // de usuario 1" once a 3rd participant joined).
+                        //
+                        // `resolvedSession.partner_id || senderId` mirrors the DB update
+                        // above (line ~293): for the FIRST guest it resolves to senderId
+                        // (guest1), and for every SUBSEQUENT guest it resolves to the
+                        // ALREADY-PERSISTED guest1 id — so `setPartnerId(...)` becomes a
+                        // no-op (same value) and the channel is never torn down.
                         navigate('/workout', {
                             state: {
                                 isMultiplayer: true,
                                 multiplayerMode: 'conjunto',
-                                partnerId: senderId,
+                                partnerId: resolvedSession.partner_id || senderId,
                                 chatId: roomSessionId,
                                 partnerSessionId: roomSessionId,
                                 isInviter: true,
