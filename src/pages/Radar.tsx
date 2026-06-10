@@ -372,11 +372,16 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
                 toast.success(`¡Siguiendo a ${currentUser.username}!`);
                 
                 // NOTIFY (Background)
+                const followerName = userProfile?.username || authUser.user_metadata?.username || authUser.user_metadata?.full_name || 'Un Guerrero';
                 await notificationService.createNotification(targetId, {
-                    type: 'system',
+                    type: 'follower',
                     title: 'NUEVO SEGUIDOR',
-                    content: `${authUser.user_metadata?.full_name || 'Alguien'} ha comenzado a seguirte.`,
-                    data: { follower_id: authUser.id }
+                    content: `${followerName} ha comenzado a seguirte.`,
+                    data: {
+                        sender_id: authUser.id,
+                        sender_name: followerName,
+                        follower_id: authUser.id
+                    }
                 });
             }
         } catch (error: any) {

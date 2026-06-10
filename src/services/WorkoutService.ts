@@ -830,7 +830,12 @@ class WorkoutService {
                         type: 'room_closed',
                         title: '🏁 SALA CERRADA',
                         message: `${hostName} cerró la sala. Tu progreso fue guardado en tu historial.`,
-                        data: { room_id: roomId, host_name: hostName }
+                        data: {
+                            room_id: roomId,
+                            host_name: hostName,
+                            sender_id: hostSession?.user_id,
+                            sender_name: hostName
+                        }
                     });
                 }
             } catch (e) {

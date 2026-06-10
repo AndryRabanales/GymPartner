@@ -1035,7 +1035,7 @@ export const NotificationsPage = () => {
                             </span>
                             {n.type === 'follower' && 'ha comenzado a seguirte.'}
                             {n.type === 'gym_join' && `se ha unido a tu sede.`}
-                            {n.type === 'system' && n.message}
+                            {n.type !== 'follower' && n.type !== 'gym_join' && n.message}
                         </p>
                         <span className="text-[10px] text-neutral-600 font-bold mt-0.5 block">{new Date(n.created_at).toLocaleDateString()}</span>
                     </div>

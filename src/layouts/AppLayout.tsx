@@ -104,13 +104,16 @@ const CoopInviteToast = ({
                         const mode = newNotification.data?.mode || 'separado';
                         
                         // Notify the inviter so their app automatically pulls them into the session
+                        const accepterName = user.user_metadata?.full_name || user.user_metadata?.username || 'Tu compañero';
                         await supabase.from('notifications').insert({
                             user_id: senderId,
                             type: 'coop_accepted',
                             title: 'RETO ACEPTADO',
-                            message: `¡${user.user_metadata.full_name || 'Alguien'} ha aceptado tu desafío! Entrando al gimnasio...`,
+                            message: `¡${accepterName} ha aceptado tu desafío! Entrando al gimnasio...`,
                             data: {
                                 partner_id: user.id,
+                                sender_id: user.id,
+                                sender_name: accepterName,
                                 mode: mode
                                 // No chat_id — room ID will be the host's session ID, discovered via polling
                             }
@@ -296,13 +299,16 @@ const CoopJoinRequestToast = ({
 
                         const roomSessionId = resolvedSession.id;
                         // Send acceptance notification to B
+                        const joinAccepterName = user.user_metadata?.full_name || user.user_metadata?.username || 'Tu compañero';
                         await supabase.from('notifications').insert({
                             user_id: senderId,
                             type: 'coop_join_accepted',
                             title: 'SOLICITUD ACEPTADA',
-                            message: `¡${user.user_metadata.username || 'Tu compañero'} ha aceptado tu solicitud de unión! Entrando al gimnasio...`,
+                            message: `¡${joinAccepterName} ha aceptado tu solicitud de unión! Entrando al gimnasio...`,
                             data: {
                                 partner_id: user.id,
+                                sender_id: user.id,
+                                sender_name: joinAccepterName,
                                 mode: 'conjunto',
                                 chat_id: roomSessionId,
                                 session_id: roomSessionId
