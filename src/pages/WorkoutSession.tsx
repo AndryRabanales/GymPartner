@@ -1374,9 +1374,8 @@ export const WorkoutSession = () => {
                 const mySessionId = sessionIdRef.current;
                 if (mySessionId) {
                     workoutService.markSessionFinished(mySessionId, finishedAt).then(() => {
-                        // Session is now fully stamped — release the rescue-modal guard
-                        // that was set during soft-finalize.
-                        try { sessionStorage.removeItem('ginx_soft_finalized'); } catch { /* ignore */ }
+                        // Session is now fully stamped — release the rescue-modal guard.
+                        try { localStorage.removeItem('ginx_soft_finalized'); } catch { /* ignore */ }
                     }).catch((e) => {
                         console.warn('room_all_finished: failed to self-stamp finished_at:', e);
                     });
@@ -5148,9 +5147,11 @@ export const WorkoutSession = () => {
                     // room concurrently), softResult may report success:false — treat as
                     // success anyway, our data is saved either way.
                     result = softResult.success ? softResult : { success: true };
-                    // Guard: suppress the rescue modal while finished_at propagates to DB.
-                    // Cleared by room_all_finished → markSessionFinished, or on app restart.
-                    try { sessionStorage.setItem('ginx_soft_finalized', finalSessionId); } catch { /* ignore */ }
+                    // Guard: suppress the rescue modal while waiting for room_all_finished.
+                    // Stored in localStorage so it survives tab refresh / app restart.
+                    // Cleared by room_all_finished → markSessionFinished, or by AppLayout
+                    // when it detects the room is fully done via DB check.
+                    try { localStorage.setItem('ginx_soft_finalized', finalSessionId); } catch { /* ignore */ }
                 }
 
             } else {

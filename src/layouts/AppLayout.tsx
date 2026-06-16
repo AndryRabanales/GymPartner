@@ -559,15 +559,48 @@ export const AppLayout = () => {
                         setShowRescueModal(false);
                         return;
                     }
-                    // Soft-finalized sessions (not last to finish) keep finished_at=null
-                    // until room_all_finished stamps them. Suppress the rescue modal during
-                    // that brief window to avoid showing "El anfitrión cerró la sala" to
-                    // someone who just cleanly completed their workout.
-                    const softFinalizedId = sessionStorage.getItem('ginx_soft_finalized');
-                    if (softFinalizedId === session.id) {
+
+                    // Soft-finalized sessions keep finished_at=null until the LAST
+                    // participant finalizes and broadcasts room_all_finished. Guard is
+                    // stored in localStorage (survives tab refresh / app restart).
+                    const softFinalizedId = localStorage.getItem('ginx_soft_finalized');
+                    const isSoftFinalized = softFinalizedId === session.id;
+
+                    // Always check if the room is actually fully done now.
+                    // Handles two cases:
+                    //  (a) Guard present: room_all_finished broadcast was missed because
+                    //      the channel closed (user navigated away) before it arrived.
+                    //  (b) Guard absent: app restarted after soft-finalize before
+                    //      room_all_finished was received (old sessionStorage behavior).
+                    // If all sibling sessions have finished_at, self-stamp and clear silently.
+                    try {
+                        const roomId = (session as any).partner_session_id || session.id;
+                        const { data: siblings } = await supabase
+                            .from('workout_sessions')
+                            .select('id, finished_at')
+                            .or(`id.eq.${roomId},partner_session_id.eq.${roomId}`)
+                            .neq('id', session.id);
+
+                        const roomFullyDone = !!(
+                            siblings && siblings.length > 0 &&
+                            (siblings as any[]).every((s: any) => !!s.finished_at)
+                        );
+
+                        if (roomFullyDone) {
+                            await workoutService.markSessionFinished(session.id);
+                            try { localStorage.removeItem('ginx_soft_finalized'); } catch { /* ignore */ }
+                            setShowRescueModal(false);
+                            return;
+                        }
+                    } catch { /* network / RLS error — fall through to normal modal logic */ }
+
+                    if (isSoftFinalized) {
+                        // User already finalized; still waiting for other participants.
+                        // Don't interrupt them with a rescue modal.
                         setShowRescueModal(false);
                         return;
                     }
+
                     setRescueSessionId(session.id);
                     setRescueGymId(session.gym_id || null);
                     setRescueStartedAt(session.started_at);
