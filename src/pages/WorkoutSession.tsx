@@ -391,6 +391,16 @@ export const WorkoutSession = () => {
     const [showSummary, setShowSummary] = useState(false);
     const [summaryTab, setSummaryTab] = useState<'grupal' | 'individual'>('grupal');
     const [exerciseFillFlow, setExerciseFillFlow] = useState<{ exerciseName: string; timestamp: number }[]>([]);
+    // DB-fetched summary data for multiplayer: authoritative participant list + per-player set data.
+    // Fixes cases where in-memory sync missed a participant or their playerWeights were never received.
+    const [coopSummaryData, setCoopSummaryData] = useState<{
+        players: { id: string; username: string; avatarUrl: string }[];
+        exerciseSets: {
+            exerciseId: string;
+            exerciseName: string;
+            sets: { setNumber: number; playerData: Record<string, { weight: number; reps: number; time: number; distance: number }> }[];
+        }[];
+    } | null>(null);
 
     const recordExerciseInteraction = (exerciseName: string) => {
         setExerciseFillFlow(prev => {
@@ -1363,7 +1373,11 @@ export const WorkoutSession = () => {
                 // "Historial" alongside everyone else's, all at the same moment.
                 const mySessionId = sessionIdRef.current;
                 if (mySessionId) {
-                    workoutService.markSessionFinished(mySessionId, finishedAt).catch((e) => {
+                    workoutService.markSessionFinished(mySessionId, finishedAt).then(() => {
+                        // Session is now fully stamped — release the rescue-modal guard
+                        // that was set during soft-finalize.
+                        try { sessionStorage.removeItem('ginx_soft_finalized'); } catch { /* ignore */ }
+                    }).catch((e) => {
                         console.warn('room_all_finished: failed to self-stamp finished_at:', e);
                     });
                 }
@@ -1658,6 +1672,78 @@ export const WorkoutSession = () => {
 
         return () => clearTimeout(handler);
     }, [activeExercises, isMultiplayer, user, currentRoutineName, isRoutineModified]);
+
+    // When the summary screen opens for a coop session, fetch the authoritative participant
+    // list and per-player set data from DB. This fixes cases where in-memory sync didn't
+    // deliver a participant's data (3rd+ person, late joiner, brief network gap, etc.).
+    useEffect(() => {
+        if (!showSummary || !isMultiplayer || multiplayerMode !== 'conjunto') return;
+        const roomId = isInviter ? (sessionId || '') : (syncRoomId || '');
+        if (!roomId) return;
+
+        const load = async () => {
+            // All sessions in the room: the host row (id = roomId) + guest rows
+            const { data: sessions } = await supabase
+                .from('workout_sessions')
+                .select('id, user_id')
+                .or(`id.eq.${roomId},partner_session_id.eq.${roomId}`);
+            if (!sessions?.length) return;
+
+            const userIds = sessions.map((s: any) => s.user_id);
+            const { data: profiles } = await supabase
+                .from('profiles').select('id, username, avatar_url').in('id', userIds);
+
+            // Host first (session.id === roomId), then guests sorted by id for determinism
+            const sorted = [...sessions].sort((a: any, b: any) => {
+                if (a.id === roomId) return -1;
+                if (b.id === roomId) return 1;
+                return a.id.localeCompare(b.id);
+            });
+            const players = sorted.map((s: any) => {
+                const p = (profiles || []).find((pr: any) => pr.id === s.user_id);
+                return { id: s.user_id, username: p?.username || 'Participante', avatarUrl: p?.avatar_url || '' };
+            });
+
+            // Fetch logs for every session in parallel
+            const exerciseMap: Record<string, {
+                exerciseId: string; exerciseName: string;
+                setMap: Record<number, Record<string, { weight: number; reps: number; time: number; distance: number }>>;
+            }> = {};
+
+            await Promise.all(sessions.map(async (sess: any) => {
+                const { data: logs } = await supabase
+                    .from('workout_logs')
+                    .select('exercise_id, set_number, weight_kg, reps, time, distance, exercise:exercises(id, name)')
+                    .eq('session_id', sess.id)
+                    .order('set_number', { ascending: true });
+                for (const log of (logs || [])) {
+                    const exId = log.exercise_id;
+                    const exName = (log.exercise as any)?.name || 'Ejercicio';
+                    if (!exerciseMap[exId]) exerciseMap[exId] = { exerciseId: exId, exerciseName: exName, setMap: {} };
+                    const sn = log.set_number || 1;
+                    if (!exerciseMap[exId].setMap[sn]) exerciseMap[exId].setMap[sn] = {};
+                    exerciseMap[exId].setMap[sn][sess.user_id] = {
+                        weight: log.weight_kg || 0,
+                        reps: log.reps || 0,
+                        time: log.time || 0,
+                        distance: log.distance || 0
+                    };
+                }
+            }));
+
+            const exerciseSets = Object.values(exerciseMap).map(ex => ({
+                exerciseId: ex.exerciseId,
+                exerciseName: ex.exerciseName,
+                sets: Object.entries(ex.setMap)
+                    .sort(([a], [b]) => Number(a) - Number(b))
+                    .map(([sn, playerData]) => ({ setNumber: Number(sn), playerData }))
+            }));
+
+            setCoopSummaryData({ players, exerciseSets });
+        };
+
+        load().catch(e => console.warn('[CoopSummary] DB fetch failed, falling back to in-memory:', e));
+    }, [showSummary, isMultiplayer, multiplayerMode, sessionId, syncRoomId, isInviter]);
 
     // Broadcast updated participant list whenever it changes on the Host's device to keep row slot alignment
     // Guard: never broadcast with empty exercises — that would wipe guests' active sessions.
@@ -5062,6 +5148,9 @@ export const WorkoutSession = () => {
                     // room concurrently), softResult may report success:false — treat as
                     // success anyway, our data is saved either way.
                     result = softResult.success ? softResult : { success: true };
+                    // Guard: suppress the rescue modal while finished_at propagates to DB.
+                    // Cleared by room_all_finished → markSessionFinished, or on app restart.
+                    try { sessionStorage.setItem('ginx_soft_finalized', finalSessionId); } catch { /* ignore */ }
                 }
 
             } else {
@@ -6273,17 +6362,48 @@ export const WorkoutSession = () => {
                     // initializeBattle reset isMultiplayer to false between finish and summary render.
                     const hasPartner = allTimeParticipantsRef.current.length > 1 || !!partnerId;
                     const isCoopSummary = (isMultiplayer || hasPartner) && multiplayerMode === 'conjunto';
-                    const allPlayers = (isCoopSummary && allTimeParticipantsRef.current.length > 0)
-                        ? allTimeParticipantsRef.current
-                        : [{ id: myId, username: myName, avatar_url: user?.user_metadata?.avatar_url }];
+                    // DB is authoritative: covers the 3rd+ participant who might not appear
+                    // in allTimeParticipantsRef due to in-memory sync gaps or late joins.
+                    const allPlayers = (coopSummaryData && coopSummaryData.players.length > 0)
+                        ? coopSummaryData.players
+                        : (isCoopSummary && allTimeParticipantsRef.current.length > 0)
+                            ? allTimeParticipantsRef.current
+                            : [{ id: myId, username: myName, avatar_url: user?.user_metadata?.avatar_url }];
                     const isGroupMode = allPlayers.length > 1;
 
                     // Use lastNonEmptyExercisesRef as safety net — if activeExercises was cleared
                     // by a race condition between finishSession and the summary render, we still
                     // have the last known exercise snapshot to display results from.
-                    const summaryExs = activeExercises.length > 0
+                    const rawSummaryExs = activeExercises.length > 0
                         ? activeExercises
                         : lastNonEmptyExercisesRef.current;
+                    // Augment in-memory playerWeights with DB logs for any participant
+                    // whose data didn't make it through the realtime sync (3rd person, etc.).
+                    const summaryExs = (() => {
+                        if (!coopSummaryData?.exerciseSets?.length) return rawSummaryExs;
+                        return rawSummaryExs.map((ex: any) => {
+                            const dbEx = coopSummaryData.exerciseSets.find(d => d.exerciseId === ex.equipmentId);
+                            if (!dbEx) return ex;
+                            return {
+                                ...ex,
+                                sets: (ex.sets || []).map((s: any, sIdx: number) => {
+                                    const dbSet = dbEx.sets.find(ds => ds.setNumber === sIdx + 1);
+                                    if (!dbSet) return s;
+                                    const pw: Record<string, number> = { ...(s.playerWeights || {}) };
+                                    const pr: Record<string, number> = { ...(s.playerReps || {}) };
+                                    const pt: Record<string, number> = { ...(s.playerTimes || {}) };
+                                    const pd: Record<string, number> = { ...(s.playerDistances || {}) };
+                                    for (const [uid, d] of Object.entries(dbSet.playerData) as [string, { weight: number; reps: number; time: number; distance: number }][]) {
+                                        if (!pw[uid] && d.weight > 0) pw[uid] = d.weight;
+                                        if (!pr[uid] && d.reps > 0) pr[uid] = d.reps;
+                                        if (!pt[uid] && d.time > 0) pt[uid] = d.time;
+                                        if (!pd[uid] && d.distance > 0) pd[uid] = d.distance;
+                                    }
+                                    return { ...s, playerWeights: pw, playerReps: pr, playerTimes: pt, playerDistances: pd };
+                                })
+                            };
+                        });
+                    })();
 
                     // Compaction Formula based on exercise volume
                     const totalSets = summaryExs.reduce((sum, ex) => sum + (ex.sets?.length || 0), 0);

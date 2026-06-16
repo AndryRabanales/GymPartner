@@ -559,6 +559,15 @@ export const AppLayout = () => {
                         setShowRescueModal(false);
                         return;
                     }
+                    // Soft-finalized sessions (not last to finish) keep finished_at=null
+                    // until room_all_finished stamps them. Suppress the rescue modal during
+                    // that brief window to avoid showing "El anfitrión cerró la sala" to
+                    // someone who just cleanly completed their workout.
+                    const softFinalizedId = sessionStorage.getItem('ginx_soft_finalized');
+                    if (softFinalizedId === session.id) {
+                        setShowRescueModal(false);
+                        return;
+                    }
                     setRescueSessionId(session.id);
                     setRescueGymId(session.gym_id || null);
                     setRescueStartedAt(session.started_at);

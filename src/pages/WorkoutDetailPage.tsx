@@ -391,8 +391,13 @@ export default function WorkoutDetailPage() {
 
             if (session.is_multiplayer && session.multiplayer_mode === 'conjunto') {
                 try {
-                // Room ID is the host's session. Guests have partner_session_id → host's session.
-                const roomId = resolvedPartnerSessionId || session.id;
+                // Room ID = the HOST's session (which is the room anchor).
+                // HOST: partner_session_id is null → roomId = session.id (they ARE the host).
+                // GUEST: partner_session_id = host's session → roomId = host's session.
+                // We use session.partner_session_id (pre-auto-heal) intentionally:
+                // resolvedPartnerSessionId may point to a guest's session after auto-heal,
+                // which would break the cross-session participant query.
+                const roomId = session.partner_session_id || session.id;
 
                 // Fetch all guest sessions (those pointing to this room).
                 // RLS: "Users can view active workout sessions of their matches" — use maybeSingle/
@@ -635,27 +640,53 @@ export default function WorkoutDetailPage() {
                             )}
                         </div>
 
-                        {/* Stats Comparison Summary */}
-                        <div className="grid grid-cols-2 gap-4 text-sm mt-2">
-                            <div className="bg-neutral-950 p-3 rounded-2xl border border-neutral-800">
-                                <div className="text-[10px] text-neutral-400 font-bold uppercase">Mi Volumen</div>
-                                <div className="text-lg font-black text-white font-mono">{workout.total_volume} kg</div>
-                                <div className="text-[10px] text-neutral-500">{workout.duration_minutes} min</div>
+                        {/* Stats Comparison Summary — scales to N participants */}
+                        {workout.room_participants && workout.room_participants.length > 0 ? (
+                            <div className="flex flex-wrap gap-2 mt-2">
+                                <div className="bg-neutral-950 p-3 rounded-2xl border border-neutral-800 flex-1 min-w-[100px]">
+                                    <div className="text-[10px] text-gym-primary font-bold uppercase truncate">{workout.my_name?.substring(0, 10) || 'Yo'}</div>
+                                    <div className="text-lg font-black text-white font-mono">{workout.total_volume} kg</div>
+                                    <div className="text-[10px] text-neutral-500">{workout.duration_minutes} min</div>
+                                </div>
+                                {workout.room_participants.map((p, idx) => {
+                                    const colors = ['text-blue-400', 'text-purple-400', 'text-green-400', 'text-orange-400', 'text-pink-400', 'text-cyan-400', 'text-rose-400'];
+                                    return (
+                                        <div key={p.userId} className="bg-neutral-950 p-3 rounded-2xl border border-neutral-800 flex-1 min-w-[100px]">
+                                            <div className={`text-[10px] font-bold uppercase truncate ${colors[idx % colors.length]}`}>{p.name.substring(0, 10)}</div>
+                                            {p.status === 'in_progress' ? (
+                                                <div className="text-xs font-bold text-amber-500 italic mt-1 animate-pulse">Entrenando...</div>
+                                            ) : (
+                                                <>
+                                                    <div className="text-lg font-black text-white font-mono">{p.volume} kg</div>
+                                                    <div className="text-[10px] text-neutral-500">finalizado</div>
+                                                </>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
-                            <div className="bg-neutral-950 p-3 rounded-2xl border border-neutral-800">
-                                <div className="text-[10px] text-neutral-400 font-bold uppercase">{workout.partner_name?.substring(0, 10)}</div>
-                                {workout.partner_status === 'in_progress' ? (
-                                    <div className="text-xs font-bold text-amber-500 italic mt-1 animate-pulse">
-                                        Aún entrenando...
-                                    </div>
-                                ) : (
-                                    <>
-                                        <div className="text-lg font-black text-white font-mono">{workout.partner_volume || 0} kg</div>
-                                        <div className="text-[10px] text-neutral-500">{workout.partner_duration_minutes || 0} min</div>
-                                    </>
-                                )}
+                        ) : (
+                            <div className="grid grid-cols-2 gap-4 text-sm mt-2">
+                                <div className="bg-neutral-950 p-3 rounded-2xl border border-neutral-800">
+                                    <div className="text-[10px] text-neutral-400 font-bold uppercase">Mi Volumen</div>
+                                    <div className="text-lg font-black text-white font-mono">{workout.total_volume} kg</div>
+                                    <div className="text-[10px] text-neutral-500">{workout.duration_minutes} min</div>
+                                </div>
+                                <div className="bg-neutral-950 p-3 rounded-2xl border border-neutral-800">
+                                    <div className="text-[10px] text-neutral-400 font-bold uppercase">{workout.partner_name?.substring(0, 10)}</div>
+                                    {workout.partner_status === 'in_progress' ? (
+                                        <div className="text-xs font-bold text-amber-500 italic mt-1 animate-pulse">
+                                            Aún entrenando...
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div className="text-lg font-black text-white font-mono">{workout.partner_volume || 0} kg</div>
+                                            <div className="text-[10px] text-neutral-500">{workout.partner_duration_minutes || 0} min</div>
+                                        </>
+                                    )}
+                                </div>
                             </div>
-                        </div>
+                        )}
 
                         {/* View Mode Tabs Selector */}
                         <div className="flex gap-2 mt-4 bg-neutral-950 p-1 rounded-2xl border border-neutral-800">
