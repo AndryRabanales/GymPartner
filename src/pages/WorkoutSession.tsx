@@ -2990,7 +2990,6 @@ export const WorkoutSession = () => {
                         } // end: last-resort log reconstruction
                     }
                 }
-            }
         } else {
                 const partnerActive = partnerActiveResult?.data;
                 const isJoiningNewCoop = currentIsMultiplayer && !currentIsInviter && partnerActive && (
