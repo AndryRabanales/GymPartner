@@ -20,7 +20,8 @@ interface WorkoutRecord {
     partner_id?: string;
     partner_session_id?: string;
     partner_status?: 'in_progress' | 'finished';
-    partner_name?: string;
+    // All other room participants (may be 1 or more for N-person rooms)
+    partner_names?: string[];
 }
 
 export const HistoryPage = () => {
@@ -29,6 +30,8 @@ export const HistoryPage = () => {
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [deleting, setDeleting] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [history, setHistory] = useState<WorkoutRecord[]>([]);
 
     let pressTimer: any;
     const handlePressStart = (id: string) => {
@@ -91,23 +94,6 @@ export const HistoryPage = () => {
         }
     };
 
-    if (!user) {
-        return (
-            <PublicTeaser
-                icon={Calendar}
-                title="Historial de Entrenamiento"
-                description="Visualiza tu historial de sesiones. Cada sesión es un registro imborrable de tu progreso real."
-                benefitTitle="Historial Completo"
-                benefitDescription="Accede a un cronograma detallado de todos tus entrenamientos. Compara tu rendimiento pasado y supérate."
-                iconColor="text-blue-500"
-                bgAccent="bg-blue-500/10"
-            />
-        );
-    }
-
-    const [loading, setLoading] = useState(true);
-    const [history, setHistory] = useState<WorkoutRecord[]>([]);
-
     const loadHistory = async () => {
         if (!user) return;
 
@@ -136,54 +122,77 @@ export const HistoryPage = () => {
                     )
                 `)
                 .eq('user_id', user.id)
-                .or('end_time.not.is.null,finished_at.not.is.null')
+                .not('end_time', 'is', null)
                 .order('started_at', { ascending: false });
 
             if (error) throw error;
 
-            // ── GUEST sessions: look up the host's session via partner_session_id ──
-            const partnerSessionIds = (data || [])
-                .filter((s: any) => s.is_multiplayer && s.partner_session_id)
-                .map((s: any) => s.partner_session_id);
+            // ── N-person room lookup ─────────────────────────────────────────────
+            // For each multiplayer session, the "room" is anchored at the HOST's
+            // session (roomId). Host: roomId = session.id. Guest: roomId = partner_session_id.
+            // We fetch ALL sessions sharing that roomId (host row + all guest rows)
+            // to build the full participant list for every session in one pass.
+            const multiSessions = (data || []).filter((s: any) => s.is_multiplayer);
+            const allRoomIds = [...new Set<string>(
+                multiSessions.map((s: any) => s.partner_session_id || s.id)
+            )];
 
-            let partnerSessionsMap = new Map<string, { finished: boolean; username: string }>();
-            if (partnerSessionIds.length > 0) {
-                const { data: partnerData, error: partnerErr } = await supabase
-                    .from('workout_sessions')
-                    .select('id, finished_at, end_time, user:profiles(username)')
-                    .in('id', partnerSessionIds);
+            // roomId → array of all participants in that room
+            const roomParticipantsMap = new Map<string, { userId: string; username: string; finished: boolean }[]>();
 
-                if (partnerErr) {
-                    // RLS may block access to partner sessions — log but don't crash
-                    console.warn('⚠️ [HistoryPage] Could not fetch partner sessions (RLS or network):', partnerErr.message);
-                }
-                if (partnerData) {
-                    partnerData.forEach((ps: any) => {
-                        const isFinished = !!(ps.finished_at || ps.end_time);
-                        const partnerUsername = ps.user?.username || 'Compañero';
-                        partnerSessionsMap.set(ps.id, { finished: isFinished, username: partnerUsername });
+            if (allRoomIds.length > 0) {
+                // PostgREST cannot join workout_sessions→profiles via the implicit user_id
+                // FK (it's to auth.users, not profiles), so we fetch session rows first
+                // and then resolve usernames in a separate profiles query.
+                const [{ data: hostRows }, { data: guestRows }] = await Promise.all([
+                    supabase
+                        .from('workout_sessions')
+                        .select('id, user_id, end_time')
+                        .in('id', allRoomIds),
+                    supabase
+                        .from('workout_sessions')
+                        .select('id, user_id, partner_session_id, end_time')
+                        .in('partner_session_id', allRoomIds)
+                ]);
+
+                // Collect all participant user IDs in one pass, then fetch profiles
+                const allParticipantIds = [
+                    ...(hostRows || []).map((r: any) => r.user_id),
+                    ...(guestRows || []).map((r: any) => r.user_id)
+                ].filter(Boolean);
+
+                const uniqueParticipantIds = [...new Set<string>(allParticipantIds)];
+                let profileMap = new Map<string, string>();
+
+                if (uniqueParticipantIds.length > 0) {
+                    const { data: profileRows } = await supabase
+                        .from('profiles')
+                        .select('id, username')
+                        .in('id', uniqueParticipantIds);
+                    (profileRows || []).forEach((p: any) => {
+                        if (p.id && p.username) profileMap.set(p.id, p.username);
                     });
                 }
-            }
 
-            // ── HOST sessions: partner_session_id is null (host IS the room).
-            //    Look up the partner's profile by partner_id to get their username.
-            const hostPartnerUserIds = (data || [])
-                .filter((s: any) => s.is_multiplayer && !s.partner_session_id && s.partner_id)
-                .map((s: any) => s.partner_id);
-
-            let hostPartnerNamesMap = new Map<string, string>(); // userId → username
-            if (hostPartnerUserIds.length > 0) {
-                const { data: profileData } = await supabase
-                    .from('profiles')
-                    .select('id, username')
-                    .in('id', hostPartnerUserIds);
-
-                if (profileData) {
-                    profileData.forEach((p: any) => {
-                        hostPartnerNamesMap.set(p.id, p.username);
+                (hostRows || []).forEach((row: any) => {
+                    const roomId: string = row.id;
+                    if (!roomParticipantsMap.has(roomId)) roomParticipantsMap.set(roomId, []);
+                    roomParticipantsMap.get(roomId)!.push({
+                        userId: row.user_id,
+                        username: profileMap.get(row.user_id) || 'Atleta',
+                        finished: !!row.end_time
                     });
-                }
+                });
+
+                (guestRows || []).forEach((row: any) => {
+                    const roomId: string = row.partner_session_id;
+                    if (!roomParticipantsMap.has(roomId)) roomParticipantsMap.set(roomId, []);
+                    roomParticipantsMap.get(roomId)!.push({
+                        userId: row.user_id,
+                        username: profileMap.get(row.user_id) || 'Atleta',
+                        finished: !!row.end_time
+                    });
+                });
             }
 
             const records = (data || []).map((s: any) => {
@@ -258,14 +267,14 @@ export const HistoryPage = () => {
                 const end = new Date(s.end_time).getTime();
                 const duration = Math.round((end - start) / (1000 * 60));
 
-                // Guest → look up via partner_session_id (= host's session id)
-                // Host  → partner_session_id is null; use hostPartnerNamesMap by partner_id
-                const partnerInfo = s.is_multiplayer && s.partner_session_id
-                    ? partnerSessionsMap.get(s.partner_session_id)
-                    : null;
-                const hostPartnerName = (!s.partner_session_id && s.partner_id)
-                    ? hostPartnerNamesMap.get(s.partner_id)
-                    : null;
+                // Determine all OTHER participants in this room (excludes self).
+                // roomId: host session id for everyone — guests use partner_session_id.
+                const roomId: string = s.partner_session_id || s.id;
+                const allRoomParts = roomParticipantsMap.get(roomId) || [];
+                const others = allRoomParts.filter(p => p.userId !== s.user_id);
+                const partnerNames = others.map(p => p.username);
+                // 'in_progress' if any co-participant hasn't closed their session yet.
+                const allOthersDone = others.length === 0 || others.every(p => p.finished);
 
                 return {
                     id: s.id,
@@ -278,12 +287,10 @@ export const HistoryPage = () => {
                     is_multiplayer: s.is_multiplayer,
                     partner_id: s.partner_id,
                     partner_session_id: s.partner_session_id,
-                    // History only contains finished sessions (.not('end_time','is',null)).
-                    // If no partnerInfo (host case), default to 'finished' — both finished together.
-                    partner_status: partnerInfo
-                        ? (partnerInfo.finished ? 'finished' : 'in_progress')
-                        : (s.is_multiplayer ? 'finished' : undefined),
-                    partner_name: partnerInfo?.username || hostPartnerName || 'Compañero'
+                    partner_status: s.is_multiplayer
+                        ? (allOthersDone ? 'finished' : 'in_progress')
+                        : undefined,
+                    partner_names: partnerNames.length > 0 ? partnerNames : undefined
                 };
             });
 
@@ -300,6 +307,20 @@ export const HistoryPage = () => {
     useEffect(() => {
         loadHistory();
     }, [user]);
+
+    if (!user) {
+        return (
+            <PublicTeaser
+                icon={Calendar}
+                title="Historial de Entrenamiento"
+                description="Visualiza tu historial de sesiones. Cada sesión es un registro imborrable de tu progreso real."
+                benefitTitle="Historial Completo"
+                benefitDescription="Accede a un cronograma detallado de todos tus entrenamientos. Compara tu rendimiento pasado y supérate."
+                iconColor="text-blue-500"
+                bgAccent="bg-blue-500/10"
+            />
+        );
+    }
 
     if (loading) {
         return <div className="min-h-screen flex items-center justify-center text-gym-primary"><Loader className="animate-spin" size={32} /></div>;
@@ -525,12 +546,16 @@ const WorkoutCard = ({
                             {session.partner_status === 'in_progress' ? (
                                 <span className="inline-flex items-center gap-1.5 text-amber-500 font-bold bg-amber-500/10 px-3 py-1 rounded-xl border border-amber-500/20 animate-pulse">
                                     <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                                    {session.partner_name ? session.partner_name.substring(0, 10) : 'Compañero'} en proceso ⚔️
+                                    {session.partner_names && session.partner_names.length > 0
+                                        ? session.partner_names.map(n => n.substring(0, 10)).join(', ')
+                                        : 'Compañero'} en proceso ⚔️
                                 </span>
                             ) : (
                                 <span className="inline-flex items-center gap-1.5 text-green-500 font-bold bg-green-500/10 px-3 py-1 rounded-xl border border-green-500/20">
                                     <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                                    Conjunto con {session.partner_name ? session.partner_name.substring(0, 10) : 'Compañero'} finalizado 🤝
+                                    Conjunto con {session.partner_names && session.partner_names.length > 0
+                                        ? session.partner_names.map(n => n.substring(0, 10)).join(', ')
+                                        : 'Compañero'} finalizado 🤝
                                 </span>
                             )}
                         </div>
