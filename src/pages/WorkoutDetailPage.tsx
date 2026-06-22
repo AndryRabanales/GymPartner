@@ -153,7 +153,10 @@ export default function WorkoutDetailPage() {
                 .maybeSingle();
             const myName: string = myProfile?.username || 'Atleta';
 
-            // Auto-heal matching partner session ID if it isn't set yet
+            // Auto-heal: resolve the partner session ID for legacy sessions where it
+            // wasn't written at session-start. Never write back to DB — the previous
+            // approach corrupted the HOST's partner_session_id with a guest's ID,
+            // breaking all subsequent N-person history lookups.
             let resolvedPartnerSessionId = session.partner_session_id;
             if (session.is_multiplayer && !resolvedPartnerSessionId && session.partner_id) {
                 const { data: foundPartner } = await supabase
@@ -165,13 +168,10 @@ export default function WorkoutDetailPage() {
                     .order('started_at', { ascending: false })
                     .limit(1)
                     .maybeSingle();
-                
+
                 if (foundPartner?.id) {
                     resolvedPartnerSessionId = foundPartner.id;
-                    await supabase
-                        .from('workout_sessions')
-                        .update({ partner_session_id: foundPartner.id })
-                        .eq('id', session.id);
+                    // NOTE: intentionally NOT writing back to DB here.
                 }
             }
 
@@ -285,7 +285,7 @@ export default function WorkoutDetailPage() {
                     .maybeSingle();
 
                 if (pSession) {
-                    const pFinished = !!(pSession.finished_at || pSession.end_time);
+                    const pFinished = !!pSession.end_time;
                     partnerStatus = pFinished ? 'finished' : 'in_progress';
 
                     // Fetch partner logs
@@ -391,13 +391,38 @@ export default function WorkoutDetailPage() {
 
             if (session.is_multiplayer && session.multiplayer_mode === 'conjunto') {
                 try {
-                // Room ID = the HOST's session (which is the room anchor).
-                // HOST: partner_session_id is null → roomId = session.id (they ARE the host).
-                // GUEST: partner_session_id = host's session → roomId = host's session.
-                // We use session.partner_session_id (pre-auto-heal) intentionally:
-                // resolvedPartnerSessionId may point to a guest's session after auto-heal,
-                // which would break the cross-session participant query.
-                const roomId = session.partner_session_id || session.id;
+                // Determine the room anchor (HOST's session ID) robustly.
+                //
+                // HOST (clean):      partner_session_id = null → roomId = session.id ✓
+                // GUEST:             partner_session_id = host_id, host has no
+                //                    partner_session_id → roomId = host_id ✓
+                // HOST (corrupted):  auto-heal previously wrote guest1_id here.
+                //                    guest1 has partner_session_id = host_id (non-null)
+                //                    → the "partner" is NOT the host → roomId = session.id ✓
+                let roomId = session.id;
+                const candidatePartnerId = session.partner_session_id || resolvedPartnerSessionId;
+                if (candidatePartnerId) {
+                    try {
+                        const { data: partnerMeta } = await supabase
+                            .from('workout_sessions')
+                            .select('id, partner_session_id')
+                            .eq('id', candidatePartnerId)
+                            .maybeSingle();
+
+                        if (partnerMeta) {
+                            // Only keep session.id as anchor when the candidate points
+                            // BACK to us (true circular/mutual reference = we are the host).
+                            // In all other cases trust the pointer chain, even if the candidate
+                            // also has a non-null partner_session_id (e.g. historical corruption
+                            // where a later guest pointed to an earlier guest instead of the host).
+                            const candidatePointsBackToUs =
+                                partnerMeta.partner_session_id === session.id;
+                            if (!candidatePointsBackToUs) {
+                                roomId = candidatePartnerId;
+                            }
+                        }
+                    } catch { /* fallback to session.id */ }
+                }
 
                 // Fetch all guest sessions (those pointing to this room).
                 // RLS: "Users can view active workout sessions of their matches" — use maybeSingle/
@@ -487,7 +512,7 @@ export default function WorkoutDetailPage() {
                         avatarUrl: prof?.avatar_url,
                         exercises: pExArr,
                         volume: Math.round(pVol),
-                        status: !!(ps.finished_at || ps.end_time) ? 'finished' : 'in_progress',
+                        status: !!ps.end_time ? 'finished' : 'in_progress',
                         sessionId: ps.id
                     });
                 }));
