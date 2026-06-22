@@ -116,11 +116,10 @@ class WorkoutService {
     }
 
     // Finish the session (The "Victory")
-    // setFinishedAt=false: do everything (save notes/routine name, award GX,
-    // record streak, send notifications) EXCEPT writing `finished_at`/`end_time`.
-    // Used in multiplayer rooms when this participant is NOT the last one to
-    // finalize — their session must stay invisible in "Historial" until the
-    // last participant finishes (see room_all_finished / markSessionFinished).
+    // setFinishedAt=false (soft-finalize): saves notes/routine name, awards GX,
+    // and sets finished_at=now (so getActiveSession returns null → no rescue modal),
+    // but leaves end_time=null so the session stays hidden in Historial until the
+    // last room participant finishes (see room_all_finished → markSessionFinished).
     async finishSession(sessionId: string, notes?: string, routineName?: string, isManual: boolean = false, geoVerified?: boolean, setFinishedAt: boolean = true): Promise<{ success: boolean; error?: any }> {
         const now = new Date().toISOString();
 
@@ -128,7 +127,8 @@ class WorkoutService {
             const updatePayload: any = {
                 end_time: now,
                 finished_at: now,
-                notes
+                notes,
+                session_state: null
             };
 
             if (routineName) {
@@ -144,19 +144,21 @@ class WorkoutService {
                 console.error('Error finishing session:', error);
                 return { success: false, error };
             }
-        } else if (notes || routineName) {
-            // Persist notes/routine name without touching finished_at/end_time
-            const softUpdatePayload: any = {};
-            if (notes) softUpdatePayload.notes = notes;
-            if (routineName) softUpdatePayload.routine_name = routineName;
+        } else {
+            // Soft-finalize: set finished_at NOW so getActiveSession() returns null
+            // (prevents rescue modal), but leave end_time null so the session stays
+            // hidden in Historial until every room participant finishes.
+            const softPayload: any = { finished_at: now, session_state: null };
+            if (notes) softPayload.notes = notes;
+            if (routineName) softPayload.routine_name = routineName;
 
             const { error } = await supabase
                 .from('workout_sessions')
-                .update(softUpdatePayload)
+                .update(softPayload)
                 .eq('id', sessionId);
 
             if (error) {
-                console.warn('Error saving notes/routine name (setFinishedAt=false):', error);
+                console.warn('Error soft-finalizing session (setFinishedAt=false):', error);
                 // Non-fatal: continue with GX/notifications below
             }
         }
@@ -196,7 +198,7 @@ class WorkoutService {
                             console.log(`📍 Geo check failed — no GX awarded for workout ${sessionId}.`);
                         } else {
                         const isMulti = session.is_multiplayer || false;
-                        const pointsAwarded = isMulti ? 3 : 2;
+                        const pointsAwarded = isMulti ? 2 : 1;
                         const reason = isMulti ? 'workout_finished_coop' : 'workout_finished';
 
                         console.log(`🎉 First qualified workout of the day (>= 20 mins)! Awarding ${pointsAwarded} GX points (isMultiplayer: ${isMulti}).`);
@@ -337,11 +339,13 @@ class WorkoutService {
     // session as finished so it now appears in "Historial".
     async markSessionFinished(sessionId: string, finishedAtIso?: string): Promise<{ success: boolean; error?: any }> {
         const finishedAt = finishedAtIso || new Date().toISOString();
+        // finished_at was already set during soft-finalize; only end_time is missing.
+        // Filter on end_time IS NULL to avoid re-stamping already-closed sessions.
         const { error } = await supabase
             .from('workout_sessions')
             .update({ finished_at: finishedAt, end_time: finishedAt })
             .eq('id', sessionId)
-            .is('finished_at', null);
+            .is('end_time', null);
 
         if (error) {
             console.error('Error marking session finished:', error);
@@ -366,14 +370,14 @@ class WorkoutService {
                     .from('workout_sessions')
                     .update({ finished_at: now, end_time: now })
                     .eq('id', roomId)
-                    .is('finished_at', null);
+                    .is('end_time', null);
             }
             await supabase
                 .from('workout_sessions')
                 .update({ finished_at: now, end_time: now })
                 .eq('partner_session_id', roomId)
                 .neq('id', excludeSessionId)
-                .is('finished_at', null);
+                .is('end_time', null);
         } catch (e) {
             console.warn('finalizeOtherRoomSessions: best-effort cross-user update failed (RLS?):', e);
         }
@@ -648,9 +652,72 @@ class WorkoutService {
             .from('workout_sessions')
             .select('id')
             .eq('id', roomId)
-            .is('finished_at', null)
+            .is('end_time', null)
             .maybeSingle();
         return !!data;
+    }
+
+    /**
+     * Returns the count of room participants who have NOT yet soft-finalized
+     * (finished_at IS NULL), excluding the caller's own session.
+     *
+     * Used to determine "am I the last to finish?" purely from DB state,
+     * without relying on realtime presence (which breaks when participants
+     * navigate to other screens while their session is still open).
+     *
+     * roomId = host's session id (= partner_session_id for guests).
+     */
+    async countPendingRoomParticipants(roomId: string, excludeSessionId: string): Promise<number> {
+        const [{ data: hostPending }, { count: guestCount }] = await Promise.all([
+            supabase
+                .from('workout_sessions')
+                .select('id')
+                .eq('id', roomId)
+                .neq('id', excludeSessionId)
+                .is('finished_at', null)
+                .maybeSingle(),
+            supabase
+                .from('workout_sessions')
+                .select('id', { count: 'exact', head: true })
+                .eq('partner_session_id', roomId)
+                .neq('id', excludeSessionId)
+                .is('finished_at', null)
+        ]);
+        return (hostPending ? 1 : 0) + (guestCount || 0);
+    }
+
+    /**
+     * Safety-net for soft-finalized sessions (finished_at set, end_time null).
+     * If all other room participants have also soft-finalized, stamps end_time
+     * so this session appears in Historial.
+     *
+     * Called from AppLayout on mount/navigation so missed `room_all_finished`
+     * broadcasts are resolved the next time the user opens the app.
+     *
+     * Returns true if end_time was stamped (session is now fully closed).
+     */
+    async resolveOrphanedCoopSession(mySessionId: string): Promise<boolean> {
+        try {
+            const { data: mySession } = await supabase
+                .from('workout_sessions')
+                .select('id, partner_session_id, is_multiplayer, end_time')
+                .eq('id', mySessionId)
+                .maybeSingle();
+
+            if (!mySession || mySession.end_time) return false; // already closed
+            if (!mySession.is_multiplayer) return false; // solo — shouldn't happen
+
+            const roomId = mySession.partner_session_id || mySession.id;
+            const pending = await this.countPendingRoomParticipants(roomId, mySessionId);
+
+            if (pending === 0) {
+                await this.markSessionFinished(mySessionId);
+                return true;
+            }
+            return false;
+        } catch {
+            return false;
+        }
     }
 
     /** Given a guest's session, returns the host's user_id so join requests can be routed. */
@@ -765,12 +832,14 @@ class WorkoutService {
             return { success: false };
         }
 
-        // 2. Find and finalize all guest sessions
+        // 2. Find and finalize all guest sessions.
+        // Filter on end_time IS NULL (not finished_at) because soft-finalized guests
+        // already have finished_at set — they still need end_time stamped to appear in Historial.
         const { data: guests } = await supabase
             .from('workout_sessions')
             .select('id, user_id')
             .eq('partner_session_id', roomId)
-            .is('finished_at', null);
+            .is('end_time', null);
 
         if (guests && guests.length > 0) {
             // 2a. Get guest session details before finalizing
@@ -780,12 +849,12 @@ class WorkoutService {
                 .select('id, user_id, started_at')
                 .in('id', guestSessionIds);
 
-            // 2b. Bulk set finished_at for all guests
+            // 2b. Stamp end_time (and finished_at as safety) for all guests not yet in Historial
             await supabase
                 .from('workout_sessions')
                 .update({ finished_at: now, end_time: now, notes: 'Sala cerrada por el anfitrión' })
                 .eq('partner_session_id', roomId)
-                .is('finished_at', null);
+                .is('end_time', null);
 
             // 2c. Award GX to each guest + send room_closed notification
             try {
@@ -820,7 +889,7 @@ class WorkoutService {
                             .like('finished_at', `${today}%`);
 
                         if (!todaySessions || todaySessions.length <= 1) {
-                            await userService.addGxPoints(gSess.user_id, 3, 'workout_finished_coop');
+                            await userService.addGxPoints(gSess.user_id, 2, 'workout_finished_coop');
                         }
                     }
 

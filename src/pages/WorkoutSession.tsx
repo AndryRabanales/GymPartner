@@ -176,6 +176,54 @@ const sanitizeRestTimers = (exercises: any[]): any[] => {
     }));
 };
 
+// Detect and stamp is_pr=true on the single best set per exercise that beats
+// the user's all-time estimated 1RM (Epley: weight × (1 + reps/30)).
+// Non-critical: errors are silently swallowed.
+const detectAndMarkPRs = async (sessionId: string, userId: string): Promise<void> => {
+    try {
+        const { data: currentSets } = await supabase
+            .from('workout_logs')
+            .select('id, exercise_id, weight_kg, reps')
+            .eq('session_id', sessionId)
+            .eq('owner_id', userId)
+            .gt('weight_kg', 0);
+
+        if (!currentSets || currentSets.length === 0) return;
+
+        const exerciseIds = [...new Set(currentSets.map((s: any) => s.exercise_id as string))];
+
+        const { data: hist } = await supabase
+            .from('workout_logs')
+            .select('exercise_id, weight_kg, reps')
+            .in('exercise_id', exerciseIds)
+            .eq('owner_id', userId)
+            .neq('session_id', sessionId)
+            .gt('weight_kg', 0);
+
+        const histMax = new Map<string, number>();
+        for (const s of (hist || [])) {
+            const e1rm = (s.weight_kg || 0) * (1 + ((s.reps || 1) / 30));
+            if (e1rm > (histMax.get(s.exercise_id) ?? 0)) histMax.set(s.exercise_id, e1rm);
+        }
+
+        const bestSet = new Map<string, { id: string; e1rm: number }>();
+        for (const s of currentSets as any[]) {
+            const e1rm = (s.weight_kg || 0) * (1 + ((s.reps || 1) / 30));
+            const prev = bestSet.get(s.exercise_id);
+            if (!prev || e1rm > prev.e1rm) bestSet.set(s.exercise_id, { id: s.id, e1rm });
+        }
+
+        const prIds: string[] = [];
+        for (const [exId, { id, e1rm }] of bestSet) {
+            if (e1rm > (histMax.get(exId) ?? 0)) prIds.push(id);
+        }
+
+        if (prIds.length > 0) {
+            await supabase.from('workout_logs').update({ is_pr: true }).in('id', prIds);
+        }
+    } catch { /* non-critical */ }
+};
+
 // Helper Component for Rest Timer
 const RestTimerDisplay = ({ status, accumulated, lastStartTime, isGold }: { status: 'running' | 'paused' | 'completed', accumulated: number, lastStartTime?: number | string, isGold?: boolean }) => {
     const [elapsed, setElapsed] = useState(0);
@@ -1237,7 +1285,13 @@ export const WorkoutSession = () => {
                                 );
                             }
                         }
-                        if (savePromises.length > 0) await Promise.all(savePromises);
+                        if (savePromises.length > 0) {
+                            await Promise.all(savePromises);
+                            const guestUserId = user?.id;
+                            if (guestSessionId && guestUserId) {
+                                await detectAndMarkPRs(guestSessionId, guestUserId);
+                            }
+                        }
                     }
                 } catch (err) {
                     console.error('❌ [Guest session_finished] Error pre-saving sets:', err);
@@ -1374,8 +1428,7 @@ export const WorkoutSession = () => {
                 const mySessionId = sessionIdRef.current;
                 if (mySessionId) {
                     workoutService.markSessionFinished(mySessionId, finishedAt).then(() => {
-                        // Session is now fully stamped — release the rescue-modal guard.
-                        try { localStorage.removeItem('ginx_soft_finalized'); } catch { /* ignore */ }
+                        // end_time now set → session appears in Historial
                     }).catch((e) => {
                         console.warn('room_all_finished: failed to self-stamp finished_at:', e);
                     });
@@ -1398,10 +1451,12 @@ export const WorkoutSession = () => {
 
                     const currentSessionId = sessionIdRef.current;
                     if (currentSessionId) {
-                        // Only update partner_session_id if it is NOT already set.
-                        // In 3+ user rooms, every new guest broadcasts their session ID.
-                        // Without this guard, User 3's broadcast would OVERWRITE User 1's link
-                        // to User 2, breaking the existing room topology.
+                        // Only guests link their partner_session_id via this broadcast.
+                        // The HOST must never have partner_session_id set — it is always null
+                        // on the host session (DB invariant). Setting it on the host would
+                        // make FriendsPage Case C misidentify the first guest as the new host,
+                        // routing join requests to the wrong person.
+                        if (!isInviterRef.current) {
                         supabase
                             .from('workout_sessions')
                             .select('partner_session_id')
@@ -1421,6 +1476,7 @@ export const WorkoutSession = () => {
                                     console.log('ℹ️ partner_session_id already set — skipping overwrite to preserve room topology.');
                                 }
                             });
+                        }
                     } else if (!isInviterRef.current && !sessionIdRef.current && !isStartingSessionRef.current) {
                         // Guest auto-starts their own session to activate their timer and enable logging
                         console.log('🚀 Guest auto-starting session on partner session ID sync...');
@@ -2034,10 +2090,19 @@ export const WorkoutSession = () => {
                     category: e.category || 'Custom'
                 }));
                 const livePayload = JSON.stringify({ active_exercises: liveExercisesSummary });
-                
+
+                // Persist the full draft to session_state so a tab close or device
+                // switch can restore even exercises that have no completed sets yet.
+                const draftState = activeExercises.length > 0 ? {
+                    exercises: activeExercises,
+                    routineName: currentRoutineName,
+                    originalIds: originalExerciseIds,
+                    isRoutineModified
+                } : null;
+
                 await supabase
                     .from('workout_sessions')
-                    .update({ notes: livePayload })
+                    .update({ notes: livePayload, session_state: draftState })
                     .eq('id', sessionId);
             } catch (err) {
                 console.error("Error syncing live session exercises to Supabase:", err);
@@ -2046,7 +2111,7 @@ export const WorkoutSession = () => {
 
         const timer = setTimeout(syncToSupabaseLive, 1000); // Debounce 1.0s
         return () => clearTimeout(timer);
-    }, [activeExercises, sessionId, user]);
+    }, [activeExercises, sessionId, user, currentRoutineName, originalExerciseIds, isRoutineModified]);
 
     // --- End Local Backup ---
 
@@ -2854,59 +2919,75 @@ export const WorkoutSession = () => {
                         }
                         setLoading(false);
                     } else {
-                    const logs = await workoutService.getSessionLogs(active.id);
-                    if (logs && logs.length > 0) {
-                        const restoredExercises: WorkoutExercise[] = [];
-                        const exerciseMap = new Map<string, WorkoutExercise>();
+                        // No localStorage draft — try DB session_state first (browser-independent,
+                        // survives tab close on a different device / cleared cache).
+                        const { data: stateRow } = await supabase
+                            .from('workout_sessions')
+                            .select('session_state')
+                            .eq('id', active.id)
+                            .maybeSingle();
+                        const dbDraft = (stateRow as any)?.session_state;
+                        if (dbDraft?.exercises?.length > 0) {
+                            setActiveExercises(sanitizeRestTimers(dbDraft.exercises));
+                            if (dbDraft.routineName) setCurrentRoutineName(dbDraft.routineName);
+                            if (dbDraft.originalIds) setOriginalExerciseIds(dbDraft.originalIds);
+                            if (dbDraft.isRoutineModified !== undefined) setIsRoutineModified(dbDraft.isRoutineModified);
+                            setLoading(false);
+                        } else {
+                        // Last resort: reconstruct from committed logs (only completed sets survive here)
+                        const logs = await workoutService.getSessionLogs(active.id);
+                        if (logs && logs.length > 0) {
+                            const restoredExercises: WorkoutExercise[] = [];
+                            const exerciseMap = new Map<string, WorkoutExercise>();
 
-                        logs.forEach((log: any) => {
-                            const exName = log.exercise?.name || 'Unknown Exercise';
-                            const exId = log.exercise_id;
-                            const equipItem = currentItems.find(i => normalizeText(i.name) === normalizeText(exName));
-                            const defaultMetrics = { weight: true, reps: true, time: false, distance: false, rpe: false };
+                            logs.forEach((log: any) => {
+                                const exName = log.exercise?.name || 'Unknown Exercise';
+                                const exId = log.exercise_id;
+                                const equipItem = currentItems.find(i => normalizeText(i.name) === normalizeText(exName));
+                                const defaultMetrics = { weight: true, reps: true, time: false, distance: false, rpe: false };
 
-                            let exercise = exerciseMap.get(exId);
-                            if (!exercise) {
-                                exercise = {
+                                let exercise = exerciseMap.get(exId);
+                                if (!exercise) {
+                                    exercise = {
+                                        id: Math.random().toString(),
+                                        equipmentId: equipItem?.id || exId,
+                                        equipmentName: exName,
+                                        metrics: (equipItem?.metrics || defaultMetrics) as any,
+                                        sets: [],
+                                        category: log.category_snapshot || equipItem?.target_muscle_group || 'Custom'
+                                    };
+                                    exerciseMap.set(exId, exercise);
+                                    restoredExercises.push(exercise);
+                                }
+
+                                exercise.sets.push({
                                     id: Math.random().toString(),
-                                    equipmentId: equipItem?.id || exId,
-                                    equipmentName: exName,
-                                    metrics: (equipItem?.metrics || defaultMetrics) as any,
-                                    sets: [],
-                                    category: log.category_snapshot || equipItem?.target_muscle_group || 'Custom'
-                                };
-                                exerciseMap.set(exId, exercise);
-                                restoredExercises.push(exercise);
-                            }
-
-                            exercise.sets.push({
-                                id: Math.random().toString(),
-                                weight: log.weight_kg || 0,
-                                reps: log.reps || 0,
-                                time: log.time || 0,
-                                distance: log.distance || 0,
-                                rpe: log.rpe || 0,
-                                custom: log.metrics_data || {},
-                                completed: true,
-                                // 🛡️ Reset ALL rest timer fields — the session was already saved;
-                                // never show running timers from a prior session.
-                                restStatus: 'completed',
-                                restAccumulated: 0,
-                                restLastStartTime: undefined,
-                                p2_restStatus: 'completed',
-                                p2_restAccumulated: 0,
-                                p2_restLastStartTime: undefined,
-                                playerRestStatus: {},
-                                playerRestAccumulated: {},
-                                playerRestLastStartTime: {}
+                                    weight: log.weight_kg || 0,
+                                    reps: log.reps || 0,
+                                    time: log.time || 0,
+                                    distance: log.distance || 0,
+                                    rpe: log.rpe || 0,
+                                    custom: log.metrics_data || {},
+                                    completed: true,
+                                    restStatus: 'completed',
+                                    restAccumulated: 0,
+                                    restLastStartTime: undefined,
+                                    p2_restStatus: 'completed',
+                                    p2_restAccumulated: 0,
+                                    p2_restLastStartTime: undefined,
+                                    playerRestStatus: {},
+                                    playerRestAccumulated: {},
+                                    playerRestLastStartTime: {}
+                                });
                             });
-                        });
-                        setActiveExercises(restoredExercises);
-                    } else if (!currentIsMultiplayer && activeExercisesRef.current.length === 0) {
-                        // Only open catalog automatically in solo mode AND if exercises are truly absent.
-                        // In multiplayer the host's exercises come from the catalog selection flow,
-                        // and the guest's come from sync_state — never open the catalog as a side effect.
-                        setShowAddModal(true);
+                            setActiveExercises(restoredExercises);
+                        } else if (!currentIsMultiplayer && activeExercisesRef.current.length === 0) {
+                            // Only open catalog automatically in solo mode AND if exercises are truly absent.
+                            // In multiplayer the host's exercises come from the catalog selection flow,
+                            // and the guest's come from sync_state — never open the catalog as a side effect.
+                            setShowAddModal(true);
+                        }
+                        } // end: last-resort log reconstruction
                     }
                 }
             }
@@ -4986,6 +5067,7 @@ export const WorkoutSession = () => {
         if (savedCount > 0) {
             console.log(`📦 Guardando ${savedCount} sets pendientes...`);
             await Promise.all(savePromises);
+            if (user?.id) await detectAndMarkPRs(finalSessionId, user.id);
         }
 
         // spec §1.2: una sola notificación clara y tranquilizadora — en vez de un
@@ -5047,17 +5129,20 @@ export const WorkoutSession = () => {
             let result: { success: boolean; error?: any };
 
             if (isMultiplayer && finalSessionId) {
-                // ── Phase 5: delay "Historial" visibility until the LAST connected
-                // participant finalizes ─────────────────────────────────────────────
-                // `participants` is cumulative (never shrinks, only isOnline flips to
-                // false on disconnect) — so "everyone currently around" is the
-                // online subset, minus anyone who already cancelled.
-                const onlineCount = participantsRef.current.filter(
-                    p => p.isOnline && !cancelledParticipantsRef.current.has(p.id)
-                ).length;
-                const isLastToFinalize = (finalizedParticipantsRef.current.size + 1) >= Math.max(onlineCount, 1);
+                // ── Phase 5: delay "Historial" visibility until the LAST participant
+                // finalizes — determined via DB, not realtime presence.
+                // Presence-based checks (p.isOnline) break when a participant navigates
+                // to another screen without pressing Finalizar: they appear offline but
+                // are still training. The DB is the only reliable source of truth.
+                // pendingCount = participants whose finished_at IS NULL (not yet done).
+                let isLastToFinalize = true;
+                let pendingCount = 0;
+                if (syncRoomId) {
+                    pendingCount = await workoutService.countPendingRoomParticipants(syncRoomId, finalSessionId);
+                    isLastToFinalize = pendingCount === 0;
+                }
 
-                console.log(`🏁 [${isInviter ? 'Host' : 'Guest'}] Finalizing. isLast=${isLastToFinalize} (finalized=${finalizedParticipantsRef.current.size}+1 / online=${onlineCount})`);
+                console.log(`🏁 [${isInviter ? 'Host' : 'Guest'}] Finalizing. isLast=${isLastToFinalize} (pending in DB=${pendingCount})`);
 
                 // Always broadcast our final snapshot so the others freeze our data
                 // at exactly what we're about to save.
@@ -5143,15 +5228,10 @@ export const WorkoutSession = () => {
                         }).catch(e => console.error('Error broadcasting participant_left:', e));
                     }
                     const softResult = await workoutService.finishSession(finalSessionId, flowNotes, currentRoutineName, true, geoVerified, false);
-                    // If finished_at was somehow already set (e.g. host already closed the
-                    // room concurrently), softResult may report success:false — treat as
-                    // success anyway, our data is saved either way.
+                    // finishSession(setFinishedAt=false) now sets finished_at immediately,
+                    // so getActiveSession() won't find this session → no rescue modal.
+                    // end_time stays null until room_all_finished → markSessionFinished.
                     result = softResult.success ? softResult : { success: true };
-                    // Guard: suppress the rescue modal while waiting for room_all_finished.
-                    // Stored in localStorage so it survives tab refresh / app restart.
-                    // Cleared by room_all_finished → markSessionFinished, or by AppLayout
-                    // when it detects the room is fully done via DB check.
-                    try { localStorage.setItem('ginx_soft_finalized', finalSessionId); } catch { /* ignore */ }
                 }
 
             } else {
