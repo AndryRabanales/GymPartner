@@ -5251,96 +5251,106 @@ export const WorkoutSession = () => {
                 sessionStorage.removeItem('ginx_temp_exit_active');
 
                 // ── Persist complete coop summary so History shows all data ──────────
-                // This runs only for the LAST participant to finalize — at this point
-                // every participant's workout_logs are committed to the DB.
-                // We save a snapshot of the full room data to coop_summary on the host
-                // session (the room anchor), which all members can read via RLS.
+                // Runs for every participant who finishes last in their DB check.
+                // The HOST also always runs this (isLastToFinalize=true unconditionally),
+                // so if guests finalize later they will overwrite with fresher data.
+                //
+                // Exercise data is read from IN-MEMORY state (activeExercisesRef), NOT
+                // from workout_logs in the DB. This eliminates the race condition where
+                // the last person's DB writes haven't completed yet when the summary is
+                // built. The in-memory state is kept fully in sync via sync_state
+                // broadcasts throughout the session and is authoritative at finalization.
                 if (isMultiplayer && multiplayerMode === 'conjunto' && isLastToFinalize) {
                     const coopRoomId = isInviter ? finalSessionId : (syncRoomId || finalSessionId);
                     try {
-                        // Fetch all sessions in the room (host + all guests via partner_session_id)
+                        // DB query for session ordering only — not for exercise data.
+                        // RLS may omit sessions with stale partner_session_id; those are
+                        // covered by participantsRef below.
                         const { data: roomSessions } = await supabase
                             .from('workout_sessions')
                             .select('id, user_id')
                             .or(`id.eq.${coopRoomId},partner_session_id.eq.${coopRoomId}`);
 
-                        // CRITICAL: always include the finalizing user's own session.
-                        // If they joined via a zombie flow their partner_session_id might point
-                        // to a stale host ID and the room query won't return their row —
-                        // but their workout_logs ARE committed under finalSessionId.
-                        const finalUserRow = (roomSessions || []).find((s: any) => s.id === finalSessionId);
-                        const allSessions: { id: string; user_id: string }[] = [
-                            ...(roomSessions || []),
-                            ...(!finalUserRow && user ? [{ id: finalSessionId, user_id: user.id }] : [])
+                        // Collect all participant user IDs:
+                        //  1. DB session rows (for ordering)
+                        //  2. In-memory participants (catches stale partner_session_id cases)
+                        //  3. Always include self
+                        const allUserIds = new Set<string>();
+                        for (const s of (roomSessions || [])) allUserIds.add((s as any).user_id);
+                        for (const p of participantsRef.current) allUserIds.add(p.id);
+                        if (user) allUserIds.add(user.id);
+
+                        const { data: profiles } = await supabase
+                            .from('profiles')
+                            .select('id, username, avatar_url')
+                            .in('id', [...allUserIds]);
+
+                        // Order: host (coopRoomId owner) first, then others.
+                        const hostUserId: string | undefined = ((roomSessions || []).find((s: any) => s.id === coopRoomId) as any)?.user_id;
+                        const orderedIds: string[] = [
+                            ...(hostUserId ? [hostUserId] : []),
+                            ...[...allUserIds].filter(id => id !== hostUserId)
                         ];
-
-                        if (allSessions.length) {
-                            const userIds = [...new Set(allSessions.map(s => s.user_id))];
-                            const { data: profiles } = await supabase
-                                .from('profiles')
-                                .select('id, username, avatar_url')
-                                .in('id', userIds);
-
-                            // Sort host first, then guests. Deduplicate by user_id so zombie
-                            // sessions never produce duplicate columns. ALL session rows are
-                            // still used for the logs fetch so no data is lost.
-                            const sortedSessions = [...allSessions].sort((a, b) => {
-                                if (a.id === coopRoomId) return -1;
-                                if (b.id === coopRoomId) return 1;
-                                // finalizer's session last only if they're a guest (not host)
-                                if (a.id === finalSessionId && a.id !== coopRoomId) return 1;
-                                if (b.id === finalSessionId && b.id !== coopRoomId) return -1;
-                                return a.id.localeCompare(b.id);
+                        const seenPlayerIds = new Set<string>();
+                        const players = orderedIds
+                            .filter(uid => { if (seenPlayerIds.has(uid)) return false; seenPlayerIds.add(uid); return true; })
+                            .map(uid => {
+                                const p = (profiles || []).find((pr: any) => pr.id === uid);
+                                const mp = participantsRef.current.find(x => x.id === uid);
+                                return {
+                                    id: uid,
+                                    username: (p as any)?.username || mp?.username || 'Participante',
+                                    avatarUrl: (p as any)?.avatar_url || mp?.avatarUrl || ''
+                                };
                             });
-                            const seenPlayerIds = new Set<string>();
-                            const players = sortedSessions
-                                .filter((s: any) => {
-                                    if (seenPlayerIds.has(s.user_id)) return false;
-                                    seenPlayerIds.add(s.user_id);
-                                    return true;
-                                })
-                                .map((s: any) => {
-                                    const p = (profiles || []).find((pr: any) => pr.id === s.user_id);
-                                    return { id: s.user_id, username: (p as any)?.username || 'Participante', avatarUrl: (p as any)?.avatar_url || '' };
-                                });
 
-                            // Build per-exercise-set-player map — same format as coopSummaryData
-                            // so WorkoutDetailPage can render it identically to the live summary screen.
+                        if (players.length > 0) {
+                            // Build exerciseSets from IN-MEMORY state — no DB timing dependency.
                             const exerciseMap: Record<string, {
                                 exerciseId: string; exerciseName: string;
                                 setMap: Record<number, Record<string, { weight: number; reps: number; time: number; distance: number; weightUnit: string }>>;
                             }> = {};
 
-                            await Promise.all(allSessions.map(async (sess) => {
-                                const { data: logs } = await supabase
-                                    .from('workout_logs')
-                                    .select('exercise_id, set_number, weight_kg, reps, time, distance, metrics_data, exercise:exercises(id, name)')
-                                    .eq('session_id', sess.id)
-                                    .order('set_number', { ascending: true });
+                            for (const exercise of activeExercisesRef.current) {
+                                const exKey = exercise.equipmentName;
+                                if (!exerciseMap[exKey]) exerciseMap[exKey] = { exerciseId: exKey, exerciseName: exercise.equipmentName, setMap: {} };
+                                exercise.sets.forEach((set: any, j: number) => {
+                                    const sn = j + 1;
+                                    if (!exerciseMap[exKey].setMap[sn]) exerciseMap[exKey].setMap[sn] = {};
+                                    for (const { id: uid } of players) {
+                                        let weight: number, reps: number, time: number, dist: number;
+                                        if (uid === user?.id) {
+                                            // Current user: check modern maps first, fall back to legacy scalar fields
+                                            const isSelfHost = isInviter;
+                                            const isSelfFirstGuest = !isInviter && uid === firstGuestId;
+                                            weight = Number(set.playerWeights?.[uid] ?? (isSelfHost ? (set.weight || 0) : (isSelfFirstGuest ? (set.p2_weight || 0) : 0))) || 0;
+                                            reps   = Number(set.playerReps?.[uid]    ?? (isSelfHost ? (set.reps    || 0) : (isSelfFirstGuest ? (set.p2_reps    || 0) : 0))) || 0;
+                                            time   = Number(set.playerTimes?.[uid]   ?? (isSelfHost ? (set.time    || 0) : (isSelfFirstGuest ? (set.p2_time    || 0) : 0))) || 0;
+                                            dist   = Number(set.playerDistances?.[uid]?? (isSelfHost ? (set.distance||0) : (isSelfFirstGuest ? (set.p2_distance||0) : 0))) || 0;
+                                        } else {
+                                            // Other participants: data arrives via sync_state broadcasts
+                                            weight = Number(set.playerWeights?.[uid]  || 0);
+                                            reps   = Number(set.playerReps?.[uid]     || 0);
+                                            time   = Number(set.playerTimes?.[uid]    || 0);
+                                            dist   = Number(set.playerDistances?.[uid]|| 0);
+                                        }
+                                        if (weight > 0 || reps > 0 || time > 0 || dist > 0 || set.playerCompleted?.[uid]) {
+                                            exerciseMap[exKey].setMap[sn][uid] = { weight, reps, time, distance: dist, weightUnit: exercise.weightUnit || 'kg' };
+                                        }
+                                    }
+                                });
+                            }
 
-                                for (const log of (logs || []) as any[]) {
-                                    const exId = log.exercise_id;
-                                    const exName = (log.exercise as any)?.name || 'Ejercicio';
-                                    if (!exerciseMap[exId]) exerciseMap[exId] = { exerciseId: exId, exerciseName: exName, setMap: {} };
-                                    const sn = log.set_number || 1;
-                                    if (!exerciseMap[exId].setMap[sn]) exerciseMap[exId].setMap[sn] = {};
-                                    exerciseMap[exId].setMap[sn][sess.user_id] = {
-                                        weight: log.weight_kg || 0,
-                                        reps: log.reps || 0,
-                                        time: log.time || 0,
-                                        distance: log.distance || 0,
-                                        weightUnit: (log.metrics_data as any)?._weight_unit || 'kg'
-                                    };
-                                }
-                            }));
-
-                            const exerciseSets = Object.values(exerciseMap).map(ex => ({
-                                exerciseId: ex.exerciseId,
-                                exerciseName: ex.exerciseName,
-                                sets: Object.entries(ex.setMap)
-                                    .sort(([a], [b]) => Number(a) - Number(b))
-                                    .map(([sn, playerData]) => ({ setNumber: Number(sn), playerData }))
-                            }));
+                            const exerciseSets = Object.values(exerciseMap)
+                                .filter(ex => Object.values(ex.setMap).some(s => Object.keys(s).length > 0))
+                                .map(ex => ({
+                                    exerciseId: ex.exerciseId,
+                                    exerciseName: ex.exerciseName,
+                                    sets: Object.entries(ex.setMap)
+                                        .sort(([a], [b]) => Number(a) - Number(b))
+                                        .map(([sn, playerData]) => ({ setNumber: Number(sn), playerData }))
+                                        .filter(s => Object.keys(s.playerData).length > 0)
+                                }));
 
                             // Use an RPC (SECURITY DEFINER) so guests can write to the
                             // host's session row — direct UPDATE is blocked by RLS for non-owners.
