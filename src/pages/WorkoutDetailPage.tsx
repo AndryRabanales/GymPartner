@@ -424,9 +424,63 @@ export default function WorkoutDetailPage() {
                     } catch { /* fallback to session.id */ }
                 }
 
-                // Fetch all guest sessions (those pointing to this room).
-                // RLS: "Users can view active workout sessions of their matches" — use maybeSingle/
-                // catch to handle gracefully if the policy blocks access for finished sessions.
+                // ── Fast path: read pre-built coop_summary from the host session ──────
+                // Saved by WorkoutSession.tsx when the last participant finalizes.
+                // RLS allows all room members to read the host (anchor) session row.
+                const { data: hostWithSummary } = await supabase
+                    .from('workout_sessions')
+                    .select('coop_summary')
+                    .eq('id', roomId)
+                    .maybeSingle();
+
+                const coopSummary: any[] | null = (hostWithSummary as any)?.coop_summary ?? null;
+
+                if (coopSummary && coopSummary.length > 0) {
+                    // Map snapshot → RoomParticipant[], excluding the current viewer
+                    // (their own data is already rendered from the main session query).
+                    roomParticipants = coopSummary
+                        .filter((p: any) => p.userId !== session.user_id)
+                        .map((p: any) => {
+                            const exArr: ExerciseDetail[] = (p.exercises || []).map((ex: any) => ({
+                                exercise_id: ex.exercise_id,
+                                exercise_name: ex.exercise_name || 'Ejercicio',
+                                muscle_group: ex.muscle_group || 'General',
+                                sets: (ex.sets || []).map((s: any) => ({
+                                    set_number: s.set_number,
+                                    weight_kg: s.weight_kg || 0,
+                                    reps: s.reps || 0,
+                                    rpe: s.rpe,
+                                    time: s.time,
+                                    distance: s.distance,
+                                    metrics_data: s.metrics_data,
+                                    is_pr: s.is_pr || false,
+                                    weightUnit: s.weightUnit || s.metrics_data?._weight_unit || 'kg'
+                                })),
+                                metrics: {
+                                    hasWeight: (ex.sets || []).some((s: any) => (s.weight_kg || 0) > 0),
+                                    hasReps: (ex.sets || []).some((s: any) => (s.reps || 0) > 0),
+                                    hasTime: (ex.sets || []).some((s: any) => (s.time || 0) > 0),
+                                    hasDistance: (ex.sets || []).some((s: any) => (s.distance || 0) > 0),
+                                    hasRpe: (ex.sets || []).some((s: any) => (s.rpe || 0) > 0),
+                                    hasCompletedAt: false,
+                                    hasRestDuration: false,
+                                    customKeys: []
+                                }
+                            }));
+
+                            return {
+                                userId: p.userId,
+                                name: p.username || 'Participante',
+                                avatarUrl: p.avatarUrl,
+                                exercises: exArr,
+                                volume: p.volume || 0,
+                                status: (p.status || 'finished') as 'finished' | 'in_progress' | 'cancelled',
+                                sessionId: p.sessionId
+                            } satisfies RoomParticipant;
+                        });
+                    console.log('✅ [History] coop_summary cargado:', roomParticipants.length, 'otros participantes');
+                } else {
+                // ── Fallback: reconstruct from raw session + logs (legacy / no summary) ──
                 const [{ data: guestSessions, error: gErr }, { data: hostRow, error: hErr }] = await Promise.all([
                     supabase
                         .from('workout_sessions')
@@ -448,7 +502,6 @@ export default function WorkoutDetailPage() {
                     ...(hostRow ? [hostRow] : [])
                 ].filter((s, idx, arr) => arr.findIndex(x => x.id === s.id) === idx); // dedup
 
-                // Fetch profiles + logs for each participant in parallel
                 await Promise.all(otherSessions.map(async (ps) => {
                     const [{ data: prof }, { data: pLogs, error: pLogsErr }] = await Promise.all([
                         supabase.from('profiles').select('username, avatar_url').eq('id', ps.user_id).maybeSingle(),
@@ -491,7 +544,6 @@ export default function WorkoutDetailPage() {
                         pVol += (log.weight_kg || 0) * (log.reps || 0);
                     });
 
-                    // Compute metrics flags
                     const pExArr = Array.from(pExMap.values());
                     pExArr.forEach(ex => {
                         ex.metrics = {
@@ -516,6 +568,7 @@ export default function WorkoutDetailPage() {
                         sessionId: ps.id
                     });
                 }));
+                } // end fallback
                 } catch (roomFetchErr) {
                     console.warn('⚠️ Room participant fetch failed (RLS or network):', roomFetchErr);
                     // Gracefully continue — show own session without partner columns

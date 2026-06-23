@@ -5247,6 +5247,91 @@ export const WorkoutSession = () => {
                 localStorage.removeItem('ginx_coop_state');
                 sessionStorage.removeItem('ginx_temp_exit_active');
 
+                // ── Persist complete coop summary so History shows all data ──────────
+                // This runs only for the LAST participant to finalize — at this point
+                // every participant's workout_logs are committed to the DB.
+                // We save a snapshot of the full room data to coop_summary on the host
+                // session (the room anchor), which all members can read via RLS.
+                if (isMultiplayer && multiplayerMode === 'conjunto' && isLastToFinalize) {
+                    const coopRoomId = isInviter ? finalSessionId : (syncRoomId || finalSessionId);
+                    try {
+                        const { data: roomSessions } = await supabase
+                            .from('workout_sessions')
+                            .select('id, user_id')
+                            .or(`id.eq.${coopRoomId},partner_session_id.eq.${coopRoomId}`);
+
+                        if (roomSessions?.length) {
+                            const userIds = (roomSessions as any[]).map(s => s.user_id);
+                            const { data: profiles } = await supabase
+                                .from('profiles')
+                                .select('id, username, avatar_url')
+                                .in('id', userIds);
+
+                            const participantSummaries = await Promise.all(
+                                (roomSessions as any[]).map(async (sess) => {
+                                    const { data: logs } = await supabase
+                                        .from('workout_logs')
+                                        .select(`
+                                            exercise_id, set_number, weight_kg, reps, rpe,
+                                            time, distance, metrics_data, is_pr, category_snapshot,
+                                            exercise:exercises(id, name)
+                                        `)
+                                        .eq('session_id', sess.id)
+                                        .order('exercise_id')
+                                        .order('set_number', { ascending: true });
+
+                                    const prof = (profiles || []).find((p: any) => p.id === sess.user_id);
+                                    const exMap = new Map<string, any>();
+                                    let volume = 0;
+
+                                    for (const log of (logs || []) as any[]) {
+                                        const exId = log.exercise_id;
+                                        if (!exMap.has(exId)) {
+                                            exMap.set(exId, {
+                                                exercise_id: exId,
+                                                exercise_name: (log.exercise as any)?.name || 'Ejercicio',
+                                                muscle_group: log.category_snapshot || 'General',
+                                                sets: []
+                                            });
+                                        }
+                                        exMap.get(exId).sets.push({
+                                            set_number: log.set_number,
+                                            weight_kg: log.weight_kg || 0,
+                                            reps: log.reps || 0,
+                                            rpe: log.rpe,
+                                            time: log.time,
+                                            distance: log.distance,
+                                            metrics_data: log.metrics_data,
+                                            is_pr: log.is_pr || false,
+                                            weightUnit: (log.metrics_data as any)?._weight_unit || 'kg'
+                                        });
+                                        volume += (log.weight_kg || 0) * (log.reps || 0);
+                                    }
+
+                                    return {
+                                        userId: sess.user_id,
+                                        sessionId: sess.id,
+                                        username: (prof as any)?.username || 'Participante',
+                                        avatarUrl: (prof as any)?.avatar_url || '',
+                                        exercises: Array.from(exMap.values()),
+                                        volume: Math.round(volume),
+                                        status: 'finished'
+                                    };
+                                })
+                            );
+
+                            await supabase
+                                .from('workout_sessions')
+                                .update({ coop_summary: participantSummaries })
+                                .eq('id', coopRoomId);
+
+                            console.log('✅ [CoopSummary] Guardado en DB para', participantSummaries.length, 'participantes');
+                        }
+                    } catch (e) {
+                        console.warn('⚠️ [CoopSummary] Error guardando (no bloquea):', e);
+                    }
+                }
+
                 // Go directly to summary — no waiting screen.
                 setTimeout(() => {
                     setLoading(false);
