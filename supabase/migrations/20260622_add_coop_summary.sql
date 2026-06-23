@@ -1,0 +1,2 @@
+ALTER TABLE workout_sessions
+  ADD COLUMN IF NOT EXISTS coop_summary JSONB DEFAULT NULL;
