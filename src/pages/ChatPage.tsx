@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { ArrowLeft, Send, MoreVertical, Loader, ShieldAlert, Trash2, UserX, Ban } from 'lucide-react';
 import { chatService } from '../services/ChatService';
+import { pushService } from '../services/PushService';
 
 interface Message {
     id: string;
@@ -201,6 +202,13 @@ export const ChatPage = () => {
                 .from('chats')
                 .update({ last_message_at: new Date().toISOString() })
                 .eq('id', chatId);
+
+            // Push notification to the recipient (best-effort, non-blocking)
+            if (otherUser?.id) {
+                const senderName = user.user_metadata?.username || user.user_metadata?.full_name || 'Alguien';
+                const preview = content.length > 60 ? content.slice(0, 57) + '...' : content;
+                pushService.send(otherUser.id, senderName, preview, { chat_id: chatId, sender_id: user.id });
+            }
         }
         setSending(false);
     };

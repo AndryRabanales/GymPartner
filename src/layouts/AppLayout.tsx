@@ -251,7 +251,7 @@ const CoopJoinRequestToast = ({
                                 .from('workout_sessions')
                                 .select('id', { count: 'exact', head: true })
                                 .eq('partner_session_id', resolvedSession.id)
-                                .is('finished_at', null);
+                                .is('end_time', null);
 
                             if ((guestNow || 0) >= 7) { // 7 invitados + 1 host = 8 total
                                 toast.dismiss(t.id);
@@ -519,6 +519,39 @@ export const AppLayout = () => {
 
         const checkRescuableSession = async () => {
             try {
+                // Recovery: soft-finalized sessions (finished_at set, end_time null)
+                // may never receive the room_all_finished broadcast if the user
+                // navigated away from WorkoutSession. On every startup/navigation,
+                // check each one: if ALL other room participants have also finished
+                // (finished_at != null), stamp end_time immediately so the session
+                // appears in Historial. The 5-hour fallback below catches anything
+                // that resolveOrphanedCoopSession can't resolve (e.g. RLS blocks).
+                const { data: softFinalized } = await supabase
+                    .from('workout_sessions')
+                    .select('id')
+                    .eq('user_id', user.id)
+                    .not('finished_at', 'is', null)
+                    .is('end_time', null);
+
+                if (softFinalized && softFinalized.length > 0) {
+                    await Promise.all(softFinalized.map((s: any) => workoutService.resolveOrphanedCoopSession(s.id)));
+                }
+
+                // Hard fallback: if a session is still stuck after 5 hours (matches
+                // the room max duration), force-close it regardless of other participants.
+                const fiveHoursAgo = new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString();
+                const { data: timedOut } = await supabase
+                    .from('workout_sessions')
+                    .select('id')
+                    .eq('user_id', user.id)
+                    .not('finished_at', 'is', null)
+                    .is('end_time', null)
+                    .lt('finished_at', fiveHoursAgo);
+
+                if (timedOut && timedOut.length > 0) {
+                    await Promise.all(timedOut.map((s: any) => workoutService.markSessionFinished(s.id)));
+                }
+
                 const { data: session } = await workoutService.getActiveSession(user.id);
 
                 if (!session) {
@@ -554,49 +587,11 @@ export const AppLayout = () => {
                 // We still show the modal on a cold load (phone killed, cache cleared)
                 // because sessionStorage is cleared between sessions.
                 if (session.is_multiplayer) {
+                    // Soft-finalized sessions now have finished_at set immediately, so
+                    // getActiveSession() will never return them — this block only fires
+                    // for genuinely active (un-finalized) coop sessions.
                     const isTempExitCoop = sessionStorage.getItem('ginx_temp_exit_active') === 'true';
                     if (isTempExitCoop) {
-                        setShowRescueModal(false);
-                        return;
-                    }
-
-                    // Soft-finalized sessions keep finished_at=null until the LAST
-                    // participant finalizes and broadcasts room_all_finished. Guard is
-                    // stored in localStorage (survives tab refresh / app restart).
-                    const softFinalizedId = localStorage.getItem('ginx_soft_finalized');
-                    const isSoftFinalized = softFinalizedId === session.id;
-
-                    // Always check if the room is actually fully done now.
-                    // Handles two cases:
-                    //  (a) Guard present: room_all_finished broadcast was missed because
-                    //      the channel closed (user navigated away) before it arrived.
-                    //  (b) Guard absent: app restarted after soft-finalize before
-                    //      room_all_finished was received (old sessionStorage behavior).
-                    // If all sibling sessions have finished_at, self-stamp and clear silently.
-                    try {
-                        const roomId = (session as any).partner_session_id || session.id;
-                        const { data: siblings } = await supabase
-                            .from('workout_sessions')
-                            .select('id, finished_at')
-                            .or(`id.eq.${roomId},partner_session_id.eq.${roomId}`)
-                            .neq('id', session.id);
-
-                        const roomFullyDone = !!(
-                            siblings && siblings.length > 0 &&
-                            (siblings as any[]).every((s: any) => !!s.finished_at)
-                        );
-
-                        if (roomFullyDone) {
-                            await workoutService.markSessionFinished(session.id);
-                            try { localStorage.removeItem('ginx_soft_finalized'); } catch { /* ignore */ }
-                            setShowRescueModal(false);
-                            return;
-                        }
-                    } catch { /* network / RLS error — fall through to normal modal logic */ }
-
-                    if (isSoftFinalized) {
-                        // User already finalized; still waiting for other participants.
-                        // Don't interrupt them with a rescue modal.
                         setShowRescueModal(false);
                         return;
                     }

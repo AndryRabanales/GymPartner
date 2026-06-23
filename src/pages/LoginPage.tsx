@@ -90,7 +90,7 @@ const InstagramEscapeScreen = () => {
                         ¡ABRE LA APP COMPLETA!
                     </h1>
                     <p className="text-neutral-400 text-sm leading-relaxed px-4">
-                        Para poder registrar tu sesión con GPS, entrenar con música de fondo y disfrutar de la experiencia premium de Gymrat.
+                        Para poder registrar tu sesión con GPS, entrenar con música de fondo y disfrutar de la experiencia premium de GINX.
                     </p>
                 </div>
 

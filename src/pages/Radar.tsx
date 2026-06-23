@@ -16,6 +16,7 @@ import {
 import { supabase } from '../lib/supabase';
 import { notificationService } from '../services/NotificationService';
 import { socialService } from '../services/SocialService';
+import { pushService } from '../services/PushService';
 import { useAuth } from '../context/AuthContext';
 import { UserProfileCard } from '../components/ui/UserProfileCard';
 import { BoostModal } from '../components/profile/BoostModal';
@@ -371,7 +372,7 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
                 await socialService.followUser(authUser.id, targetId);
                 toast.success(`¡Siguiendo a ${currentUser.username}!`);
                 
-                // NOTIFY (Background)
+                // NOTIFY (in-app + push, background)
                 const followerName = userProfile?.username || authUser.user_metadata?.username || authUser.user_metadata?.full_name || 'Un Guerrero';
                 await notificationService.createNotification(targetId, {
                     type: 'follower',
@@ -383,6 +384,7 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
                         follower_id: authUser.id
                     }
                 });
+                pushService.send(targetId, 'NUEVO SEGUIDOR', `${followerName} ha comenzado a seguirte.`, { sender_id: authUser.id });
             }
         } catch (error: any) {
             console.error("Error in follow toggle:", error);

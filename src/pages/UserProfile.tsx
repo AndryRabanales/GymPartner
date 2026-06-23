@@ -187,20 +187,12 @@ export const UserProfile = () => {
 
 
     const handleShareProfile = async () => {
-        const username = profile?.username || user?.user_metadata?.full_name || 'gymrat';
+        const username = profile?.username || user?.user_metadata?.full_name || 'atleta';
         const profileUrl = `${window.location.origin}/player/${user?.id}`;
         navigator.clipboard.writeText(profileUrl);
-        alert('🚀 ¡Enlace de tu perfil copiado! Compártelo con el mundo. ¡Has ganado +5 GX!');
-        
-        if (user) {
-            try {
-                console.log("🎉 App shared! Awarding 5 GX points.");
-                await userService.addGxPoints(user.id, 5, 'app_shared');
-                loadUserData();
-            } catch (e) {
-                console.warn("Could not award sharing GX points:", e);
-            }
-        }
+        // GX (+5) is awarded via processReferral() when the invited user
+        // actually completes registration — NOT on share click.
+        alert('🚀 ¡Enlace copiado! Cuando alguien se registre usando tu enlace, ganarás +5 GX.');
     };
 
     const loadUserData = async () => {

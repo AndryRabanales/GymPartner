@@ -11,9 +11,11 @@ const config: CapacitorConfig = {
   },
   plugins: {
     Keyboard: {
-      // Keep the viewport stable when the keyboard appears — no zoom
       resize: 'body',
       resizeOnFullScreen: true,
+    },
+    PushNotifications: {
+      presentationOptions: ['alert', 'badge', 'sound'],
     },
   },
 };

@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { socialService } from './SocialService';
 import { userService } from './UserService';
+import { pushService } from './PushService';
 import toast from 'react-hot-toast';
 
 export interface Notification {
@@ -263,12 +264,12 @@ export const notificationService = {
                 // Auto-follow
                 await socialService.followUser(user.id, targetUserId);
 
-                // Notify Target about New Follower
+                // Notify Target about New Follower (in-app + push)
                 await supabase
                     .from('notifications')
                     .insert({
                         user_id: targetUserId,
-                        type: 'follower', // Explicit follower type
+                        type: 'follower',
                         title: 'NUEVO SEGUIDOR',
                         message: `${senderName} ha comenzado a seguirte.`,
                         data: {
@@ -276,6 +277,7 @@ export const notificationService = {
                             sender_name: senderName
                         }
                     });
+                pushService.send(targetUserId, 'NUEVO SEGUIDOR', `${senderName} ha comenzado a seguirte.`, { sender_id: user.id });
             }
         } catch (followError) {
             console.error("Auto-follow error (non-blocking):", followError);
@@ -402,6 +404,9 @@ export const notificationService = {
                 .from('chats')
                 .update({ last_message_at: new Date().toISOString() })
                 .eq('id', chat.id);
+
+            // Notify the original inviter (push only — they'll see the chat open)
+            pushService.send(senderId, '¡MATCH ACEPTADO!', `${acceptorName} aceptó tu invitación a entrenar.`, { chat_id: chat.id, acceptor_id: user.id });
 
             // Award 1 GX to both users — ONLY the first time this pair ever matches
             await Promise.all([

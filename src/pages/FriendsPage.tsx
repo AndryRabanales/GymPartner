@@ -67,7 +67,7 @@ export const FriendsPage = () => {
                     .from('workout_sessions')
                     .select('id, user_id, partner_id, started_at, is_multiplayer, multiplayer_mode, partner_session_id')
                     .or(`user_id.in.(${friendIds.join(',')}),partner_id.in.(${friendIds.join(',')})`)
-                    .is('finished_at', null)
+                    .is('end_time', null)
                     .gt('started_at', twelveHoursAgo)
                     .order('started_at', { ascending: false });
 
@@ -232,7 +232,7 @@ export const FriendsPage = () => {
                 .from('workout_sessions')
                 .select('id, user_id')
                 .eq('user_id', candidateHostId)
-                .is('finished_at', null)
+                .is('end_time', null)
                 .gt('started_at', twelveHoursAgo)
                 .order('started_at', { ascending: false })
                 .limit(1)
@@ -260,7 +260,7 @@ export const FriendsPage = () => {
                 .from('workout_sessions')
                 .select('id', { count: 'exact', head: true })
                 .eq('partner_session_id', roomSessionId)
-                .is('finished_at', null);
+                .is('end_time', null);
 
             const totalInRoom = 1 + (activeGuestCount || 0); // 1 host + invitados activos
 

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useRef, useState } from 'r
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 import { userService } from '../services/UserService';
+import { pushService } from '../services/PushService';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Age Gate Screen — shown to new users before profile creation
@@ -242,6 +243,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 ensureProfileExists(currentUser).catch(e =>
                     console.error('❌ [Auth] ensureProfileExists failed:', e)
                 );
+                if (event === 'SIGNED_IN') {
+                    pushService.initialize().catch(() => { /* silent */ });
+                }
             }
         });
 
@@ -517,7 +521,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const signOut = async () => {
         console.log('🚪 [Auth] Signing out...');
 
-        // Clear presence in DB before logging out
+        // Clear presence and push token before logging out
         if (user && supabase) {
             try {
                 await supabase
@@ -528,6 +532,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 console.error("Error resetting active status on logout:", err);
             }
         }
+        pushService.clearToken().catch(() => { });
 
         // 1. Clear state immediately so UI reflects logout right away
         setUser(null);
