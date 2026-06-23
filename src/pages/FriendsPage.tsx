@@ -119,7 +119,7 @@ export const FriendsPage = () => {
         setLoading(false);
     };
 
-    const handleInviteToWorkout = async (friend: any, mode: 'conjunto' | 'separado') => {
+    const handleInviteToWorkout = async (friend: any, mode: 'conjunto' = 'conjunto') => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user || !friend.other_user) return;
 
@@ -321,7 +321,7 @@ export const FriendsPage = () => {
                     Mis Matches
                 </h1>
                 <p className="text-neutral-400 text-sm text-center font-medium mt-2 max-w-xs">
-                    Entrena en conjunto o separado con tus compañeros de batalla.
+                    Entrena en conjunto con tus compañeros de batalla.
                 </p>
             </div>
 

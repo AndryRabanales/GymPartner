@@ -164,7 +164,7 @@ export const InboxPage = () => {
                     return;
                 }
 
-                const mode = notification.data?.mode || 'separado';
+                const mode = notification.data?.mode || 'conjunto';
                 
                 // Notify the inviter so their app automatically pulls them into the session
                 const { data: { user } } = await supabase.auth.getUser();

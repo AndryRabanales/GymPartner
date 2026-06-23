@@ -310,7 +310,7 @@ export const WorkoutSession = () => {
 
     const [isMultiplayer, setIsMultiplayer] = useState<boolean>(navState.isMultiplayer ?? cachedCoop.isMultiplayer ?? false);
     const isMultiplayerRef = useRef<boolean>(navState.isMultiplayer ?? cachedCoop.isMultiplayer ?? false);
-    const [multiplayerMode, setMultiplayerMode] = useState<'conjunto' | 'separado' | null>(navState.multiplayerMode ?? cachedCoop.multiplayerMode ?? null);
+    const [multiplayerMode, setMultiplayerMode] = useState<'conjunto' | null>(navState.multiplayerMode ?? cachedCoop.multiplayerMode ?? null);
     const [partnerId, setPartnerId] = useState<string | null>(navState.partnerId ?? cachedCoop.partnerId ?? null);
     const [chatId, setChatId] = useState<string | null>(navState.chatId ?? cachedCoop.chatId ?? null);
     const [partnerSessionId, setPartnerSessionId] = useState<string | null>(navState.partnerSessionId ?? cachedCoop.partnerSessionId ?? null);
@@ -1073,8 +1073,6 @@ export const WorkoutSession = () => {
 
                             return [...mergedExercises, ...localOnly];
                         });
-                    } else if (multiplayerMode === 'separado') {
-                        setPartnerExercises(safeExercises);
                     }
                 }
             })
@@ -1329,10 +1327,6 @@ export const WorkoutSession = () => {
                 setFinalizedParticipantsState(prev => new Set([...prev, sender]));
                 // Intentionally do NOT remove from participants: keep them visible
                 // as locked/read-only rows so remaining users can see their records.
-                // In separado mode, clear stale partner exercises so the spy view doesn't show ghost data
-                if (multiplayerMode === 'separado' && sender === partnerId) {
-                    setPartnerExercises([]);
-                }
                 // Stop rest timers for the leaving participant so their timer freezes (BUG-03)
                 setActiveExercises(prev => prev.map(ex => ({
                     ...ex,
@@ -5516,14 +5510,6 @@ export const WorkoutSession = () => {
                             <p className="text-neutral-400 text-[8px] font-black uppercase tracking-tight">Gimnasio Multijugador Activo</p>
                         </div>
                     </div>
-                    {multiplayerMode === 'separado' && (
-                        <button
-                            onClick={() => setViewingMode(v => v === 'mine' ? 'partner' : 'mine')}
-                            className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider border transition-colors ${viewingMode === 'partner' ? 'bg-yellow-500 text-black border-yellow-500 shadow-[0_0_10px_rgba(250,204,21,0.5)]' : 'bg-neutral-900 text-yellow-500 border-yellow-500/30 hover:bg-neutral-800'}`}
-                        >
-                            {viewingMode === 'mine' ? 'ESPIAR COMPAÑERO' : 'VOLVER A MI RUTINA'}
-                        </button>
-                    )}
                 </div>
             )}
 

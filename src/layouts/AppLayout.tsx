@@ -101,7 +101,7 @@ const CoopInviteToast = ({
 
                         await notificationService.updateInvitationStatus(newNotification, 'accepted');
                         
-                        const mode = newNotification.data?.mode || 'separado';
+                        const mode = newNotification.data?.mode || 'conjunto';
                         
                         // Notify the inviter so their app automatically pulls them into the session
                         const accepterName = user.user_metadata?.full_name || user.user_metadata?.username || 'Tu compañero';

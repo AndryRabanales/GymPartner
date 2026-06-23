@@ -1,11 +1,11 @@
 import React from 'react';
-import { Dumbbell, Swords, Shield, X, Check, Users } from 'lucide-react';
+import { Swords, X, Users } from 'lucide-react';
 import { FadeInImage } from '../ui/FadeInImage';
 
 interface CoopWorkoutModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onAccept: (mode: 'conjunto' | 'separado') => void;
+    onAccept: (mode: 'conjunto') => void;
     inviterUsername: string;
     inviterAvatarUrl?: string;
 }
@@ -41,10 +41,9 @@ export const CoopWorkoutModal: React.FC<CoopWorkoutModalProps> = ({
                     </p>
                 </div>
 
-                {/* Modes */}
-                <div className="p-4 space-y-3">
-                    {/* Conjunto */}
-                    <button 
+                {/* Accept */}
+                <div className="p-4">
+                    <button
                         onClick={() => onAccept('conjunto')}
                         className="w-full bg-neutral-950 border border-gym-primary/50 hover:border-gym-primary rounded-2xl p-4 flex items-center gap-4 transition-all hover:bg-gym-primary/5 group text-left active:scale-95"
                     >
@@ -52,25 +51,9 @@ export const CoopWorkoutModal: React.FC<CoopWorkoutModalProps> = ({
                             <Users size={24} className="text-gym-primary" />
                         </div>
                         <div>
-                            <h3 className="text-sm font-black text-white uppercase tracking-wider">Entrenamiento Conjunto</h3>
+                            <h3 className="text-sm font-black text-white uppercase tracking-wider">Aceptar Invitación</h3>
                             <p className="text-[10px] text-neutral-400 mt-0.5 leading-tight">
                                 Comparten la misma rutina en la misma pantalla. Sus series se intercalan.
-                            </p>
-                        </div>
-                    </button>
-
-                    {/* Separado */}
-                    <button 
-                        onClick={() => onAccept('separado')}
-                        className="w-full bg-neutral-950 border border-white/10 hover:border-white/30 rounded-2xl p-4 flex items-center gap-4 transition-all hover:bg-white/5 group text-left active:scale-95"
-                    >
-                        <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                            <Shield size={24} className="text-white" />
-                        </div>
-                        <div>
-                            <h3 className="text-sm font-black text-white uppercase tracking-wider">Entrenamiento Separado</h3>
-                            <p className="text-[10px] text-neutral-400 mt-0.5 leading-tight">
-                                Rutinas independientes, pero pueden ver los PRs del otro en tiempo real.
                             </p>
                         </div>
                     </button>
