@@ -6,8 +6,6 @@ import { COMMON_EQUIPMENT_SEEDS } from './GymEquipmentService';
  * This should be run once to populate the global exercises catalog
  */
 export async function seedExercisesCatalog() {
-    console.log('[SeedExercises] Starting catalog seed (Sync Mode)...');
-
     const seeds = COMMON_EQUIPMENT_SEEDS;
     const seedNames = new Set(seeds.map(s => s.name));
 
@@ -24,16 +22,13 @@ export async function seedExercisesCatalog() {
     // 2. Identify and delete obsolete exercises
     const toDelete = dbExercises?.filter(dbEx => !seedNames.has(dbEx.name)) || [];
     if (toDelete.length > 0) {
-        console.log(`[SeedExercises] Found ${toDelete.length} old exercises to delete from database.`);
         for (const ex of toDelete) {
             const { error: delError } = await supabase
                 .from('exercises')
                 .delete()
                 .eq('id', ex.id);
             if (delError) {
-                console.warn(`[SeedExercises] Could not delete exercise "${ex.name}" (it may be referenced by existing logs/routines):`, delError.message);
-            } else {
-                console.log(`[SeedExercises] Deleted old exercise: "${ex.name}"`);
+                console.warn(`[SeedExercises] Could not delete "${ex.name}":`, delError.message);
             }
         }
     }

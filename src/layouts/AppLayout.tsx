@@ -720,7 +720,6 @@ export const AppLayout = () => {
 
     // Preload all exercise catalog images for instant rendering without delays
     useEffect(() => {
-        console.log("🖼️ Preloading exercise catalog images for ultra-fast instant rendering...");
         COMMON_EQUIPMENT_SEEDS.forEach(seed => {
             if (seed.image_url) {
                 const img = new Image();
@@ -733,7 +732,6 @@ const notificationSeen = useRef<Set<string>>(new Set());
     useEffect(() => {
         if (!user) return;
 
-        console.log("🔔 Subscribing to real-time notifications for live workouts...");
         const channel = supabase
             .channel(`user-notifications:${user.id}`)
             .on('postgres_changes', {
@@ -743,7 +741,6 @@ const notificationSeen = useRef<Set<string>>(new Set());
                 filter: `user_id=eq.${user.id}`
             }, (payload) => {
                 const newNotification = payload.new;
-                console.log("🔔 Real-time notification received:", newNotification);
 
                 // Guard: Supabase Realtime may fire INSERT events to the sender too when the
                 // RLS SELECT policy includes `data->>'sender_id' = auth.uid()`. We only want

@@ -145,10 +145,8 @@ export const UserProfile = () => {
             // Short delay for better UX
             // Seed DB with new defaults (Background) - Run Only Once
             if (!hasSeededRef.current) {
-                console.log('Triggering background seed...');
                 hasSeededRef.current = true;
                 seedExercisesCatalog().catch(console.error);
-                console.log("UserProfile Loaded - Ready for Reset");
             }
         } else {
             setLoading(false);
@@ -196,8 +194,6 @@ export const UserProfile = () => {
     };
 
     const loadUserData = async () => {
-        console.log("📥 [loadUserData] Started loading profile for user ID:", user?.id);
-        
         const fullName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'Atleta';
         const defaultUsername = fullName
             .toLowerCase()
@@ -207,7 +203,6 @@ export const UserProfile = () => {
 
         // Keep loading=true until real DB data arrives - prevents the flash of incomplete content
         try {
-            console.log("📥 [loadUserData] Fetching profiles table row via Supabase...");
             let { data, error } = await supabase
                 .from('profiles')
                 .select('*')
@@ -219,8 +214,6 @@ export const UserProfile = () => {
                 setLoading(false);
                 return;
             }
-
-            console.log("📥 [loadUserData] Profiles fetch complete. Found row:", !!data);
 
             let profileData = data;
             if (!profileData) {
@@ -251,7 +244,6 @@ export const UserProfile = () => {
 
 
             if (profileData) {
-                console.log("📥 [loadUserData] Setting real profile state.");
                 setProfile(profileData);
 
                 // REFERRAL CHECK

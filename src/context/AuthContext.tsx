@@ -202,8 +202,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const pendingNewUserRef = useRef<User | null>(null);
 
     useEffect(() => {
-        console.log('🔑 [AuthContext] Initializing...');
-
         if (!isSupabaseConfigured() || !supabase) {
             console.warn('⚠️ [AuthContext] Supabase not configured.');
             setLoading(false);
@@ -217,8 +215,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // We do NOT call getSession() separately to avoid race conditions.
         // ─────────────────────────────────────────────────────────────
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-            console.log(`📡 [Auth] Event: ${event} | Session: ${!!newSession}`);
-
             setSession(newSession);
             setUser(newSession?.user ?? null);
 
@@ -226,7 +222,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             if (!hasInitialized.current) {
                 hasInitialized.current = true;
                 setLoading(false);
-                console.log('🔓 [Auth] Loading unblocked on first auth event.');
             }
 
             // Clean the OAuth hash from the URL AFTER Supabase has consumed it
@@ -285,8 +280,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             return;
         }
 
-        console.log('⏰ [Active Tracker] Active session tracker started.');
-        
         let sessionSecs = parseInt(sessionStorage.getItem(`active_secs_${user.id}_${today}`) || '0', 10);
 
         const interval = setInterval(async () => {
@@ -395,7 +388,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (!supabase) return;
 
         try {
-            console.log('🔍 [Profile] Checking profile for:', currentUser.id);
             const { data: existing, error: checkErr } = await supabase
                 .from('profiles')
                 .select('id')
@@ -415,8 +407,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 setNeedsAgeVerification(true);
                 return;
             }
-
-            console.log('✅ [Profile] Already exists.');
 
             // Existing user — process any pending referral
             if (!isProcessingReferral.current) {
