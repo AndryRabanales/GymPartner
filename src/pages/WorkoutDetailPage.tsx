@@ -129,7 +129,6 @@ export default function WorkoutDetailPage() {
 
     const loadWorkoutDetail = async (id: string) => {
         setLoading(true);
-        console.group(`[Detail] 🔍 Loading workout ${id}`);
         try {
             // Get session data
             const { data: session, error: sessionError } = await supabase
@@ -148,17 +147,12 @@ export default function WorkoutDetailPage() {
                 .eq('id', id)
                 .single();
 
+            if (sessionError) console.error('[Detail] Session fetch failed:', sessionError);
+            else console.log('[Detail] Session:', { id: session.id, isMultiplayer: session.is_multiplayer, partnerSessionId: session.partner_session_id });
+
             if (sessionError) {
-                console.error('[Detail] ❌ Session query error:', sessionError);
                 throw sessionError;
             }
-            console.log('[Detail] 📌 Session:', {
-                id: session.id,
-                is_multiplayer: session.is_multiplayer,
-                partner_id: session.partner_id,
-                partner_session_id: session.partner_session_id,
-                gym: (session as any).gyms?.name,
-            });
 
             // Fetch current user's display name (never show "Yo")
             const { data: myProfile } = await supabase
@@ -186,10 +180,8 @@ export default function WorkoutDetailPage() {
 
                 if (foundPartner?.id) {
                     resolvedPartnerSessionId = foundPartner.id;
-                    console.log('[Detail] 🔗 Auto-healed partner_session_id:', resolvedPartnerSessionId);
                 }
             }
-            console.log('[Detail] 🔗 resolvedPartnerSessionId:', resolvedPartnerSessionId ?? 'none');
 
             // Get workout logs with exercise details
             const { data: logs, error: logsError } = await supabase
@@ -211,12 +203,12 @@ export default function WorkoutDetailPage() {
                 .order('exercise_id')
                 .order('set_number');
 
+            if (logsError) console.error('[Detail] Logs fetch failed:', logsError);
+            else console.log('[Detail] My logs:', logs?.length ?? 0, 'rows', logs?.length === 0 ? '← EMPTY, session will show no exercises' : '');
+
             if (logsError) {
-                console.error('[Detail] ❌ Logs query error:', logsError);
                 throw logsError;
             }
-            console.log(`[Detail] 📝 My workout_logs: ${logs?.length ?? 0} rows`);
-            if (!logs?.length) console.warn('[Detail] ⚠️ No logs found — this session will show 0 exercises');
 
             // Group logs by exercise
             const exerciseMap = new Map<string, ExerciseDetail>();
@@ -456,17 +448,13 @@ export default function WorkoutDetailPage() {
                     .maybeSingle();
 
                 const savedSummary: any = (hostWithSummary as any)?.coop_summary ?? null;
-                console.log('[Detail] 🏠 roomId:', roomId);
-                console.log('[Detail] 💾 coop_summary snapshot:', savedSummary
-                    ? `✅ found — ${savedSummary.players?.length ?? 0} players, ${savedSummary.exerciseSets?.length ?? 0} exercises`
-                    : '❌ not found — will fallback to live fetch');
+                console.log('[Detail] coop_summary:', savedSummary ? `snapshot found (${savedSummary.players?.length} players, ${savedSummary.exerciseSets?.length} exercises)` : 'not found → live fetch');
 
-                if (savedSummary && savedSummary.players && savedSummary.exerciseSets) {
+                if (savedSummary && savedSummary.players?.length > 0 && savedSummary.exerciseSets?.length > 0) {
                     // Fast path: new-format snapshot already saved
                     setCoopSummaryRaw(savedSummary);
                 } else {
                     // Live fetch: mirror the coopSummaryData effect from WorkoutSession.tsx
-                    console.log('[Detail] 🔄 Falling back to live workout_logs fetch...');
                     try {
                         const { data: roomSessions } = await supabase
                             .from('workout_sessions')
@@ -541,11 +529,10 @@ export default function WorkoutDetailPage() {
 
                             if (players.length > 0) {
                                 setCoopSummaryRaw({ players, exerciseSets });
-                                console.log('✅ [History] coop summary built live:', players.length, 'players,', exerciseSets.length, 'exercises');
                             }
                         }
                     } catch (liveErr) {
-                        console.warn('⚠️ [History] live coop summary fetch failed:', liveErr);
+                        console.error('[Detail] live coop summary fetch failed:', liveErr);
                     }
                 }
 
@@ -595,7 +582,6 @@ export default function WorkoutDetailPage() {
                                 sessionId: p.sessionId
                             } satisfies RoomParticipant;
                         });
-                    console.log('✅ [History] coop_summary cargado:', roomParticipants.length, 'otros participantes');
                 } else {
                 // ── Fallback: reconstruct from raw session + logs (legacy / no summary) ──
                 const [{ data: guestSessions, error: gErr }, { data: hostRow, error: hErr }] = await Promise.all([
@@ -611,8 +597,8 @@ export default function WorkoutDetailPage() {
                         .neq('user_id', session.user_id)
                         .maybeSingle()
                 ]);
-                if (gErr) console.warn('⚠️ Could not fetch guest sessions (RLS):', gErr.message);
-                if (hErr) console.warn('⚠️ Could not fetch host session (RLS):', hErr.message);
+                if (gErr) console.error('[Detail] Could not fetch guest sessions (RLS):', gErr.message);
+                if (hErr) console.error('[Detail] Could not fetch host session (RLS):', hErr.message);
 
                 const otherSessions = [
                     ...(guestSessions || []),
@@ -633,7 +619,7 @@ export default function WorkoutDetailPage() {
                             .order('exercise_id')
                             .order('set_number')
                     ]);
-                    if (pLogsErr) console.warn(`⚠️ Could not fetch logs for participant ${ps.user_id} (RLS?):`, pLogsErr.message);
+                    if (pLogsErr) console.error(`[Detail] Could not fetch logs for participant ${ps.user_id} (RLS?):`, pLogsErr.message);
 
                     const pExMap = new Map<string, ExerciseDetail>();
                     let pVol = 0;
@@ -687,21 +673,13 @@ export default function WorkoutDetailPage() {
                 }));
                 } // end fallback
                 } catch (roomFetchErr) {
-                    console.warn('⚠️ Room participant fetch failed (RLS or network):', roomFetchErr);
+                    console.error('[Detail] Room participant fetch failed (RLS or network):', roomFetchErr);
                     // Gracefully continue — show own session without partner columns
                 }
             }
 
             const finalExercises = Array.from(exerciseMap.values());
-            console.log('[Detail] ✅ Final result:', {
-                myExercises: finalExercises.length,
-                myVolume: totalVol,
-                partnerExercises: partnerExercises.length,
-                roomParticipants: roomParticipants.length,
-                roomParticipantsDetail: roomParticipants.map(p => ({ name: p.name, exercises: p.exercises.length, volume: p.volume })),
-                coopSummarySet: !!coopSummaryRaw,
-            });
-            console.groupEnd();
+            console.log('[Detail] Final:', { myExercises: finalExercises.length, roomParticipants: roomParticipants.length });
 
             setWorkout({
                 id: session.id,
@@ -729,8 +707,7 @@ export default function WorkoutDetailPage() {
 
             setLoading(false);
         } catch (error) {
-            console.error('[Detail] ❌ Error loading workout detail:', error);
-            console.groupEnd();
+            console.error('[Detail] Error loading workout detail:', error);
             setLoading(false);
         }
     };

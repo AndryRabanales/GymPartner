@@ -4957,6 +4957,7 @@ export const WorkoutSession = () => {
             }
         }
 
+        console.log('[Flow] sets pre-saved', { saved: savedCount, pendingSync: pendingSyncCount, sessionId: finalSessionId, exercises: activeExercises.length });
         if (savedCount > 0) {
             await Promise.all(savePromises);
             if (user?.id) await detectAndMarkPRs(finalSessionId, user.id);
@@ -5243,16 +5244,21 @@ export const WorkoutSession = () => {
                                         .filter(s => Object.keys(s.playerData).length > 0)
                                 }));
 
-                            console.log('[Flow] coop summary built', { exerciseSets: exerciseSets.length });
-                            // Use an RPC (SECURITY DEFINER) so guests can write to the
-                            // host's session row — direct UPDATE is blocked by RLS for non-owners.
-                            const { error: summaryErr } = await supabase.rpc('upsert_coop_summary', {
-                                p_room_id: coopRoomId,
-                                p_summary: { players, exerciseSets }
-                            });
-                            if (summaryErr) throw summaryErr;
-
-                            console.log('[Flow] coop summary saved:', { players: players.length, exerciseSets: exerciseSets.length });
+                            console.log('[Flow] coop summary built', { exerciseSets: exerciseSets.length, exercises: activeExercisesRef.current.length, players: players.length });
+                            if (exerciseSets.length === 0) {
+                                // Don't overwrite any existing valid snapshot with empty data.
+                                // WorkoutDetailPage will fall back to a live workout_logs query.
+                                console.warn('[Flow] ⚠️ exerciseSets=0 — skipping upsert (detail page will use live fetch from workout_logs)');
+                            } else {
+                                // Use an RPC (SECURITY DEFINER) so guests can write to the
+                                // host's session row — direct UPDATE is blocked by RLS for non-owners.
+                                const { error: summaryErr } = await supabase.rpc('upsert_coop_summary', {
+                                    p_room_id: coopRoomId,
+                                    p_summary: { players, exerciseSets }
+                                });
+                                if (summaryErr) throw summaryErr;
+                                console.log('[Flow] coop summary saved:', { players: players.length, exerciseSets: exerciseSets.length });
+                            }
                         }
                     } catch (e) {
                         console.error('[Flow] coop summary error (non-blocking):', e);
