@@ -5155,15 +5155,10 @@ export const WorkoutSession = () => {
                 sessionStorage.removeItem('ginx_temp_exit_active');
 
                 // ── Persist complete coop summary so History shows all data ──────────
-                // Runs for every participant who finishes last in their DB check.
-                // The HOST also always runs this (isLastToFinalize=true unconditionally),
-                // so if guests finalize later they will overwrite with fresher data.
-                //
-                // Exercise data is read from IN-MEMORY state (activeExercisesRef), NOT
-                // from workout_logs in the DB. This eliminates the race condition where
-                // the last person's DB writes haven't completed yet when the summary is
-                // built. The in-memory state is kept fully in sync via sync_state
-                // broadcasts throughout the session and is authoritative at finalization.
+                // Runs only for the LAST participant to finalize (isLastToFinalize=true).
+                // At this point all other participants have already finished their pre-saves
+                // (they finalized before us), so workout_logs in the DB is fully up-to-date
+                // for all sessions. Reading from DB here is correct and race-condition-free.
                 if (isMultiplayer && multiplayerMode === 'conjunto' && isLastToFinalize) {
                     const coopRoomId = isInviter ? finalSessionId : (syncRoomId || finalSessionId);
                     try {

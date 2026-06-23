@@ -126,20 +126,12 @@ export const HistoryPage = () => {
                 .order('started_at', { ascending: false });
 
             if (error) {
-                console.error('[History] ❌ Query error:', error);
+                console.error('[History] Query failed:', error);
                 throw error;
+            } else {
+                const withLogs = (data || []).filter((s: any) => s.workout_logs?.length > 0).length;
+                console.log('[History] Loaded:', { total: (data || []).length, withLogs, withoutLogs: (data || []).length - withLogs });
             }
-
-            console.group('[History] 📋 Raw query results');
-            console.log('Total sessions with end_time:', (data || []).length);
-            const withLogs = (data || []).filter((s: any) => s.workout_logs?.length > 0);
-            const noLogs = (data || []).filter((s: any) => !s.workout_logs?.length);
-            console.log('Sessions WITH workout_logs:', withLogs.length);
-            console.log('Sessions WITHOUT workout_logs (will show 0 volume/muscles):', noLogs.length);
-            if (noLogs.length > 0) {
-                console.log('No-log session IDs (first 5):', noLogs.slice(0, 5).map((s: any) => ({ id: s.id, started_at: s.started_at, is_multiplayer: s.is_multiplayer })));
-            }
-            console.groupEnd();
 
             // ── N-person room lookup ─────────────────────────────────────────────
             // For each multiplayer session, the "room" is anchored at the HOST's
@@ -308,24 +300,7 @@ export const HistoryPage = () => {
                 };
             });
 
-            console.group('[History] ✅ Records built');
-            console.log('Total records:', records.length);
-            const withData = records.filter(r => r.muscles_trained.length > 0 || r.total_volume > 0);
-            const empty = records.filter(r => r.muscles_trained.length === 0 && r.total_volume === 0);
-            console.log('Records with muscles/volume:', withData.length);
-            console.log('Records with 0 data (empty sessions):', empty.length);
-            if (records.length > 0) {
-                console.log('Most recent record:', {
-                    id: records[0].id,
-                    started_at: records[0].started_at,
-                    duration_minutes: records[0].duration_minutes,
-                    total_volume: records[0].total_volume,
-                    muscles_trained: records[0].muscles_trained,
-                    is_multiplayer: records[0].is_multiplayer,
-                    partner_names: records[0].partner_names,
-                });
-            }
-            console.groupEnd();
+            console.log('[History] Records ready:', records.length, '— sample:', records[0] ? { id: records[0].id, muscles: records[0].muscles_trained, volume: records[0].total_volume, duration: records[0].duration_minutes } : 'empty');
             setHistory(records);
             setLoading(false);
         } catch (error) {
