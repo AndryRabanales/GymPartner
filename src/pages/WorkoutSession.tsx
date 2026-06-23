@@ -360,17 +360,12 @@ export const WorkoutSession = () => {
         if (!user) return;
         const state = location.state as any;
         if (state && state.isMultiplayer) {
-            console.log('🔄 Sincronizando nuevo estado multijugador desde location.state:', state);
-            
             // Clean local exercise state ONLY if forceNewSession is explicitly requested (fresh start)
             if (state.forceNewSession === true) {
-                console.log('🧹 [Force New Session] Cleaning exercises from state');
                 setActiveExercises([]);
                 setCurrentRoutineName('');
                 setOriginalExerciseIds([]);
                 setIsRoutineModified(false);
-            } else {
-                console.log('🚀 [Preserve Session] Preserving existing exercises to invite partner to current room');
             }
             setIsMultiplayer(true);
             if (state.multiplayerMode) setMultiplayerMode(state.multiplayerMode);
@@ -387,7 +382,6 @@ export const WorkoutSession = () => {
             if (!nextIsInv) {
                 const nextRoomId = state.partnerSessionId || state.chatId;
                 if (nextRoomId) {
-                    console.log('🔑 Sincronizando syncRoomId para el invitado:', nextRoomId);
                     setSyncRoomId(nextRoomId);
                 }
             }
@@ -527,7 +521,6 @@ export const WorkoutSession = () => {
         const hostId = isInviter ? user?.id : partnerId;
         const fgId = participants.find(p => p.id !== hostId)?.id || partnerId || null;
         if (fgId !== firstGuestId) {
-            console.log('🎯 Updating firstGuestId deterministically to:', fgId);
             setFirstGuestId(fgId);
         }
     }, [participants, isInviter, user?.id, partnerId, firstGuestId]);
@@ -613,7 +606,6 @@ export const WorkoutSession = () => {
             // wait for sync_state from the host. Deleting here would break the room.
             const isGuest = isMultiplayerRef.current && !isInviterRef.current;
             if (sessId && exercisesCount === 0 && !isGuest) {
-                console.log("🧹 Unmount: Deleting empty/unstarted workout session:", sessId);
                 supabase.from('workout_sessions').delete().eq('id', sessId).then(() => {
                     localStorage.removeItem(`workout_draft_${sessId}`);
                 });
@@ -781,7 +773,6 @@ export const WorkoutSession = () => {
                     });
                 }
                 if (newPresences && newPresences.length > 0 && activeExercisesRef.current.length > 0) {
-                    console.log('👥 New user joined presence. Hydrating them with active exercises...');
                     channel.send({
                         type: 'broadcast',
                         event: 'sync_state',
@@ -861,7 +852,6 @@ export const WorkoutSession = () => {
                             const next = [...prev];
                             for (const kp of knownParticipants) {
                                 if (!next.find(p => p.id === kp.id)) {
-                                    console.log('🎉 [Dynamic Discovery] Nuevo jugador detectado en la sala:', kp.username);
                                     next.push(kp);
                                     updated = true;
                                 }
@@ -1096,7 +1086,6 @@ export const WorkoutSession = () => {
                 if (sender === user.id) return; // Ignore echoes
 
                 if (activeExercisesRef.current && activeExercisesRef.current.length > 0) {
-                    console.log('🔄 Host/Partner received hydration request. Broadcasting active exercises...', activeExercisesRef.current);
                     channelRef.current?.send({
                         type: 'broadcast',
                         event: 'sync_state',
@@ -1114,7 +1103,6 @@ export const WorkoutSession = () => {
                 const currentSessionId = sessionIdRef.current;
                 const currentStartTime = startTimeRef.current;
                 if (currentSessionId) {
-                    console.log('🔄 Broadcasting session ID and start time for hydration...', currentSessionId);
                     channelRef.current?.send({
                         type: 'broadcast',
                         event: 'sync_session_id',
@@ -1130,7 +1118,6 @@ export const WorkoutSession = () => {
                 const { sender } = payload.payload;
                 if (sender === user.id) return; // Ignore echoes
                 
-                console.warn('⚠️ [Destruction Protocol] Received session_terminated signal from host');
                 import('react-hot-toast').then(({ default: t }) => t.error("Misión abortada por el anfitrión."));
                 
                 // Clear local cache immediately
@@ -1157,7 +1144,6 @@ export const WorkoutSession = () => {
                 // como aproximación segura y fiel al espíritu del requisito, cada participante
                 // restante conserva TODOS sus datos y su sesión sigue activa, convertida a
                 // modo individual — nadie es expulsado ni pierde su progreso.
-                console.warn('⚠️ [Host Cancelled] El host canceló su entrenamiento — continuamos en modo individual sin perder datos.');
                 import('react-hot-toast').then(({ default: t }) => t.success('El anfitrión canceló su sesión. Tu progreso se mantiene — continúas de forma individual.', { duration: 6000 }));
 
                 try {
@@ -1197,7 +1183,6 @@ export const WorkoutSession = () => {
                 // Guard: run once per room close
                 if (isLeavingPageRef.current) return;
 
-                console.log('🏁 [Guest] Host closed the room — saving sets now, guest presses Finalizar when ready.');
 
                 // ── Save sets immediately while exercises are in memory ──────────────
                 // We save NOW (before the guest presses Finalizar) because closeRoom()
@@ -1422,7 +1407,7 @@ export const WorkoutSession = () => {
                     workoutService.markSessionFinished(mySessionId, finishedAt).then(() => {
                         // end_time now set → session appears in Historial
                     }).catch((e) => {
-                        console.warn('room_all_finished: failed to self-stamp finished_at:', e);
+                        console.error('room_all_finished: failed to self-stamp finished_at:', e);
                     });
                 }
             })
@@ -1437,7 +1422,6 @@ export const WorkoutSession = () => {
                 if (sender === user.id) return; // Ignore echoes
 
                 if (partnerSessionId) {
-                    console.log('🔗 Received partner session ID via broadcast:', partnerSessionId);
                     partnerSessionIdRef.current = partnerSessionId;
                     setPartnerSessionId(partnerSessionId);
 
@@ -1462,16 +1446,13 @@ export const WorkoutSession = () => {
                                         .eq('id', currentSessionId)
                                         .then(({ error }) => {
                                             if (error) console.error('Error linking partner session:', error);
-                                            else console.log('✅ Linked partner session successfully!');
                                         });
                                 } else {
-                                    console.log('ℹ️ partner_session_id already set — skipping overwrite to preserve room topology.');
                                 }
                             });
                         }
                     } else if (!isInviterRef.current && !sessionIdRef.current && !isStartingSessionRef.current) {
                         // Guest auto-starts their own session to activate their timer and enable logging
-                        console.log('🚀 Guest auto-starting session on partner session ID sync...');
                         startNewSession(undefined, partnerSessionId, true, multiplayerMode || 'conjunto', partnerId || sender).then(() => {
                             if (partnerStartTime) {
                                 setStartTime(new Date(partnerStartTime));
@@ -1482,7 +1463,6 @@ export const WorkoutSession = () => {
             })
             .subscribe(async (status) => {
                 if (status === 'SUBSCRIBED') {
-                    console.log('✅ Conectado al canal multijugador');
                     
                     // Track local presence state
                     await channel.track({
@@ -1507,7 +1487,6 @@ export const WorkoutSession = () => {
 
                     // ANY participant requests hydration explicitly upon reconnecting to guarantee no missed events
                     if (isMultiplayer) {
-                        console.log('🔄 Requesting hydration from partner to catch up on missed events...');
                         channel.send({
                             type: 'broadcast',
                             event: 'request_hydration',
@@ -1553,7 +1532,6 @@ export const WorkoutSession = () => {
                 // pero no cargó el coop"). Tell them plainly what's happening — the
                 // host simply hasn't started their workout yet — so they know it's
                 // not broken and can retry once the host actually begins.
-                console.warn('⏱️ [Guest Poll] Timed out waiting for host session after', MAX_ATTEMPTS, 'attempts.');
                 import('react-hot-toast').then(({ default: t }) =>
                     t('⏳ Tu compañero aún no inició su entrenamiento. Cuando lo haga, vuelve a intentar unirte desde la invitación.', {
                         duration: 7000,
@@ -1567,7 +1545,6 @@ export const WorkoutSession = () => {
             try {
                 const { data } = await workoutService.getActiveSession(hostId);
                 if (data && !cancelled) {
-                    console.log('🔗 [Guest Poll] Host session found:', data.id);
                     setPartnerSessionId(data.id);
                     setSyncRoomId(data.id);
                     return; // channel effect re-runs when syncRoomId changes
@@ -1594,7 +1571,6 @@ export const WorkoutSession = () => {
 
                     if (finishedSess && !cancelled) {
                         cancelled = true; // detener el polling antes de tocar estado
-                        console.warn('⚠️ [TD-02] El host ya finalizó su sesión — convirtiendo al guest a modo individual.');
 
                         // Convertir sesión del guest a solo si ya fue creada
                         try {
@@ -1659,7 +1635,6 @@ export const WorkoutSession = () => {
             try {
                 const open = await workoutService.isRoomOpen(syncRoomId);
                 if (!open && !isLeavingPageRef.current) {
-                    console.warn('⚠️ [Guest Poll] Room closed — host finished. Notifying guest to press Finalizar.');
                     // Do NOT force showSummary here — guest may still be logging sets.
                     // A persistent toast prompts them; handleFinalizeSession handles
                     // already-closed sessions gracefully (returns success).
@@ -1797,7 +1772,7 @@ export const WorkoutSession = () => {
             setCoopSummaryData({ players, exerciseSets });
         };
 
-        load().catch(e => console.warn('[CoopSummary] DB fetch failed, falling back to in-memory:', e));
+        load().catch(e => console.error('[CoopSummary] DB fetch failed, falling back to in-memory:', e));
     }, [showSummary, isMultiplayer, multiplayerMode, sessionId, syncRoomId, isInviter]);
 
     // Broadcast updated participant list whenever it changes on the Host's device to keep row slot alignment
@@ -1805,7 +1780,6 @@ export const WorkoutSession = () => {
     useEffect(() => {
         if (isMultiplayer && isInviter && channelRef.current && user && participants.length > 0
             && activeExercisesRef.current.length > 0) {
-            console.log('📢 Host broadcasting updated participant list to all devices:', participants.map(p => p.username));
             channelRef.current.send({
                 type: 'broadcast',
                 event: 'sync_state',
@@ -1823,14 +1797,12 @@ export const WorkoutSession = () => {
     // Delay link of partner session ID if it arrived before our sessionId was created
     useEffect(() => {
         if (sessionId && partnerSessionIdRef.current) {
-            console.log('🔗 Delayed linking of partner session:', partnerSessionIdRef.current);
             supabase
                 .from('workout_sessions')
                 .update({ partner_session_id: partnerSessionIdRef.current })
                 .eq('id', sessionId)
                 .then(({ error }) => {
                     if (error) console.error('Error linking partner session delayed:', error);
-                    else console.log('✅ Delayed linking successful!');
                 });
         }
     }, [sessionId]);
@@ -1852,7 +1824,6 @@ export const WorkoutSession = () => {
             if (!isMultiplayer || !user) return;
 
             if (document.visibilityState === 'visible') {
-                console.log('📱 [Wakeup] App became visible. Re-tracking presence and requesting hydration...');
 
                 // Wait for the Supabase Realtime WebSocket to fully reconnect after background/sleep.
                 // The channel may have been silently dropped by the OS — 1.5s is sufficient to reconnect.
@@ -1865,16 +1836,14 @@ export const WorkoutSession = () => {
                         username: user.user_metadata?.username || user.user_metadata?.full_name || 'Yo',
                         avatar_url: user.user_metadata?.avatar_url || '',
                         joined_at: joinTimestamp
-                    }).then(() => {
-                        console.log('✅ [Wakeup] Presence re-tracked successfully.');
-                    }).catch(e => console.warn('⚠️ [Wakeup] Failed to re-track presence:', e));
+                    }).catch(e => console.error('[Wakeup] Failed to re-track presence:', e));
 
                     // Request full state hydration from the partner to recover any missed events.
                     channelRef.current.send({
                         type: 'broadcast',
                         event: 'request_hydration',
                         payload: { sender: user.id }
-                    }).catch(e => console.warn('⚠️ [Wakeup] Failed to send hydration request:', e));
+                    }).catch(e => console.error('[Wakeup] Failed to send hydration request:', e));
                 }, 1500);
             }
             // NOTE: On 'hidden' (phone locked), we intentionally do NOT clear any session state.
@@ -2126,7 +2095,6 @@ export const WorkoutSession = () => {
 
         // 1. Start Session if needed (Delayed Start)
         if (!sessionId) {
-            console.log("🚀 Auto-starting session on first exercise add...");
             const result = await startNewSession();
             if (result && result.freshArsenal) {
                 activeArsenal = result.freshArsenal;
@@ -2452,7 +2420,6 @@ export const WorkoutSession = () => {
             // pausing the visible clock must never let a session live past the
             // hard limit and become a zombie.
             if (diff >= MAX_SESSION_MS) {
-                console.warn('⏰ Sesión superó el límite de 5 horas. Cerrando automáticamente...');
                 setIsFinished(true);
                 isLeavingPageRef.current = true;
                 // Clean up all local state silently
@@ -2525,7 +2492,6 @@ export const WorkoutSession = () => {
                 const dist = haversineDistance(userPos.lat, userPos.lng, Number(gymRow.lat), Number(gymRow.lng));
                 if (dist > GEO_RADIUS_M) {
                     geoLeftRadiusRef.current = true;
-                    console.warn(`📍 Geo-validación continua: te alejaste del gym (${Math.round(dist)}m) — hoy no sumarás GX/racha de entrenamiento.`);
                     import('react-hot-toast').then(({ default: t }) =>
                         t('Te alejaste del gym — hoy no sumarás GX/racha de entrenamiento 📍', {
                             duration: 5000,
@@ -2586,7 +2552,6 @@ export const WorkoutSession = () => {
             try {
                 const closedIds = await workoutService.cleanOrphanSessions(userId);
                 if (closedIds.length > 0) {
-                    console.log(`🧹 Purgando ${closedIds.length} draft(s) de localStorage de sesiones cerradas:`, closedIds);
                     closedIds.forEach(id => {
                         localStorage.removeItem(`workout_draft_${id}`);
                     });
@@ -2602,7 +2567,7 @@ export const WorkoutSession = () => {
                     }
                 }
             } catch (cleanupErr) {
-                console.warn('⚠️ cleanOrphanSessions falló pero continuamos:', cleanupErr);
+                console.error('cleanOrphanSessions failed:', cleanupErr);
             }
 
             // 1. PHASE 1: Instant Data Fetch (Settings & Gyms)
@@ -2667,7 +2632,7 @@ export const WorkoutSession = () => {
                             name: dbGym.name || gymName,
                             address: dbGym.address || '',
                             location: { lat: dbGym.lat, lng: dbGym.lng }
-                        }).catch(e => console.warn('⚠️ Auto-register host gym failed:', e));
+                        }).catch(e => console.error('Auto-register host gym failed:', e));
                     }
 
                     // Override the guest's gym with the host's gym.
@@ -2744,7 +2709,6 @@ export const WorkoutSession = () => {
                                         return Array.from(new Map(merged.map(i => [i.id, i])).values());
                                     });
                                 }
-                                console.log(`✅ Predeterminado detectado: ${g.gym_name} (${Math.round(distM)}m)`);
 
                             } else if (nearbyDefaults.length > 1) {
                                 // R7: multiple predeterminados nearby → picker (does NOT auto-save)
@@ -2777,7 +2741,7 @@ export const WorkoutSession = () => {
                             setResolvedGymId(null);
                         }
                     } catch (err) {
-                        console.warn('Phase 3 GPS error:', err);
+                        console.error('Phase 3 GPS error:', err);
                         // GPS failed — cannot determine location, use free workout.
                         setDetectedGymName('Entrenamiento Libre');
                         setResolvedGymId(null);
@@ -2801,7 +2765,6 @@ export const WorkoutSession = () => {
                     // save the selected gym as the new predeterminado
                     if (gym.saveAsDefault) {
                         await userService.toggleHomeBase(user!.id, gym.id, true);
-                        console.log(`⭐ Guardado como predeterminado: ${gym.name}`);
                     }
 
                     setDetectedGymName(gym.name || '');
@@ -2842,7 +2805,6 @@ export const WorkoutSession = () => {
             const isTooOldToRestore = activeAge > SESSION_MAX_RESTORE_MS;
 
             if (active && isTooOldToRestore) {
-                console.warn(`⚠️ Sesión activa demasiado antigua (${(activeAge / 60000).toFixed(0)} min) — cerrando y descartando.`);
                 localStorage.removeItem(`workout_draft_${active.id}`);
                 localStorage.removeItem('ginx_coop_state');
                 await workoutService.finishSession(active.id, 'Cierre automático: límite de 5 horas');
@@ -2869,7 +2831,7 @@ export const WorkoutSession = () => {
                     supabase.from('workout_sessions').update({
                         is_multiplayer: true,
                         partner_id: currentPartnerId
-                    }).eq('id', active.id).catch(e => console.warn('Failed to upgrade session to multiplayer:', e));
+                    }).eq('id', active.id).catch(e => console.error('Failed to upgrade session to multiplayer:', e));
                 }
 
                 // If active session has a gym_id and it is different from targetGymId, re-fetch items and routines
@@ -2901,7 +2863,6 @@ export const WorkoutSession = () => {
                 // If we are already training in this exact session, DO NOT re-hydrate it
                 // to prevent losing unsaved exercises/routines currently active in our React state.
                 if (sessionIdRef.current === active.id && activeExercisesRef.current.length > 0) {
-                    console.log("🚀 [Preserve State] We are already in this session with exercises loaded. Skipping hydration.");
                     setLoading(false);
                 } else {
                     // Hydrate from Draft or DB
@@ -2998,14 +2959,12 @@ export const WorkoutSession = () => {
 
                 // If there was a stale active session but we are joining a multiplayer session, finish it first
                 if (active && (forceNewSession || isJoiningNewCoop)) {
-                    console.log("🧹 Finishing stale active session before joining multiplayer:", active.id);
                     localStorage.removeItem(`workout_draft_${active.id}`);
                     await workoutService.finishSession(active.id, "Stale session auto-closed to join multiplayer");
                 }
 
                 // Clear any other global state files preventatively on forced new session or new coop join
                 if (forceNewSession || isJoiningNewCoop) {
-                    console.log("🧹 [Coop Cleanup] Purging stale local draft keys to prevent ghost data leak on new session");
                     localStorage.removeItem(STORAGE_KEY);
                     localStorage.removeItem('workout_session_state');
                     localStorage.removeItem('ginx_coop_state');
@@ -3039,7 +2998,6 @@ export const WorkoutSession = () => {
                 const autoRoutine = routineIdParam ? localRoutines.find(r => r.id === routineIdParam) : null;
 
                 if (autoRoutine && !sessionIdRef.current) {
-                    console.log("⚡ Auto-loading routine from search parameter:", autoRoutine.name);
                     setCurrentRoutineName(autoRoutine.name);
                     const result = await startNewSession(targetGymId || undefined, undefined, currentIsMultiplayer, currentMultiplayerMode, currentPartnerId);
                     await loadRoutine(autoRoutine, result?.freshArsenal || mergedInventory);
@@ -3062,14 +3020,12 @@ export const WorkoutSession = () => {
                                 .eq('id', roomIdFromNav)
                                 .maybeSingle();
                             if (roomSess) {
-                                console.log('🔗 Host session already finished — using room ID from nav state:', roomIdFromNav);
                                 partnerActive = roomSess;
                             }
                         }
                     }
 
                     if (partnerActive) {
-                        console.log("🔗 Found active partner session on init:", partnerActive.id);
                         partnerSessionIdRef.current = partnerActive.id;
                         setPartnerSessionId(partnerActive.id);
 
@@ -3080,7 +3036,6 @@ export const WorkoutSession = () => {
                         if (currentIsMultiplayer && currentMultiplayerMode === 'conjunto' && !currentIsInviter && !sessionIdRef.current) {
                             // Flag: keep loading=true until sync_state arrives with exercises
                             waitingForGuestSyncRef.current = true;
-                            console.log('🚀 Guest auto-starting session because partner has active session...');
                             await startNewSession(partnerActive.gym_id || undefined, partnerActive.id, currentIsMultiplayer, currentMultiplayerMode, currentPartnerId);
                             setStartTime(new Date(partnerActive.started_at));
 
@@ -3095,7 +3050,6 @@ export const WorkoutSession = () => {
                             // waitingForGuestSyncRef is still true, so the next arrival correctly
                             // releases loading AND populates activeExercises.
                             if (channelRef.current) {
-                                console.log('🔄 [GuestSync] Re-requesting hydration after session start (post-reset safety)...');
                                 channelRef.current.send({
                                     type: 'broadcast',
                                     event: 'request_hydration',
@@ -3112,7 +3066,6 @@ export const WorkoutSession = () => {
                             // WorkoutDetailPage uses to load partner logs in the history view.
                             const newGuestSessionId = sessionIdRef.current;
                             if (newGuestSessionId && channelRef.current) {
-                                console.log('🔗 [GuestSync] Broadcasting guest session ID to room:', newGuestSessionId);
                                 channelRef.current.send({
                                     type: 'broadcast',
                                     event: 'sync_session_id',
@@ -3130,7 +3083,6 @@ export const WorkoutSession = () => {
                             if (guestSyncTimeoutRef.current) clearTimeout(guestSyncTimeoutRef.current);
                             guestSyncTimeoutRef.current = setTimeout(() => {
                                 if (waitingForGuestSyncRef.current) {
-                                    console.warn('⏰ [GuestSync] No sync_state received in 12s — releasing loading.');
                                     waitingForGuestSyncRef.current = false;
                                     setLoading(false);
                                 }
@@ -3158,15 +3110,12 @@ export const WorkoutSession = () => {
 
     const getClosestGymIdFromGPS = async (userId: string): Promise<{ id: string; name: string } | null> => {
         try {
-            console.log("🎯 Adquiriendo GPS en tiempo real para inicio de entrenamiento...");
             const gpsPosition = await getCurrentPosition({ enableHighAccuracy: true, timeout: 1500 })
                 .catch(async () => {
-                    console.log("⚠️ GPS de alta precisión falló o timeout, intentando rápido...");
                     return await getCurrentPosition({ enableHighAccuracy: false, timeout: 1000 });
                 });
 
             if (!gpsPosition) {
-                console.warn("❌ GPS no disponible.");
                 return null;
             }
 
@@ -3191,11 +3140,9 @@ export const WorkoutSession = () => {
 
             if (gymsWithDistance.length > 0) {
                 const closestGym = gymsWithDistance[0];
-                console.log(`🎯 Ubicación confirmada en: ${closestGym.name} (${Math.round(closestGym.dist)}m)`);
 
                 // Auto-add to passport if not already registered
                 if (!gyms.some(g => g.gym_id === closestGym.id)) {
-                    console.log(`✈️ Agregando ${closestGym.name} al pasaporte de forma automática...`);
                     await userService.addGymToPassport(userId, {
                         place_id: closestGym.place_id,
                         name: closestGym.name,
@@ -3221,14 +3168,11 @@ export const WorkoutSession = () => {
     ): Promise<{ gymId: string | null; freshArsenal?: any[] }> => {
         if (!user) return { gymId: null };
         if (isStartingSessionRef.current) {
-            console.log("⚠️ startNewSession already in progress, ignoring duplicate call");
             return { gymId: null };
         }
         isStartingSessionRef.current = true;
         setLoading(true);
         try {
-            console.log("🚀 Starting NEW Session explicitly...");
-
             // Clear the deleted-exercise filter so re-added exercises from a previous
             // session don't get permanently blocked in the new session's CRDT merge.
             deletedExerciseIdsRef.current.clear();
@@ -3246,18 +3190,6 @@ export const WorkoutSession = () => {
             const finalMultiplayerMode = overrideMultiplayerMode ?? multiplayerMode;
             const finalPartnerId = overridePartnerId ?? partnerId;
 
-            console.log("📍 GPS already resolved or pre-selected. Using finalGymId:", finalGymId);
-            console.log("📡 [startNewSession] Argumentos para startSession:", {
-                userId: user.id,
-                finalGymId,
-                isMultiplayer: finalIsMultiplayer,
-                multiplayerMode: finalMultiplayerMode,
-                partnerId: finalPartnerId,
-                forcePartnerSessionId,
-                partnerSessionId,
-                finalPartnerSessionId: forcePartnerSessionId || partnerSessionId || undefined
-            });
-
             // 🧹 Automatic prevention: Clean any ghost sessions before starting, then
             // purge their localStorage draft keys so stale data can't leak back in.
             const orphanIds = await workoutService.cleanOrphanSessions(user.id);
@@ -3272,8 +3204,6 @@ export const WorkoutSession = () => {
                 forcePartnerSessionId || partnerSessionId || undefined
             );
             
-            console.log("📡 [startNewSession] Respuesta de startSession:", { newSession, startError });
-
             if (startError) throw startError;
 
             // Clear local backup on success
@@ -3285,7 +3215,6 @@ export const WorkoutSession = () => {
                 setStartTime(new Date());
                 setElapsedTime("00:00");
                 setIsFinished(false);
-                console.log('✅ Session started:', newSession.id);
             }
 
             return { gymId: finalGymId, freshArsenal };
@@ -3346,25 +3275,12 @@ export const WorkoutSession = () => {
                 }
 
                 if (item) {
-                    // DEBUG: Log the raw detail object from DB
-                    console.log(`📋 RAW DETAIL from DB for ${item.name}:`, {
-                        track_weight: detail.track_weight,
-                        track_reps: detail.track_reps,
-                        track_time: detail.track_time,
-                        track_distance: detail.track_distance,
-                        track_rpe: detail.track_rpe,
-                        custom_metric: detail.custom_metric,
-                        equipment_metrics: detail.equipment?.metrics
-                    });
-
                     // CRITICAL FIX: equipment.metrics from DB should have HIGHEST priority
                     const baseMetrics = {
                         ...defaultMetrics, // Start with defaults
                         ...(item.metrics || {}), // Local inventory override
                         ...(detail.equipment?.metrics || {}), // DB JSONB has HIGHEST priority (custom metrics here!)
                     };
-
-                    console.log(`🔧 Base Metrics After Merge:`, baseMetrics);
 
                     // Start with baseMetrics (includes ALL metrics from equipment.metrics)
                     const metrics = {
@@ -3382,11 +3298,7 @@ export const WorkoutSession = () => {
                     if (detail.custom_metric) {
                         // @ts-expect-error - ignore typing
                         metrics[detail.custom_metric] = true;
-                        console.log(`✨ Added Custom Routine Metric: ${detail.custom_metric}`);
                     }
-
-                    console.log(`✅ FINAL METRICS FOR ${item.name}:`, metrics);
-                    console.log(`📊 Custom Metrics Count: ${Object.keys(metrics).filter(k => !['weight', 'reps', 'time', 'distance', 'rpe'].includes(k)).length}`);
 
                     // Initialize custom metrics
                     const customMetrics: Record<string, number> = {};
@@ -3396,7 +3308,6 @@ export const WorkoutSession = () => {
                     Object.keys(metricsObj).forEach(mid => {
                         if (!['weight', 'reps', 'time', 'distance', 'rpe'].includes(mid) && metricsObj[mid]) {
                             customMetrics[mid] = 0;
-                            console.log(`🎯 Initialized custom metric "${mid}" in set.custom object`);
                         }
                     });
 
@@ -3419,14 +3330,9 @@ export const WorkoutSession = () => {
                     // FALLBACK: Ghost Exercise (Not in local inventory, but exists in routine)
                     // We allow it to run so the user can workout anywhere.
                     const ghostName = detail.equipment?.name || detail.name || 'Ejercicio Externo';
-                    console.log(`👻 Creating Ghost Exercise: ${ghostName}`, detail);
-                    console.log(`👻 detail.equipment FULL OBJECT:`, detail.equipment);
-                    console.log(`👻 detail.equipment?.metrics:`, detail.equipment?.metrics);
-                    console.log(`👻 Is detail.equipment?.metrics truthy?`, !!detail.equipment?.metrics);
 
                     // FIX: Respect Routine Configuration even for Ghosts
                     const baseMetrics = detail.equipment?.metrics || defaultMetrics;
-                    console.log(`👻 baseMetrics selected:`, baseMetrics);
 
                     // Start with baseMetrics (includes ALL metrics from equipment.metrics)
                     const ghostMetrics = {
@@ -3442,12 +3348,8 @@ export const WorkoutSession = () => {
 
                     // Add custom metric from routine if exists
                     if (detail.custom_metric) {
-
                         ghostMetrics[detail.custom_metric] = true;
-                        console.log(`👻 Added Custom Metric to Ghost Exercise: ${detail.custom_metric}`);
                     }
-
-                    console.log(`👻 FINAL GHOST METRICS FOR ${ghostName}:`, ghostMetrics);
 
                     // Initialize custom metrics
                     const customMetrics: Record<string, number> = {};
@@ -3457,7 +3359,6 @@ export const WorkoutSession = () => {
                     Object.keys(metricsObj).forEach(mid => {
                         if (!['weight', 'reps', 'time', 'distance', 'rpe'].includes(mid) && metricsObj[mid]) {
                             customMetrics[mid] = 0;
-                            console.log(`👻 Initialized ghost custom metric "${mid}"`);
                         }
                     });
 
@@ -3529,7 +3430,6 @@ export const WorkoutSession = () => {
                 alert(`⚠️ Algunos ejercicios no están en este gimnasio:\n\n${missingList}\n\nPuedes continuar con los ${exercisesToAdd.length} ejercicios disponibles o agregar los faltantes a tu Arsenal.`);
             }
         } else {
-            console.warn("No matching exercises found in this gym's arsenal.");
             const missingList = missingExercises.length > 0 ? `\n\nEjercicios faltantes:\n${missingExercises.join('\n')}` : '';
             alert(`⚠️ No se encontraron ejercicios de esta rutina en este gimnasio.${missingList}\n\nAgrega estos ejercicios a tu Arsenal Local para poder usar esta rutina.`);
         }
@@ -4550,7 +4450,6 @@ export const WorkoutSession = () => {
         // participante conserva su sesión y su progreso, y continúa en modo individual
         // (en vez del antiguo "Destruction Protocol" que borraba y expulsaba a todos).
         if (isMultiplayer && isInviter && channelRef.current && user) {
-            console.log('📢 Host cancelando — avisando a los demás para que continúen en modo individual sin perder datos...');
             channelRef.current.send({
                 type: 'broadcast',
                 event: 'host_cancelled_continue_solo',
@@ -4694,7 +4593,6 @@ export const WorkoutSession = () => {
             if (existing?.id) return existing.id;
 
             // 2. Not found — create a new exercises row so sets can be linked via FK
-            console.warn(`Creating new exercise entry for: "${equipmentName}"`);
             const { data: newExercise, error } = await supabase
                 .from('exercises')
                 .insert({ name: equipmentName.trim() })
@@ -4781,7 +4679,6 @@ export const WorkoutSession = () => {
             : true; // Always ask for Quick Start sessions
 
         if (currentRoutineName && !hasChanged) {
-            console.log('✨ Routine matches original template. Skipping save modal...');
             checkLocationStep();
             return;
         }
@@ -4791,7 +4688,6 @@ export const WorkoutSession = () => {
         if (user && activeExercises.length > 0) {
             const exists = await routineAlreadyExists(user.id, activeExercises);
             if (exists) {
-                console.log('✨ Identical routine already saved. Skipping save modal...');
                 checkLocationStep();
                 return;
             }
@@ -4892,8 +4788,10 @@ export const WorkoutSession = () => {
         // setIsFinished(true); // Already stopped
         let finalSessionId = sessionId;
 
+        console.log('[Flow] finalize start', { sessionId: sessionIdRef.current, isMultiplayer, exercises: activeExercisesRef.current.length });
+
         if (!finalSessionId) {
-            console.warn('⚠️ No sessionId found at finalize! Intentando crear sesión de emergencia...');
+            console.error('[Session] No sessionId found at finalize — attempting emergency session creation');
             try {
                 const newSession = await workoutService.startSession(
                     user!.id,
@@ -4906,7 +4804,6 @@ export const WorkoutSession = () => {
                 if (newSession && newSession.data) {
                     finalSessionId = newSession.data.id;
                     setSessionId(finalSessionId);
-                    console.log('✅ Sesión de emergencia creada:', finalSessionId);
                 } else {
                     console.error('❌ Failed to create emergency session!', newSession.error);
                     alert("⚠️ FALLA DE BASE DE DATOS AL INICIAR SESIÓN:\n" + JSON.stringify(newSession.error, null, 2));
@@ -4930,7 +4827,6 @@ export const WorkoutSession = () => {
         }
 
         setLoading(true);
-        console.log('🏁 Iniciando proceso de finalización...');
 
         // 💾 AUTO-SAVE: Save any unsaved sets that have data
         let savedCount = 0;
@@ -5001,8 +4897,6 @@ export const WorkoutSession = () => {
                     const targetId = await getExId();
 
                     if (targetId) {
-                        console.log(`💾 Saving set ${j + 1} for ${exercise.equipmentName}...`);
-                        
                         let finalRestDuration = (set.playerRestAccumulated?.[myId]) || 0;
                         const activeRestStatus = set.playerRestStatus?.[myId];
                         const activeRestLastStartTime = set.playerRestLastStartTime?.[myId];
@@ -5046,7 +4940,7 @@ export const WorkoutSession = () => {
                                 // reintento automático — flushPendingSets() (disparado desde
                                 // AppLayout en cada arranque y en cada evento 'online') la
                                 // sincroniza sola, sin que el usuario tenga que hacer nada.
-                                console.error(`❌ Error saving set for ${exercise.equipmentName}, queued for offline sync:`, res.error);
+                                if (res.error) console.error('[Session] ✗ Set save failed:', res.error.message, { sessionId: finalSessionId, exerciseId: targetId });
                                 workoutService.queuePendingSet(finalSessionId, setPayload);
                                 pendingSyncCount++;
                             }
@@ -5064,7 +4958,6 @@ export const WorkoutSession = () => {
         }
 
         if (savedCount > 0) {
-            console.log(`📦 Guardando ${savedCount} sets pendientes...`);
             await Promise.all(savePromises);
             if (user?.id) await detectAndMarkPRs(finalSessionId, user.id);
         }
@@ -5082,7 +4975,6 @@ export const WorkoutSession = () => {
             );
         }
 
-        console.log('🏁 Terminando sesión en DB:', finalSessionId);
 
         try {
             const flowNotes = `Flujo de Llenado: ${exerciseFillFlow.map(f => f.exerciseName).join(' ➔ ')}`;
@@ -5142,7 +5034,7 @@ export const WorkoutSession = () => {
                     isLastToFinalize = pendingCount === 0;
                 }
 
-                console.log(`🏁 [${isInviter ? 'Host' : 'Guest'}] Finalizing. isLast=${isLastToFinalize} (pending in DB=${pendingCount})`);
+                console.log(`[Flow] finalize coop [${isInviter ? 'host' : 'guest'}] isLast=${isLastToFinalize} pending=${pendingCount} roomId=${syncRoomId}`);
 
                 // Always broadcast our final snapshot so the others freeze our data
                 // at exactly what we're about to save.
@@ -5168,7 +5060,7 @@ export const WorkoutSession = () => {
                 if (isLastToFinalize) {
                     // ── I'm the LAST one — close the room for everyone right now ──────
                     if (isInviter) {
-                        console.log('🏁 [Host] Last to finalize — closing room:', finalSessionId);
+                        console.log('[Flow] host last — closing room:', finalSessionId);
                         if (channelRef.current && user) {
                             // Notify any straggler guests the room is closing (legacy path —
                             // they pre-save their pending sets on receipt).
@@ -5186,7 +5078,7 @@ export const WorkoutSession = () => {
                             [...finalizedParticipantsRef.current]
                         );
                     } else {
-                        console.log('🏁 [Guest] Last to finalize — closing room:', finalSessionId);
+                        console.log('[Flow] guest last — closing room:', finalSessionId);
                         if (channelRef.current && user) {
                             await channelRef.current.send({
                                 type: 'broadcast',
@@ -5219,7 +5111,7 @@ export const WorkoutSession = () => {
                 } else {
                     // ── NOT the last one — save my data, get my GX now, but keep
                     // finished_at/end_time NULL so I don't show up in "Historial" yet.
-                    console.log(`🏃 [${isInviter ? 'Host' : 'Guest'}] Not last — soft-finalizing (waiting for the rest):`, finalSessionId);
+                    console.log(`[Flow] soft-finalize [${isInviter ? 'host' : 'guest'}] waiting for others:`, finalSessionId);
                     if (channelRef.current && user) {
                         await channelRef.current.send({
                             type: 'broadcast',
@@ -5242,7 +5134,7 @@ export const WorkoutSession = () => {
             localStorage.setItem(`exercise_fill_flow_${finalSessionId}`, JSON.stringify(exerciseFillFlow));
 
             if (result.success) {
-                console.log('✅ Sesión terminada exitosamente');
+                console.log('[Flow] session finished ok', { sessionId: finalSessionId });
                 localStorage.removeItem(`workout_draft_${finalSessionId}`);
                 localStorage.removeItem(STORAGE_KEY);
                 localStorage.removeItem('ginx_coop_state');
@@ -5303,6 +5195,7 @@ export const WorkoutSession = () => {
                             });
 
                         if (players.length > 0) {
+                            console.log('[Flow] building coop summary', { exercises: activeExercisesRef.current.length, players: players.length, coopRoomId });
                             // Build exerciseSets from IN-MEMORY state — no DB timing dependency.
                             const exerciseMap: Record<string, {
                                 exerciseId: string; exerciseName: string;
@@ -5350,6 +5243,7 @@ export const WorkoutSession = () => {
                                         .filter(s => Object.keys(s.playerData).length > 0)
                                 }));
 
+                            console.log('[Flow] coop summary built', { exerciseSets: exerciseSets.length });
                             // Use an RPC (SECURITY DEFINER) so guests can write to the
                             // host's session row — direct UPDATE is blocked by RLS for non-owners.
                             const { error: summaryErr } = await supabase.rpc('upsert_coop_summary', {
@@ -5358,10 +5252,10 @@ export const WorkoutSession = () => {
                             });
                             if (summaryErr) throw summaryErr;
 
-                            console.log('✅ [CoopSummary] Guardado en DB:', players.length, 'jugadores,', exerciseSets.length, 'ejercicios');
+                            console.log('[Flow] coop summary saved:', { players: players.length, exerciseSets: exerciseSets.length });
                         }
                     } catch (e) {
-                        console.warn('⚠️ [CoopSummary] Error guardando (no bloquea):', e);
+                        console.error('[Flow] coop summary error (non-blocking):', e);
                     }
                 }
 
