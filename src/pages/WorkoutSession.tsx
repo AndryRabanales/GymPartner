@@ -5122,8 +5122,10 @@ export const WorkoutSession = () => {
                         }).catch(e => console.error('Error broadcasting room_all_finished:', e));
                     }
                 } else {
-                    // ── NOT the last one — save my data, get my GX now, but keep
-                    // finished_at/end_time NULL so I don't show up in "Historial" yet.
+                    // ── NOT the last one — save my data and get my GX now.
+                    // end_time is stamped immediately (setFinishedAt=true) so this session
+                    // appears in Historial as soon as the user presses Finalizar, regardless
+                    // of whether they press "Volver al inicio" or stay on the summary screen.
                     console.log(`[Flow] soft-finalize [${isInviter ? 'host' : 'guest'}] waiting for others:`, finalSessionId);
                     if (channelRef.current && user) {
                         await channelRef.current.send({
