@@ -5126,6 +5126,7 @@ export const WorkoutSession = () => {
             }
 
             let result: { success: boolean; error?: any };
+            let isLastToFinalize = false; // lifted so coop_summary block can read it after the if/else
 
             if (isMultiplayer && finalSessionId) {
                 // ── Phase 5: delay "Historial" visibility until the LAST participant
@@ -5134,7 +5135,7 @@ export const WorkoutSession = () => {
                 // to another screen without pressing Finalizar: they appear offline but
                 // are still training. The DB is the only reliable source of truth.
                 // pendingCount = participants whose finished_at IS NULL (not yet done).
-                let isLastToFinalize = true;
+                isLastToFinalize = true;
                 let pendingCount = 0;
                 if (syncRoomId) {
                     pendingCount = await workoutService.countPendingRoomParticipants(syncRoomId, finalSessionId);
