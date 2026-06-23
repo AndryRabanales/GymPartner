@@ -5197,59 +5197,59 @@ export const WorkoutSession = () => {
                             });
 
                         if (players.length > 0) {
-                            console.log('[Flow] building coop summary', { exercises: activeExercisesRef.current.length, players: players.length, coopRoomId });
-                            // Build exerciseSets from IN-MEMORY state — no DB timing dependency.
+                            // Build exerciseSets from workout_logs in the DB — same source the
+                            // live summary screen uses. This is immune to in-memory state being
+                            // empty (e.g. if the last user's exercises were cleared by cleanup).
+                            // All save-promises are already awaited above, so DB is up to date.
+                            const sessionUserMap: Record<string, string> = {};
+                            for (const s of (roomSessions || [])) sessionUserMap[(s as any).id] = (s as any).user_id;
+                            // Always include self in case RLS omitted the current session
+                            if (user && finalSessionId) sessionUserMap[finalSessionId] = user.id;
+                            const allSessionIds = Object.keys(sessionUserMap);
+
                             const exerciseMap: Record<string, {
                                 exerciseId: string; exerciseName: string;
                                 setMap: Record<number, Record<string, { weight: number; reps: number; time: number; distance: number; weightUnit: string }>>;
                             }> = {};
 
-                            for (const exercise of activeExercisesRef.current) {
-                                const exKey = exercise.equipmentName;
-                                if (!exerciseMap[exKey]) exerciseMap[exKey] = { exerciseId: exKey, exerciseName: exercise.equipmentName, setMap: {} };
-                                exercise.sets.forEach((set: any, j: number) => {
-                                    const sn = j + 1;
-                                    if (!exerciseMap[exKey].setMap[sn]) exerciseMap[exKey].setMap[sn] = {};
-                                    for (const { id: uid } of players) {
-                                        let weight: number, reps: number, time: number, dist: number;
-                                        if (uid === user?.id) {
-                                            // Current user: check modern maps first, fall back to legacy scalar fields
-                                            const isSelfHost = isInviter;
-                                            const isSelfFirstGuest = !isInviter && uid === firstGuestId;
-                                            weight = Number(set.playerWeights?.[uid] ?? (isSelfHost ? (set.weight || 0) : (isSelfFirstGuest ? (set.p2_weight || 0) : 0))) || 0;
-                                            reps   = Number(set.playerReps?.[uid]    ?? (isSelfHost ? (set.reps    || 0) : (isSelfFirstGuest ? (set.p2_reps    || 0) : 0))) || 0;
-                                            time   = Number(set.playerTimes?.[uid]   ?? (isSelfHost ? (set.time    || 0) : (isSelfFirstGuest ? (set.p2_time    || 0) : 0))) || 0;
-                                            dist   = Number(set.playerDistances?.[uid]?? (isSelfHost ? (set.distance||0) : (isSelfFirstGuest ? (set.p2_distance||0) : 0))) || 0;
-                                        } else {
-                                            // Other participants: data arrives via sync_state broadcasts
-                                            weight = Number(set.playerWeights?.[uid]  || 0);
-                                            reps   = Number(set.playerReps?.[uid]     || 0);
-                                            time   = Number(set.playerTimes?.[uid]    || 0);
-                                            dist   = Number(set.playerDistances?.[uid]|| 0);
-                                        }
-                                        if (weight > 0 || reps > 0 || time > 0 || dist > 0 || set.playerCompleted?.[uid]) {
-                                            exerciseMap[exKey].setMap[sn][uid] = { weight, reps, time, distance: dist, weightUnit: exercise.weightUnit || 'kg' };
-                                        }
-                                    }
-                                });
+                            if (allSessionIds.length > 0) {
+                                const { data: allLogs } = await supabase
+                                    .from('workout_logs')
+                                    .select('session_id, exercise_id, set_number, weight_kg, reps, time, distance, metrics_data, exercise:exercises(id, name)')
+                                    .in('session_id', allSessionIds)
+                                    .order('set_number', { ascending: true });
+
+                                for (const log of (allLogs || []) as any[]) {
+                                    const uid = sessionUserMap[log.session_id];
+                                    if (!uid) continue;
+                                    const exId = log.exercise_id;
+                                    const exName = (log.exercise as any)?.name || 'Ejercicio';
+                                    if (!exerciseMap[exId]) exerciseMap[exId] = { exerciseId: exId, exerciseName: exName, setMap: {} };
+                                    const sn = log.set_number || 1;
+                                    if (!exerciseMap[exId].setMap[sn]) exerciseMap[exId].setMap[sn] = {};
+                                    exerciseMap[exId].setMap[sn][uid] = {
+                                        weight: log.weight_kg || 0,
+                                        reps: log.reps || 0,
+                                        time: log.time || 0,
+                                        distance: log.distance || 0,
+                                        weightUnit: (log.metrics_data as any)?._weight_unit || 'kg'
+                                    };
+                                }
                             }
 
-                            const exerciseSets = Object.values(exerciseMap)
-                                .filter(ex => Object.values(ex.setMap).some(s => Object.keys(s).length > 0))
-                                .map(ex => ({
-                                    exerciseId: ex.exerciseId,
-                                    exerciseName: ex.exerciseName,
-                                    sets: Object.entries(ex.setMap)
-                                        .sort(([a], [b]) => Number(a) - Number(b))
-                                        .map(([sn, playerData]) => ({ setNumber: Number(sn), playerData }))
-                                        .filter(s => Object.keys(s.playerData).length > 0)
-                                }));
+                            const exerciseSets = Object.values(exerciseMap).map(ex => ({
+                                exerciseId: ex.exerciseId,
+                                exerciseName: ex.exerciseName,
+                                sets: Object.entries(ex.setMap)
+                                    .sort(([a], [b]) => Number(a) - Number(b))
+                                    .map(([sn, playerData]) => ({ setNumber: Number(sn), playerData }))
+                                    .filter(s => Object.keys(s.playerData).length > 0)
+                            }));
 
-                            console.log('[Flow] coop summary built', { exerciseSets: exerciseSets.length, exercises: activeExercisesRef.current.length, players: players.length });
+                            console.log('[Flow] coop summary built from DB logs', { exerciseSets: exerciseSets.length, players: players.length, sessions: allSessionIds.length });
+
                             if (exerciseSets.length === 0) {
-                                // Don't overwrite any existing valid snapshot with empty data.
-                                // WorkoutDetailPage will fall back to a live workout_logs query.
-                                console.warn('[Flow] ⚠️ exerciseSets=0 — skipping upsert (detail page will use live fetch from workout_logs)');
+                                console.warn('[Flow] ⚠️ exerciseSets=0 from DB logs — skipping upsert');
                             } else {
                                 // Use an RPC (SECURITY DEFINER) so guests can write to the
                                 // host's session row — direct UPDATE is blocked by RLS for non-owners.
