@@ -1776,10 +1776,11 @@ export const WorkoutSession = () => {
             // and the last person to finish has the most complete DB data.
             // Uses upsert_coop_summary RPC (SECURITY DEFINER) so guests can write to host row.
             if (players.length > 0) {
-                supabase.rpc('upsert_coop_summary', {
+                const { error: saveErr } = await supabase.rpc('upsert_coop_summary', {
                     p_room_id: roomId,
                     p_summary: { players, exerciseSets }
-                }).catch(e => console.error('[CoopSummary] snapshot save failed:', e));
+                });
+                if (saveErr) console.error('[CoopSummary] snapshot save failed:', saveErr);
             }
         };
 
