@@ -3040,7 +3040,7 @@ export const WorkoutSession = () => {
                 const routineIdParam = searchParams.get('routineId');
                 const autoRoutine = routineIdParam ? localRoutines.find(r => r.id === routineIdParam) : null;
 
-                if (autoRoutine) {
+                if (autoRoutine && !sessionIdRef.current) {
                     console.log("⚡ Auto-loading routine from search parameter:", autoRoutine.name);
                     setCurrentRoutineName(autoRoutine.name);
                     const result = await startNewSession(targetGymId || undefined, undefined, currentIsMultiplayer, currentMultiplayerMode, currentPartnerId);
@@ -3079,7 +3079,7 @@ export const WorkoutSession = () => {
                             setFirstGuestId(partnerActive.partner_id);
                         }
 
-                        if (currentIsMultiplayer && currentMultiplayerMode === 'conjunto' && !currentIsInviter) {
+                        if (currentIsMultiplayer && currentMultiplayerMode === 'conjunto' && !currentIsInviter && !sessionIdRef.current) {
                             // Flag: keep loading=true until sync_state arrives with exercises
                             waitingForGuestSyncRef.current = true;
                             console.log('🚀 Guest auto-starting session because partner has active session...');
