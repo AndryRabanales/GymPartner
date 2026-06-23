@@ -5256,26 +5256,38 @@ export const WorkoutSession = () => {
                 if (isMultiplayer && multiplayerMode === 'conjunto' && isLastToFinalize) {
                     const coopRoomId = isInviter ? finalSessionId : (syncRoomId || finalSessionId);
                     try {
-                        // Fetch all sessions in the room (host + all guests)
+                        // Fetch all sessions in the room (host + all guests via partner_session_id)
                         const { data: roomSessions } = await supabase
                             .from('workout_sessions')
                             .select('id, user_id')
                             .or(`id.eq.${coopRoomId},partner_session_id.eq.${coopRoomId}`);
 
-                        if (roomSessions?.length) {
-                            const userIds = (roomSessions as any[]).map(s => s.user_id);
+                        // CRITICAL: always include the finalizing user's own session.
+                        // If they joined via a zombie flow their partner_session_id might point
+                        // to a stale host ID and the room query won't return their row —
+                        // but their workout_logs ARE committed under finalSessionId.
+                        const finalUserRow = (roomSessions || []).find((s: any) => s.id === finalSessionId);
+                        const allSessions: { id: string; user_id: string }[] = [
+                            ...(roomSessions || []),
+                            ...(!finalUserRow && user ? [{ id: finalSessionId, user_id: user.id }] : [])
+                        ];
+
+                        if (allSessions.length) {
+                            const userIds = [...new Set(allSessions.map(s => s.user_id))];
                             const { data: profiles } = await supabase
                                 .from('profiles')
                                 .select('id, username, avatar_url')
                                 .in('id', userIds);
 
-                            // Build players list — host first (room anchor), then guests sorted for determinism.
-                            // Deduplicate by user_id: a zombie session from a previous interrupted join
-                            // can leave a second row for the same user. Keep first occurrence (host wins).
-                            // We still process ALL sessions when fetching logs so data is never lost.
-                            const sortedSessions = [...(roomSessions as any[])].sort((a, b) => {
+                            // Sort host first, then guests. Deduplicate by user_id so zombie
+                            // sessions never produce duplicate columns. ALL session rows are
+                            // still used for the logs fetch so no data is lost.
+                            const sortedSessions = [...allSessions].sort((a, b) => {
                                 if (a.id === coopRoomId) return -1;
                                 if (b.id === coopRoomId) return 1;
+                                // finalizer's session last only if they're a guest (not host)
+                                if (a.id === finalSessionId && a.id !== coopRoomId) return 1;
+                                if (b.id === finalSessionId && b.id !== coopRoomId) return -1;
                                 return a.id.localeCompare(b.id);
                             });
                             const seenPlayerIds = new Set<string>();
@@ -5297,7 +5309,7 @@ export const WorkoutSession = () => {
                                 setMap: Record<number, Record<string, { weight: number; reps: number; time: number; distance: number; weightUnit: string }>>;
                             }> = {};
 
-                            await Promise.all((roomSessions as any[]).map(async (sess) => {
+                            await Promise.all(allSessions.map(async (sess) => {
                                 const { data: logs } = await supabase
                                     .from('workout_logs')
                                     .select('exercise_id, set_number, weight_kg, reps, time, distance, metrics_data, exercise:exercises(id, name)')
