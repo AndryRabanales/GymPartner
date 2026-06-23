@@ -1770,9 +1770,20 @@ export const WorkoutSession = () => {
             }));
 
             setCoopSummaryData({ players, exerciseSets });
+
+            // Persist snapshot so every participant's History always matches the live summary.
+            // Runs for every participant who reaches the summary screen — last write wins,
+            // and the last person to finish has the most complete DB data.
+            // Uses upsert_coop_summary RPC (SECURITY DEFINER) so guests can write to host row.
+            if (players.length > 0) {
+                supabase.rpc('upsert_coop_summary', {
+                    p_room_id: roomId,
+                    p_summary: { players, exerciseSets }
+                }).catch(e => console.error('[CoopSummary] snapshot save failed:', e));
+            }
         };
 
-        load().catch(e => console.error('[CoopSummary] DB fetch failed, falling back to in-memory:', e));
+        load().catch(e => console.error('[CoopSummary] DB fetch failed:', e));
     }, [showSummary, isMultiplayer, multiplayerMode, sessionId, syncRoomId, isInviter]);
 
     // Broadcast updated participant list whenever it changes on the Host's device to keep row slot alignment
