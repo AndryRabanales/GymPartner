@@ -5256,6 +5256,7 @@ export const WorkoutSession = () => {
                 if (isMultiplayer && multiplayerMode === 'conjunto' && isLastToFinalize) {
                     const coopRoomId = isInviter ? finalSessionId : (syncRoomId || finalSessionId);
                     try {
+                        // Fetch all sessions in the room (host + all guests)
                         const { data: roomSessions } = await supabase
                             .from('workout_sessions')
                             .select('id, user_id')
@@ -5268,65 +5269,61 @@ export const WorkoutSession = () => {
                                 .select('id, username, avatar_url')
                                 .in('id', userIds);
 
-                            const participantSummaries = await Promise.all(
-                                (roomSessions as any[]).map(async (sess) => {
-                                    const { data: logs } = await supabase
-                                        .from('workout_logs')
-                                        .select(`
-                                            exercise_id, set_number, weight_kg, reps, rpe,
-                                            time, distance, metrics_data, is_pr, category_snapshot,
-                                            exercise:exercises(id, name)
-                                        `)
-                                        .eq('session_id', sess.id)
-                                        .order('exercise_id')
-                                        .order('set_number', { ascending: true });
+                            // Build players list — host first (room anchor), then guests sorted for determinism
+                            const sortedSessions = [...(roomSessions as any[])].sort((a, b) => {
+                                if (a.id === coopRoomId) return -1;
+                                if (b.id === coopRoomId) return 1;
+                                return a.id.localeCompare(b.id);
+                            });
+                            const players = sortedSessions.map((s: any) => {
+                                const p = (profiles || []).find((pr: any) => pr.id === s.user_id);
+                                return { id: s.user_id, username: (p as any)?.username || 'Participante', avatarUrl: (p as any)?.avatar_url || '' };
+                            });
 
-                                    const prof = (profiles || []).find((p: any) => p.id === sess.user_id);
-                                    const exMap = new Map<string, any>();
-                                    let volume = 0;
+                            // Build per-exercise-set-player map — same format as coopSummaryData
+                            // so WorkoutDetailPage can render it identically to the live summary screen.
+                            const exerciseMap: Record<string, {
+                                exerciseId: string; exerciseName: string;
+                                setMap: Record<number, Record<string, { weight: number; reps: number; time: number; distance: number; weightUnit: string }>>;
+                            }> = {};
 
-                                    for (const log of (logs || []) as any[]) {
-                                        const exId = log.exercise_id;
-                                        if (!exMap.has(exId)) {
-                                            exMap.set(exId, {
-                                                exercise_id: exId,
-                                                exercise_name: (log.exercise as any)?.name || 'Ejercicio',
-                                                muscle_group: log.category_snapshot || 'General',
-                                                sets: []
-                                            });
-                                        }
-                                        exMap.get(exId).sets.push({
-                                            set_number: log.set_number,
-                                            weight_kg: log.weight_kg || 0,
-                                            reps: log.reps || 0,
-                                            rpe: log.rpe,
-                                            time: log.time,
-                                            distance: log.distance,
-                                            metrics_data: log.metrics_data,
-                                            is_pr: log.is_pr || false,
-                                            weightUnit: (log.metrics_data as any)?._weight_unit || 'kg'
-                                        });
-                                        volume += (log.weight_kg || 0) * (log.reps || 0);
-                                    }
+                            await Promise.all((roomSessions as any[]).map(async (sess) => {
+                                const { data: logs } = await supabase
+                                    .from('workout_logs')
+                                    .select('exercise_id, set_number, weight_kg, reps, time, distance, metrics_data, exercise:exercises(id, name)')
+                                    .eq('session_id', sess.id)
+                                    .order('set_number', { ascending: true });
 
-                                    return {
-                                        userId: sess.user_id,
-                                        sessionId: sess.id,
-                                        username: (prof as any)?.username || 'Participante',
-                                        avatarUrl: (prof as any)?.avatar_url || '',
-                                        exercises: Array.from(exMap.values()),
-                                        volume: Math.round(volume),
-                                        status: 'finished'
+                                for (const log of (logs || []) as any[]) {
+                                    const exId = log.exercise_id;
+                                    const exName = (log.exercise as any)?.name || 'Ejercicio';
+                                    if (!exerciseMap[exId]) exerciseMap[exId] = { exerciseId: exId, exerciseName: exName, setMap: {} };
+                                    const sn = log.set_number || 1;
+                                    if (!exerciseMap[exId].setMap[sn]) exerciseMap[exId].setMap[sn] = {};
+                                    exerciseMap[exId].setMap[sn][sess.user_id] = {
+                                        weight: log.weight_kg || 0,
+                                        reps: log.reps || 0,
+                                        time: log.time || 0,
+                                        distance: log.distance || 0,
+                                        weightUnit: (log.metrics_data as any)?._weight_unit || 'kg'
                                     };
-                                })
-                            );
+                                }
+                            }));
+
+                            const exerciseSets = Object.values(exerciseMap).map(ex => ({
+                                exerciseId: ex.exerciseId,
+                                exerciseName: ex.exerciseName,
+                                sets: Object.entries(ex.setMap)
+                                    .sort(([a], [b]) => Number(a) - Number(b))
+                                    .map(([sn, playerData]) => ({ setNumber: Number(sn), playerData }))
+                            }));
 
                             await supabase
                                 .from('workout_sessions')
-                                .update({ coop_summary: participantSummaries })
+                                .update({ coop_summary: { players, exerciseSets } })
                                 .eq('id', coopRoomId);
 
-                            console.log('✅ [CoopSummary] Guardado en DB para', participantSummaries.length, 'participantes');
+                            console.log('✅ [CoopSummary] Guardado en DB:', players.length, 'jugadores,', exerciseSets.length, 'ejercicios');
                         }
                     } catch (e) {
                         console.warn('⚠️ [CoopSummary] Error guardando (no bloquea):', e);

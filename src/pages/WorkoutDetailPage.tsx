@@ -82,7 +82,7 @@ export default function WorkoutDetailPage() {
     // Default to joint view for multiplayer sessions so all participants' data is always visible
     const [viewMode, setViewMode] = useState<'mine' | 'partner' | 'joint'>('mine');
     // Raw coop_summary snapshot — when present, renders the summary-screen style view
-    const [coopSummaryRaw, setCoopSummaryRaw] = useState<any[] | null>(null);
+    const [coopSummaryRaw, setCoopSummaryRaw] = useState<{ players: any[]; exerciseSets: any[] } | null>(null);
     const [summaryTab, setSummaryTab] = useState<'grupal' | 'individual'>('grupal');
     const [selectedPlayerIdx, setSelectedPlayerIdx] = useState(0);
     // Set joint as default once we know it's multiplayer
@@ -437,17 +437,21 @@ export default function WorkoutDetailPage() {
                     .eq('id', roomId)
                     .maybeSingle();
 
-                const coopSummary: any[] | null = (hostWithSummary as any)?.coop_summary ?? null;
+                const coopSummary: any = (hostWithSummary as any)?.coop_summary ?? null;
 
-                // Store raw snapshot — triggers the summary-screen-style history view
-                if (coopSummary && coopSummary.length > 0) {
+                // New format: { players, exerciseSets }
+                // Old format (array) is ignored — sessions will fall through to fallback
+                if (coopSummary && coopSummary.players && coopSummary.exerciseSets) {
                     setCoopSummaryRaw(coopSummary);
                 }
 
-                if (coopSummary && coopSummary.length > 0) {
+                // Legacy array format — still used for roomParticipants fallback build
+                const coopSummaryArr: any[] | null = Array.isArray(coopSummary) ? coopSummary : null;
+
+                if (coopSummaryArr && coopSummaryArr.length > 0) {
                     // Map snapshot → RoomParticipant[], excluding the current viewer
                     // (their own data is already rendered from the main session query).
-                    roomParticipants = coopSummary
+                    roomParticipants = coopSummaryArr
                         .filter((p: any) => p.userId !== session.user_id)
                         .map((p: any) => {
                             const exArr: ExerciseDetail[] = (p.exercises || []).map((ex: any) => ({
@@ -642,99 +646,105 @@ export default function WorkoutDetailPage() {
     }
 
     // ── Co-op Summary History View ───────────────────────────────────────────
-    // When coop_summary is present, render a replica of the post-workout results
-    // screen instead of the broken per-participant reconstruction UI.
-    if (workout.is_multiplayer && workout.multiplayer_mode === 'conjunto' && coopSummaryRaw && coopSummaryRaw.length > 0) {
-        // Sort so the current viewer appears first
-        const allPlayers = [...coopSummaryRaw].sort((a, b) =>
-            a.userId === workout.user_id ? -1 : b.userId === workout.user_id ? 1 : 0
-        );
+    // Exact replica of WorkoutSession's summary screen, reading from coop_summary JSONB.
+    if (workout.is_multiplayer && workout.multiplayer_mode === 'conjunto' && coopSummaryRaw) {
+        const { players: allPlayers, exerciseSets } = coopSummaryRaw;
         const isGroupMode = allPlayers.length > 1;
 
-        // Build per-exercise map for GRUPAL tab:
-        // exerciseId → { name, muscle, sets: Map<setNum, {playerId → {w,r,t,d,unit}}> }
-        const exMap = new Map<string, {
-            name: string; muscle: string;
-            sets: Map<number, Record<string, { w: number; r: number; t: number; d: number; unit: string }>>;
-        }>();
-        for (const participant of allPlayers) {
-            for (const ex of (participant.exercises || [])) {
-                if (!exMap.has(ex.exercise_id)) {
-                    exMap.set(ex.exercise_id, { name: ex.exercise_name || 'Ejercicio', muscle: ex.muscle_group || 'General', sets: new Map() });
-                }
-                const entry = exMap.get(ex.exercise_id)!;
-                for (const s of (ex.sets || [])) {
-                    if (!entry.sets.has(s.set_number)) entry.sets.set(s.set_number, {});
-                    entry.sets.get(s.set_number)![participant.userId] = {
-                        w: s.weight_kg || 0, r: s.reps || 0, t: s.time || 0, d: s.distance || 0,
-                        unit: s.weightUnit || (s.metrics_data?._weight_unit) || 'kg'
-                    };
-                }
-            }
+        const columnCount = (summaryTab === 'grupal' && isGroupMode) ? allPlayers.length : 1;
+        let gridWidthClass = 'w-[60%] max-w-md';
+        let headerTextSize = 'text-[9px]';
+        let colHeaderTextSize = 'text-[8px]';
+        let rowTextSize = 'text-[8px]';
+        let wTextSize = 'text-[9.5px]';
+        let wUnitSize = 'text-[5.5px]';
+        let detailTextSize = 'text-[8.5px]';
+        if (columnCount === 2) {
+            gridWidthClass = 'w-[65%] max-w-md'; headerTextSize = 'text-[8.5px]'; colHeaderTextSize = 'text-[7.5px]';
+            rowTextSize = 'text-[7.5px]'; wTextSize = 'text-[9px]'; wUnitSize = 'text-[5px]'; detailTextSize = 'text-[8px]';
+        } else if (columnCount === 3) {
+            gridWidthClass = 'w-[65%] max-w-md'; headerTextSize = 'text-[9.5px]'; colHeaderTextSize = 'text-[8px]';
+            rowTextSize = 'text-[8px]'; wTextSize = 'text-[9.5px]'; wUnitSize = 'text-[5.5px]'; detailTextSize = 'text-[8.5px]';
+        } else if (columnCount === 4) {
+            gridWidthClass = 'w-[75%] max-w-lg'; headerTextSize = 'text-[9px]'; colHeaderTextSize = 'text-[7.5px]';
+            rowTextSize = 'text-[7.5px]'; wTextSize = 'text-[9px]'; wUnitSize = 'text-[5px]'; detailTextSize = 'text-[7.5px]';
+        } else if (columnCount > 4) {
+            gridWidthClass = 'w-[90%] max-w-4xl'; headerTextSize = 'text-[8.5px]'; colHeaderTextSize = 'text-[7px]';
+            rowTextSize = 'text-[7px]'; wTextSize = 'text-[8.5px]'; wUnitSize = 'text-[4.5px]'; detailTextSize = 'text-[7px]';
         }
-        const grupalExercises = Array.from(exMap.entries()).map(([id, ex]) => ({
-            id, name: ex.name, muscle: ex.muscle,
-            sets: Array.from(ex.sets.entries()).sort(([a], [b]) => a - b).map(([num, data]) => ({ num, data }))
-        }));
-
-        const colCount = allPlayers.length;
-        const gridWidthClass = colCount <= 1 ? 'w-[60%] max-w-md' : colCount === 2 ? 'w-[65%] max-w-md' : colCount === 3 ? 'w-[70%] max-w-lg' : 'w-[85%] max-w-4xl';
-        const hSz = colCount <= 2 ? 'text-[9px]' : 'text-[8.5px]';
-        const colHSz = colCount <= 2 ? 'text-[8px]' : 'text-[7.5px]';
-        const rowSz = colCount <= 2 ? 'text-[8px]' : 'text-[7.5px]';
-        const wSz = colCount <= 2 ? 'text-[9.5px]' : 'text-[8.5px]';
-        const wUSz = colCount <= 2 ? 'text-[5.5px]' : 'text-[5px]';
-        const dSz = colCount <= 2 ? 'text-[8.5px]' : 'text-[8px]';
 
         const cardStyle = 'bg-[#141310] rounded-md overflow-hidden border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]';
-        const cardGap = 'gap-1';
+        const cardSpacing = 'gap-1';
+        const headerPadding = 'px-1.5 py-0.5';
+        const colHeaderPadding = 'px-1.5 py-px';
+        const rowPadding = 'px-1.5 py-[1px]';
 
-        const selectedParticipant = allPlayers[selectedPlayerIdx] || allPlayers[0];
-        const indivExercises = (selectedParticipant?.exercises || []).filter((ex: any) => ex.sets?.some((s: any) => s.weight_kg > 0 || s.reps > 0 || s.time > 0 || s.distance > 0));
-
-        const dateCoopStr = new Date(workout.started_at).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        // For INDIVIDUAL tab: exercises of the selected player, built from exerciseSets
+        const selectedPlayer = allPlayers[selectedPlayerIdx] || allPlayers[0];
+        const indivExs = exerciseSets
+            .map((ex: any) => {
+                const mySets = (ex.sets || []).filter((s: any) => {
+                    const d = s.playerData?.[selectedPlayer?.id];
+                    return d && (d.weight > 0 || d.reps > 0 || d.time > 0 || d.distance > 0);
+                });
+                return mySets.length ? { ...ex, filteredSets: mySets } : null;
+            })
+            .filter(Boolean);
 
         return (
-            <div className="fixed inset-0 z-[180] flex flex-col bg-black overflow-hidden">
+            <div className="fixed inset-0 z-[180] flex flex-col summary-animated-bg overflow-hidden">
                 <style dangerouslySetInnerHTML={{__html: `
-                    .coop-hist-bg {
-                        background: linear-gradient(-45deg, #000000, #2d2500, #000000, #3d3100, #000000);
+                    .summary-animated-bg {
+                        background: linear-gradient(-45deg, #000000, #4d4002, #000000, #7a6603, #000000);
                         background-size: 400% 400%;
-                        animation: histGrad 12s ease infinite;
+                        animation: premiumGradient 9s ease infinite;
                     }
-                    @keyframes histGrad {
+                    @keyframes premiumGradient {
                         0% { background-position: 0% 50%; }
                         50% { background-position: 100% 50%; }
                         100% { background-position: 0% 50%; }
                     }
                 `}} />
 
-                {/* HEADER */}
-                <div className="flex-shrink-0 coop-hist-bg border-b border-black pt-safe px-3 pb-2 relative">
+                {/* STICKY HEADER */}
+                <div className="flex-shrink-0 bg-black/40 border-b border-black pt-1.5 px-2 pb-1.5 relative">
                     <button
                         onClick={() => navigate(-1)}
-                        className="flex items-center gap-1 text-yellow-500/70 text-[10px] font-black uppercase tracking-widest mb-1 active:opacity-60"
+                        className="flex items-center gap-1 text-yellow-500/60 text-[9px] font-black uppercase tracking-widest mb-1 active:opacity-60"
                     >
                         ‹ Volver
                     </button>
-                    <div className="text-center mb-1">
-                        <h1 className="text-xl font-black italic uppercase tracking-tighter text-yellow-400 drop-shadow-[0_1.5px_0_#000] border-y border-yellow-400/20 px-3 py-0 select-none">
+                    <div className="text-center flex flex-col items-center mb-1">
+                        <h1 className="text-xl md:text-2xl font-black italic uppercase tracking-tighter text-yellow-400 drop-shadow-[0_1.5px_0_#000] border-y border-yellow-400/20 px-3 py-0 select-none animate-pulse"
+                            style={{ fontFamily: "'Impact', 'Arial Black', sans-serif" }}>
                             ¡RESULTADOS!
                         </h1>
-                        <p className="text-[7px] font-black tracking-[0.2em] text-yellow-500/40 uppercase">STUDIO GYNX ENTERTAINMENT INC.</p>
-                        <p className="text-[8px] text-neutral-500 mt-0.5 capitalize">{dateCoopStr} · {workout.gym_name}</p>
+                        <p className="text-[7.5px] font-black tracking-[0.2em] text-yellow-500/50 uppercase mt-0">
+                            STUDIO GYNX ENTERTAINMENT INC.
+                        </p>
+                        <p className="text-[8px] text-neutral-500 capitalize mt-0.5">
+                            {new Date(workout.started_at).toLocaleDateString('es-ES', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })} · {workout.gym_name}
+                        </p>
                     </div>
 
                     <div className="flex gap-1.5 w-[90%] max-w-sm mx-auto">
                         {isGroupMode && (
                             <button
                                 onClick={() => setSummaryTab('grupal')}
-                                className={`flex-1 py-1 px-2 rounded-md text-[9.5px] font-black uppercase tracking-wider border-2 transition-all active:scale-95 ${summaryTab === 'grupal' ? 'bg-yellow-400 border-black text-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]' : 'bg-neutral-900 border-neutral-800 text-neutral-400'}`}
+                                className={`flex-1 py-1 px-2 rounded-md text-[9.5px] font-black uppercase tracking-wider border-2 transition-all transform hover:scale-[1.03] active:scale-95 duration-100 ${
+                                    summaryTab === 'grupal'
+                                        ? 'bg-yellow-400 border-black text-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]'
+                                        : 'bg-neutral-900 border-neutral-800 text-neutral-400'
+                                }`}
                             >GRUPAL</button>
                         )}
                         <button
                             onClick={() => setSummaryTab('individual')}
-                            className={`flex-1 py-1 px-2 rounded-md text-[9.5px] font-black uppercase tracking-wider border-2 transition-all active:scale-95 ${summaryTab === 'individual' || !isGroupMode ? 'bg-yellow-400 border-black text-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]' : 'bg-neutral-900 border-neutral-800 text-neutral-400'}`}
+                            className={`flex-1 py-1 px-2 rounded-md text-[9.5px] font-black uppercase tracking-wider border-2 transition-all transform hover:scale-[1.03] active:scale-95 duration-100 ${
+                                summaryTab === 'individual' || !isGroupMode
+                                    ? 'bg-yellow-400 border-black text-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]'
+                                    : 'bg-neutral-900 border-neutral-800 text-neutral-400'
+                            }`}
                         >INDIVIDUAL</button>
                     </div>
                 </div>
@@ -744,54 +754,62 @@ export default function WorkoutDetailPage() {
 
                     {/* ── GRUPAL TAB ── */}
                     {summaryTab === 'grupal' && isGroupMode && (
-                        <div className={`flex flex-col ${cardGap}`}>
-                            {grupalExercises.map((ex, exIdx) => {
-                                const hasAnyData = ex.sets.some(s =>
-                                    allPlayers.some(p => {
-                                        const d = s.data[p.userId];
-                                        return d && (d.w > 0 || d.r > 0 || d.t > 0 || d.d > 0);
+                        <div className={`flex flex-col ${cardSpacing}`}>
+                            {exerciseSets.map((ex: any, exIdx: number) => {
+                                const hasAnyData = (ex.sets || []).some((s: any) =>
+                                    allPlayers.some((p: any) => {
+                                        const d = s.playerData?.[p.id];
+                                        return d && (d.weight > 0 || d.reps > 0 || d.time > 0 || d.distance > 0);
                                     })
                                 );
                                 if (!hasAnyData) return null;
                                 return (
-                                    <div key={ex.id} className={cardStyle}>
-                                        <div className={`px-1.5 py-0.5 bg-gradient-to-r from-yellow-500/15 via-yellow-500/5 to-transparent border-b border-black flex justify-between items-center`}>
-                                            <span className={`${hSz} font-black uppercase tracking-widest text-yellow-400 italic`}>★ {ex.name}</span>
+                                    <div key={ex.exerciseId} className={`${cardStyle} transform hover:-translate-y-0.5 transition-transform duration-200`}>
+                                        <div className={`${headerPadding} bg-gradient-to-r from-yellow-500/15 via-yellow-500/5 to-transparent border-b border-black flex justify-between items-center`}>
+                                            <span className={`${headerTextSize} font-black uppercase tracking-widest text-yellow-400 italic`}>★ {ex.exerciseName}</span>
                                             <span className="text-[7px] font-black text-yellow-500/40 uppercase">EX-{exIdx + 1}</span>
                                         </div>
-                                        <div className={`grid px-1.5 py-px bg-black/50 border-b border-black ${colHSz} font-bold text-neutral-400 uppercase tracking-wider`}
+                                        <div className={`grid ${colHeaderPadding} bg-black/50 border-b border-black ${colHeaderTextSize} font-bold text-neutral-400 uppercase tracking-wider`}
                                             style={{ gridTemplateColumns: `32px repeat(${allPlayers.length}, 1fr)` }}>
                                             <div className="text-yellow-500/80 font-black">SET</div>
-                                            {allPlayers.map(p => (
-                                                <div key={p.userId} className={`text-center font-black truncate ${colHSz} ${p.userId === workout.user_id ? 'text-yellow-400 italic underline decoration-yellow-400/40' : 'text-neutral-300'}`}>
-                                                    {(p.username || 'U').substring(0, 7)}
-                                                </div>
-                                            ))}
+                                            {allPlayers.map((p: any) => {
+                                                const nm = (p.username || 'U').split(' ')[0].substring(0, 7);
+                                                const isMe = p.id === workout.user_id;
+                                                return (
+                                                    <div key={p.id} className={`text-center font-black truncate ${colHeaderTextSize} ${isMe ? 'text-yellow-400 italic underline decoration-yellow-400/40' : 'text-neutral-300'}`}>
+                                                        {nm}
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
-                                        {ex.sets.map(({ num, data }) => {
-                                            const hasAny = allPlayers.some(p => { const d = data[p.userId]; return d && (d.w > 0 || d.r > 0 || d.t > 0 || d.d > 0); });
+                                        {(ex.sets || []).map((s: any) => {
+                                            const hasAny = allPlayers.some((p: any) => {
+                                                const d = s.playerData?.[p.id];
+                                                return d && (d.weight > 0 || d.reps > 0 || d.time > 0 || d.distance > 0);
+                                            });
                                             if (!hasAny) return null;
                                             return (
-                                                <div key={num} className={`grid px-1.5 py-[1px] border-b border-black/20 last:border-0 items-center bg-black/10`}
+                                                <div key={s.setNumber} className={`grid ${rowPadding} border-b border-black/20 last:border-0 items-center bg-black/10 hover:bg-black/20 transition-colors`}
                                                     style={{ gridTemplateColumns: `32px repeat(${allPlayers.length}, 1fr)` }}>
-                                                    <div className={`${rowSz} text-yellow-500/40 font-black italic`}>#{num}</div>
-                                                    {allPlayers.map(p => {
-                                                        const d = data[p.userId];
-                                                        const w = d?.w || 0; const r = d?.r || 0; const t = d?.t || 0; const dist = d?.d || 0;
-                                                        const unit = d?.unit || 'kg';
+                                                    <div className={`${rowTextSize} text-yellow-500/40 font-black italic`}>#{s.setNumber}</div>
+                                                    {allPlayers.map((p: any) => {
+                                                        const d = s.playerData?.[p.id];
+                                                        const w = d?.weight || 0; const r = d?.reps || 0;
+                                                        const t = d?.time || 0; const dist = d?.distance || 0;
+                                                        const unit = d?.weightUnit || 'kg';
                                                         const hasVal = w > 0 || r > 0 || t > 0 || dist > 0;
-                                                        const isMe = p.userId === workout.user_id;
+                                                        const isMe = p.id === workout.user_id;
                                                         return (
-                                                            <div key={p.userId} className="flex flex-col items-center justify-center py-0.5">
+                                                            <div key={p.id} className="flex flex-col items-center justify-center py-0.5">
                                                                 {hasVal ? (
                                                                     <div className="flex flex-col items-center">
-                                                                        {w > 0 && <span className={`${wSz} font-black leading-none tracking-tight ${isMe ? 'text-yellow-400' : 'text-white'}`}>{w}<span className={`${wUSz} font-bold text-neutral-400 ml-0.5`}>{unit}</span></span>}
-                                                                        {r > 0 && <span className={`${dSz} text-neutral-400 leading-none font-bold mt-0.5`}>{r}r</span>}
-                                                                        {t > 0 && <span className={`${dSz} text-neutral-400 leading-none font-bold mt-0.5`}>{t}s</span>}
-                                                                        {dist > 0 && <span className={`${dSz} text-neutral-400 leading-none font-bold mt-0.5`}>{dist}m</span>}
+                                                                        {w > 0 && <span className={`${wTextSize} font-black leading-none tracking-tight ${isMe ? 'text-yellow-400' : 'text-white'}`}>{w}<span className={`${wUnitSize} font-bold text-neutral-400 ml-0.5`}>{unit}</span></span>}
+                                                                        {r > 0 && <span className={`${detailTextSize} text-neutral-400 leading-none font-bold mt-0.5`}>{r}r</span>}
+                                                                        {t > 0 && <span className={`${detailTextSize} text-neutral-400 leading-none font-bold mt-0.5`}>{t}s</span>}
+                                                                        {dist > 0 && <span className={`${detailTextSize} text-neutral-400 leading-none font-bold mt-0.5`}>{dist}m</span>}
                                                                     </div>
                                                                 ) : (
-                                                                    <span className={`${rowSz} text-neutral-700 font-bold`}>—</span>
+                                                                    <span className={`${rowTextSize} text-neutral-700 font-bold`}>—</span>
                                                                 )}
                                                             </div>
                                                         );
@@ -802,9 +820,9 @@ export default function WorkoutDetailPage() {
                                     </div>
                                 );
                             })}
-                            {grupalExercises.length === 0 && (
+                            {exerciseSets.length === 0 && (
                                 <div className="flex flex-col items-center justify-center py-16 text-neutral-600">
-                                    <p className="text-[10px] font-black uppercase tracking-widest">No se registraron ejercicios</p>
+                                    <p className={`${rowTextSize} font-black uppercase tracking-widest`}>No se registraron ejercicios</p>
                                 </div>
                             )}
                         </div>
@@ -812,64 +830,66 @@ export default function WorkoutDetailPage() {
 
                     {/* ── INDIVIDUAL TAB ── */}
                     {(summaryTab === 'individual' || !isGroupMode) && (
-                        <div className={`flex flex-col ${cardGap}`}>
-                            {/* Player selector */}
+                        <div className={`flex flex-col ${cardSpacing}`}>
+                            {/* Player selector tabs */}
                             {isGroupMode && (
-                                <div className="flex gap-1 mb-1 overflow-x-auto pb-1">
-                                    {allPlayers.map((p, idx) => (
+                                <div className="flex gap-1 mb-1.5 overflow-x-auto pb-1">
+                                    {allPlayers.map((p: any, idx: number) => (
                                         <button
-                                            key={p.userId}
+                                            key={p.id}
                                             onClick={() => setSelectedPlayerIdx(idx)}
-                                            className={`flex-shrink-0 px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider border transition-all ${selectedPlayerIdx === idx ? 'bg-yellow-400 border-black text-black' : 'bg-neutral-900 border-neutral-800 text-neutral-400'}`}
+                                            className={`flex-shrink-0 px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider border-2 transition-all active:scale-95 ${
+                                                selectedPlayerIdx === idx
+                                                    ? 'bg-yellow-400 border-black text-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]'
+                                                    : 'bg-neutral-900 border-neutral-800 text-neutral-400'
+                                            }`}
                                         >
-                                            {(p.username || 'U').substring(0, 10)}
-                                            {p.userId === workout.user_id && ' ★'}
+                                            {(p.username || 'U').substring(0, 10)}{p.id === workout.user_id ? ' ★' : ''}
                                         </button>
                                     ))}
                                 </div>
                             )}
 
-                            {/* Volume badge */}
-                            <div className="flex items-center justify-between px-2 py-1 mb-0.5">
-                                <span className="text-[9px] font-black text-yellow-400 uppercase tracking-widest">{selectedParticipant?.username}</span>
-                                <span className="text-[9px] font-black text-neutral-400">{selectedParticipant?.volume || 0} kg total</span>
-                            </div>
-
-                            {/* Exercises */}
-                            {indivExercises.map((ex: any, exIdx: number) => {
-                                const hasTD = ex.sets.some((s: any) => (s.time || 0) > 0 || (s.distance || 0) > 0);
+                            {indivExs.map((ex: any, exIdx: number) => {
+                                const hasTD = ex.filteredSets.some((s: any) => {
+                                    const d = s.playerData?.[selectedPlayer?.id];
+                                    return d && (d.time > 0 || d.distance > 0);
+                                });
                                 return (
-                                    <div key={ex.exercise_id} className={cardStyle}>
-                                        <div className="px-1.5 py-0.5 bg-gradient-to-r from-yellow-500/15 via-yellow-500/5 to-transparent border-b border-black flex justify-between items-center">
-                                            <span className={`${hSz} font-black uppercase tracking-widest text-yellow-400 italic`}>★ {ex.exercise_name}</span>
+                                    <div key={ex.exerciseId} className={`${cardStyle} transform hover:-translate-y-0.5 transition-transform duration-200`}>
+                                        <div className={`${headerPadding} bg-gradient-to-r from-yellow-500/15 via-yellow-500/5 to-transparent border-b border-black flex justify-between items-center`}>
+                                            <span className={`${headerTextSize} font-black uppercase tracking-widest text-yellow-400 italic`}>★ {ex.exerciseName}</span>
                                             <span className="text-[7px] font-black text-yellow-500/40 uppercase">EX-{exIdx + 1}</span>
                                         </div>
-                                        <div className={`grid ${hasTD ? 'grid-cols-4' : 'grid-cols-3'} px-1.5 py-px bg-black/50 border-b border-black text-[8px] font-bold text-neutral-400 uppercase tracking-wider`}>
+                                        <div className={`grid ${hasTD ? 'grid-cols-4' : 'grid-cols-3'} ${colHeaderPadding} bg-black/50 border-b border-black text-[8px] font-bold text-neutral-400 uppercase tracking-wider`}>
                                             <div className="text-yellow-500/80 font-black leading-none">SET</div>
                                             <div className="text-center font-black leading-none">PESO</div>
                                             <div className="text-center font-black leading-none">REPS</div>
-                                            {hasTD && <div className="text-center font-black leading-none">T/D</div>}
+                                            {hasTD && <div className="text-center font-black leading-none">TIEMPO/DIST</div>}
                                         </div>
-                                        {(ex.sets || []).filter((s: any) => s.weight_kg > 0 || s.reps > 0 || s.time > 0 || s.distance > 0).map((s: any) => {
-                                            const unit = s.weightUnit || s.metrics_data?._weight_unit || 'kg';
+                                        {ex.filteredSets.map((s: any) => {
+                                            const d = s.playerData?.[selectedPlayer?.id] || {};
+                                            const w = d.weight || 0; const r = d.reps || 0;
+                                            const t = d.time || 0; const dist = d.distance || 0;
+                                            const unit = d.weightUnit || 'kg';
                                             return (
-                                                <div key={s.set_number} className={`grid ${hasTD ? 'grid-cols-4' : 'grid-cols-3'} px-1.5 py-[1px] border-b border-black/20 last:border-0 items-center bg-black/10`}>
-                                                    <div className={`${rowSz} text-yellow-500/40 font-black italic leading-none`}>#{s.set_number}</div>
+                                                <div key={s.setNumber} className={`grid ${hasTD ? 'grid-cols-4' : 'grid-cols-3'} ${rowPadding} border-b border-black/20 last:border-0 items-center bg-black/10 hover:bg-black/20 transition-colors`}>
+                                                    <div className={`${rowTextSize} text-yellow-500/40 font-black italic leading-none`}>#{s.setNumber}</div>
                                                     <div className="text-center leading-none">
-                                                        {s.weight_kg > 0
-                                                            ? <span className={`${wSz} font-black text-yellow-400 leading-none`}>{s.weight_kg}<span className={`${wUSz} font-bold text-neutral-400 ml-0.5`}>{unit}</span></span>
-                                                            : <span className={`text-neutral-700 ${rowSz} font-bold leading-none`}>—</span>}
+                                                        {w > 0
+                                                            ? <span className={`${wTextSize} font-black text-yellow-400 leading-none`}>{w}<span className={`${wUnitSize} font-bold text-neutral-400 ml-0.5`}>{unit}</span></span>
+                                                            : <span className={`text-neutral-700 ${rowTextSize} font-bold leading-none`}>—</span>}
                                                     </div>
                                                     <div className="text-center leading-none">
-                                                        {s.reps > 0
-                                                            ? <span className={`${wSz} font-black text-white leading-none`}>{s.reps}</span>
-                                                            : <span className={`text-neutral-700 ${rowSz} font-bold leading-none`}>—</span>}
+                                                        {r > 0
+                                                            ? <span className={`${wTextSize} font-black text-white leading-none`}>{r}</span>
+                                                            : <span className={`text-neutral-700 ${rowTextSize} font-bold leading-none`}>—</span>}
                                                     </div>
                                                     {hasTD && (
                                                         <div className="text-center leading-none">
-                                                            {s.time > 0 ? <span className={`${dSz} font-bold text-neutral-300 leading-none`}>{s.time}s</span>
-                                                                : s.distance > 0 ? <span className={`${dSz} font-bold text-neutral-300 leading-none`}>{s.distance}m</span>
-                                                                : <span className={`text-neutral-700 ${rowSz} font-bold leading-none`}>—</span>}
+                                                            {t > 0 ? <span className={`${detailTextSize} font-bold text-neutral-300 leading-none`}>{t}s</span>
+                                                                : dist > 0 ? <span className={`${detailTextSize} font-bold text-neutral-300 leading-none`}>{dist}m</span>
+                                                                : <span className={`text-neutral-700 ${rowTextSize} font-bold leading-none`}>—</span>}
                                                         </div>
                                                     )}
                                                 </div>
@@ -878,21 +898,21 @@ export default function WorkoutDetailPage() {
                                     </div>
                                 );
                             })}
-                            {indivExercises.length === 0 && (
+                            {indivExs.length === 0 && (
                                 <div className="flex flex-col items-center justify-center py-16 text-neutral-600">
-                                    <p className="text-[10px] font-black uppercase tracking-widest">No se registraron ejercicios</p>
+                                    <p className={`${rowTextSize} font-black uppercase tracking-widest`}>No se registraron ejercicios</p>
                                 </div>
                             )}
                         </div>
                     )}
                 </div>
 
-                {/* FOOTER */}
-                <div className="flex-shrink-0 py-2 px-4 bg-gradient-to-t from-black via-black/95 to-transparent border-t border-black/25">
-                    <div className="w-full max-w-md mx-auto">
+                {/* FOOTER — same as summary screen */}
+                <div className="flex-shrink-0 py-2 px-4 bg-gradient-to-t from-[#0c0b09] via-[#0c0b09]/95 to-transparent border-t border-black/25">
+                    <div className="w-full max-w-md mx-auto px-2">
                         <button
                             onClick={() => navigate(-1)}
-                            className="w-full bg-[#f43f5e] hover:bg-[#e11d48] border-2 border-black text-white font-black uppercase py-2.5 rounded-xl text-[11px] tracking-widest shadow-[0_3px_0px_0px_rgba(0,0,0,1)] active:translate-y-[3px] active:shadow-none transition-all duration-150"
+                            className="w-full bg-[#f43f5e] hover:bg-[#e11d48] border-2 border-black text-white font-black uppercase py-2.5 rounded-xl text-[11px] tracking-widest shadow-[0_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[0_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] active:translate-y-[3px] active:shadow-none transition-all duration-150"
                         >
                             ¡VOLVER AL HISTORIAL!
                         </button>
