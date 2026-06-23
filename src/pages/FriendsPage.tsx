@@ -67,7 +67,7 @@ export const FriendsPage = () => {
                     .from('workout_sessions')
                     .select('id, user_id, partner_id, started_at, is_multiplayer, multiplayer_mode, partner_session_id')
                     .or(`user_id.in.(${friendIds.join(',')}),partner_id.in.(${friendIds.join(',')})`)
-                    .is('end_time', null)
+                    .is('finished_at', null)   // mirror getActiveSession — soft-finalized sessions are NOT active
                     .gt('started_at', twelveHoursAgo)
                     .order('started_at', { ascending: false });
 
@@ -222,9 +222,11 @@ export const FriendsPage = () => {
             }
         }
 
-        // ── Step 2: DB verification — query the candidate host's active session ──
-        // We always look up by user_id, NOT by session ID, so we are immune to
-        // partner_session_id not being set yet (race window after guest joins).
+        // ── Step 2: DB verification — confirm the host is genuinely active ──────
+        // Re-query live so we don't send a join request to a session that already
+        // finished between the last loadFriends() call and now.
+        // Use finished_at IS NULL (same as getActiveSession) — end_time can still
+        // be null for soft-finalized co-op sessions that are already done.
         let hostId = candidateHostId;
         let roomSessionId = candidateRoomId;
         try {
@@ -232,16 +234,20 @@ export const FriendsPage = () => {
                 .from('workout_sessions')
                 .select('id, user_id')
                 .eq('user_id', candidateHostId)
-                .is('end_time', null)
+                .is('finished_at', null)
                 .gt('started_at', twelveHoursAgo)
                 .order('started_at', { ascending: false })
                 .limit(1)
                 .maybeSingle();
 
-            if (hostSess?.user_id) {
-                hostId = hostSess.user_id;
-                roomSessionId = hostSess.id;
+            if (!hostSess) {
+                toast.error("❌ Este usuario ya no está entrenando.", { id: "join-req", duration: 4000 });
+                loadFriends(true); // refresh to remove stale "training" indicator
+                return;
             }
+
+            hostId = hostSess.user_id;
+            roomSessionId = hostSess.id;
         } catch (e) {
             console.warn("Failed to query host session, using candidate:", e);
         }
