@@ -837,12 +837,10 @@ export const WorkoutSession = () => {
                 }
 
                 if (routineName !== undefined && routineName !== null) {
-                    console.log('🔄 Synchronized routine name via broadcast:', routineName);
                     setCurrentRoutineName(routineName);
                 }
 
                 if (incomingRoutineModified !== undefined && incomingRoutineModified !== null) {
-                    console.log('🔄 Synchronized isRoutineModified via broadcast:', incomingRoutineModified);
                     setIsRoutineModified(incomingRoutineModified);
                 }
 

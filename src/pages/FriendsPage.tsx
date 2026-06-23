@@ -58,38 +58,21 @@ export const FriendsPage = () => {
             let activeSessionsMap = new Map<string, any>();
             
             if (friendIds.length > 0) {
-                console.log("🕵️‍♂️ [FriendsPage] Buscando sesiones para friendIds:", friendIds);
-                // Use 5 hours (same as getActiveSession for rooms) so FriendsPage and WorkoutSession
-                // agree on what is "active". Using 12h here caused a mismatch where FriendsPage
-                // would show a friend as training but the host's device couldn't find the session.
                 const twelveHoursAgo = new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString();
                 const { data: activeSessions, error: sessionErr } = await supabase
                     .from('workout_sessions')
                     .select('id, user_id, partner_id, started_at, is_multiplayer, multiplayer_mode, partner_session_id')
                     .or(`user_id.in.(${friendIds.join(',')}),partner_id.in.(${friendIds.join(',')})`)
-                    .is('finished_at', null)   // mirror getActiveSession — soft-finalized sessions are NOT active
+                    .is('finished_at', null)
                     .gt('started_at', twelveHoursAgo)
                     .order('started_at', { ascending: false });
 
-                console.log("🕵️‍♂️ [FriendsPage] activeSessions encontradas en DB:", activeSessions, "Error:", sessionErr);
+                if (sessionErr) console.error('[FriendsPage] Error fetching active sessions:', sessionErr);
 
                 if (activeSessions) {
-                    // ⚠️ GHOST-SESSION FIX: a friend can have MULTIPLE unfinished session rows
-                    // at once (e.g. a stale/orphaned coop room from an earlier interrupted
-                    // session, plus the brand-new one they're training in right now). Without
-                    // an explicit order, .find() picked whichever row Postgres happened to
-                    // return first — frequently the OLD ghost row — causing handleJoinWorkout
-                    // to resolve the wrong host/room and silently misroute the join request.
-                    // Sorting by started_at DESC (above) guarantees .find() always picks the
-                    // MOST RECENTLY STARTED session — i.e. the one the friend is actually in.
                     friendIds.forEach(fId => {
                         const sess = activeSessions.find(s => s.user_id === fId || s.partner_id === fId);
-                        if (sess) {
-                            console.log(`✅ [FriendsPage] Asignando sesión activa a friendId ${fId}:`, sess);
-                            activeSessionsMap.set(fId, sess);
-                        } else {
-                            console.log(`❌ [FriendsPage] Ninguna sesión encontrada en el array devuelto para friendId ${fId}`);
-                        }
+                        if (sess) activeSessionsMap.set(fId, sess);
                     });
                 }
             }
