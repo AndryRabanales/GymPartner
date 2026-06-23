@@ -5348,10 +5348,13 @@ export const WorkoutSession = () => {
                                     .map(([sn, playerData]) => ({ setNumber: Number(sn), playerData }))
                             }));
 
-                            await supabase
-                                .from('workout_sessions')
-                                .update({ coop_summary: { players, exerciseSets } })
-                                .eq('id', coopRoomId);
+                            // Use an RPC (SECURITY DEFINER) so guests can write to the
+                            // host's session row — direct UPDATE is blocked by RLS for non-owners.
+                            const { error: summaryErr } = await supabase.rpc('upsert_coop_summary', {
+                                p_room_id: coopRoomId,
+                                p_summary: { players, exerciseSets }
+                            });
+                            if (summaryErr) throw summaryErr;
 
                             console.log('✅ [CoopSummary] Guardado en DB:', players.length, 'jugadores,', exerciseSets.length, 'ejercicios');
                         }
