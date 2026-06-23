@@ -147,11 +147,11 @@ export const HistoryPage = () => {
                 const [{ data: hostRows }, { data: guestRows }] = await Promise.all([
                     supabase
                         .from('workout_sessions')
-                        .select('id, user_id, end_time')
+                        .select('id, user_id, end_time, finished_at')
                         .in('id', allRoomIds),
                     supabase
                         .from('workout_sessions')
-                        .select('id, user_id, partner_session_id, end_time')
+                        .select('id, user_id, partner_session_id, end_time, finished_at')
                         .in('partner_session_id', allRoomIds)
                 ]);
 
