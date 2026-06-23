@@ -5120,10 +5120,11 @@ export const WorkoutSession = () => {
                             payload: { sender: user.id }
                         }).catch(e => console.error('Error broadcasting participant_left:', e));
                     }
-                    const softResult = await workoutService.finishSession(finalSessionId, flowNotes, currentRoutineName, true, geoVerified, false);
-                    // finishSession(setFinishedAt=false) now sets finished_at immediately,
-                    // so getActiveSession() won't find this session → no rescue modal.
-                    // end_time stays null until room_all_finished → markSessionFinished.
+                    // setFinishedAt=true so end_time is stamped immediately — sessions appear
+                    // in Historial as soon as Finalizar is pressed, not when everyone clicks
+                    // "Volver al inicio". room_all_finished still fires but is a no-op for
+                    // end_time (markSessionFinished filters on end_time IS NULL).
+                    const softResult = await workoutService.finishSession(finalSessionId, flowNotes, currentRoutineName, true, geoVerified, true);
                     result = softResult.success ? softResult : { success: true };
                 }
 

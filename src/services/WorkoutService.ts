@@ -54,8 +54,10 @@ class WorkoutService {
             .select()
             .single();
 
+        if (error) console.error('[WS] startSession failed:', error.message, { userId, isMultiplayer, partnerSessionId });
+        else console.log('[WS] ✓ Session created:', data?.id, { isMultiplayer, partnerSessionId: partnerSessionId ?? null });
+
         if (error) {
-            console.error('Error starting session:', error);
             return { error };
         }
 
@@ -116,10 +118,9 @@ class WorkoutService {
     }
 
     // Finish the session (The "Victory")
-    // setFinishedAt=false (soft-finalize): saves notes/routine name, awards GX,
-    // and sets finished_at=now (so getActiveSession returns null → no rescue modal),
-    // but leaves end_time=null so the session stays hidden in Historial until the
-    // last room participant finishes (see room_all_finished → markSessionFinished).
+    // setFinishedAt=true (default, including soft-finalize): sets both finished_at
+    // and end_time=now so sessions appear in Historial immediately when Finalizar
+    // is pressed — no dependency on room_all_finished to stamp end_time.
     async finishSession(sessionId: string, notes?: string, routineName?: string, isManual: boolean = false, geoVerified?: boolean, setFinishedAt: boolean = true): Promise<{ success: boolean; error?: any }> {
         const now = new Date().toISOString();
 
@@ -140,8 +141,10 @@ class WorkoutService {
                 .update(updatePayload)
                 .eq('id', sessionId);
 
+            if (error) console.error('[WS] finishSession failed:', error.message, { sessionId });
+            else console.log('[WS] ✓ Session finished:', sessionId);
+
             if (error) {
-                console.error('Error finishing session:', error);
                 return { success: false, error };
             }
         } else {
@@ -158,14 +161,12 @@ class WorkoutService {
                 .eq('id', sessionId);
 
             if (error) {
-                console.warn('Error soft-finalizing session (setFinishedAt=false):', error);
                 // Non-fatal: continue with GX/notifications below
             }
         }
 
         // If this is an automatic/background close, skip G-points and notifications
         if (!isManual) {
-            console.log(`ℹ️ [WorkoutService] Sesión ${sessionId} finalizada automáticamente (isManual=false). Omitiendo puntos y notificaciones.`);
             return { success: true };
         }
 
@@ -195,13 +196,11 @@ class WorkoutService {
 
                     if (isFirstWorkoutToday) {
                         if (geoVerified === false) {
-                            console.log(`📍 Geo check failed — no GX awarded for workout ${sessionId}.`);
+                            // Geo check failed — no GX awarded
                         } else {
                         const isMulti = session.is_multiplayer || false;
                         const pointsAwarded = isMulti ? 2 : 1;
                         const reason = isMulti ? 'workout_finished_coop' : 'workout_finished';
-
-                        console.log(`🎉 First qualified workout of the day (>= 20 mins)! Awarding ${pointsAwarded} GX points (isMultiplayer: ${isMulti}).`);
 
                         // Award GX points
                         await userService.addGxPoints(session.user_id, pointsAwarded, reason);
@@ -212,7 +211,7 @@ class WorkoutService {
                             const { streakService } = await import('./StreakService');
                             await streakService.recordTrainingDay(session.user_id);
                         } catch (streakErr) {
-                            console.warn('Could not record streak training day:', streakErr);
+                            console.error('Could not record streak training day:', streakErr);
                         }
 
                         // Increment checkins_count in profile
@@ -230,12 +229,10 @@ class WorkoutService {
                             .eq('id', session.user_id);
                         } // end else (geoVerified !== false)
                     }
-                } else {
-                    console.log(`⚠️ Session duration (${durationMinutes.toFixed(1)} mins) is less than 20 mins. No GX points awarded.`);
                 }
             }
         } catch (e) {
-            console.warn('Could not award GX Points or training cumulative point:', e);
+            console.error('Could not award GX Points or training cumulative point:', e);
         }
 
         // Notify allies that the session has finished
@@ -379,7 +376,7 @@ class WorkoutService {
                 .neq('id', excludeSessionId)
                 .is('end_time', null);
         } catch (e) {
-            console.warn('finalizeOtherRoomSessions: best-effort cross-user update failed (RLS?):', e);
+            console.error('finalizeOtherRoomSessions: best-effort cross-user update failed (RLS?):', e);
         }
     }
 
@@ -391,7 +388,7 @@ class WorkoutService {
         try {
             await supabase.from('workout_logs').delete().eq('session_id', sessionId);
         } catch (e) {
-            console.warn('forceDeleteSession: error deleting workout_logs (continuing):', e);
+            console.error('forceDeleteSession: error deleting workout_logs (continuing):', e);
         }
 
         const { error } = await supabase
@@ -419,7 +416,6 @@ class WorkoutService {
 
         if ((count || 0) > 0) {
             // Session has data — finalize (set finished_at) instead of delete
-            console.warn(`⚠️ deleteSession called on session with ${count} logs — finalizing instead of deleting to preserve data.`);
             return this.finishSession(sessionId, 'Sesión cancelada por el usuario');
         }
 
@@ -442,8 +438,6 @@ class WorkoutService {
     async cleanOrphanSessions(userId: string): Promise<string[]> {
         const closedIds: string[] = [];
         try {
-            console.log('🧹 [Cleanup] Escaneando sesiones huérfanas para el usuario:', userId);
-
             // Fetch ALL unfinished sessions, including multiplayer flags to avoid
             // auto-closing active co-op sessions (e.g. when partner locks their phone).
             const { data: activeSessions } = await supabase
@@ -469,11 +463,8 @@ class WorkoutService {
                 // but sessions under 5 hours must remain intact for all participants.
                 if (session.is_multiplayer || session.partner_session_id) {
                     if (minutesSinceStart > ROOM_MAX_MINUTES) {
-                        console.log(`⏰ [Cleanup] Sala multijugador expirada (${minutesSinceStart.toFixed(0)} min > 5h): ${session.id}`);
                         await this.finishSession(session.id, 'Cierre automático: límite de 5 horas de sala');
                         closedIds.push(session.id);
-                    } else {
-                        console.log(`🛡️ [Cleanup] Sesión multijugador activa preservada (${minutesSinceStart.toFixed(0)} min): ${session.id}`);
                     }
                     continue;
                 }
@@ -486,19 +477,17 @@ class WorkoutService {
                 const hasLogs = (count || 0) > 0;
 
                 if (!hasLogs) {
-                    if (minutesSinceStart > 30) {
-                        console.log(`🧹 [Cleanup] Eliminando sesión vacía fantasma antigua: ${session.id} (${minutesSinceStart.toFixed(0)} min)`);
+                    // 3 hours gives enough time for any legitimate workout — including coop
+                    // sessions whose is_multiplayer flag wasn't set correctly in the DB row.
+                    // 30 minutes was too aggressive and closed active coop participants
+                    // who hadn't logged any sets yet, wiping their exercises from state.
+                    if (minutesSinceStart > 180) {
                         await this.deleteSession(session.id);
                         closedIds.push(session.id);
-                    } else {
-                        console.log(`ℹ️ [Cleanup] Sesión vacía reciente (${minutesSinceStart.toFixed(0)} min) — se preserva: ${session.id}`);
                     }
                 } else if (minutesSinceStart > 480) {
-                    console.log(`🧹 [Cleanup] Cerrando sesión huérfana antigua con datos (${minutesSinceStart.toFixed(0)} min): ${session.id}`);
                     await this.finishSession(session.id, 'Cierre automático por inactividad');
                     closedIds.push(session.id);
-                } else {
-                    console.log(`ℹ️ [Cleanup] Sesión reciente con datos (${minutesSinceStart.toFixed(0)} min) — se preserva: ${session.id}`);
                 }
             }
         } catch (err) {
@@ -533,8 +522,10 @@ class WorkoutService {
             .select()
             .single();
 
+        if (error) console.error('[WS] logSet failed:', error.message, { sessionId: setData.session_id, exerciseId: setData.exercise_id, setNumber: setData.set_number });
+        else console.log('[WS] ✓ Set logged:', { sessionId: setData.session_id, exerciseId: setData.exercise_id, setNumber: setData.set_number, weight: safePayload.weight_kg, reps: safePayload.reps });
+
         if (error) {
-            console.error('Error logging set:', error);
             return { error };
         }
         return { data };
@@ -597,10 +588,10 @@ class WorkoutService {
             return { data: null, error: recentError || coopError };
         }
         if (recentError) {
-            console.warn('getActiveSession: recent-session query failed, falling back to coop result', recentError);
+            console.error('getActiveSession: recent-session query failed, falling back to coop result', recentError);
         }
         if (coopError) {
-            console.warn('getActiveSession: coop query failed, falling back to recent result', coopError);
+            console.error('getActiveSession: coop query failed, falling back to recent result', coopError);
         }
 
         if (coopData && recentData) {
@@ -791,7 +782,7 @@ class WorkoutService {
             // ids, write their workout_logs rows, and show "¡Progreso guardado!".
             await new Promise(resolve => setTimeout(resolve, 3000));
         } catch (e) {
-            console.warn('closeRoom: failed to broadcast session_finished to guests (non-fatal):', e);
+            console.error('closeRoom: failed to broadcast session_finished to guests (non-fatal):', e);
         } finally {
             if (channel) {
                 try { await supabase.removeChannel(channel); } catch { /* ignore */ }
@@ -908,7 +899,7 @@ class WorkoutService {
                     });
                 }
             } catch (e) {
-                console.warn('closeRoom: error awarding guest GX or sending notifications:', e);
+                console.error('closeRoom: error awarding guest GX or sending notifications:', e);
                 // Non-fatal: host session and guest sessions are already closed; only GX/notifications failed
             }
         }
@@ -1066,7 +1057,7 @@ class WorkoutService {
             `)
             .in('routine_id', routineIds);
 
-        if (exercisesError) console.warn('Error fetching routine_exercises:', exercisesError);
+        if (exercisesError) console.error('Error fetching routine_exercises:', exercisesError);
 
         // 3. REMOVED routine_items fetch (404 Not Found)
 
@@ -1202,7 +1193,6 @@ class WorkoutService {
     // Import (Clone) a Master Routine to a Gym
     async importRoutine(userId: string, sourceRoutineId: string, targetGymId: string) {
         // 1. USE RPC for Server-Side "Sudo" Cloning (Bypasses RLS to read private data)
-        console.log(`[Import] Calling RPC clone_full_routine for ${sourceRoutineId} -> ${targetGymId}`);
 
         const { data, error } = await supabase.rpc('clone_full_routine', {
             p_user_id: userId,
@@ -1274,7 +1264,6 @@ class WorkoutService {
 
     // NEW Helper for Rich Config
     private async linkRichExercisesToRoutine(routineId: string, exercises: any[]) {
-        console.log('[linkRichExercisesToRoutine] Saving rich config for', exercises.length, 'items');
 
         const exerciseRows = exercises.map((ex, idx) => ({
             routine_id: routineId,
@@ -1305,8 +1294,6 @@ class WorkoutService {
     private async linkEquipmentToRoutine(routineId: string, equipmentIds: string[]) {
         if (equipmentIds.length === 0) return;
 
-        console.log('[linkEquipmentToRoutine] Starting with IDs:', equipmentIds);
-
         // Build exercise rows - use the IDs directly as exercise_ids
         // These IDs can be from gym_equipment OR from exercises table
         const exerciseRows = equipmentIds.map((eqId, idx) => ({
@@ -1324,27 +1311,9 @@ class WorkoutService {
             .select();
 
         if (insertError) {
-            console.error('[linkEquipmentToRoutine] ❌ Insert failed:', insertError);
-            console.error('[linkEquipmentToRoutine] IDs that failed:', equipmentIds);
-
-            // Log which table these IDs might belong to
-            const { data: inGymEquipment } = await supabase
-                .from('gym_equipment')
-                .select('id, name')
-                .in('id', equipmentIds);
-
-            const { data: inExercises } = await supabase
-                .from('exercises')
-                .select('id, name')
-                .in('id', equipmentIds);
-
-            console.log('[linkEquipmentToRoutine] Found in gym_equipment:', inGymEquipment?.length || 0, inGymEquipment);
-            console.log('[linkEquipmentToRoutine] Found in exercises:', inExercises?.length || 0, inExercises);
-
+            console.error('[linkEquipmentToRoutine] Insert failed:', insertError);
             return;
         }
-
-        console.log('[linkEquipmentToRoutine] ✅ Successfully saved', insertedExercises?.length, 'exercises');
     }
 
 
@@ -1494,7 +1463,7 @@ class WorkoutService {
 
             if (error) {
                 if (error.code === '42P01') {
-                    console.warn("routine_shares table does not exist yet.");
+                    console.error("routine_shares table does not exist yet.");
                 } else {
                     console.error("Error getting routine shares:", error);
                 }
