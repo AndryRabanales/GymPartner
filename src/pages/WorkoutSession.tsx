@@ -1734,53 +1734,122 @@ export const WorkoutSession = () => {
                     return { id: s.user_id, username: p?.username || 'Participante', avatarUrl: p?.avatar_url || '' };
                 });
 
-            // Fetch logs for every session in parallel
-            const exerciseMap: Record<string, {
-                exerciseId: string; exerciseName: string;
-                setMap: Record<number, Record<string, { weight: number; reps: number; time: number; distance: number }>>;
-            }> = {};
+            // Build exerciseSets from IN-MEMORY state — exactly what this user sees on screen.
+            // The last user to finalize has the most complete picture (all synced data from
+            // all participants), so "last write wins" correctly captures the full session.
+            const memExs = activeExercisesRef.current.length > 0
+                ? activeExercisesRef.current
+                : lastNonEmptyExercisesRef.current;
 
-            await Promise.all(sessions.map(async (sess: any) => {
-                const { data: logs } = await supabase
-                    .from('workout_logs')
-                    .select('exercise_id, set_number, weight_kg, reps, time, distance, exercise:exercises(id, name)')
-                    .eq('session_id', sess.id)
-                    .order('set_number', { ascending: true });
-                for (const log of (logs || [])) {
-                    const exId = log.exercise_id;
-                    const exName = (log.exercise as any)?.name || 'Ejercicio';
-                    if (!exerciseMap[exId]) exerciseMap[exId] = { exerciseId: exId, exerciseName: exName, setMap: {} };
-                    const sn = log.set_number || 1;
-                    if (!exerciseMap[exId].setMap[sn]) exerciseMap[exId].setMap[sn] = {};
-                    exerciseMap[exId].setMap[sn][sess.user_id] = {
-                        weight: log.weight_kg || 0,
-                        reps: log.reps || 0,
-                        time: log.time || 0,
-                        distance: log.distance || 0
-                    };
-                }
-            }));
-
-            const exerciseSets = Object.values(exerciseMap).map(ex => ({
-                exerciseId: ex.exerciseId,
-                exerciseName: ex.exerciseName,
-                sets: Object.entries(ex.setMap)
-                    .sort(([a], [b]) => Number(a) - Number(b))
-                    .map(([sn, playerData]) => ({ setNumber: Number(sn), playerData }))
-            }));
+            const exerciseSets = memExs.map((ex: any) => {
+                const sets = (ex.sets || []).map((s: any, idx: number) => {
+                    const playerData: Record<string, { weight: number; reps: number; time: number; distance: number; weightUnit: string }> = {};
+                    for (const uid of userIds) {
+                        const w = Number(s.playerWeights?.[uid] ?? 0);
+                        const r = Number(s.playerReps?.[uid] ?? 0);
+                        const t = Number(s.playerTimes?.[uid] ?? 0);
+                        const d = Number(s.playerDistances?.[uid] ?? 0);
+                        if (w > 0 || r > 0 || t > 0 || d > 0) {
+                            playerData[uid] = { weight: w, reps: r, time: t, distance: d, weightUnit: ex.weightUnit || 'kg' };
+                        }
+                    }
+                    return { setNumber: idx + 1, playerData };
+                }).filter((s: any) => Object.keys(s.playerData).length > 0);
+                return { exerciseId: ex.equipmentId || '', exerciseName: ex.equipmentName || '', sets };
+            }).filter((ex: any) => ex.sets.length > 0);
 
             setCoopSummaryData({ players, exerciseSets });
 
-            // Persist snapshot so every participant's History always matches the live summary.
-            // Runs for every participant who reaches the summary screen — last write wins,
-            // and the last person to finish has the most complete DB data.
-            // Uses upsert_coop_summary RPC (SECURITY DEFINER) so guests can write to host row.
-            if (players.length > 0) {
-                const { error: saveErr } = await supabase.rpc('upsert_coop_summary', {
-                    p_room_id: roomId,
-                    p_summary: { players, exerciseSets }
-                });
-                if (saveErr) console.error('[CoopSummary] snapshot save failed:', saveErr);
+            if (players.length === 0) {
+                console.warn('[CoopSummary] No players found for room:', roomId);
+                return;
+            }
+            if (exerciseSets.length === 0) {
+                console.warn('[CoopSummary] No exercise data in memory — snapshot not saved.');
+                return;
+            }
+
+            // Save in-memory snapshot to DB (authoritative — reflects exactly what screen shows)
+            const { error: saveErr } = await supabase.rpc('upsert_coop_summary', {
+                p_room_id: roomId,
+                p_summary: { players, exerciseSets }
+            });
+            if (saveErr) {
+                console.error('[CoopSummary] snapshot save failed:', saveErr);
+                return;
+            }
+
+            // ── Verification: compare in-memory summary with workout_logs in DB ────────────
+            // Detects whether pre-saves wrote all sets correctly.
+            // "onlyInMem" = shown in summary but missing from workout_logs (pre-save failed).
+            // "mismatch"  = present in both but values differ (data corruption).
+            const sessionUserMap: Record<string, string> = {};
+            for (const s of sessions) sessionUserMap[(s as any).id] = (s as any).user_id;
+
+            const { data: allLogs } = await supabase
+                .from('workout_logs')
+                .select('session_id, exercise_id, set_number, weight_kg, reps, time, distance, exercise:exercises(id, name)')
+                .in('session_id', sessions.map((s: any) => s.id))
+                .order('set_number', { ascending: true });
+
+            // Index DB logs by exerciseName → setNumber → userId
+            const dbMap: Record<string, Record<number, Record<string, { weight: number; reps: number; time: number; distance: number }>>> = {};
+            for (const log of (allLogs || []) as any[]) {
+                const uid = sessionUserMap[log.session_id];
+                if (!uid) continue;
+                const exName = (log.exercise as any)?.name || log.exercise_id;
+                if (!dbMap[exName]) dbMap[exName] = {};
+                const sn = log.set_number || 1;
+                if (!dbMap[exName][sn]) dbMap[exName][sn] = {};
+                dbMap[exName][sn][uid] = {
+                    weight: log.weight_kg || 0, reps: log.reps || 0,
+                    time: log.time || 0, distance: log.distance || 0
+                };
+            }
+
+            const onlyInMem: any[] = [];
+            const mismatches: any[] = [];
+
+            for (const ex of exerciseSets) {
+                const dbEx = dbMap[ex.exerciseName];
+                for (const s of ex.sets) {
+                    const dbSet = dbEx?.[s.setNumber];
+                    for (const [uid, mem] of Object.entries(s.playerData) as [string, any][]) {
+                        const pName = players.find(p => p.id === uid)?.username || uid.slice(0, 8);
+                        const db = dbSet?.[uid];
+                        if (!db) {
+                            onlyInMem.push({
+                                ejercicio: ex.exerciseName, serie: s.setNumber, usuario: pName,
+                                resumen: `${mem.weight}kg × ${mem.reps}r`
+                            });
+                        } else {
+                            const wOk = Math.abs((db.weight || 0) - (mem.weight || 0)) < 0.05;
+                            const rOk = (db.reps || 0) === (mem.reps || 0);
+                            const tOk = Math.abs((db.time || 0) - (mem.time || 0)) < 1;
+                            const dOk = Math.abs((db.distance || 0) - (mem.distance || 0)) < 0.05;
+                            if (!wOk || !rOk || !tOk || !dOk) {
+                                mismatches.push({
+                                    ejercicio: ex.exerciseName, serie: s.setNumber, usuario: pName,
+                                    resumen: `${mem.weight}kg × ${mem.reps}r`,
+                                    db: `${db.weight}kg × ${db.reps}r`
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (onlyInMem.length === 0 && mismatches.length === 0) {
+                console.log(`[CoopVerify] ✅ Resumen coincide exactamente con workout_logs. Snapshot guardado OK (${exerciseSets.length} ejercicios, ${players.length} jugadores).`);
+            } else {
+                if (onlyInMem.length > 0) {
+                    console.warn('[CoopVerify] ⚠️ Datos en resumen pero AUSENTES de workout_logs (pre-save falló para estas series):');
+                    console.table(onlyInMem);
+                }
+                if (mismatches.length > 0) {
+                    console.warn('[CoopVerify] ⚠️ Valores distintos entre resumen y workout_logs:');
+                    console.table(mismatches);
+                }
             }
         };
 
