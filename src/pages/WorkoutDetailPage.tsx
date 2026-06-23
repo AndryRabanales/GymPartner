@@ -428,25 +428,86 @@ export default function WorkoutDetailPage() {
                     } catch { /* fallback to session.id */ }
                 }
 
-                // ── Fast path: read pre-built coop_summary from the host session ──────
-                // Saved by WorkoutSession.tsx when the last participant finalizes.
-                // RLS allows all room members to read the host (anchor) session row.
+                // ── Build coop summary for the results-screen-style history view ────────
+                // Priority 1: pre-built snapshot on host session (new format {players, exerciseSets})
+                // Priority 2: fetch live from workout_logs (same queries as summary screen effect)
+                // workout_logs has a permissive coop RLS so all room members can read each other's logs.
                 const { data: hostWithSummary } = await supabase
                     .from('workout_sessions')
                     .select('coop_summary')
                     .eq('id', roomId)
                     .maybeSingle();
 
-                const coopSummary: any = (hostWithSummary as any)?.coop_summary ?? null;
+                const savedSummary: any = (hostWithSummary as any)?.coop_summary ?? null;
 
-                // New format: { players, exerciseSets }
-                // Old format (array) is ignored — sessions will fall through to fallback
-                if (coopSummary && coopSummary.players && coopSummary.exerciseSets) {
-                    setCoopSummaryRaw(coopSummary);
+                if (savedSummary && savedSummary.players && savedSummary.exerciseSets) {
+                    // Fast path: new-format snapshot already saved
+                    setCoopSummaryRaw(savedSummary);
+                } else {
+                    // Live fetch: mirror the coopSummaryData effect from WorkoutSession.tsx
+                    try {
+                        const { data: roomSessions } = await supabase
+                            .from('workout_sessions')
+                            .select('id, user_id')
+                            .or(`id.eq.${roomId},partner_session_id.eq.${roomId}`);
+
+                        if (roomSessions?.length) {
+                            const userIds = (roomSessions as any[]).map((s: any) => s.user_id);
+                            const { data: profiles } = await supabase
+                                .from('profiles').select('id, username, avatar_url').in('id', userIds);
+
+                            const sortedSessions = [...(roomSessions as any[])].sort((a, b) =>
+                                a.id === roomId ? -1 : b.id === roomId ? 1 : a.id.localeCompare(b.id)
+                            );
+                            const players = sortedSessions.map((s: any) => {
+                                const p = (profiles || []).find((pr: any) => pr.id === s.user_id);
+                                return { id: s.user_id, username: (p as any)?.username || 'Participante', avatarUrl: (p as any)?.avatar_url || '' };
+                            });
+
+                            const exerciseMap: Record<string, {
+                                exerciseId: string; exerciseName: string;
+                                setMap: Record<number, Record<string, { weight: number; reps: number; time: number; distance: number; weightUnit: string }>>;
+                            }> = {};
+
+                            await Promise.all((roomSessions as any[]).map(async (sess: any) => {
+                                const { data: logs } = await supabase
+                                    .from('workout_logs')
+                                    .select('exercise_id, set_number, weight_kg, reps, time, distance, metrics_data, exercise:exercises(id, name)')
+                                    .eq('session_id', sess.id)
+                                    .order('set_number', { ascending: true });
+                                for (const log of (logs || []) as any[]) {
+                                    const exId = log.exercise_id;
+                                    const exName = (log.exercise as any)?.name || 'Ejercicio';
+                                    if (!exerciseMap[exId]) exerciseMap[exId] = { exerciseId: exId, exerciseName: exName, setMap: {} };
+                                    const sn = log.set_number || 1;
+                                    if (!exerciseMap[exId].setMap[sn]) exerciseMap[exId].setMap[sn] = {};
+                                    exerciseMap[exId].setMap[sn][sess.user_id] = {
+                                        weight: log.weight_kg || 0, reps: log.reps || 0,
+                                        time: log.time || 0, distance: log.distance || 0,
+                                        weightUnit: (log.metrics_data as any)?._weight_unit || 'kg'
+                                    };
+                                }
+                            }));
+
+                            const exerciseSets = Object.values(exerciseMap).map(ex => ({
+                                exerciseId: ex.exerciseId, exerciseName: ex.exerciseName,
+                                sets: Object.entries(ex.setMap)
+                                    .sort(([a], [b]) => Number(a) - Number(b))
+                                    .map(([sn, playerData]) => ({ setNumber: Number(sn), playerData }))
+                            }));
+
+                            if (players.length > 0) {
+                                setCoopSummaryRaw({ players, exerciseSets });
+                                console.log('✅ [History] coop summary built live:', players.length, 'players,', exerciseSets.length, 'exercises');
+                            }
+                        }
+                    } catch (liveErr) {
+                        console.warn('⚠️ [History] live coop summary fetch failed:', liveErr);
+                    }
                 }
 
-                // Legacy array format — still used for roomParticipants fallback build
-                const coopSummaryArr: any[] | null = Array.isArray(coopSummary) ? coopSummary : null;
+                // Legacy array format — still used for roomParticipants fallback build (old UI)
+                const coopSummaryArr: any[] | null = Array.isArray(savedSummary) ? savedSummary : null;
 
                 if (coopSummaryArr && coopSummaryArr.length > 0) {
                     // Map snapshot → RoomParticipant[], excluding the current viewer
