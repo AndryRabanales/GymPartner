@@ -5269,16 +5269,26 @@ export const WorkoutSession = () => {
                                 .select('id, username, avatar_url')
                                 .in('id', userIds);
 
-                            // Build players list — host first (room anchor), then guests sorted for determinism
+                            // Build players list — host first (room anchor), then guests sorted for determinism.
+                            // Deduplicate by user_id: a zombie session from a previous interrupted join
+                            // can leave a second row for the same user. Keep first occurrence (host wins).
+                            // We still process ALL sessions when fetching logs so data is never lost.
                             const sortedSessions = [...(roomSessions as any[])].sort((a, b) => {
                                 if (a.id === coopRoomId) return -1;
                                 if (b.id === coopRoomId) return 1;
                                 return a.id.localeCompare(b.id);
                             });
-                            const players = sortedSessions.map((s: any) => {
-                                const p = (profiles || []).find((pr: any) => pr.id === s.user_id);
-                                return { id: s.user_id, username: (p as any)?.username || 'Participante', avatarUrl: (p as any)?.avatar_url || '' };
-                            });
+                            const seenPlayerIds = new Set<string>();
+                            const players = sortedSessions
+                                .filter((s: any) => {
+                                    if (seenPlayerIds.has(s.user_id)) return false;
+                                    seenPlayerIds.add(s.user_id);
+                                    return true;
+                                })
+                                .map((s: any) => {
+                                    const p = (profiles || []).find((pr: any) => pr.id === s.user_id);
+                                    return { id: s.user_id, username: (p as any)?.username || 'Participante', avatarUrl: (p as any)?.avatar_url || '' };
+                                });
 
                             // Build per-exercise-set-player map — same format as coopSummaryData
                             // so WorkoutDetailPage can render it identically to the live summary screen.

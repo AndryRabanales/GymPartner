@@ -456,13 +456,25 @@ export default function WorkoutDetailPage() {
                             const { data: profiles } = await supabase
                                 .from('profiles').select('id, username, avatar_url').in('id', userIds);
 
+                            // Sort host first, then guests — host session (id === roomId) is the anchor
                             const sortedSessions = [...(roomSessions as any[])].sort((a, b) =>
                                 a.id === roomId ? -1 : b.id === roomId ? 1 : a.id.localeCompare(b.id)
                             );
-                            const players = sortedSessions.map((s: any) => {
-                                const p = (profiles || []).find((pr: any) => pr.id === s.user_id);
-                                return { id: s.user_id, username: (p as any)?.username || 'Participante', avatarUrl: (p as any)?.avatar_url || '' };
-                            });
+                            // Deduplicate by user_id: keep first occurrence (host before guests).
+                            // A user can have multiple sessions in the same room if they joined/left
+                            // and the old session wasn't cleaned up (zombie session).
+                            // We still fetch logs for ALL sessions so data from any session is merged.
+                            const seenUserIds = new Set<string>();
+                            const players = sortedSessions
+                                .filter((s: any) => {
+                                    if (seenUserIds.has(s.user_id)) return false;
+                                    seenUserIds.add(s.user_id);
+                                    return true;
+                                })
+                                .map((s: any) => {
+                                    const p = (profiles || []).find((pr: any) => pr.id === s.user_id);
+                                    return { id: s.user_id, username: (p as any)?.username || 'Participante', avatarUrl: (p as any)?.avatar_url || '' };
+                                });
 
                             const exerciseMap: Record<string, {
                                 exerciseId: string; exerciseName: string;
