@@ -1754,10 +1754,18 @@ export const WorkoutSession = () => {
                 if (b.id === roomId) return 1;
                 return a.id.localeCompare(b.id);
             });
-            const players = sorted.map((s: any) => {
-                const p = (profiles || []).find((pr: any) => pr.id === s.user_id);
-                return { id: s.user_id, username: p?.username || 'Participante', avatarUrl: p?.avatar_url || '' };
-            });
+            // Deduplicate by user_id — a user can have zombie sessions from interrupted joins
+            const seenIds = new Set<string>();
+            const players = sorted
+                .filter((s: any) => {
+                    if (seenIds.has(s.user_id)) return false;
+                    seenIds.add(s.user_id);
+                    return true;
+                })
+                .map((s: any) => {
+                    const p = (profiles || []).find((pr: any) => pr.id === s.user_id);
+                    return { id: s.user_id, username: p?.username || 'Participante', avatarUrl: p?.avatar_url || '' };
+                });
 
             // Fetch logs for every session in parallel
             const exerciseMap: Record<string, {
