@@ -451,13 +451,22 @@ export default function WorkoutDetailPage() {
                             .select('id, user_id')
                             .or(`id.eq.${roomId},partner_session_id.eq.${roomId}`);
 
-                        if (roomSessions?.length) {
-                            const userIds = (roomSessions as any[]).map((s: any) => s.user_id);
+                        // Always include the current user's session — stale partner_session_id
+                        // can cause the room query to miss it.
+                        const rawSessions = roomSessions || [];
+                        const currentInRoom = rawSessions.some((s: any) => s.id === session.id);
+                        const allRoomSessions = [
+                            ...rawSessions,
+                            ...(!currentInRoom ? [{ id: session.id, user_id: session.user_id }] : [])
+                        ];
+
+                        if (allRoomSessions.length) {
+                            const userIds = [...new Set(allRoomSessions.map((s: any) => s.user_id))];
                             const { data: profiles } = await supabase
                                 .from('profiles').select('id, username, avatar_url').in('id', userIds);
 
                             // Sort host first, then guests — host session (id === roomId) is the anchor
-                            const sortedSessions = [...(roomSessions as any[])].sort((a, b) =>
+                            const sortedSessions = [...allRoomSessions].sort((a, b) =>
                                 a.id === roomId ? -1 : b.id === roomId ? 1 : a.id.localeCompare(b.id)
                             );
                             // Deduplicate by user_id: keep first occurrence (host before guests).
@@ -481,7 +490,7 @@ export default function WorkoutDetailPage() {
                                 setMap: Record<number, Record<string, { weight: number; reps: number; time: number; distance: number; weightUnit: string }>>;
                             }> = {};
 
-                            await Promise.all((roomSessions as any[]).map(async (sess: any) => {
+                            await Promise.all(allRoomSessions.map(async (sess: any) => {
                                 const { data: logs } = await supabase
                                     .from('workout_logs')
                                     .select('exercise_id, set_number, weight_kg, reps, time, distance, metrics_data, exercise:exercises(id, name)')
