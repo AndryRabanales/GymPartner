@@ -67,6 +67,15 @@ export const RoutineBuilder = () => {
         });
     };
 
+    const handleSwapVariant = (oldId: string, newId: string) => {
+        setSelectedCatalogItems(prev => {
+            const next = new Set(prev);
+            next.delete(oldId);
+            next.add(newId);
+            return next;
+        });
+    };
+
     const handleBatchAdd = () => {
         const newSelections: RoutineExerciseConfig[] = [];
 
@@ -257,6 +266,7 @@ export const RoutineBuilder = () => {
                 <CatalogModal
                     selected={selectedCatalogItems}
                     onToggle={handleCatalogToggle}
+                    onSwapVariant={handleSwapVariant}
                     onClose={() => setShowSelector(false)}
                     onConfirm={handleBatchAdd}
                 />

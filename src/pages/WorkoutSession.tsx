@@ -1989,6 +1989,15 @@ export const WorkoutSession = () => {
         });
     };
 
+    const handleSwapVariant = (oldId: string, newId: string) => {
+        setSelectedCatalogItems(prev => {
+            const next = new Set(prev);
+            next.delete(oldId);
+            next.add(newId);
+            return next;
+        });
+    };
+
     // NEW: Rest Timer State
     const [restTimerSetKey, setRestTimerSetKey] = useState<string | null>(null); // "exerciseIdx-setIdx" to show only under specific set
 
@@ -6220,6 +6229,7 @@ export const WorkoutSession = () => {
                 <CatalogModal
                     selected={selectedCatalogItems}
                     onToggle={handleCatalogToggle}
+                    onSwapVariant={handleSwapVariant}
                     onClose={() => {
                         if (activeExercises.length === 0) { isLeavingPageRef.current = true; navigate('/'); }
                         else { setShowAddModal(false); }
