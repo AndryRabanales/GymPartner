@@ -5646,12 +5646,6 @@ export const WorkoutSession = () => {
                                             : <><Pause size={16} /> Pausar sesión</>}
                                     </button>
                                     <button
-                                        onClick={handleRestartSession}
-                                        className="flex items-center gap-3 w-full p-3 text-left text-sm font-bold text-white hover:bg-neutral-800 rounded-lg transition-colors"
-                                    >
-                                        <RotateCcw size={16} /> Reiniciar
-                                    </button>
-                                    <button
                                         onClick={() => {
                                             setShowExitMenu(false);
                                             setShowForceExitModal(true);
