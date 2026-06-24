@@ -1424,24 +1424,27 @@ export const WorkoutSession = () => {
                 if (sender === user.id) return; // Ignore echoes
 
                 if (partnerSessionId) {
+                    // Only trust session ID broadcasts from the host.
+                    // Other guests also broadcast sync_session_id; using their ID as
+                    // partnerSessionId would corrupt localStorage, syncRoomId recovery,
+                    // and the DB partner_session_id link (all room-anchor invariants).
+                    if (!isInviterRef.current && !senderIsHost) return;
+
                     partnerSessionIdRef.current = partnerSessionId;
                     setPartnerSessionId(partnerSessionId);
 
                     const currentSessionId = sessionIdRef.current;
                     if (currentSessionId) {
-                        // Only guests link their partner_session_id via this broadcast.
-                        // CRITICAL: only update partner_session_id in DB when the sender IS the host.
-                        // If a guest broadcasts first (race condition in 3+ person rooms), we must
-                        // ignore it — otherwise this guest's session points to another guest instead
-                        // of the host, breaking all room-scoped queries and RLS policies.
-                        if (!isInviterRef.current && senderIsHost) {
+                        // Only guests update partner_session_id in DB (hosts always have null).
+                        // Correct the value if it was previously set to a wrong guest session
+                        // (race condition where another guest broadcast arrived first).
+                        if (!isInviterRef.current) {
                             supabase
                                 .from('workout_sessions')
                                 .select('partner_session_id')
                                 .eq('id', currentSessionId)
                                 .maybeSingle()
                                 .then(({ data }) => {
-                                    // Set if unset, OR correct if previously set to a wrong (guest) session
                                     if (!data?.partner_session_id || data.partner_session_id !== partnerSessionId) {
                                         supabase
                                             .from('workout_sessions')
@@ -1454,7 +1457,7 @@ export const WorkoutSession = () => {
                                 });
                         }
                     } else if (!isInviterRef.current && !sessionIdRef.current && !isStartingSessionRef.current) {
-                        // Guest auto-starts their own session to activate their timer and enable logging
+                        // Guest has no session yet — auto-start one linked to the host's session.
                         startNewSession(undefined, partnerSessionId, true, multiplayerMode || 'conjunto', partnerId || sender).then(() => {
                             if (partnerStartTime) {
                                 setStartTime(new Date(partnerStartTime));
@@ -1466,9 +1469,11 @@ export const WorkoutSession = () => {
             .subscribe(async (status) => {
                 if (status === 'SUBSCRIBED') {
                     
-                    // Track local presence state
+                    // Track local presence state (session_id included so finalization-time
+                    // save can build a complete sessionUserMap even if RLS misses a session)
                     await channel.track({
                         user_id: user.id,
+                        session_id: sessionIdRef.current,
                         username: user.user_metadata?.username || user.user_metadata?.full_name || 'Yo',
                         avatar_url: user.user_metadata?.avatar_url || '',
                         joined_at: joinTimestamp
@@ -5298,6 +5303,14 @@ export const WorkoutSession = () => {
                             for (const s of (roomSessions || [])) sessionUserMap[(s as any).id] = (s as any).user_id;
                             // Always include self in case RLS omitted the current session
                             if (user && finalSessionId) sessionUserMap[finalSessionId] = user.id;
+                            // Also include sessions from Realtime presence (session_id tracked in
+                            // channel.track payload) — covers cases where stale partner_session_id
+                            // caused the room query to miss a participant's session row.
+                            for (const p of participantsRef.current) {
+                                if (p.session_id && p.id && !Object.values(sessionUserMap).includes(p.id)) {
+                                    sessionUserMap[p.session_id] = p.id;
+                                }
+                            }
                             const allSessionIds = Object.keys(sessionUserMap);
 
                             const exerciseMap: Record<string, {
