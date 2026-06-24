@@ -298,32 +298,12 @@ class UserService {
     /**
      * Add GX Points to a user (Gamification score)
      */
-    async addGxPoints(userId: string, amount: number, reason: string, skipStreakBonus = false): Promise<{ success: boolean; error?: string }> {
+    async addGxPoints(userId: string, amount: number, reason: string): Promise<{ success: boolean; error?: string }> {
         try {
-            let finalAmount = amount;
-
-            // x2 multiplier for streaks of 10+ days (positive amounts only)
-            if (amount > 0 && !skipStreakBonus) {
-                try {
-                    const { data: streak } = await supabase
-                        .from('user_streaks')
-                        .select('current_streak')
-                        .eq('user_id', userId)
-                        .maybeSingle();
-
-                    if (streak && streak.current_streak >= 10) {
-                        finalAmount = amount * 2;
-                        console.log(`🔥 Streak x2! ${amount} → ${finalAmount} GX (racha: ${streak.current_streak} días)`);
-                    }
-                } catch {
-                    // streak check failed → use base amount, don't block reward
-                }
-            }
-
-            console.log(`⚡ Adding ${finalAmount} GX Points to ${userId} for ${reason}`);
+            console.log(`⚡ Adding ${amount} GX Points to ${userId} for ${reason}`);
             const { error } = await supabase.rpc('increment_gx_points', {
                 u_id: userId,
-                amount: finalAmount
+                amount
             });
 
             if (error) throw error;

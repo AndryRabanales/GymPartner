@@ -2010,45 +2010,21 @@ export const WorkoutSession = () => {
     }, [activeMuscleFilter, searchTerm]);
 
     // Sync Selected Catalog Items reactively with active exercises
-    // Reset on close, rebuild fresh on open — prevents count inflation for coop guests (BUG-06)
+    // Reset on close, rebuild fresh on open — marks already-added exercises as selected in the catalog.
     useEffect(() => {
         if (!showAddModal) {
             setSelectedCatalogItems(new Set());
             return;
         }
-        // Build a fresh set from current active exercises for visual "already in session" state.
-        const toMark = new Set<string>();
-        activeExercises.forEach(e => {
-            // Always keep the exact equipmentId (covers manifest, virtual, and real DB IDs)
-            if (e.equipmentId) toMark.add(e.equipmentId);
-            if (e.equipmentName) {
-                toMark.add(`virtual-${e.equipmentName}`);
-                toMark.add(`virtual-${e.equipmentName.trim()}`);
-            }
-            // Mark the manifest variant-specific ID so the correct per-variant card
-            // appears selected. For single-variant exercises use the plain manifest ID.
-            // NEVER add the plain manifest ID for multi-variant exercises — doing so
-            // creates phantom/ghost exercises in handleBatchAdd.
-            // Exact match only — avoid prefix ambiguity (e.g. "Press" matching both
-            // "Press Inclinado" and "Press Plano"). Equipment names are always either
-            // the exact base name or "BaseName (VariantName)".
-            const manifestEntry = IMAGE_MANIFEST.find(entry =>
-                e.equipmentName === entry.name ||
-                entry.variants.some(v => e.equipmentName === `${entry.name} (${v.name})`)
-            );
-            if (manifestEntry) {
-                if (manifestEntry.variants.length > 1) {
-                    const matchedVariant = manifestEntry.variants.find(v =>
-                        e.equipmentName === `${manifestEntry.name} (${v.name})`
-                    );
-                    if (matchedVariant) {
-                        toMark.add(`manifest-${manifestEntry.id}__${matchedVariant.id}`);
-                    }
-                } else {
-                    toMark.add(`manifest-${manifestEntry.id}`);
-                }
-            }
-        });
+        // The catalog uses vid(seedName) = `virtual-${seedName}` as the only ID format it recognizes.
+        // seedName equals equipmentName exactly, so we add exactly one ID per exercise.
+        // Adding extra IDs (equipmentId DB UUIDs, manifest-* prefixes) inflates the counter
+        // and breaks the yellow-border visual since the catalog never checks those formats.
+        const toMark = new Set<string>(
+            activeExercises
+                .filter(e => !!e.equipmentName)
+                .map(e => `virtual-${e.equipmentName.trim()}`)
+        );
         setSelectedCatalogItems(toMark);
     }, [showAddModal]); // Only re-run when modal opens/closes, not on every exercise change
 
@@ -3515,7 +3491,29 @@ export const WorkoutSession = () => {
         setLoading(false);
     };
 
+    // Returns true if any finalized participant has recorded data in the given set.
+    // Such sets are immutable — deleting them would erase a finalized user's workout log.
+    const setHasFinalizedData = (set: any, finalizedIds: Set<string>): boolean => {
+        for (const id of finalizedIds) {
+            if (
+                set.playerWeights?.[id] !== undefined ||
+                set.playerReps?.[id] !== undefined ||
+                set.playerTimes?.[id] !== undefined ||
+                set.playerDistances?.[id] !== undefined ||
+                set.playerRpes?.[id] !== undefined ||
+                set.playerCompleted?.[id] === true
+            ) return true;
+        }
+        return false;
+    };
+
+    const exerciseHasFinalizedData = (exercise: any, finalizedIds: Set<string>): boolean =>
+        exercise.sets.some((s: any) => setHasFinalizedData(s, finalizedIds));
+
     const removeExercise = (id: string) => {
+        const exercise = activeExercises.find(e => e.id === id);
+        if (exercise && exerciseHasFinalizedData(exercise, finalizedParticipantsRef.current)) return;
+
         deletedExerciseIdsRef.current.add(id);
         setActiveExercises(prev => prev.filter(e => e.id !== id));
         setIsRoutineModified(true);
@@ -3624,6 +3622,9 @@ export const WorkoutSession = () => {
 
         // 1. Capture set ID and exercise ID before splicing (needed for broadcast & CRDT guard)
         const targetSet = updatedExercises[exerciseIndex].sets[setIndex];
+
+        // Guard: never delete a set that has data from a finalized participant
+        if (setHasFinalizedData(targetSet, finalizedParticipantsRef.current)) return;
         const setId = targetSet?.id as string | undefined;
         const exerciseId = updatedExercises[exerciseIndex].id;
 
@@ -5659,16 +5660,21 @@ export const WorkoutSession = () => {
                                             <h3 className="text-2xl font-black italic uppercase text-white leading-tight truncate">
                                                 {exercise.equipmentName}
                                             </h3>
-                                            {canModifyStructure && (
-                                                <div className="flex gap-2 mt-2">
-                                                    <button
-                                                        onClick={() => removeExercise(exercise.id)}
-                                                        className="text-neutral-500 hover:text-red-500 transition-colors bg-neutral-800/50 p-2 rounded-lg"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                </div>
-                                            )}
+                                            {canModifyStructure && (() => {
+                                                const exLocked = exerciseHasFinalizedData(exercise, finalizedParticipantsState);
+                                                return (
+                                                    <div className="flex gap-2 mt-2">
+                                                        <button
+                                                            onClick={() => removeExercise(exercise.id)}
+                                                            disabled={exLocked}
+                                                            title={exLocked ? 'Un participante ya finalizó con datos en este ejercicio' : 'Eliminar ejercicio'}
+                                                            className={`transition-colors bg-neutral-800/50 p-2 rounded-lg ${exLocked ? 'opacity-30 cursor-not-allowed text-neutral-600' : 'text-neutral-500 hover:text-red-500'}`}
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })()}
                                         </div>
                                     </div>
 
@@ -5688,15 +5694,19 @@ export const WorkoutSession = () => {
                                                                 }`}
                                                         >
                                                             {/* [MOVED] Delete Set Button - Top Left */}
-                                                            {canModifyStructure && (
-                                                            <button
-                                                                onClick={() => removeSet(mapIndex, setIndex)}
-                                                                className="absolute -top-2 -left-2 bg-neutral-900 border border-neutral-800 text-neutral-500 hover:text-red-500 rounded-full p-1.5 shadow-lg z-10 scale-75 hover:scale-100 transition-all"
-                                                                title="Eliminar Serie"
-                                                            >
-                                                                <Trash2 size={14} />
-                                                            </button>
-                                                            )}
+                                                            {canModifyStructure && (() => {
+                                                                const sLocked = setHasFinalizedData(set, finalizedParticipantsState);
+                                                                return (
+                                                                    <button
+                                                                        onClick={() => removeSet(mapIndex, setIndex)}
+                                                                        disabled={sLocked}
+                                                                        title={sLocked ? 'Un participante ya finalizó con datos en esta serie' : 'Eliminar Serie'}
+                                                                        className={`absolute -top-2 -left-2 bg-neutral-900 border border-neutral-800 rounded-full p-1.5 shadow-lg z-10 transition-all ${sLocked ? 'opacity-30 cursor-not-allowed text-neutral-600 scale-75' : 'text-neutral-500 hover:text-red-500 scale-75 hover:scale-100'}`}
+                                                                    >
+                                                                        <Trash2 size={14} />
+                                                                    </button>
+                                                                );
+                                                            })()}
                                                             {/* Set Number */}
                                                             <div className="w-5 flex justify-center shrink-0 self-center">
                                                                 <div className={`w-5 h-5 rounded-full flex items-center justify-center font-black text-[10px] ${isCompleted ? 'bg-green-500/20 text-green-500' : 'bg-neutral-800 text-neutral-400'

@@ -1,34 +1,15 @@
-import { useEffect, useState } from 'react';
 import { Flame } from 'lucide-react';
-import { streakService } from '../../services/StreakService';
-import type { UserStreak } from '../../services/StreakService';
 
 interface StreakFlameProps {
-    userId: string;
+    count: number;
     showLabel?: boolean;
     size?: 'sm' | 'md' | 'lg';
 }
 
-export const StreakFlame = ({ userId, showLabel = true, size = 'md' }: StreakFlameProps) => {
-    const [streak, setStreak] = useState<UserStreak | null>(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        loadStreak();
-    }, [userId]);
-
-    const loadStreak = async () => {
-        const data = await streakService.getUserStreak(userId);
-        setStreak(data);
-        setLoading(false);
-    };
-
-    if (loading) return <div className="animate-pulse bg-neutral-800 rounded-full w-12 h-6" />;
-
-    // Default zero state
-    if (!streak || streak.current_streak === 0) {
+export const StreakFlame = ({ count, showLabel = true, size = 'md' }: StreakFlameProps) => {
+    if (count === 0) {
         return (
-            <div className="flex items-center gap-1 opacity-50 grayscale" title="Sin Racha">
+            <div className="flex items-center gap-1 opacity-50 grayscale" title="Sin entrenos">
                 <Flame size={size === 'lg' ? 24 : size === 'md' ? 20 : 16} />
                 {showLabel && <span className="font-bold text-neutral-500">0</span>}
             </div>
@@ -41,12 +22,11 @@ export const StreakFlame = ({ userId, showLabel = true, size = 'md' }: StreakFla
             ${size === 'sm' ? 'gap-1 px-2 py-0.5' : 'gap-1.5 px-2.5 py-1'}
             bg-orange-500/10 border-orange-500/50 text-orange-500 hover:bg-orange-500/20
         `}
-            title={`Racha: ${streak.current_streak} día(s) de entrenamiento`}
+            title={`${count} día(s) entrenados`}
         >
             <Flame size={size === 'lg' ? 24 : size === 'md' ? 20 : 16} fill="currentColor" className="animate-[pulse_3s_ease-in-out_infinite]" />
-
             <span className={`font-black ${size === 'lg' ? 'text-xl' : size === 'md' ? 'text-sm' : 'text-xs'}`}>
-                {streak.current_streak}
+                {count}
             </span>
         </div>
     );

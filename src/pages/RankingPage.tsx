@@ -17,7 +17,7 @@ interface RankedUser {
     avatar_url: string;
     followers_count: number;
     gx_points: number;
-    current_streak: number;
+    checkins_count: number;
     is_boosted?: boolean;
     rank: number;
     gym_name?: string;
@@ -85,7 +85,7 @@ export const RankingPage = () => {
                         avatar_url: p.avatar_url || `https://ui-avatars.com/api/?name=${p.username || 'U'}&background=random`,
                         followers_count: Number(p.followers_count) || 0,
                         gx_points: Number(p.gx_points) || 0,
-                        current_streak: Number(p.current_streak) || 0,
+                        checkins_count: Number(p.checkins_count) || 0,
                         is_boosted: p.is_boosted || false,
                         rank: index + 1,
                         gym_name: p.gym_name || targetGym.gym_name,
@@ -203,8 +203,8 @@ export const RankingPage = () => {
                         </div>
                         <div className="shrink-0 flex flex-col items-end">
                             <span className="font-black text-gym-primary text-sm italic">{player.gx_points} GX</span>
-                            <span className="text-[8px] text-neutral-500 font-bold uppercase">
-                                {player.current_streak >= 10 ? '🔥 x2 RACHA' : 'Racha: ' + player.current_streak}
+                            <span className="text-[8px] text-neutral-500 font-bold uppercase flex items-center gap-0.5">
+                                🔥 {player.checkins_count} entrenos
                             </span>
                         </div>
                     </button>
@@ -222,8 +222,7 @@ export const RankingPage = () => {
                                 if (p.id === selectedPlayer.id) {
                                     const diff = newIsFollowing ? 1 : -1;
                                     const newFollowers = Math.max(0, p.followers_count + diff);
-                                    const multiplier = p.current_streak >= 10 ? 2 : 1;
-                                    const newGxPoints = Math.max(0, p.gx_points + (diff * multiplier));
+                                    const newGxPoints = Math.max(0, p.gx_points + diff);
                                     return {
                                         ...p,
                                         followers_count: newFollowers,

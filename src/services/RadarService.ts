@@ -34,20 +34,33 @@ export const radarService = {
     async getNearbyGymRats(lat: number, lng: number, radiusKm: number = 99999): Promise<RadarUser[]> {
         console.log('📡 Radar Scanning...', { lat, lng, radiusKm });
 
-        const { data, error } = await supabase
-            .rpc('get_nearby_gymrats', {
-                current_lat: lat,
-                current_lng: lng,
-                radius_km: radiusKm
-            });
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
 
-        if (error) {
-            console.error('Radar Error:', error);
-            // Fallback for demo/dev if RPC missing
+        const [radarResult, blocksResult] = await Promise.all([
+            supabase.rpc('get_nearby_gymrats', { current_lat: lat, current_lng: lng, radius_km: radiusKm }),
+            currentUser
+                ? supabase.from('user_blocks').select('blocked_user, blocked_by').or(`blocked_by.eq.${currentUser.id},blocked_user.eq.${currentUser.id}`)
+                : Promise.resolve({ data: [], error: null })
+        ]);
+
+        if (radarResult.error) {
+            console.error('Radar Error:', radarResult.error);
             return [];
         }
 
-        if (!data) return [];
+        if (!radarResult.data) return [];
+
+        // Build set of blocked user IDs (both directions)
+        const blockedIds = new Set<string>();
+        if (blocksResult.data) {
+            for (const b of blocksResult.data) {
+                blockedIds.add(b.blocked_user);
+                blockedIds.add(b.blocked_by);
+            }
+            if (currentUser) blockedIds.delete(currentUser.id); // don't exclude self
+        }
+
+        const data = radarResult.data.filter((u: any) => !blockedIds.has(u.user_id));
 
         // Map and enrich with Tier info
         return data.map((user: any) => ({

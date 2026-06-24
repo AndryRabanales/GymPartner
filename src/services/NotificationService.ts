@@ -196,6 +196,22 @@ export const notificationService = {
             return false;
         }
 
+        // 🛡️ 0. Check if either user has blocked the other
+        try {
+            const { data: block } = await supabase
+                .from('user_blocks')
+                .select('id')
+                .or(`and(blocked_by.eq.${user.id},blocked_user.eq.${targetUserId}),and(blocked_by.eq.${targetUserId},blocked_user.eq.${user.id})`)
+                .maybeSingle();
+
+            if (block) {
+                toast.error("No puedes conectar con este usuario.");
+                return false;
+            }
+        } catch (blockErr) {
+            console.error('Error checking block status:', blockErr);
+        }
+
         // 🛡️ 1. Check if they already have an active chat/connection
         try {
             const { data: existingChat, error: chatError } = await supabase
@@ -408,11 +424,6 @@ export const notificationService = {
             // Notify the original inviter (push only — they'll see the chat open)
             pushService.send(senderId, '¡MATCH ACEPTADO!', `${acceptorName} aceptó tu invitación a entrenar.`, { chat_id: chat.id, acceptor_id: user.id });
 
-            // Award 1 GX to both users — ONLY the first time this pair ever matches
-            await Promise.all([
-                userService.addGxPoints(user.id, 1, 'match_accepted'),
-                userService.addGxPoints(senderId, 1, 'match_accepted'),
-            ]);
 
             return chat.id;
         }

@@ -275,48 +275,35 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
         const localKey = `ginx_5min_reward_${user.id}_${today}`;
 
-        // If local storage says we already rewarded today, skip completely
+        // Fast local check — avoids unnecessary DB calls
         if (localStorage.getItem(localKey) === 'true') {
             return;
         }
 
         let sessionSecs = parseInt(sessionStorage.getItem(`active_secs_${user.id}_${today}`) || '0', 10);
+        let awarded = false;
 
         const interval = setInterval(async () => {
+            if (awarded) return;
             sessionSecs += 1;
             sessionStorage.setItem(`active_secs_${user.id}_${today}`, sessionSecs.toString());
 
             if (sessionSecs >= 300) { // 5 minutes
                 clearInterval(interval);
-                
-                // Double check DB to ensure they haven't received it today
+                awarded = true; // prevent re-entry if effect re-runs before cleanup
+
                 try {
-                    const { data: profile } = await supabase
-                        .from('profiles')
-                        .select('custom_settings')
-                        .eq('id', user.id)
-                        .single();
+                    // Atomic DB function: checks + awards in a single transaction.
+                    // Uses FOR UPDATE lock — safe against multi-tab race conditions.
+                    const { data: wasAwarded, error } = await supabase
+                        .rpc('award_5min_daily_gx', { u_id: user.id, today_date: today });
 
-                    const customSettings = profile?.custom_settings || {};
-                    if (customSettings.last_5min_reward_date !== today) {
-                        // Award 1 GX point
-                        await userService.addGxPoints(user.id, 1, '5min_daily_active');
+                    if (error) throw error;
 
-                        // Save updated custom_settings
-                        await supabase
-                            .from('profiles')
-                            .update({
-                                custom_settings: {
-                                    ...customSettings,
-                                    last_5min_reward_date: today
-                                }
-                            })
-                            .eq('id', user.id);
+                    localStorage.setItem(localKey, 'true');
 
-                        // Mark locally
-                        localStorage.setItem(localKey, 'true');
-
-                        console.log('🎉 5 minutes daily active achieved! Awarded 1 GX point.');
+                    if (wasAwarded) {
+                        console.log('🎉 5 minutes daily active achieved! Awarded GX point.');
                         const toastModule = await import('react-hot-toast');
                         toastModule.default.success('🔥 ¡Ganaste +1 GX por estar activo 5 minutos hoy!', {
                             duration: 5000,
@@ -330,8 +317,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                                 fontSize: '11px'
                             }
                         });
-                    } else {
-                        localStorage.setItem(localKey, 'true');
                     }
                 } catch (err) {
                     console.error('Error rewarding 5-min active time:', err);

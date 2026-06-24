@@ -568,7 +568,7 @@ export const UserProfile = () => {
 
                                     {/* STREAK FLAME (Placed next to Follow Stats, guaranteed same line!) */}
                                     <div className="shrink-0 scale-95 sm:scale-100 origin-left">
-                                        <StreakFlame userId={user.id} size="sm" />
+                                        <StreakFlame count={profile?.checkins_count || 0} size="sm" />
                                     </div>
                                 </div>
                             </div>

@@ -1,5 +1,6 @@
 
 import { supabase } from '../lib/supabase';
+import { userService } from './UserService';
 
 export interface ChatPreview {
     id: string;
@@ -96,9 +97,18 @@ export const chatService = {
             if (chatData) {
                 const otherUserId = chatData.user_a === user.id ? chatData.user_b : chatData.user_a;
 
-                // A. Unfollow both ways (sever match connection)
-                await supabase.from('follows').delete().eq('follower_id', user.id).eq('following_id', otherUserId);
-                await supabase.from('follows').delete().eq('follower_id', otherUserId).eq('following_id', user.id);
+                // A. Unfollow both ways (sever match connection) + adjust GX for lost followers
+                const { data: followA } = await supabase.from('follows').select('id').eq('follower_id', user.id).eq('following_id', otherUserId).maybeSingle();
+                const { data: followB } = await supabase.from('follows').select('id').eq('follower_id', otherUserId).eq('following_id', user.id).maybeSingle();
+
+                if (followA) {
+                    await supabase.from('follows').delete().eq('follower_id', user.id).eq('following_id', otherUserId);
+                    await userService.addGxPoints(otherUserId, -1, 'lost_follower');
+                }
+                if (followB) {
+                    await supabase.from('follows').delete().eq('follower_id', otherUserId).eq('following_id', user.id);
+                    await userService.addGxPoints(user.id, -1, 'lost_follower');
+                }
 
                 // B. Delete match invitations from both sides' notifications to reset match state
                 await supabase.from('notifications')
@@ -175,11 +185,7 @@ export const chatService = {
                 }
             }
 
-            // B. Unfollow each other
-            await supabase.from('follows').delete().eq('follower_id', user.id).eq('following_id', blockedUserId);
-            await supabase.from('follows').delete().eq('follower_id', blockedUserId).eq('following_id', user.id);
-
-            // C. Delete any pending/received match invitations between them in notifications
+            // B. Delete any pending/received match invitations between them in notifications
             await supabase.from('notifications')
                 .delete()
                 .eq('type', 'invitation')
