@@ -12,7 +12,7 @@
  */
 
 import { useState, useMemo } from 'react';
-import { X, Check } from 'lucide-react';
+import { X, Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { CURATED_EXERCISES, CATALOG_MUSCLES, type BaseExercise } from '../../data/exerciseCatalog';
 import { COMMON_EQUIPMENT_SEEDS } from '../../services/GymEquipmentService';
 import { ArsenalCard } from '../arsenal/ArsenalCard';
@@ -130,10 +130,12 @@ export const CatalogModal = ({ selected, onToggle, onClose, onConfirm }: Props) 
                             const item = itemForBase(base);
                             const isSel = selected.has(vid(currentVariant.seedName));
 
+                            const hasVariants = base.variants.length > 1;
+
                             return (
                                 <div
                                     key={base.id}
-                                    className={`cursor-pointer rounded-lg transition-all ${isSel ? 'ring-2 ring-gym-primary ring-offset-1 ring-offset-black' : ''}`}
+                                    className={`relative cursor-pointer rounded-lg transition-all h-44 ${isSel ? 'ring-2 ring-gym-primary ring-offset-2 ring-offset-black' : ''}`}
                                     onClick={(e) => {
                                         if ((e.target as HTMLElement).closest('[data-variant-btn="true"]')) return;
                                         onToggle(vid(currentVariant.seedName));
@@ -144,10 +146,30 @@ export const CatalogModal = ({ selected, onToggle, onClose, onConfirm }: Props) 
                                         isSelected={isSel}
                                         userSettings={EMPTY_SETTINGS}
                                         onEdit={() => {}}
-                                        variantLabel={base.variants.length > 1 ? currentVariant.label : undefined}
-                                        variantTotal={base.variants.length > 1 ? base.variants.length : undefined}
-                                        onVariantCycle={base.variants.length > 1 ? (dir) => cycleVariant(base, dir) : undefined}
+                                        variantLabel={hasVariants ? currentVariant.label : undefined}
+                                        variantTotal={hasVariants ? base.variants.length : undefined}
                                     />
+                                    {/* Arrows — positioned on the full card height, not just the image zone */}
+                                    {hasVariants && (
+                                        <>
+                                            <button
+                                                data-variant-btn="true"
+                                                onPointerDown={e => e.stopPropagation()}
+                                                onClick={e => { e.stopPropagation(); cycleVariant(base, 'prev'); }}
+                                                className="absolute left-0 top-1/2 -translate-y-1/2 z-30 p-1.5 rounded-r-lg bg-black/60 text-white hover:text-gym-primary hover:bg-black/90 transition-all backdrop-blur-md"
+                                            >
+                                                <ChevronLeft size={16} strokeWidth={4} />
+                                            </button>
+                                            <button
+                                                data-variant-btn="true"
+                                                onPointerDown={e => e.stopPropagation()}
+                                                onClick={e => { e.stopPropagation(); cycleVariant(base, 'next'); }}
+                                                className="absolute right-0 top-1/2 -translate-y-1/2 z-30 p-1.5 rounded-l-lg bg-black/60 text-white hover:text-gym-primary hover:bg-black/90 transition-all backdrop-blur-md"
+                                            >
+                                                <ChevronRight size={16} strokeWidth={4} />
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
                             );
                         })}
