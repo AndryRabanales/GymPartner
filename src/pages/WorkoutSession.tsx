@@ -2226,7 +2226,32 @@ export const WorkoutSession = () => {
                 }
                 return;
             }
-            const item = effectiveInv.find(i => i.id === id);
+            let item = effectiveInv.find(i => i.id === id);
+
+            // Fallback A: gym may have this seed as a DB item with a UUID (not virtual-* ID)
+            // so search by normalized name instead.
+            if (!item && id.startsWith('virtual-')) {
+                const seedName = id.slice('virtual-'.length);
+                item = effectiveInv.find(i => normalizeText(i.name) === normalizeText(seedName));
+            }
+
+            // Fallback B: not in arsenal at all — build a synthetic item from CURATED_EXERCISES
+            if (!item && id.startsWith('virtual-')) {
+                const seedName = id.slice('virtual-'.length);
+                const base = CURATED_EXERCISES.find(b => b.variants.some(v => v.seedName === seedName));
+                if (base) {
+                    item = {
+                        id,
+                        name: seedName,
+                        category: base.muscle,
+                        target_muscle_group: base.muscle,
+                        metrics: base.metrics,
+                        quantity: 1,
+                        status: 'ACTIVE',
+                    } as any;
+                }
+            }
+
             if (item) itemsToAdd.push(item);
         });
 
