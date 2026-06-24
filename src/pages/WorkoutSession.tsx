@@ -4936,8 +4936,23 @@ export const WorkoutSession = () => {
         let pendingSyncCount = 0;
         const savePromises: Promise<any>[] = [];
 
-        for (let i = 0; i < activeExercises.length; i++) {
-            const exercise = activeExercises[i];
+        // Use the ref (always current) instead of the React state closure, which
+        // can be stale when handleFinalizeSession captures it at an earlier render.
+        // Fall back to lastNonEmptyExercisesRef so data is never lost even if the
+        // state was cleared (e.g. by a channel re-subscription) before finalization.
+        const exercisesToSave = activeExercisesRef.current.length > 0
+            ? activeExercisesRef.current
+            : lastNonEmptyExercisesRef.current;
+
+        console.log('[Flow] finalize pre-save', {
+            activeState: activeExercises.length,
+            activeRef: activeExercisesRef.current.length,
+            lastNonEmpty: lastNonEmptyExercisesRef.current.length,
+            using: exercisesToSave.length
+        });
+
+        for (let i = 0; i < exercisesToSave.length; i++) {
+            const exercise = exercisesToSave[i];
 
             // Resolve ID once per exercise if needed
             let exerciseDbId: string | null = null;
@@ -5058,7 +5073,7 @@ export const WorkoutSession = () => {
             }
         }
 
-        console.log('[Flow] sets pre-saved', { saved: savedCount, pendingSync: pendingSyncCount, sessionId: finalSessionId, exercises: activeExercises.length });
+        console.log('[Flow] sets pre-saved', { saved: savedCount, pendingSync: pendingSyncCount, sessionId: finalSessionId, exercises: exercisesToSave.length });
         if (savedCount > 0) {
             await Promise.all(savePromises);
             if (user?.id) await detectAndMarkPRs(finalSessionId, user.id);
