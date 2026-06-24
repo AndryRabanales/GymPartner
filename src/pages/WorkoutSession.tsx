@@ -6201,19 +6201,18 @@ export const WorkoutSession = () => {
             </div >
 
 
-            {/* Fab Add Button (Only if exercises exist and not spying) */}
-            {
-                (activeExercises.length > 0 && viewingMode === 'mine') && (
-                    <div className="fixed bottom-24 left-0 w-full px-4 flex justify-center z-50 pointer-events-none">
-                        <button
-                            onClick={() => setShowAddModal(true)}
-                            className="pointer-events-auto bg-red-600 text-white font-black py-4 px-10 rounded-2xl shadow-[0_10px_40px_rgba(220,38,38,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center gap-3 text-lg border border-red-500/50 backdrop-blur-md"
-                        >
-                            <Plus size={24} strokeWidth={3} /> AÑADIR EJERCICIO
-                        </button>
+            {/* FAB — Add Exercise (bottom-right corner) */}
+            {(activeExercises.length > 0 && viewingMode === 'mine') && (
+                <button
+                    onClick={() => setShowAddModal(true)}
+                    className="fixed bottom-24 right-4 z-50 flex items-center gap-2 pl-3 pr-4 py-2.5 rounded-full bg-red-600/90 backdrop-blur-md border border-red-400/30 text-white shadow-[0_8px_32px_rgba(220,38,38,0.5)] hover:bg-red-500 hover:scale-105 active:scale-95 transition-all"
+                >
+                    <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                        <Plus size={14} strokeWidth={3} />
                     </div>
-                )
-            }
+                    <span className="text-xs font-black uppercase tracking-widest">Añadir</span>
+                </button>
+            )}
 
             {/* Exercise Selector Modal */}
             {showAddModal && !showSummary && !showRoutineModal && !showStartOptionsModal && !isFinished && (
