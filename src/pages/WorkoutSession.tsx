@@ -11,7 +11,7 @@ import { userService } from '../services/UserService';
 import { workoutService } from '../services/WorkoutService';
 import { WorkoutCarousel } from '../components/workout/WorkoutCarousel';
 import { WorkoutCatalog } from '../components/workout/WorkoutCatalog';
-import { getExtrasForMuscle } from '../data/exerciseCatalog';
+import { getExtrasForMuscle, CURATED_EXERCISES } from '../data/exerciseCatalog';
 import { IMAGE_MANIFEST } from '../data/imageManifest';
 import { useUnlockedExercises } from '../hooks/useUnlockedExercises';
 import { ArsenalGrid } from '../components/arsenal/ArsenalGrid';
@@ -3326,6 +3326,30 @@ export const WorkoutSession = () => {
                         const itemName = normalizeName(i.name);
                         return itemName.includes(targetName) || targetName.includes(itemName);
                     });
+                }
+
+                // 4. Fallback: virtual-* IDs saved by RoutineBuilder via WorkoutCatalog.
+                // Reconstruct a synthetic arsenal item from CURATED_EXERCISES so the exercise
+                // loads correctly even when it isn't in the gym's physical equipment list.
+                if (!item) {
+                    const seedName = detail.exercise_id?.startsWith('virtual-')
+                        ? detail.exercise_id.slice('virtual-'.length)
+                        : (detail.equipment?.name || detail.name);
+
+                    if (seedName) {
+                        const base = CURATED_EXERCISES.find(b => b.variants.some(v => v.seedName === seedName));
+                        if (base) {
+                            item = {
+                                id: `virtual-${seedName}`,
+                                name: seedName,
+                                category: base.muscle,
+                                target_muscle_group: base.muscle,
+                                metrics: base.metrics,
+                                quantity: 1,
+                                status: 'ACTIVE',
+                            } as any;
+                        }
+                    }
                 }
 
                 if (item) {
