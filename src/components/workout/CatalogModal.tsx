@@ -33,6 +33,8 @@ export const CatalogModal = ({ selected, onToggle, onClose, onConfirm }: Props) 
     const [searchTerm, setSearchTerm] = useState('');
     // variantIdx: baseId → index of currently displayed variant
     const [variantIdx, setVariantIdx] = useState<Record<string, number>>({});
+    // Freeze initial selection at mount so the counter shows only NEW selections
+    const [initialSelected] = useState(() => new Set(selected));
 
     const exercisesForMuscle = useMemo(
         () => CURATED_EXERCISES.filter(b =>
@@ -75,7 +77,8 @@ export const CatalogModal = ({ selected, onToggle, onClose, onConfirm }: Props) 
         setVariantIdx(prev => ({ ...prev, [base.id]: nextIdx }));
     };
 
-    const selectedCount = selected.size;
+    // Only count exercises that weren't pre-selected when the modal opened
+    const newCount = [...selected].filter(id => !initialSelected.has(id)).length;
 
     return (
         <div className="fixed inset-0 bg-black/95 z-50 flex flex-col animate-in fade-in duration-200">
@@ -126,13 +129,11 @@ export const CatalogModal = ({ selected, onToggle, onClose, onConfirm }: Props) 
                             const currentVariant = base.variants[currentIdx] ?? base.variants[0];
                             const item = itemForBase(base);
                             const isSel = selected.has(vid(currentVariant.seedName));
-                            // Also check if ANY variant of this base is selected
-                            const anySelected = base.variants.some(v => selected.has(vid(v.seedName)));
 
                             return (
                                 <div
                                     key={base.id}
-                                    className={`cursor-pointer rounded-lg transition-all ${anySelected ? 'ring-2 ring-gym-primary ring-offset-1 ring-offset-black' : ''}`}
+                                    className={`cursor-pointer rounded-lg transition-all ${isSel ? 'ring-2 ring-gym-primary ring-offset-1 ring-offset-black' : ''}`}
                                     onClick={(e) => {
                                         if ((e.target as HTMLElement).closest('[data-variant-btn="true"]')) return;
                                         onToggle(vid(currentVariant.seedName));
@@ -155,17 +156,14 @@ export const CatalogModal = ({ selected, onToggle, onClose, onConfirm }: Props) 
             </div>
 
             {/* Footer */}
-            {selectedCount > 0 && (
+            {newCount > 0 && (
                 <div className="px-4 pb-6 pt-2 shrink-0 border-t border-white/5 bg-neutral-950">
-                    <div className="text-center text-xs text-neutral-500 font-bold uppercase tracking-wider mb-2">
-                        {selectedCount} ejercicio{selectedCount !== 1 ? 's' : ''} seleccionado{selectedCount !== 1 ? 's' : ''}
-                    </div>
                     <button
                         onClick={onConfirm}
                         className="w-full bg-gym-primary text-black font-black uppercase py-4 rounded-2xl shadow-[0_10px_40px_rgba(250,204,21,0.4)] hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-3 text-lg"
                     >
                         <Check size={22} strokeWidth={3} />
-                        CONFIRMAR ({selectedCount})
+                        AGREGAR {newCount} EJERCICIO{newCount !== 1 ? 'S' : ''}
                     </button>
                 </div>
             )}
