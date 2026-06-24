@@ -335,6 +335,9 @@ export const WorkoutSession = () => {
     // Snapshot of the last non-empty exercises state — used by session_finished handler so
     // guests can save sets even if activeExercisesRef is cleared before the event arrives.
     const lastNonEmptyExercisesRef = useRef<WorkoutExercise[]>([]);
+    // Set to true during handleFinalizeSession when this user is the last to finalize.
+    // Read by the live summary's load() to decide whether to save the coop_summary snapshot.
+    const isLastToFinalizeRef = useRef<boolean>(false);
     // Tracks exercises deliberately removed during this session so incoming sync_state
     // cannot re-add them (race condition fix for multiplayer).
     const deletedExerciseIdsRef = useRef<Set<string>>(new Set());
@@ -1711,7 +1714,7 @@ export const WorkoutSession = () => {
         if (!roomId) return;
 
         const load = async () => {
-            // All sessions in the room: the host row (id = roomId) + guest rows
+            // All sessions in the room: host row (id = roomId) + guest rows
             const { data: sessions } = await supabase
                 .from('workout_sessions')
                 .select('id, user_id')
@@ -1722,114 +1725,103 @@ export const WorkoutSession = () => {
             const { data: profiles } = await supabase
                 .from('profiles').select('id, username, avatar_url').in('id', userIds);
 
-            // Host first (session.id === roomId), then guests sorted by id for determinism
+            // Host first, then guests sorted by id for determinism; deduplicate by user_id
             const sorted = [...sessions].sort((a: any, b: any) => {
                 if (a.id === roomId) return -1;
                 if (b.id === roomId) return 1;
                 return a.id.localeCompare(b.id);
             });
-            // Deduplicate by user_id — a user can have zombie sessions from interrupted joins
             const seenIds = new Set<string>();
             const players = sorted
-                .filter((s: any) => {
-                    if (seenIds.has(s.user_id)) return false;
-                    seenIds.add(s.user_id);
-                    return true;
-                })
+                .filter((s: any) => { if (seenIds.has(s.user_id)) return false; seenIds.add(s.user_id); return true; })
                 .map((s: any) => {
                     const p = (profiles || []).find((pr: any) => pr.id === s.user_id);
                     return { id: s.user_id, username: p?.username || 'Participante', avatarUrl: p?.avatar_url || '' };
                 });
 
-            // ── Build exerciseSets from workout_logs in DB (authoritative) ──────────────
-            // Using DB ensures all users who view the summary write an identical snapshot;
-            // "last write wins" then gives the most complete picture (last user's pre-saves
-            // are already committed by the time they reach the summary screen).
-            const sessionUserMap: Record<string, string> = {};
-            for (const s of sessions) sessionUserMap[(s as any).id] = (s as any).user_id;
+            if (players.length === 0) { console.warn('[CoopSummary] No players for room:', roomId); return; }
 
-            const exerciseMap: Record<string, {
-                exerciseId: string; exerciseName: string;
-                setMap: Record<number, Record<string, { weight: number; reps: number; time: number; distance: number }>>;
-            }> = {};
-
-            const { data: allLogs } = await supabase
-                .from('workout_logs')
-                .select('session_id, exercise_id, set_number, weight_kg, reps, time, distance, exercise:exercises(id, name)')
-                .in('session_id', sessions.map((s: any) => s.id))
-                .order('set_number', { ascending: true });
-
-            for (const log of (allLogs || []) as any[]) {
-                const uid = sessionUserMap[log.session_id];
-                if (!uid) continue;
-                const exId = log.exercise_id;
-                const exName = (log.exercise as any)?.name || 'Ejercicio';
-                if (!exerciseMap[exId]) exerciseMap[exId] = { exerciseId: exId, exerciseName: exName, setMap: {} };
-                const sn = log.set_number || 1;
-                if (!exerciseMap[exId].setMap[sn]) exerciseMap[exId].setMap[sn] = {};
-                exerciseMap[exId].setMap[sn][uid] = {
-                    weight: log.weight_kg || 0, reps: log.reps || 0,
-                    time: log.time || 0, distance: log.distance || 0
-                };
-            }
-
-            const exerciseSets = Object.values(exerciseMap).map(ex => ({
-                exerciseId: ex.exerciseId,
-                exerciseName: ex.exerciseName,
-                sets: Object.entries(ex.setMap)
-                    .sort(([a], [b]) => Number(a) - Number(b))
-                    .map(([sn, playerData]) => ({ setNumber: Number(sn), playerData }))
-            }));
-
-            setCoopSummaryData({ players, exerciseSets });
-
-            if (players.length === 0) {
-                console.warn('[CoopSummary] No players found for room:', roomId);
+            // ── Non-last users: populate display state from DB, but do NOT write the
+            // snapshot. The last user owns the snapshot — their in-memory state is the
+            // only source guaranteed to be complete and correct.
+            if (!isLastToFinalizeRef.current) {
+                const sessionUserMap: Record<string, string> = {};
+                for (const s of sessions) sessionUserMap[(s as any).id] = (s as any).user_id;
+                const { data: logs } = await supabase
+                    .from('workout_logs')
+                    .select('session_id, exercise_id, set_number, weight_kg, reps, time, distance, exercise:exercises(id, name)')
+                    .in('session_id', sessions.map((s: any) => s.id))
+                    .order('set_number', { ascending: true });
+                const exMap: Record<string, any> = {};
+                for (const log of (logs || []) as any[]) {
+                    const uid = sessionUserMap[log.session_id]; if (!uid) continue;
+                    const exId = log.exercise_id; const exName = (log.exercise as any)?.name || 'Ejercicio';
+                    if (!exMap[exId]) exMap[exId] = { exerciseId: exId, exerciseName: exName, setMap: {} };
+                    const sn = log.set_number || 1;
+                    if (!exMap[exId].setMap[sn]) exMap[exId].setMap[sn] = {};
+                    exMap[exId].setMap[sn][uid] = { weight: log.weight_kg || 0, reps: log.reps || 0, time: log.time || 0, distance: log.distance || 0 };
+                }
+                const dbSets = Object.values(exMap).map((ex: any) => ({
+                    exerciseId: ex.exerciseId, exerciseName: ex.exerciseName,
+                    sets: Object.entries(ex.setMap).sort(([a], [b]) => Number(a) - Number(b)).map(([sn, pd]) => ({ setNumber: Number(sn), playerData: pd }))
+                }));
+                setCoopSummaryData({ players, exerciseSets: dbSets });
+                console.log(`[CoopSummary] not last — display updated (${dbSets.length} exercises from DB, snapshot ownership: last user)`);
                 return;
             }
 
-            // Save DB-based snapshot (overwrites any earlier partial snapshot)
-            const { error: saveErr } = await supabase.rpc('upsert_coop_summary', {
-                p_room_id: roomId,
-                p_summary: { players, exerciseSets }
-            });
-            if (saveErr) {
-                console.error('[CoopSummary] snapshot save failed:', saveErr);
-                return;
-            }
-
-            // ── Verification: compare in-memory summary vs workout_logs in DB ─────────────
-            // "onlyInMem" = shown on screen but MISSING from workout_logs (pre-save failed).
-            // "mismatch"  = present in both but values differ.
+            // ── Last user: build snapshot from IN-MEMORY state (exactly what this screen
+            // shows) and save it as the authoritative coop_summary for the entire room.
+            // This is the single source of truth — every participant's History reads it.
             const memExs = activeExercisesRef.current.length > 0
                 ? activeExercisesRef.current
                 : lastNonEmptyExercisesRef.current;
 
-            // Build in-memory view keyed by exerciseName → setNumber → userId
-            const memMap: Record<string, Record<number, Record<string, { weight: number; reps: number }>>> = {};
-            for (const ex of memExs) {
-                const exName = (ex as any).equipmentName || '';
-                if (!exName) continue;
-                for (let idx = 0; idx < ((ex as any).sets || []).length; idx++) {
-                    const s = (ex as any).sets[idx];
-                    const sn = idx + 1;
+            const memExerciseSets = memExs.map((ex: any) => {
+                const sets = (ex.sets || []).map((s: any, idx: number) => {
+                    const playerData: Record<string, { weight: number; reps: number; time: number; distance: number; weightUnit: string }> = {};
                     for (const uid of userIds) {
-                        const w = Number((s.playerWeights || {})[uid] ?? 0);
-                        const r = Number((s.playerReps || {})[uid] ?? 0);
-                        if (w > 0 || r > 0) {
-                            if (!memMap[exName]) memMap[exName] = {};
-                            if (!memMap[exName][sn]) memMap[exName][sn] = {};
-                            memMap[exName][sn][uid] = { weight: w, reps: r };
+                        const w = Number(s.playerWeights?.[uid] ?? 0);
+                        const r = Number(s.playerReps?.[uid] ?? 0);
+                        const t = Number(s.playerTimes?.[uid] ?? 0);
+                        const d = Number(s.playerDistances?.[uid] ?? 0);
+                        if (w > 0 || r > 0 || t > 0 || d > 0) {
+                            playerData[uid] = { weight: w, reps: r, time: t, distance: d, weightUnit: ex.weightUnit || 'kg' };
                         }
                     }
-                }
+                    return { setNumber: idx + 1, playerData };
+                }).filter((s: any) => Object.keys(s.playerData).length > 0);
+                return { exerciseId: ex.equipmentId || '', exerciseName: ex.equipmentName || '', sets };
+            }).filter((ex: any) => ex.sets.length > 0);
+
+            setCoopSummaryData({ players, exerciseSets: memExerciseSets });
+
+            if (memExerciseSets.length === 0) {
+                console.warn('[CoopSummary] Last user has no exercise data in memory — snapshot not saved.');
+                return;
             }
 
-            // Build DB view keyed the same way (already have allLogs)
+            const { error: saveErr } = await supabase.rpc('upsert_coop_summary', {
+                p_room_id: roomId,
+                p_summary: { players, exerciseSets: memExerciseSets }
+            });
+            if (saveErr) { console.error('[CoopSummary] snapshot save failed:', saveErr); return; }
+
+            console.log(`[CoopVerify] ✅ Snapshot guardado desde resumen en vivo (${memExerciseSets.length} ejercicios, ${players.length} jugadores). Todos los historiales usarán estos datos.`);
+
+            // ── Diagnostic: check if workout_logs match what's on screen ──────────────
+            // If there are discrepancies, workout_logs are incomplete (pre-save gaps).
+            // The snapshot above still has the correct data regardless.
+            const sessionUserMap: Record<string, string> = {};
+            for (const s of sessions) sessionUserMap[(s as any).id] = (s as any).user_id;
+            const { data: allLogs } = await supabase
+                .from('workout_logs')
+                .select('session_id, exercise_id, set_number, weight_kg, reps, exercise:exercises(id, name)')
+                .in('session_id', sessions.map((s: any) => s.id));
+
             const dbMapVerify: Record<string, Record<number, Record<string, { weight: number; reps: number }>>> = {};
             for (const log of (allLogs || []) as any[]) {
-                const uid = sessionUserMap[log.session_id];
-                if (!uid) continue;
+                const uid = sessionUserMap[log.session_id]; if (!uid) continue;
                 const exName = (log.exercise as any)?.name || log.exercise_id;
                 const sn = log.set_number || 1;
                 if (!dbMapVerify[exName]) dbMapVerify[exName] = {};
@@ -1838,38 +1830,23 @@ export const WorkoutSession = () => {
             }
 
             const onlyInMem: any[] = [];
-            const mismatches: any[] = [];
-
-            for (const [exName, setsByNum] of Object.entries(memMap)) {
-                for (const [snStr, byUser] of Object.entries(setsByNum)) {
-                    const sn = Number(snStr);
-                    for (const [uid, mem] of Object.entries(byUser)) {
-                        const pName = players.find(p => p.id === uid)?.username || uid.slice(0, 8);
-                        const db = dbMapVerify[exName]?.[sn]?.[uid];
-                        if (!db) {
-                            onlyInMem.push({ ejercicio: exName, serie: sn, usuario: pName, resumen: `${mem.weight}kg × ${mem.reps}r` });
-                        } else {
-                            const wOk = Math.abs(db.weight - mem.weight) < 0.05;
-                            const rOk = db.reps === mem.reps;
-                            if (!wOk || !rOk) {
-                                mismatches.push({ ejercicio: exName, serie: sn, usuario: pName, resumen: `${mem.weight}kg × ${mem.reps}r`, db: `${db.weight}kg × ${db.reps}r` });
-                            }
+            for (const ex of memExerciseSets) {
+                for (const s of ex.sets) {
+                    for (const [uid, mem] of Object.entries(s.playerData) as [string, any][]) {
+                        if (!dbMapVerify[ex.exerciseName]?.[s.setNumber]?.[uid]) {
+                            onlyInMem.push({
+                                ejercicio: ex.exerciseName, serie: s.setNumber,
+                                usuario: players.find(p => p.id === uid)?.username || uid.slice(0, 8),
+                                resumen: `${mem.weight}kg × ${mem.reps}r`,
+                                nota: 'rescatado de memoria (pre-save incompleto)'
+                            });
                         }
                     }
                 }
             }
-
-            if (onlyInMem.length === 0 && mismatches.length === 0) {
-                console.log(`[CoopVerify] ✅ Resumen coincide con workout_logs. Snapshot guardado OK (${exerciseSets.length} ejercicios, ${players.length} jugadores).`);
-            } else {
-                if (onlyInMem.length > 0) {
-                    console.warn('[CoopVerify] ⚠️ En resumen pero AUSENTES de workout_logs (pre-save falló):');
-                    console.table(onlyInMem);
-                }
-                if (mismatches.length > 0) {
-                    console.warn('[CoopVerify] ⚠️ Valores distintos entre resumen y DB:');
-                    console.table(mismatches);
-                }
+            if (onlyInMem.length > 0) {
+                console.warn('[CoopVerify] ⚠️ Datos rescatados de memoria (no estaban en workout_logs):');
+                console.table(onlyInMem);
             }
         };
 
@@ -5150,6 +5127,8 @@ export const WorkoutSession = () => {
                     pendingCount = await workoutService.countPendingRoomParticipants(syncRoomId, finalSessionId);
                     isLastToFinalize = pendingCount === 0;
                 }
+                // Expose to the live summary effect so it knows whether to save the snapshot
+                isLastToFinalizeRef.current = isLastToFinalize;
 
                 console.log(`[Flow] finalize coop [${isInviter ? 'host' : 'guest'}] isLast=${isLastToFinalize} pending=${pendingCount} roomId=${syncRoomId}`);
 
