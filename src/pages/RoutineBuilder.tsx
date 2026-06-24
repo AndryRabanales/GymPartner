@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { userService } from '../services/UserService';
 import { CURATED_EXERCISES } from '../data/exerciseCatalog';
-import { WorkoutCatalog } from '../components/workout/WorkoutCatalog';
+import { CatalogModal } from '../components/workout/CatalogModal';
 import { ArrowLeft, Plus, Save, Trash2, Dumbbell, Clock, Hash, Trophy } from 'lucide-react';
 
 interface RoutineExerciseConfig {
@@ -253,27 +253,13 @@ export const RoutineBuilder = () => {
                 </button>
             </div>
 
-            {/* Catalog Modal — same WorkoutCatalog used in workout session */}
             {showSelector && (
-                <div className="fixed inset-0 bg-black/95 z-50 flex flex-col animate-in fade-in duration-200">
-                    <div className="flex-1 overflow-hidden relative">
-                        <WorkoutCatalog
-                            selected={selectedCatalogItems}
-                            onToggle={handleCatalogToggle}
-                            onClose={() => setShowSelector(false)}
-                        />
-                    </div>
-                    {selectedCatalogItems.size > 0 && (
-                        <div className="px-4 pb-6 pt-2 shrink-0 bg-neutral-950 border-t border-white/5">
-                            <button
-                                onClick={handleBatchAdd}
-                                className="w-full bg-gym-primary text-black font-black uppercase py-4 rounded-2xl shadow-[0_10px_40px_rgba(250,204,21,0.4)] hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-3 text-lg"
-                            >
-                                CONFIRMAR ({selectedCatalogItems.size})
-                            </button>
-                        </div>
-                    )}
-                </div>
+                <CatalogModal
+                    selected={selectedCatalogItems}
+                    onToggle={handleCatalogToggle}
+                    onClose={() => setShowSelector(false)}
+                    onConfirm={handleBatchAdd}
+                />
             )}
         </div>
     );

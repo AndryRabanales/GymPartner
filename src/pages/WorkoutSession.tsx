@@ -10,7 +10,7 @@ import { equipmentService, COMMON_EQUIPMENT_SEEDS } from '../services/GymEquipme
 import { userService } from '../services/UserService';
 import { workoutService } from '../services/WorkoutService';
 import { WorkoutCarousel } from '../components/workout/WorkoutCarousel';
-import { WorkoutCatalog } from '../components/workout/WorkoutCatalog';
+import { CatalogModal } from '../components/workout/CatalogModal';
 import { getExtrasForMuscle, CURATED_EXERCISES } from '../data/exerciseCatalog';
 import { IMAGE_MANIFEST } from '../data/imageManifest';
 import { useUnlockedExercises } from '../hooks/useUnlockedExercises';
@@ -6215,207 +6215,18 @@ export const WorkoutSession = () => {
                 )
             }
 
-            {/* Exercise Selector Modal — hidden when any other overlay is active */}
-            {
-                showAddModal && !showSummary && !showRoutineModal && !showStartOptionsModal && !isFinished && (
-                    <div className="fixed inset-0 bg-black/95 z-[90] flex flex-col animate-in fade-in duration-200 overflow-hidden">
-                        {/* Header */}
-                        <div className="flex-none p-2.5 pb-1 border-b border-white/5 bg-neutral-950">
-                            <div className="flex justify-between items-center mb-2">
-                                <div>
-                                    <h2 className="text-lg md:text-2xl font-black text-white italic uppercase tracking-tighter">
-                                        {isCreatingExercise ? (editingItem ? 'Editar Ejercicio' : 'Crear Ejercicio') : 'Catálogo'}
-                                    </h2>
-                                </div>
-                                <button onClick={() => {
-                                    if (isCreatingExercise) { setIsCreatingExercise(false); setEditingItem(null); }
-                                    else {
-                                        if (activeExercises.length === 0) { isLeavingPageRef.current = true; navigate('/'); }
-                                        else { setShowAddModal(false); }
-                                    }
-                                }} className="bg-neutral-900 p-1.5 rounded-full text-white hover:bg-neutral-800 transition-colors">
-                                    {isCreatingExercise ? <ArrowLeft size={16} /> : <X size={16} />}
-                                </button>
-                            </div>
-
-                            {/* Search Bar */}
-                            {!isCreatingExercise && (
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-2.5 text-neutral-500" size={16} />
-                                    <input
-                                        type="text"
-                                        placeholder="Buscar ejercicio..."
-                                        value={searchTerm}
-                                        onChange={e => setSearchTerm(e.target.value)}
-                                        className="w-full bg-neutral-900 border border-neutral-800 rounded-xl py-2 pl-9 text-[16px] text-white focus:outline-none focus:border-gym-primary transition-all font-bold"
-                                        autoFocus
-                                    />
-                                </div>
-                            )}
-
-                            {/* Muscle anchors — tap to jump to section, all exercises stay visible */}
-                            {!isCreatingExercise && (
-                                <div
-                                    className="mt-2 flex gap-1.5 py-1 px-1 no-scrollbar items-center"
-                                    style={{ overflowX: 'scroll', WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' } as React.CSSProperties}
-                                >
-                                    {[
-                                        'PECHO','HOMBRO','TRÍCEPS',
-                                        'ESPALDA','BÍCEPS','ANTEBRAZO',
-                                        'CUÁDRICEPS','ISQUIOTIBIALES','GLÚTEOS','PANTORRILLAS',
-                                        'ABDOMINALES','CUELLO','CARDIO',
-                                    ].map(cat => (
-                                        <button
-                                            key={cat}
-                                            onClick={() => scrollToCategory(cat)}
-                                            className={`shrink-0 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border transition-all
-                                                ${activeMuscleFilter === cat
-                                                    ? 'bg-gym-primary text-black border-gym-primary'
-                                                    : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:border-gym-primary/40'
-                                                }`}
-                                        >
-                                            {cat}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* ── Extras panel — exercises not in catalog ── */}
-                        {extrasSection && !isCreatingExercise && (
-                            <div className="fixed inset-0 z-[95] bg-black flex flex-col animate-in slide-in-from-bottom-4 duration-200 overflow-hidden">
-                                {/* Panel header */}
-                                <div className="flex-none px-4 py-3 border-b border-white/5 flex items-center gap-3">
-                                    <button
-                                        onClick={() => setExtrasSection(null)}
-                                        className="bg-neutral-900 p-1.5 rounded-full text-white hover:bg-neutral-800 transition-colors"
-                                    >
-                                        <ArrowLeft size={16} />
-                                    </button>
-                                    <div>
-                                        <h3 className="text-base font-black text-white italic uppercase tracking-tight">
-                                            Más ejercicios de {extrasSection}
-                                        </h3>
-                                        <p className="text-[10px] text-neutral-500 font-bold">
-                                            {extrasSectionInventory.length} ejercicio{extrasSectionInventory.length !== 1 ? 's' : ''} adicionale{extrasSectionInventory.length !== 1 ? 's' : ''}
-                                        </p>
-                                    </div>
-                                </div>
-                                {/* Exercises grid */}
-                                <div className="flex-1 px-3 pt-4 pb-32"
-                                    style={{ overflowY: 'scroll', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', minHeight: 0, height: 0 } as React.CSSProperties}
-                                >
-                                    {extrasSectionInventory.length === 0 ? (
-                                        <div className="flex flex-col items-center justify-center h-48 gap-3 text-neutral-600">
-                                            <span className="text-4xl">✅</span>
-                                            <p className="text-sm font-bold">Tienes todos los ejercicios de este músculo</p>
-                                        </div>
-                                    ) : (
-                                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                                            {extrasSectionInventory.map(item => {
-                                                const isSelected = selectedCatalogItems.has(item.id);
-                                                return (
-                                                    <div key={item.id} className="cursor-pointer" onClick={() => handleCatalogToggle(item.id)}>
-                                                        <ArsenalCard
-                                                            item={item}
-                                                            isSelected={isSelected}
-                                                            userSettings={userSettings}
-                                                        />
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-                                </div>
-                                {/* Floating AGREGAR inside panel */}
-                                {newlySelectedCount > 0 && (
-                                    <div className="absolute bottom-6 left-0 w-full px-4 flex justify-center pointer-events-none z-10">
-                                        <button
-                                            onClick={handleBatchAdd}
-                                            className="pointer-events-auto bg-gym-primary text-black font-black uppercase py-4 px-12 rounded-2xl shadow-[0_10px_40px_rgba(250,204,21,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center gap-3 text-lg border-2 border-yellow-400"
-                                        >
-                                            <Plus size={24} strokeWidth={3} />
-                                            AGREGAR ({newlySelectedCount})
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        <div
-                            ref={catalogScrollRef}
-                            className="flex-1 px-2 sm:px-4 pb-32 bg-black"
-                            style={{
-                                overflowY: 'scroll',
-                                overflowX: 'hidden',
-                                WebkitOverflowScrolling: 'touch',
-                                touchAction: 'pan-y pinch-zoom',
-                                // Explicit height-0 base + flex-grow so iOS calculates the height correctly
-                                minHeight: 0,
-                                height: 0,
-                            } as React.CSSProperties}
-                        >
-                            {!isCreatingExercise ? (
-                                <div className="pt-4">
-                                    <ArsenalGrid
-                                        inventory={curatedCatalogInventory}
-                                        selectedItems={selectedCatalogItems}
-                                        userSettings={userSettings}
-                                        searchTerm={searchTerm}
-                                        onToggleSelection={handleCatalogToggle}
-                                        onOpenCatalog={(section) => setExtrasSection(section)}
-                                        onEditItem={setEditingItem}
-                                        sectionOrder={CATALOG_ORDER}
-                                        gridClassName="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2"
-                                        variantBadgeMap={variantBadgeMap}
-                                        lockedItemIds={lockedItemIds}
-                                        onUnlockItem={(itemId) => {
-                                            unlockExercise(itemId);
-                                            // Remove from lockedItemIds on next render (state update triggers re-render)
-                                        }}
-                                        // onVariantCycle removed — each variant is now its own card,
-                                        // cycling within a single card is no longer used.
-                                    />
-                                </div>
-                            ) : (
-                                <EquipmentForm
-                                    user={user}
-                                    userSettings={userSettings}
-                                    onUpdateSettings={setUserSettings}
-                                    editingItem={editingItem}
-                                    onClose={() => { setIsCreatingExercise(false); setEditingItem(null); }}
-                                    onSuccess={(newItem, isEdit) => {
-                                        setArsenal(prev => isEdit ? prev.map(i => i.id === newItem.id ? newItem : i) : [...prev, newItem]);
-                                        setSelectedCatalogItems(prev => { const s = new Set(prev); s.add(newItem.id); return s; });
-                                        setIsCreatingExercise(false); setEditingItem(null); setSearchTerm('');
-                                    }}
-                                    activeSection={activeMuscleFilter || 'CHEST'}
-                                    catalogItems={catalogItems}
-                                    onQuickAdd={(seed) => {
-                                        const id = `virtual-${seed.name}`;
-                                        setSelectedCatalogItems(prev => { const s = new Set(prev); s.add(id); return s; });
-                                        setArsenal(prev => [...prev, { ...seed, id, gym_id: 'virtual', quantity: 1, condition: 'GOOD' } as any]);
-                                        setIsCreatingExercise(false);
-                                    }}
-                                />
-                            )}
-
-                            {/* Floating "Add" Button */}
-                            {!isCreatingExercise && newlySelectedCount > 0 && (
-                                <div className="fixed bottom-6 left-0 w-full px-4 z-[100] flex justify-center pointer-events-none">
-                                    <button
-                                        onClick={handleBatchAdd}
-                                        className="pointer-events-auto bg-gym-primary text-black font-black uppercase py-4 px-12 rounded-2xl shadow-[0_10px_40px_rgba(250,204,21,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center gap-3 text-lg animate-in slide-in-from-bottom-4 border-2 border-yellow-400"
-                                    >
-                                        <Plus size={24} strokeWidth={3} />
-                                        AGREGAR ({newlySelectedCount})
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )
-            }
+            {/* Exercise Selector Modal */}
+            {showAddModal && !showSummary && !showRoutineModal && !showStartOptionsModal && !isFinished && (
+                <CatalogModal
+                    selected={selectedCatalogItems}
+                    onToggle={handleCatalogToggle}
+                    onClose={() => {
+                        if (activeExercises.length === 0) { isLeavingPageRef.current = true; navigate('/'); }
+                        else { setShowAddModal(false); }
+                    }}
+                    onConfirm={handleBatchAdd}
+                />
+            )}
 
             {/* SmartNumpad Removed */}
 
