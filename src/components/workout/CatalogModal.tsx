@@ -135,7 +135,7 @@ export const CatalogModal = ({ selected, onToggle, onClose, onConfirm }: Props) 
                             return (
                                 <div
                                     key={base.id}
-                                    className={`relative cursor-pointer rounded-lg transition-all h-44 ${isSel ? 'ring-2 ring-gym-primary ring-offset-2 ring-offset-black' : ''}`}
+                                    className={`relative cursor-pointer rounded-lg transition-all h-52 ${isSel ? 'ring-2 ring-gym-primary ring-offset-2 ring-offset-black' : ''}`}
                                     onClick={(e) => {
                                         if ((e.target as HTMLElement).closest('[data-variant-btn="true"]')) return;
                                         onToggle(vid(currentVariant.seedName));
@@ -149,24 +149,24 @@ export const CatalogModal = ({ selected, onToggle, onClose, onConfirm }: Props) 
                                         variantLabel={hasVariants ? currentVariant.label : undefined}
                                         variantTotal={hasVariants ? base.variants.length : undefined}
                                     />
-                                    {/* Arrows — positioned on the full card height, not just the image zone */}
+                                    {/* Arrows — centered on full card height */}
                                     {hasVariants && (
                                         <>
                                             <button
                                                 data-variant-btn="true"
                                                 onPointerDown={e => e.stopPropagation()}
                                                 onClick={e => { e.stopPropagation(); cycleVariant(base, 'prev'); }}
-                                                className="absolute left-0 top-1/2 -translate-y-1/2 z-30 p-1.5 rounded-r-lg bg-black/60 text-white hover:text-gym-primary hover:bg-black/90 transition-all backdrop-blur-md"
+                                                className="absolute left-0 top-1/2 -translate-y-1/2 z-30 flex items-center justify-center w-7 h-10 rounded-r-xl bg-black/70 border border-white/20 border-l-0 text-white hover:text-gym-primary hover:bg-black/90 hover:border-gym-primary/50 transition-all backdrop-blur-sm shadow-lg"
                                             >
-                                                <ChevronLeft size={16} strokeWidth={4} />
+                                                <ChevronLeft size={18} strokeWidth={3} />
                                             </button>
                                             <button
                                                 data-variant-btn="true"
                                                 onPointerDown={e => e.stopPropagation()}
                                                 onClick={e => { e.stopPropagation(); cycleVariant(base, 'next'); }}
-                                                className="absolute right-0 top-1/2 -translate-y-1/2 z-30 p-1.5 rounded-l-lg bg-black/60 text-white hover:text-gym-primary hover:bg-black/90 transition-all backdrop-blur-md"
+                                                className="absolute right-0 top-1/2 -translate-y-1/2 z-30 flex items-center justify-center w-7 h-10 rounded-l-xl bg-black/70 border border-white/20 border-r-0 text-white hover:text-gym-primary hover:bg-black/90 hover:border-gym-primary/50 transition-all backdrop-blur-sm shadow-lg"
                                             >
-                                                <ChevronRight size={16} strokeWidth={4} />
+                                                <ChevronRight size={18} strokeWidth={3} />
                                             </button>
                                         </>
                                     )}
