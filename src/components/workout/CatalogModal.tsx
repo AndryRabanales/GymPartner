@@ -21,8 +21,6 @@ interface Props {
     /** IDs already selected: `virtual-${seedName}` */
     selected: Set<string>;
     onToggle: (virtualId: string) => void;
-    /** Atomic swap: removes oldId and adds newId in one state update (avoids React batching bug). */
-    onSwapVariant: (oldId: string, newId: string) => void;
     onClose: () => void;
     onConfirm: () => void;
 }
@@ -30,7 +28,7 @@ interface Props {
 const EMPTY_SETTINGS = { categories: [], metrics: [] };
 const vid = (seedName: string) => `virtual-${seedName}`;
 
-export const CatalogModal = ({ selected, onToggle, onSwapVariant, onClose, onConfirm }: Props) => {
+export const CatalogModal = ({ selected, onToggle, onClose, onConfirm }: Props) => {
     const [activeMuscle, setActiveMuscle] = useState<string>('PECHO');
     const [searchTerm, setSearchTerm] = useState('');
     // variantIdx: baseId → index of currently displayed variant
@@ -73,15 +71,7 @@ export const CatalogModal = ({ selected, onToggle, onSwapVariant, onClose, onCon
         const nextIdx = dir === 'next'
             ? (currentIdx + 1) % base.variants.length
             : (currentIdx - 1 + base.variants.length) % base.variants.length;
-
-        const oldVariant = base.variants[currentIdx];
-        const newVariant = base.variants[nextIdx];
-
-        // Atomic swap: one state update so React batching doesn't leave old selected.
-        if (selected.has(vid(oldVariant.seedName))) {
-            onSwapVariant(vid(oldVariant.seedName), vid(newVariant.seedName));
-        }
-
+        // Just navigate — never touch selection state
         setVariantIdx(prev => ({ ...prev, [base.id]: nextIdx }));
     };
 
