@@ -57,7 +57,9 @@ export const CatalogModal = ({ selected, onToggle, onClose, onConfirm }: Props) 
         const seed = seedLookup.get(variant.seedName);
         return {
             id: vid(variant.seedName),
-            name: variant.seedName,
+            // Use base name (e.g. "Press Inclinado") as display title so the card stays
+            // short and readable — the variant pill already shows "Mancuernas" / "Barra" etc.
+            name: base.name,
             category: base.muscle,
             target_muscle_group: base.muscle,
             metrics: base.metrics,

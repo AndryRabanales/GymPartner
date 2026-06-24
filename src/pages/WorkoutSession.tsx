@@ -5706,7 +5706,7 @@ export const WorkoutSession = () => {
                                         <div className="flex-1 min-w-0">
                                             {/* Exercise name — full name including variant, no change-variant button.
                                                 Variants are selected in the catalog. During training the name is fixed. */}
-                                            <h3 className="text-2xl font-black italic uppercase text-white leading-tight truncate">
+                                            <h3 className={`font-black italic uppercase text-white leading-tight line-clamp-2 ${exercise.equipmentName.length > 22 ? 'text-base' : 'text-xl'}`}>
                                                 {exercise.equipmentName}
                                             </h3>
                                             {canModifyStructure && (() => {
