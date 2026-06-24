@@ -78,18 +78,13 @@ export const WorkoutCatalog = ({ selected, onToggle, onClose }: Props) => {
     };
 
     const handleVariantPick = (base: BaseExercise, variant: ExerciseVariant) => {
-        // Deselect ALL other variants of this base exercise that are currently selected
-        base.variants.forEach(v => {
-            if (v.id !== variant.id && selected.has(vid(v.seedName))) {
-                onToggle(vid(v.seedName));
-            }
-        });
+        // Each variant is independently togglable — no mutual exclusion.
+        // Save preference only when selecting (not deselecting)
+        if (!selected.has(vid(variant.seedName))) {
+            saveVariantPref(base.id, variant.id);
+            setVariantPrefs(prev => ({ ...prev, [base.id]: variant.id }));
+        }
 
-        // Save preference
-        saveVariantPref(base.id, variant.id);
-        setVariantPrefs(prev => ({ ...prev, [base.id]: variant.id }));
-
-        // Toggle the chosen variant (select if not selected, deselect if already selected)
         onToggle(vid(variant.seedName));
 
         setPickingVariantFor(null);

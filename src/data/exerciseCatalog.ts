@@ -229,12 +229,12 @@ const HOMBRO: BaseExercise[] = [
     },
 ];
 
-// ─────────────────────────── PIERNA ─────────────────────────────────────────
-const PIERNA: BaseExercise[] = [
+// ─────────────────────────── CUÁDRICEPS ─────────────────────────────────────
+const CUADRICEPS: BaseExercise[] = [
     {
         id: 'sentadilla',
         name: 'Sentadilla',
-        muscle: 'PIERNA', icon: '🍑',
+        muscle: 'CUÁDRICEPS', icon: '🍑',
         metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
         variants: [
             { id: 'libre_barra', label: 'Libre Barra',  seedName: 'Sentadilla Libre (Barra)',   icon: '🍑' },
@@ -246,7 +246,7 @@ const PIERNA: BaseExercise[] = [
     {
         id: 'prensa_piernas',
         name: 'Prensa de Piernas',
-        muscle: 'PIERNA', icon: '📐',
+        muscle: 'CUÁDRICEPS', icon: '📐',
         metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
         variants: [
             { id: '45', label: '45°', seedName: 'Prensa de Piernas (45°)', icon: '📐' },
@@ -255,7 +255,7 @@ const PIERNA: BaseExercise[] = [
     {
         id: 'extension_cuadriceps',
         name: 'Extensión de Cuádriceps',
-        muscle: 'PIERNA', icon: '🦵',
+        muscle: 'CUÁDRICEPS', icon: '🦵',
         metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
         variants: [
             { id: 'maquina', label: 'Máquina', seedName: 'Extensiones de Cuádriceps', icon: '🦵' },
@@ -264,7 +264,7 @@ const PIERNA: BaseExercise[] = [
     {
         id: 'zancadas',
         name: 'Zancadas / Lunges',
-        muscle: 'PIERNA', icon: '🚶',
+        muscle: 'CUÁDRICEPS', icon: '🚶',
         metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
         variants: [
             { id: 'mancuernas', label: 'Mancuernas', seedName: 'Zancadas / Lunges (Mancuernas)', icon: '🚶' },
@@ -273,9 +273,22 @@ const PIERNA: BaseExercise[] = [
         ],
     },
     {
+        id: 'step_up',
+        name: 'Step Up',
+        muscle: 'CUÁDRICEPS', icon: '🚶',
+        metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
+        variants: [
+            { id: 'mancuernas', label: 'Mancuernas', seedName: 'Step Up con Mancuernas', icon: '🚶' },
+        ],
+    },
+];
+
+// ─────────────────────────── ISQUIOTIBIALES ──────────────────────────────────
+const ISQUIOTIBIALES: BaseExercise[] = [
+    {
         id: 'peso_muerto_rumano',
         name: 'Peso Muerto Rumano',
-        muscle: 'PIERNA', icon: '🎋',
+        muscle: 'ISQUIOTIBIALES', icon: '🎋',
         metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
         variants: [
             { id: 'barra',      label: 'Barra',      seedName: 'Peso Muerto Rumano (Barra)',      icon: '🎋' },
@@ -285,7 +298,7 @@ const PIERNA: BaseExercise[] = [
     {
         id: 'curl_femoral',
         name: 'Curl Femoral',
-        muscle: 'PIERNA', icon: '🥓',
+        muscle: 'ISQUIOTIBIALES', icon: '🥓',
         metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
         variants: [
             { id: 'tumbado', label: 'Tumbado (Máquina)', seedName: 'Curl Femoral Tumbado (Máquina)', icon: '🥓' },
@@ -295,19 +308,10 @@ const PIERNA: BaseExercise[] = [
     {
         id: 'buenos_dias',
         name: 'Good Mornings (Buenos Días)',
-        muscle: 'PIERNA', icon: '🌞',
+        muscle: 'ISQUIOTIBIALES', icon: '🌞',
         metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
         variants: [
             { id: 'barra', label: 'Barra', seedName: 'Good Mornings (Buenos Días)', icon: '🌞' },
-        ],
-    },
-    {
-        id: 'step_up',
-        name: 'Step Up',
-        muscle: 'PIERNA', icon: '🚶',
-        metrics: { weight: true, reps: true, time: false, distance: false, rpe: false },
-        variants: [
-            { id: 'mancuernas', label: 'Mancuernas', seedName: 'Step Up con Mancuernas', icon: '🚶' },
         ],
     },
 ];
@@ -614,7 +618,8 @@ export const CURATED_EXERCISES: BaseExercise[] = [
     ...PECHO,
     ...ESPALDA,
     ...HOMBRO,
-    ...PIERNA,
+    ...CUADRICEPS,
+    ...ISQUIOTIBIALES,
     ...GLUTEOS,
     ...BICEPS,
     ...TRICEPS,
