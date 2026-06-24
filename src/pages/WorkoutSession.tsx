@@ -6205,12 +6205,12 @@ export const WorkoutSession = () => {
             {(activeExercises.length > 0 && viewingMode === 'mine') && (
                 <button
                     onClick={() => setShowAddModal(true)}
-                    className="fixed bottom-24 right-4 z-50 flex items-center gap-2 pl-3 pr-4 py-2.5 rounded-full bg-red-600/90 backdrop-blur-md border border-red-400/30 text-white shadow-[0_8px_32px_rgba(220,38,38,0.5)] hover:bg-red-500 hover:scale-105 active:scale-95 transition-all"
+                    className="fixed bottom-24 left-4 z-50 flex items-center gap-2 pl-3 pr-4 py-2.5 rounded-full bg-red-600/90 backdrop-blur-md border border-red-400/30 text-white shadow-[0_8px_32px_rgba(220,38,38,0.5)] hover:bg-red-500 hover:scale-105 active:scale-95 transition-all"
                 >
                     <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center shrink-0">
                         <Plus size={14} strokeWidth={3} />
                     </div>
-                    <span className="text-xs font-black uppercase tracking-widest">Añadir</span>
+                    <span className="text-[10px] font-black uppercase tracking-wider">Añadir ejercicio</span>
                 </button>
             )}
 
