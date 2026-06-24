@@ -123,7 +123,7 @@ export const CatalogModal = ({ selected, onToggle, onClose, onConfirm }: Props) 
                 {exercisesForMuscle.length === 0 ? (
                     <div className="text-center text-neutral-600 font-bold py-12">Sin resultados</div>
                 ) : (
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                    <div className="grid grid-cols-3 gap-3 mt-2">
                         {exercisesForMuscle.map(base => {
                             const currentIdx = variantIdx[base.id] ?? 0;
                             const currentVariant = base.variants[currentIdx] ?? base.variants[0];
