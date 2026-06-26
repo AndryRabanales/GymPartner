@@ -21,6 +21,7 @@ import { InboxPage } from './pages/InboxPage';
 import { PublicProfile } from './pages/PublicProfile';
 import { FriendsPage } from './pages/FriendsPage';
 import { PrivacyPolicy } from './pages/PrivacyPolicy';
+import { DeleteAccountPage } from './pages/DeleteAccountPage';
 import { TermsPage } from './pages/TermsPage';
 import { BottomNavProvider } from './context/BottomNavContext';
 
@@ -38,6 +39,7 @@ function App() {
           <Routes>
             {/* Public routes — no auth or layout wrapper needed */}
             <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/delete-account" element={<DeleteAccountPage />} />
             <Route path="/terms" element={<TermsPage />} />
 
             <Route path="/" element={<AppLayout />}>
