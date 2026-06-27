@@ -206,59 +206,63 @@ export const LoginPage = () => {
     }
 
     return (
-        <div className="fixed inset-0 bg-neutral-950 flex flex-col items-center justify-center overflow-hidden">
-            {/* Ambient glow */}
-            <div className="absolute w-[300px] h-[300px] bg-gym-primary/8 rounded-full blur-[100px] top-0 left-1/2 -translate-x-1/2 pointer-events-none" />
+        <div className="fixed inset-0 bg-neutral-950 flex flex-col overflow-hidden">
+            {/* Top ambient glow */}
+            <div className="absolute w-[400px] h-[400px] bg-gym-primary/6 rounded-full blur-[120px] -top-32 left-1/2 -translate-x-1/2 pointer-events-none" />
+            <div className="absolute w-[250px] h-[250px] bg-yellow-500/4 rounded-full blur-[80px] bottom-0 right-0 pointer-events-none" />
 
-            <div className="relative z-10 w-full max-w-sm px-5 flex flex-col items-center gap-5">
-
-                {/* Logo */}
-                <div className="flex flex-col items-center gap-2">
-                    <div className="w-16 h-16 bg-neutral-950 border border-neutral-800 rounded-2xl flex items-center justify-center shadow-md overflow-hidden">
-                        <img src="/ginxIcon.png" alt="Ginx" className="w-full h-full object-cover" />
-                    </div>
-                    <h1 className="text-2xl font-black text-white tracking-tight">Acceso <span className="text-gym-primary italic">GINX</span></h1>
-                    <p className="text-neutral-400 text-xs text-center">Elige tu método de acceso rápido para continuar.</p>
+            {/* Top branding section */}
+            <div className="flex-1 flex flex-col items-center justify-center px-6 relative z-10">
+                {/* Icon + brand */}
+                <div className="w-20 h-20 rounded-3xl overflow-hidden border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.6)] mb-4">
+                    <img src="/ginxIcon.png" alt="Ginx" className="w-full h-full object-cover" />
                 </div>
+                <h1 className="text-3xl font-black italic tracking-tight text-white mb-1">
+                    GINX
+                </h1>
+                <div className="h-px w-12 bg-gym-primary mb-3" />
+                <p className="text-neutral-500 text-xs text-center font-bold uppercase tracking-widest">
+                    Entrena · Conecta · Compite
+                </p>
+            </div>
+
+            {/* Bottom actions section */}
+            <div className="relative z-10 px-6 pb-8 flex flex-col gap-3">
 
                 {error && (
-                    <div className="w-full bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-xl text-xs text-center">
+                    <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-xl text-xs text-center mb-1">
                         {error}
                     </div>
                 )}
 
-                {/* Buttons */}
-                <div className="w-full flex flex-col gap-3">
-                    <button
-                        onClick={handleGoogleLogin}
-                        className="w-full bg-white text-black font-black py-3.5 rounded-xl hover:bg-neutral-100 active:scale-95 transition-all flex items-center justify-center gap-3 shadow-md"
-                    >
-                        <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
-                        <span className="text-sm uppercase tracking-wider">Entrar con Google</span>
-                    </button>
+                <button
+                    onClick={handleGoogleLogin}
+                    className="w-full bg-white text-black font-black py-4 rounded-2xl active:scale-95 transition-all flex items-center justify-center gap-3 shadow-lg"
+                >
+                    <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
+                    <span className="text-sm uppercase tracking-wider">Continuar con Google</span>
+                </button>
 
-                    <button
-                        onClick={handleMetaLogin}
-                        className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white font-black py-3.5 rounded-xl hover:from-blue-500 hover:to-blue-600 active:scale-95 transition-all flex items-center justify-center gap-3 shadow-md"
-                    >
-                        <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                            <path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z" />
-                        </svg>
-                        <span className="text-sm uppercase tracking-wider">Entrar con Meta</span>
-                    </button>
-                </div>
+                <button
+                    onClick={handleMetaLogin}
+                    className="w-full bg-[#1877F2] text-white font-black py-4 rounded-2xl active:scale-95 transition-all flex items-center justify-center gap-3 shadow-lg"
+                >
+                    <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                        <path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z" />
+                    </svg>
+                    <span className="text-sm uppercase tracking-wider">Continuar con Meta</span>
+                </button>
 
-                {/* Dev bypass — localhost only */}
                 {import.meta.env.DEV && (
                     <button
                         onClick={() => signInAsDev && signInAsDev()}
-                        className="w-full bg-neutral-800/60 text-neutral-400 font-bold py-2.5 rounded-xl hover:bg-neutral-700 hover:text-white active:scale-95 transition-all flex items-center justify-center gap-2 text-xs border border-neutral-700 border-dashed"
+                        className="w-full bg-neutral-800/60 text-neutral-500 font-bold py-3 rounded-xl active:scale-95 transition-all flex items-center justify-center gap-2 text-xs border border-neutral-700 border-dashed"
                     >
                         🛠️ Dev Bypass
                     </button>
                 )}
 
-                <p className="text-[10px] text-neutral-600 leading-relaxed text-center px-4">
+                <p className="text-[10px] text-neutral-600 leading-relaxed text-center mt-1">
                     Al continuar aceptas nuestros{' '}
                     <Link to="/terms" className="text-neutral-500 underline">Términos</Link>
                     {' '}y{' '}
