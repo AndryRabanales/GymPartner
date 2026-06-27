@@ -349,64 +349,57 @@ export const UserProfile = () => {
 
     if (!user) {
         return (
-            <div className="flex flex-col bg-neutral-950 min-h-screen">
-                {/* Hero Section */}
-                <div className="flex-1 flex flex-col items-center justify-center p-6 py-20 md:py-32 text-center relative overflow-hidden">
-                    {/* Background Glow */}
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gym-primary/10 rounded-full blur-[100px] pointer-events-none"></div>
+            <div className="fixed inset-0 bg-neutral-950 flex flex-col overflow-hidden">
+                {/* Background glow */}
+                <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-gym-primary/8 rounded-full blur-[100px] pointer-events-none" />
 
-                    <div className="relative z-10 max-w-3xl">
-                        <div className="bg-gym-primary/10 w-fit mx-auto px-4 py-1.5 rounded-full border border-gym-primary/20 mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                            <span className="text-gym-primary font-bold text-sm tracking-wide">LA EVOLUCIÓN DEL ENTRENAMIENTO</span>
-                        </div>
-
-                        <h1 className="text-4xl md:text-7xl font-black text-white mb-4 leading-tight animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-100 uppercase italic">
-                            Tu Gimnasio <br />
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-gym-primary to-yellow-200">Inteligente</span>
-                        </h1>
-
-                        <p className="text-lg md:text-xl text-neutral-400 mb-8 max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200">
-                            Deja de adivinar. Domina tu entorno. <br />
-                            Mapa de gimnasios, seguimiento de progreso y rango social en una sola app.
-                        </p>
-
-                        <div className="flex flex-col sm:flex-row gap-4 justify-center animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-300">
-                            <Link
-                                to="/login"
-                                className="bg-gym-primary text-black font-black text-xl px-12 py-5 rounded-[2rem] hover:bg-yellow-400 transition-all transform hover:scale-105 shadow-2xl shadow-gym-primary/40 flex items-center justify-center gap-3 no-underline italic tracking-tighter"
-                            >
-                                <LogIn size={28} strokeWidth={3} />
-                                <span>INICIAR SESIÓN</span>
-                            </Link>
-                        </div>
+                {/* Hero — fills available space */}
+                <div className="flex-1 flex flex-col items-center justify-center px-6 text-center relative z-10 min-h-0">
+                    <div className="bg-gym-primary/10 px-4 py-1.5 rounded-full border border-gym-primary/20 mb-4">
+                        <span className="text-gym-primary font-bold text-xs tracking-widest uppercase">La Evolución del Entrenamiento</span>
                     </div>
+
+                    <h1 className="text-4xl font-black text-white leading-tight uppercase italic mb-3">
+                        Tu Gimnasio <br />
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-gym-primary to-yellow-200">Inteligente</span>
+                    </h1>
+
+                    <p className="text-neutral-400 text-sm mb-6 max-w-xs mx-auto leading-relaxed">
+                        Deja de adivinar. Domina tu entorno.<br />
+                        Mapa, progreso y rango social en una sola app.
+                    </p>
+
+                    <Link
+                        to="/login"
+                        className="bg-gym-primary text-black font-black text-base px-10 py-4 rounded-[2rem] shadow-[0_0_30px_rgba(250,204,21,0.4)] flex items-center justify-center gap-2 no-underline italic tracking-tighter active:scale-95 transition-all"
+                    >
+                        <LogIn size={20} strokeWidth={3} />
+                        INICIAR SESIÓN
+                    </Link>
                 </div>
 
-                {/* Features Grid */}
-                <div className="grid grid-cols-3 gap-1 px-1 bg-neutral-900 border-t border-white/5">
-                    <div className="bg-neutral-950 p-4 md:p-10 text-center hover:bg-neutral-900 transition-colors group cursor-default">
-                        <div className="bg-blue-500/10 w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl flex items-center justify-center mx-auto mb-4 md:mb-6 group-hover:bg-blue-500/20 transition-colors">
-                            <MapPin size={24} className="text-blue-500 md:hidden" />
-                            <MapPin size={32} className="text-blue-500 hidden md:block" />
+                {/* Features bar — compact, always visible at bottom */}
+                <div className="grid grid-cols-3 border-t border-white/5 shrink-0">
+                    <div className="bg-neutral-950 p-3 text-center border-r border-white/5">
+                        <div className="bg-blue-500/10 w-9 h-9 rounded-xl flex items-center justify-center mx-auto mb-1.5">
+                            <MapPin size={18} className="text-blue-500" />
                         </div>
-                        <h3 className="text-sm md:text-xl font-bold text-white mb-2 uppercase italic tracking-tighter">La Sede</h3>
-                        <p className="text-[10px] md:text-sm text-neutral-500 leading-tight">Localiza tu gimnasio en el mapa y establece tu base de entrenamiento.</p>
+                        <h3 className="text-[10px] font-black text-white uppercase italic">La Sede</h3>
+                        <p className="text-[9px] text-neutral-600 leading-tight mt-0.5">Tu gimnasio en el mapa</p>
                     </div>
-                    <div className="bg-neutral-950 p-4 md:p-10 text-center hover:bg-neutral-900 transition-colors group cursor-default">
-                        <div className="bg-purple-500/10 w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl flex items-center justify-center mx-auto mb-4 md:mb-6 group-hover:bg-purple-500/20 transition-colors">
-                            <Dumbbell size={24} className="text-purple-500 md:hidden" />
-                            <Dumbbell size={32} className="text-purple-500 hidden md:block" />
+                    <div className="bg-neutral-950 p-3 text-center border-r border-white/5">
+                        <div className="bg-purple-500/10 w-9 h-9 rounded-xl flex items-center justify-center mx-auto mb-1.5">
+                            <Dumbbell size={18} className="text-purple-500" />
                         </div>
-                        <h3 className="text-sm md:text-xl font-bold text-white mb-2 uppercase italic tracking-tighter">Inventario</h3>
-                        <p className="text-[10px] md:text-sm text-neutral-500 leading-tight">Inventario digital de máquinas. Sabe qué equipamiento tienes antes de llegar.</p>
+                        <h3 className="text-[10px] font-black text-white uppercase italic">Inventario</h3>
+                        <p className="text-[9px] text-neutral-600 leading-tight mt-0.5">Equipo disponible</p>
                     </div>
-                    <div className="bg-neutral-950 p-4 md:p-10 text-center hover:bg-neutral-900 transition-colors group cursor-default">
-                        <div className="bg-green-500/10 w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl flex items-center justify-center mx-auto mb-4 md:mb-6 group-hover:bg-green-500/20 transition-colors">
-                            <Swords size={24} className="text-green-500 md:hidden" />
-                            <Swords size={32} className="text-green-500 hidden md:block" />
+                    <div className="bg-neutral-950 p-3 text-center">
+                        <div className="bg-green-500/10 w-9 h-9 rounded-xl flex items-center justify-center mx-auto mb-1.5">
+                            <Swords size={18} className="text-green-500" />
                         </div>
-                        <h3 className="text-sm md:text-xl font-bold text-white mb-2 uppercase italic tracking-tighter">Entrenamiento</h3>
-                        <p className="text-[10px] md:text-sm text-neutral-500 leading-tight">Seguimiento de entrenamiento avanzado. Series, reps y progreso real.</p>
+                        <h3 className="text-[10px] font-black text-white uppercase italic">Entrenamiento</h3>
+                        <p className="text-[9px] text-neutral-600 leading-tight mt-0.5">Progreso real</p>
                     </div>
                 </div>
             </div>
