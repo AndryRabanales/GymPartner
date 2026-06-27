@@ -1,7 +1,7 @@
 import { useAuth } from '../context/AuthContext';
 import { ExternalLink } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 // ── Detect Meta / Instagram in-app browser ──────────────────────────────────
 function detectMetaIAB() {
@@ -118,9 +118,15 @@ const InstagramEscapeScreen = () => {
 
 // ── Main Login Page ──────────────────────────────────────────────────────────
 export const LoginPage = () => {
-    const { signInWithGoogle, signInWithMeta, signInAsDev } = useAuth();
+    const { signInWithGoogle, signInWithMeta, signInAsDev, user } = useAuth();
     const [error, setError] = useState<string | null>(null);
     const [isAutoLoggingIn, setIsAutoLoggingIn] = useState(false);
+    const navigate = useNavigate();
+
+    // Redirect to home as soon as user is authenticated
+    useEffect(() => {
+        if (user) navigate('/', { replace: true });
+    }, [user]);
 
     // Show escape screen immediately if inside Instagram/Meta IAB
     if (detectMetaIAB()) {
@@ -207,47 +213,45 @@ export const LoginPage = () => {
 
     return (
         <div className="fixed inset-0 bg-neutral-950 flex flex-col overflow-hidden">
-            {/* Top ambient glow */}
-            <div className="absolute w-[400px] h-[400px] bg-gym-primary/6 rounded-full blur-[120px] -top-32 left-1/2 -translate-x-1/2 pointer-events-none" />
-            <div className="absolute w-[250px] h-[250px] bg-yellow-500/4 rounded-full blur-[80px] bottom-0 right-0 pointer-events-none" />
+            {/* Ambient glows */}
+            <div className="absolute w-[350px] h-[350px] bg-gym-primary/6 rounded-full blur-[120px] -top-24 left-1/2 -translate-x-1/2 pointer-events-none" />
+            <div className="absolute w-[200px] h-[200px] bg-yellow-500/4 rounded-full blur-[80px] bottom-0 right-0 pointer-events-none" />
 
-            {/* Top branding section */}
-            <div className="flex-1 flex flex-col items-center justify-center px-6 relative z-10">
-                {/* Icon + brand */}
-                <div className="w-20 h-20 rounded-3xl overflow-hidden border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.6)] mb-4">
+            {/* Branding — centered, takes remaining space */}
+            <div className="flex-1 flex flex-col items-center justify-center px-6 relative z-10 min-h-0">
+                <div className="w-16 h-16 rounded-2xl overflow-hidden border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.6)] mb-3">
                     <img src="/ginxIcon.png" alt="Ginx" className="w-full h-full object-cover" />
                 </div>
-                <h1 className="text-3xl font-black italic tracking-tight text-white mb-1">
-                    GINX
-                </h1>
-                <div className="h-px w-12 bg-gym-primary mb-3" />
-                <p className="text-neutral-500 text-xs text-center font-bold uppercase tracking-widest">
+                <h1 className="text-2xl font-black italic tracking-tight text-white mb-1">GINX</h1>
+                <div className="h-px w-10 bg-gym-primary mb-2" />
+                <p className="text-neutral-500 text-[10px] text-center font-bold uppercase tracking-widest">
                     Entrena · Conecta · Compite
                 </p>
             </div>
 
-            {/* Bottom actions section */}
-            <div className="relative z-10 px-6 pb-8 flex flex-col gap-3">
+            {/* Actions — fixed at bottom, compact */}
+            <div className="relative z-10 px-6 pb-safe flex flex-col gap-2.5"
+                style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}>
 
                 {error && (
-                    <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-xl text-xs text-center mb-1">
+                    <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-2.5 rounded-xl text-xs text-center">
                         {error}
                     </div>
                 )}
 
                 <button
                     onClick={handleGoogleLogin}
-                    className="w-full bg-white text-black font-black py-4 rounded-2xl active:scale-95 transition-all flex items-center justify-center gap-3 shadow-lg"
+                    className="w-full bg-white text-black font-black py-3.5 rounded-2xl active:scale-95 transition-all flex items-center justify-center gap-2.5 shadow-lg"
                 >
-                    <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
+                    <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4" />
                     <span className="text-sm uppercase tracking-wider">Continuar con Google</span>
                 </button>
 
                 <button
                     onClick={handleMetaLogin}
-                    className="w-full bg-[#1877F2] text-white font-black py-4 rounded-2xl active:scale-95 transition-all flex items-center justify-center gap-3 shadow-lg"
+                    className="w-full bg-[#1877F2] text-white font-black py-3.5 rounded-2xl active:scale-95 transition-all flex items-center justify-center gap-2.5 shadow-lg"
                 >
-                    <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                         <path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z" />
                     </svg>
                     <span className="text-sm uppercase tracking-wider">Continuar con Meta</span>
@@ -256,13 +260,13 @@ export const LoginPage = () => {
                 {import.meta.env.DEV && (
                     <button
                         onClick={() => signInAsDev && signInAsDev()}
-                        className="w-full bg-neutral-800/60 text-neutral-500 font-bold py-3 rounded-xl active:scale-95 transition-all flex items-center justify-center gap-2 text-xs border border-neutral-700 border-dashed"
+                        className="w-full bg-neutral-800/60 text-neutral-500 font-bold py-2.5 rounded-xl active:scale-95 transition-all flex items-center justify-center gap-2 text-xs border border-neutral-700 border-dashed"
                     >
                         🛠️ Dev Bypass
                     </button>
                 )}
 
-                <p className="text-[10px] text-neutral-600 leading-relaxed text-center mt-1">
+                <p className="text-[9px] text-neutral-600 text-center pb-1">
                     Al continuar aceptas nuestros{' '}
                     <Link to="/terms" className="text-neutral-500 underline">Términos</Link>
                     {' '}y{' '}

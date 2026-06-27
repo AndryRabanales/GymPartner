@@ -30,6 +30,13 @@ repositories {
     }
 }
 
+configurations.all {
+    resolutionStrategy {
+        // Force a browser version compatible with AGP 8.7.2 / compileSdk 35
+        force 'androidx.browser:browser:1.8.0'
+    }
+}
+
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
