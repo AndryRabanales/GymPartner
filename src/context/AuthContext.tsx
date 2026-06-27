@@ -3,6 +3,12 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 import { userService } from '../services/UserService';
 import { pushService } from '../services/PushService';
+import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
+import { App } from '@capacitor/app';
+
+// Custom scheme used as OAuth redirect on native — must match AndroidManifest intent filter
+const NATIVE_REDIRECT = 'com.ginx.app://login-callback';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Age Gate Screen — shown to new users before profile creation
@@ -200,6 +206,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // render and show <AgeGateScreen> until they confirm their age.
     const [needsAgeVerification, setNeedsAgeVerification] = useState(false);
     const pendingNewUserRef = useRef<User | null>(null);
+
+    // Deep-link listener for native OAuth callback (com.ginx.app://login-callback#...)
+    useEffect(() => {
+        if (!Capacitor.isNativePlatform() || !supabase) return;
+        const listener = App.addListener('appUrlOpen', async ({ url }) => {
+            if (!url.startsWith('com.ginx.app://')) return;
+            await Browser.close();
+            // Extract tokens from the URL fragment and set the session
+            const hashPart = url.split('#')[1];
+            if (hashPart) {
+                const params = new URLSearchParams(hashPart);
+                const access_token = params.get('access_token');
+                const refresh_token = params.get('refresh_token');
+                if (access_token && refresh_token) {
+                    await supabase.auth.setSession({ access_token, refresh_token });
+                }
+            }
+        });
+        return () => { listener.then(l => l.remove()); };
+    }, []);
 
     useEffect(() => {
         if (!isSupabaseConfigured() || !supabase) {
@@ -439,13 +465,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // ─── Sign-in helpers ───
     const getRedirectUrl = () => {
-        // In dev, always use localhost. In prod use the real origin.
+        if (Capacitor.isNativePlatform()) return NATIVE_REDIRECT;
         if (import.meta.env.DEV) return 'http://localhost:5173';
         return window.location.origin;
     };
 
+    const handleNativeOAuth = async (provider: 'google' | 'facebook') => {
+        if (!isSupabaseConfigured() || !supabase) throw new Error('Supabase no configurado.');
+        const { data, error } = await supabase.auth.signInWithOAuth({
+            provider,
+            options: { redirectTo: NATIVE_REDIRECT, skipBrowserRedirect: true }
+        });
+        if (error) throw error;
+        if (data?.url) await Browser.open({ url: data.url });
+    };
+
     const signInWithGoogle = async () => {
         if (!isSupabaseConfigured() || !supabase) throw new Error('Supabase no configurado.');
+        if (Capacitor.isNativePlatform()) { await handleNativeOAuth('google'); return; }
         const redirectTo = getRedirectUrl();
         console.log('🔐 [Auth] Google OAuth redirect to:', redirectTo);
         const { error } = await supabase.auth.signInWithOAuth({
@@ -457,6 +494,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const signInWithMeta = async () => {
         if (!isSupabaseConfigured() || !supabase) throw new Error('Supabase no configurado.');
+        if (Capacitor.isNativePlatform()) { await handleNativeOAuth('facebook'); return; }
         const redirectTo = getRedirectUrl();
         console.log('🔐 [Auth] Meta OAuth redirect to:', redirectTo);
         const { error } = await supabase.auth.signInWithOAuth({
