@@ -116,19 +116,27 @@ export const RoutineBuilder = () => {
     };
 
     const handleSave = async () => {
-        if (!user || !name) return;
+        if (!user) return;
+        if (!name.trim()) {
+            alert('Ponle un nombre a tu rutina antes de guardar.');
+            return;
+        }
+        if (selectedExercises.length === 0) {
+            alert('Agrega al menos un ejercicio a tu rutina.');
+            return;
+        }
 
         const { data: routine, error } = await supabase
             .from('routines')
-            .insert({ user_id: user.id, name, is_public: true })
+            .insert({ user_id: user.id, name: name.trim(), is_public: true })
             .select()
             .single();
 
-        if (error) { alert('Error creating routine: ' + error.message); return; }
+        if (error) { alert('Error al crear la rutina: ' + error.message); return; }
 
         const exercisesToInsert = selectedExercises.map((ex, i) => ({
             routine_id: routine.id,
-            exercise_id: ex.exercise_id,  // "virtual-${seedName}"
+            exercise_id: ex.exercise_id,
             name: ex.name,
             order_index: i,
             track_weight: ex.track_weight,
@@ -143,11 +151,11 @@ export const RoutineBuilder = () => {
         if (exError) {
             console.error(exError);
             alert('Error al guardar ejercicios: ' + exError.message);
+            // Delete the empty routine to avoid orphans
+            await supabase.from('routines').delete().eq('id', routine.id);
         } else {
-            alert('¡Rutina de Guerra creada!');
+            navigate(-1);
         }
-
-        navigate(-1);
     };
 
     return (
@@ -258,7 +266,10 @@ export const RoutineBuilder = () => {
                 <CatalogModal
                     selected={selectedCatalogItems}
                     onToggle={handleCatalogToggle}
-                    onClose={() => setShowSelector(false)}
+                    onClose={() => {
+                        setSelectedCatalogItems(new Set());
+                        setShowSelector(false);
+                    }}
                     onConfirm={handleBatchAdd}
                 />
             )}
