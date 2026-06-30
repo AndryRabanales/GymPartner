@@ -229,7 +229,7 @@ export const InboxPage = () => {
     const totalUnreadMessages = chats.reduce((acc, c) => acc + (c.unread_count || 0), 0);
 
     return (
-        <div className="flex-1 flex flex-col bg-transparent pb-0 relative overflow-hidden">
+        <div className="flex-1 flex flex-col bg-transparent pb-0 relative overflow-x-hidden">
             {/* Header & Tabs */}
             <div className="sticky top-0 z-40 bg-neutral-950/90 backdrop-blur-xl border-b border-white/5 pb-0 flex flex-col relative shrink-0">
                 {/* CENTERED TITLING */}

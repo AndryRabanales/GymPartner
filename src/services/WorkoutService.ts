@@ -83,32 +83,49 @@ class WorkoutService {
                 }
             }
 
+            // Collect recipient IDs from both sources:
+            // 1. Training partners (chats table = accepted matches)
+            // 2. History-share recipients (explicit history access grants)
+            const recipientSet = new Set<string>();
+
+            const { data: chats } = await supabase
+                .from('chats')
+                .select('user_a, user_b')
+                .or(`user_a.eq.${userId},user_b.eq.${userId}`);
+
+            (chats || []).forEach(chat => {
+                const friendId = chat.user_a === userId ? chat.user_b : chat.user_a;
+                recipientSet.add(friendId);
+            });
+
             const { data: shares } = await supabase
                 .from('history_shares')
                 .select('shared_with')
                 .eq('shared_by', userId);
 
-            if (shares && shares.length > 0) {
-                const notificationsPayload = shares
-                    .filter(share => share.shared_with !== userId && share.shared_with !== partnerId) // 🚫 Do not notify oneself OR the training partner!
-                    .map(share => ({
-                        user_id: share.shared_with,
-                        type: 'system',
-                        title: '🔴 EN VIVO - ENTRENANDO AHORA',
-                        message: `¡${displayName} comenzó a entrenar en ${gymLabel}!`,
-                        data: {
-                            sender_id: userId,
-                            sender_name: displayName,
-                            session_id: data.id,
-                            gym_name: gymLabel,
-                            status: 'started',
-                            started_at: data.started_at
-                        }
-                    }));
+            (shares || []).forEach(share => recipientSet.add(share.shared_with));
 
-                if (notificationsPayload.length > 0) {
-                    await supabase.from('notifications').insert(notificationsPayload);
-                }
+            // Remove self and the active training partner (already in the session)
+            recipientSet.delete(userId);
+            if (partnerId) recipientSet.delete(partnerId);
+
+            if (recipientSet.size > 0) {
+                const notificationsPayload = Array.from(recipientSet).map(recipientId => ({
+                    user_id: recipientId,
+                    type: 'system',
+                    title: '🔴 EN VIVO - ENTRENANDO AHORA',
+                    message: `¡${displayName} comenzó a entrenar en ${gymLabel}!`,
+                    data: {
+                        sender_id: userId,
+                        sender_name: displayName,
+                        session_id: data.id,
+                        gym_name: gymLabel,
+                        status: 'started',
+                        started_at: data.started_at
+                    }
+                }));
+
+                await supabase.from('notifications').insert(notificationsPayload);
             }
         } catch (notifyErr) {
             console.error('Error sending start live notification:', notifyErr);
