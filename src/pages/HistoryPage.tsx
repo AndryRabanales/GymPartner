@@ -39,6 +39,7 @@ export const HistoryPage = () => {
     const [loading, setLoading] = useState(true);
     const [history, setHistory] = useState<WorkoutRecord[]>([]);
     const [pendingWorkouts, setPendingWorkouts] = useState<PendingWorkout[]>([]);
+    const [isOfflineCache, setIsOfflineCache] = useState(false);
 
     // Load any offline-queued workouts from localStorage
     useEffect(() => {
@@ -121,6 +122,8 @@ export const HistoryPage = () => {
             setDeleting(false);
         }
     };
+
+    const HISTORY_CACHE_KEY = `ginx_cached_history_${user?.id}`;
 
     const loadHistory = async () => {
         if (!user) return;
@@ -330,10 +333,27 @@ export const HistoryPage = () => {
 
             console.log('[History] Records ready:', records.length, '— sample:', records[0] ? { id: records[0].id, muscles: records[0].muscles_trained, volume: records[0].total_volume, duration: records[0].duration_minutes } : 'empty');
             setHistory(records);
+            setIsOfflineCache(false);
+            // Cache the processed records for offline use (last 50 sessions)
+            try {
+                localStorage.setItem(HISTORY_CACHE_KEY, JSON.stringify(records.slice(0, 50)));
+            } catch { /* quota exceeded — skip cache */ }
             setLoading(false);
         } catch (error) {
             console.error('Error loading history:', error);
-            setHistory([]);
+            // Try to load from cache before showing empty state
+            try {
+                const cached = localStorage.getItem(HISTORY_CACHE_KEY);
+                if (cached) {
+                    const cachedRecords: WorkoutRecord[] = JSON.parse(cached);
+                    setHistory(cachedRecords);
+                    setIsOfflineCache(true);
+                } else {
+                    setHistory([]);
+                }
+            } catch {
+                setHistory([]);
+            }
             setLoading(false);
         }
     };
@@ -386,6 +406,13 @@ export const HistoryPage = () => {
 
     return (
         <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6 pb-24">
+            {/* Offline cache banner */}
+            {isOfflineCache && (
+                <div className="flex items-center gap-2 bg-neutral-900 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-neutral-400">
+                    <WifiOff size={15} className="text-yellow-500 shrink-0" />
+                    <span>Sin conexión — mostrando datos guardados. Se actualizará al reconectarte.</span>
+                </div>
+            )}
             {/* Header */}
             <div className="text-center mb-8 space-y-4">
                 <div>
