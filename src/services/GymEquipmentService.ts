@@ -872,7 +872,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "STRENGTH_MACHINE",
         "targetMuscle": "Pecho",
         "icon": "🤖",
-        "image_url": "/ejercicioimg/ejercicios/pecho/Press Declinado Maquina.png",
+        "image_url": "/ejercicioimg/ejercicios/pecho/Declinado/PressDeclinadoEnMaquina.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -1068,7 +1068,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Pierna",
         "icon": "🎋",
-        "image_url": "/ejercicioimg/ejercicios/Pierna/Peso Muerto Rumano Barra.png",
+        "image_url": "/ejercicioimg/ejercicios/Isquiotibiales/Peso Muerto/Convencional.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -1082,7 +1082,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "FREE_WEIGHT",
         "targetMuscle": "Pierna",
         "icon": "🎋",
-        "image_url": "/ejercicioimg/ejercicios/Pierna/Peso Muerto Rumano Mancuernas.png",
+        "image_url": "/ejercicioimg/ejercicios/Isquiotibiales/Peso Muerto/Convencional.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -1236,7 +1236,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "CABLE",
         "targetMuscle": "Tríceps",
         "icon": "🦯",
-        "image_url": "/ejercicioimg/ejercicios/Triceps/Extensiones de Tríceps Barra Recta.png",
+        "image_url": "/ejercicioimg/ejercicios/Triceps/Extension tricep/Cuerda.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -1264,7 +1264,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "CABLE",
         "targetMuscle": "Tríceps",
         "icon": "🏇",
-        "image_url": "/ejercicioimg/ejercicios/Triceps/Extensiones de Tríceps Polea.png",
+        "image_url": "/ejercicioimg/ejercicios/Triceps/Extension tricep/Una Mano.png",
         "metrics": {
             "weight": true,
             "reps": true,
@@ -1348,7 +1348,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "CARDIO",
         "targetMuscle": "Cardio",
         "icon": "🚲",
-        "image_url": "/ejercicioimg/ejercicios/Cardio/Caminadoras/CardioBicicleta.png",
+        "image_url": "/ejercicioimg/ejercicios/Cardio/Caminadoras/Bicicleta.png",
         "metrics": {
             "weight": false,
             "reps": false,
@@ -1362,7 +1362,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "CARDIO",
         "targetMuscle": "Cardio",
         "icon": "🏃",
-        "image_url": "/ejercicioimg/ejercicios/Cardio/Caminadoras/CardioEliptica.png",
+        "image_url": "/ejercicioimg/ejercicios/Cardio/Caminadoras/Eliptica.png",
         "metrics": {
             "weight": false,
             "reps": false,
@@ -1376,7 +1376,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "CARDIO",
         "targetMuscle": "Cardio",
         "icon": "🏃",
-        "image_url": "/ejercicioimg/ejercicios/Cardio/Caminadoras/CardioEnCinta.png",
+        "image_url": "/ejercicioimg/ejercicios/Cardio/Caminadoras/Cinta.png",
         "metrics": {
             "weight": false,
             "reps": false,
@@ -1390,7 +1390,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "CARDIO",
         "targetMuscle": "Cardio",
         "icon": "🪜",
-        "image_url": "/ejercicioimg/ejercicios/Cardio/Caminadoras/CardioEscalera.png",
+        "image_url": "/ejercicioimg/ejercicios/Cardio/Caminadoras/Escaladora.png",
         "metrics": {
             "weight": false,
             "reps": false,
@@ -1404,7 +1404,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "CARDIO",
         "targetMuscle": "Cardio",
         "icon": "🚣",
-        "image_url": "/ejercicioimg/ejercicios/Cardio/CardioRemo.png",
+        "image_url": "/ejercicioimg/ejercicios/Cardio/Remo Concept2.png",
         "metrics": {
             "weight": false,
             "reps": false,
@@ -1418,7 +1418,7 @@ export const COMMON_EQUIPMENT_SEEDS = [
         "category": "CARDIO",
         "targetMuscle": "Cardio",
         "icon": "🪢",
-        "image_url": "/ejercicioimg/ejercicios/Cardio/CardioSaltarCuerda.png",
+        "image_url": "/ejercicioimg/ejercicios/Cardio/Saltar Cuerda.png",
         "metrics": {
             "weight": false,
             "reps": false,
