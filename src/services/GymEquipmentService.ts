@@ -173,11 +173,25 @@ class GymEquipmentService {
         };
     }
 
-    // Update user custom settings
+    // Update user custom settings (merges into existing custom_settings to avoid wiping other keys)
     async updateUserSettings(userId: string, settings: CustomSettings): Promise<void> {
+        const { data: current, error: fetchError } = await supabase
+            .from('profiles')
+            .select('custom_settings')
+            .eq('id', userId)
+            .single();
+
+        if (fetchError) throw fetchError;
+
+        const merged = {
+            ...(current?.custom_settings || {}),
+            categories: settings.categories,
+            metrics: settings.metrics,
+        };
+
         const { error } = await supabase
             .from('profiles')
-            .update({ custom_settings: settings })
+            .update({ custom_settings: merged })
             .eq('id', userId);
 
         if (error) throw error;
