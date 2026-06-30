@@ -14,7 +14,7 @@ import { normalizeText, getMuscleGroup } from '../utils/inventoryUtils';
 import { ArsenalCard } from '../components/arsenal/ArsenalCard';
 import { EquipmentForm } from '../components/arsenal/EquipmentForm';
 import { ShareRoutineModal } from '../components/profile/ShareRoutineModal';
-import { CURATED_EXERCISES, CATALOG_MUSCLES } from '../data/exerciseCatalog';
+import { CURATED_EXERCISES, CATALOG_MUSCLES, resolveSeedName } from '../data/exerciseCatalog';
 
 // Local constants removed in favor of Service imports
 
@@ -259,12 +259,6 @@ export const MyArsenal = () => {
         [catalogActiveMuscle, searchTerm]
     );
 
-    const seedLookupForCatalog = useMemo(() => {
-        const m = new Map<string, any>();
-        (COMMON_EQUIPMENT_SEEDS as any[]).forEach(s => m.set(s.name, s));
-        return m;
-    }, []);
-
     const EMPTY_CARD_SETTINGS = { categories: [], metrics: [] };
 
     const scrollToCategory = (_category: string) => { /* no-op: tabs now filter directly */ };
@@ -487,8 +481,14 @@ export const MyArsenal = () => {
 
                 // 1. Check CURATED_EXERCISES first — always prefer virtual IDs so the
                 //    catalog grid can highlight the card as selected on edit.
+                //    Also try resolving via SEED_ALIASES for routines saved before the rename.
+                const resolvedName = resolveSeedName(ex.name);
+                const resolvedNorm = normalizeText(resolvedName);
                 for (const base of CURATED_EXERCISES) {
-                    const variantMatch = base.variants.find(v => normalizeText(v.seedName) === normName);
+                    const variantMatch = base.variants.find(v =>
+                        normalizeText(v.seedName) === normName ||
+                        normalizeText(v.seedName) === resolvedNorm
+                    );
                     if (variantMatch) {
                         finalId = `virtual-${variantMatch.seedName}`;
                         foundMatch = true;
@@ -514,13 +514,10 @@ export const MyArsenal = () => {
                     }
                 }
 
-                // 4. Check Seeds (Virtual ID) — fallback for legacy seed names
-                if (!foundMatch) {
-                    const seedMatch = COMMON_EQUIPMENT_SEEDS.find(s => normalizeText(s.name) === normName);
-                    if (seedMatch) {
-                        finalId = `virtual-${seedMatch.name}`;
-                        foundMatch = true;
-                    }
+                // 4. Alias fallback — use the resolved seed name as a virtual ID
+                if (!foundMatch && resolvedName !== ex.name) {
+                    finalId = `virtual-${resolvedName}`;
+                    foundMatch = true;
                 }
 
                 // 4. Ghost Handling (Imported Item not found locally)
@@ -1240,14 +1237,13 @@ export const MyArsenal = () => {
                             const virtualId = `virtual-${currentVariant.seedName}`;
                             const isSel = selectedItems.has(virtualId);
                             const hasVariants = base.variants.length > 1;
-                            const seed = seedLookupForCatalog.get(currentVariant.seedName);
                             const cardItem = {
                                 id: virtualId,
                                 name: base.name,
                                 category: base.muscle,
                                 target_muscle_group: base.muscle,
                                 metrics: base.metrics,
-                                image_url: seed?.image_url ?? null,
+                                image_url: currentVariant.imagePath ?? null,
                                 icon: currentVariant.icon,
                                 quantity: 1,
                                 status: 'ACTIVE' as const,

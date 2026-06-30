@@ -2,17 +2,21 @@
  * generateCatalog.mjs
  * Run: npm run catalog
  *
- * Scans public/ejercicioimg/ejercicios/ and generates
- * src/data/imageManifest.ts — the single source of truth for
- * which exercises appear in the workout catalog.
+ * Scans public/ejercicioimg/ejercicios/ and generates:
+ *   src/data/imageManifest.ts  — flat list of all exercise images
+ *   src/data/catalogData.ts    — structured catalog (replaces CURATED_EXERCISES hardcode)
  *
  * Folder convention:
- *   Muscle/                     → muscle group root
- *     Image.png                 → standalone (no variants), VISIBLE
- *     ocultos/Image.png         → standalone, LOCKED
- *     VariantGroup/             → variant group
- *       Image.png               → variant, VISIBLE
- *       ocultos/Image.png       → variant, LOCKED
+ *   MuscleGroup/                     → muscle group root
+ *     Image.png                      → standalone exercise (name = filename without ext)
+ *     ExerciseName/                  → variant group (exercise name = folder name)
+ *       Variant.png                  → variant (name = filename without ext)
+ *       ocultos/Variant.png          → locked variant (not shown)
+ *     ocultos/Image.png              → locked standalone
+ *
+ * SeedName format:
+ *   Variant exercise:  "ExerciseName (VariantName)"
+ *   Standalone:        "ExerciseName"
  */
 
 import fs from 'fs';
@@ -20,10 +24,13 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.join(__dirname, '..', 'public', 'ejercicioimg', 'ejercicios');
-const OUTPUT = path.join(__dirname, '..', 'src', 'data', 'imageManifest.ts');
+const ROOT   = path.join(__dirname, '..', 'public', 'ejercicioimg', 'ejercicios');
+const OUT_MANIFEST = path.join(__dirname, '..', 'src', 'data', 'imageManifest.ts');
+const OUT_CATALOG  = path.join(__dirname, '..', 'src', 'data', 'catalogData.ts');
 
-// Folder name → catalog muscle label (getMuscleGroup-compatible)
+// ── Maps ─────────────────────────────────────────────────────────────────────
+
+/** Filesystem folder name → catalog muscle label */
 const MUSCLE_MAP = {
   'Abdomen':        'ABDOMINALES',
   'Antebrazo':      'ANTEBRAZO',
@@ -41,15 +48,37 @@ const MUSCLE_MAP = {
   'Triceps':        'TRÍCEPS',
 };
 
-/** Convert a filename to a human-readable display name */
+/** Default emoji icon per muscle group (fallback when no image) */
+const MUSCLE_ICON = {
+  ABDOMINALES:    '🥨',
+  ANTEBRAZO:      '🦾',
+  'BÍCEPS':       '💪',
+  CARDIO:         '🚴',
+  CUELLO:         '💆',
+  ESPALDA:        '🚣',
+  PANTORRILLAS:   '🦵',
+  'GLÚTEOS':      '🍑',
+  HOMBRO:         '🐦',
+  'ISQUIOTIBIALES':'🎋',
+  PECHO:          '🏋️‍♂️',
+  'CUÁDRICEPS':   '🍑',
+  'TRÍCEPS':      '🏇',
+};
+
+/** Default metrics per muscle group */
+const MUSCLE_METRICS = {
+  CARDIO: { weight: false, reps: false, time: true, distance: true, rpe: false },
+};
+const DEFAULT_METRICS = { weight: true, reps: true, time: false, distance: false, rpe: false };
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
 function toDisplayName(filename) {
   let name = filename
     .replace(/\.png$/i, '')
     .replace(/-Photoroom/i, '')
-    .replace(/ \(\d+\)$/, '')     // remove trailing "(2)" etc.
+    .replace(/ \(\d+\)$/, '')
     .trim();
-
-  // Split CamelCase only when letters are directly adjacent (no spaces)
   if (!name.includes(' ')) {
     name = name
       .replace(/([a-záéíóúüñ])([A-ZÁÉÍÓÚÜÑ])/g, '$1 $2')
@@ -58,7 +87,6 @@ function toDisplayName(filename) {
   return name.replace(/\s+/g, ' ').trim();
 }
 
-/** Make a filesystem-safe id from a display name */
 function toId(name) {
   return name
     .toLowerCase()
@@ -67,77 +95,111 @@ function toId(name) {
     .replace(/^_|_$/g, '');
 }
 
-/** Read .png files from a directory (non-recursive) */
 function readPngs(dir) {
   if (!fs.existsSync(dir)) return [];
   return fs.readdirSync(dir).filter(f => f.toLowerCase().endsWith('.png'));
 }
 
-/** Build the image path relative to /public */
 function imgUrl(muscleFolderName, ...parts) {
   return `/ejercicioimg/ejercicios/${muscleFolderName}/${parts.join('/')}`;
 }
 
-// ── Main scan ────────────────────────────────────────────────────────────────
+// ── Main scan ─────────────────────────────────────────────────────────────────
 
-const results = [];
+const manifestResults = [];  // flat list for imageManifest.ts
+const catalogResults  = [];  // structured list for catalogData.ts
 
 for (const [folderName, muscle] of Object.entries(MUSCLE_MAP)) {
   const musclePath = path.join(ROOT, folderName);
   if (!fs.existsSync(musclePath)) continue;
 
-  const items = fs.readdirSync(musclePath, { withFileTypes: true });
+  const metrics = MUSCLE_METRICS[muscle] ?? DEFAULT_METRICS;
+  const icon    = MUSCLE_ICON[muscle] ?? '💪';
+  const items   = fs.readdirSync(musclePath, { withFileTypes: true });
 
   for (const item of items) {
     if (item.isFile() && item.name.toLowerCase().endsWith('.png')) {
-      // ── Standalone exercise (no variants) ──────────────────────────────
-      const name = toDisplayName(item.name);
-      results.push({
-        id:           toId(name),
-        name,
+      // ── Standalone exercise ──────────────────────────────────────────────
+      const displayName = toDisplayName(item.name);
+      const seedName    = displayName;  // standalone: seedName = file name
+      const imagePath   = imgUrl(folderName, item.name);
+
+      manifestResults.push({
+        id: toId(displayName), name: displayName, muscle, folderName,
+        imagePath, isLocked: false, variantGroup: null, variants: [],
+      });
+
+      catalogResults.push({
+        id:       toId(displayName + '_' + folderName),
+        name:     displayName,
         muscle,
-        folderName,
-        imagePath:    imgUrl(folderName, item.name),
-        isLocked:     false,
-        variantGroup: null,
-        variants:     [],
+        icon,
+        metrics,
+        imagePath,
+        isLocked: false,
+        variants: [{ id: toId(displayName), label: displayName, seedName, imagePath, isLocked: false }],
+        _standalone: true,
       });
 
     } else if (item.isDirectory() && item.name !== 'ocultos') {
       // ── Variant group ────────────────────────────────────────────────────
-      const variantDir = path.join(musclePath, item.name);
-      const groupName  = item.name;
+      const variantDir  = path.join(musclePath, item.name);
+      const groupName   = item.name;
+      const baseName    = groupName;  // folder name IS the exercise display name
+
       const visiblePngs = readPngs(variantDir);
       const lockedPngs  = readPngs(path.join(variantDir, 'ocultos'));
 
-      const variants = [
-        ...visiblePngs.map(f => ({
-          id:        toId(toDisplayName(f)),
-          name:      toDisplayName(f),
-          imagePath: imgUrl(folderName, groupName, f),
-          isLocked:  false,
-        })),
-        ...lockedPngs.map(f => ({
-          id:        toId(toDisplayName(f)),
-          name:      toDisplayName(f),
-          imagePath: imgUrl(folderName, groupName, 'ocultos', f),
-          isLocked:  true,
-        })),
+      const allVariants = [
+        ...visiblePngs.map(f => {
+          const variantLabel = toDisplayName(f);
+          return {
+            id:        toId(variantLabel),
+            name:      variantLabel,
+            imagePath: imgUrl(folderName, groupName, f),
+            isLocked:  false,
+            label:     variantLabel,
+            seedName:  `${baseName} (${variantLabel})`,
+          };
+        }),
+        ...lockedPngs.map(f => {
+          const variantLabel = toDisplayName(f);
+          return {
+            id:        toId(variantLabel),
+            name:      variantLabel,
+            imagePath: imgUrl(folderName, groupName, 'ocultos', f),
+            isLocked:  true,
+            label:     variantLabel,
+            seedName:  `${baseName} (${variantLabel})`,
+          };
+        }),
       ];
 
-      if (variants.length === 0) continue;
+      if (allVariants.length === 0) continue;
 
-      // The base exercise name = variant group folder name (cleaned)
-      const baseName = toDisplayName(groupName);
-      results.push({
+      const firstVisible = allVariants.find(v => !v.isLocked) ?? allVariants[0];
+
+      manifestResults.push({
         id:           toId(baseName + '_' + folderName),
         name:         baseName,
         muscle,
         folderName,
-        imagePath:    variants.find(v => !v.isLocked)?.imagePath ?? variants[0].imagePath,
-        isLocked:     variants.every(v => v.isLocked),
+        imagePath:    firstVisible.imagePath,
+        isLocked:     allVariants.every(v => v.isLocked),
         variantGroup: groupName,
-        variants,
+        variants:     allVariants.map(({ id, name, imagePath, isLocked }) => ({ id, name, imagePath, isLocked })),
+      });
+
+      catalogResults.push({
+        id:       toId(baseName + '_' + folderName),
+        name:     baseName,
+        muscle,
+        icon,
+        metrics,
+        imagePath: firstVisible.imagePath,
+        isLocked:  allVariants.every(v => v.isLocked),
+        variants:  allVariants.map(({ id, label, seedName, imagePath, isLocked }) => ({ id, label, seedName, imagePath, isLocked })),
+        _standalone: false,
       });
     }
   }
@@ -145,23 +207,32 @@ for (const [folderName, muscle] of Object.entries(MUSCLE_MAP)) {
   // ── Locked standalones in ocultos/ ────────────────────────────────────────
   const lockedPngs = readPngs(path.join(musclePath, 'ocultos'));
   for (const f of lockedPngs) {
-    const name = toDisplayName(f);
-    results.push({
-      id:           toId(name),
-      name,
+    const displayName = toDisplayName(f);
+    const seedName    = displayName;
+    const imagePath   = imgUrl(folderName, 'ocultos', f);
+
+    manifestResults.push({
+      id: toId(displayName), name: displayName, muscle, folderName,
+      imagePath, isLocked: true, variantGroup: null, variants: [],
+    });
+
+    catalogResults.push({
+      id:        toId(displayName + '_' + folderName),
+      name:      displayName,
       muscle,
-      folderName,
-      imagePath:    imgUrl(folderName, 'ocultos', f),
-      isLocked:     true,
-      variantGroup: null,
-      variants:     [],
+      icon,
+      metrics,
+      imagePath,
+      isLocked:  true,
+      variants:  [{ id: toId(displayName), label: displayName, seedName, imagePath, isLocked: true }],
+      _standalone: true,
     });
   }
 }
 
-// ── Write output ─────────────────────────────────────────────────────────────
+// ── Write imageManifest.ts ────────────────────────────────────────────────────
 
-const ts = `// AUTO-GENERATED by scripts/generateCatalog.mjs — DO NOT EDIT MANUALLY
+const manifestTs = `// AUTO-GENERATED by scripts/generateCatalog.mjs — DO NOT EDIT MANUALLY
 // Run "npm run catalog" to regenerate after moving images.
 // Generated: ${new Date().toISOString()}
 
@@ -183,7 +254,7 @@ export interface ManifestExercise {
   variants: ManifestVariant[];
 }
 
-export const IMAGE_MANIFEST: ManifestExercise[] = ${JSON.stringify(results, null, 2)};
+export const IMAGE_MANIFEST: ManifestExercise[] = ${JSON.stringify(manifestResults, null, 2)};
 
 /** All exercises that have variants (main card = base, arrows cycle variants) */
 export const MANIFEST_WITH_VARIANTS = IMAGE_MANIFEST.filter(e => e.variants.length > 1);
@@ -192,15 +263,59 @@ export const MANIFEST_WITH_VARIANTS = IMAGE_MANIFEST.filter(e => e.variants.leng
 export const MANIFEST_STANDALONE = IMAGE_MANIFEST.filter(e => e.variants.length <= 1);
 `;
 
-fs.writeFileSync(OUTPUT, ts, 'utf8');
-console.log(`✅ Generated ${results.length} exercises → ${OUTPUT}`);
+fs.writeFileSync(OUT_MANIFEST, manifestTs, 'utf8');
+console.log(`✅ imageManifest.ts — ${manifestResults.length} exercises`);
 
-// Summary
+// ── Write catalogData.ts ──────────────────────────────────────────────────────
+
+// Strip the _standalone helper field before writing
+const cleanCatalog = catalogResults.map(({ _standalone, ...rest }) => rest);
+
+const catalogTs = `// AUTO-GENERATED by scripts/generateCatalog.mjs — DO NOT EDIT MANUALLY
+// Run "npm run catalog" to regenerate after adding/moving images.
+// Generated: ${new Date().toISOString()}
+//
+// HOW TO ADD AN EXERCISE:
+//   1. Put the image in public/ejercicioimg/ejercicios/<MuscleFolder>/<Name>.png  (standalone)
+//   2. Or create a folder: <MuscleFolder>/<ExerciseName>/<Variant>.png            (with variants)
+//   3. Run: npm run catalog
+
+export interface CatalogVariant {
+  id: string;
+  label: string;
+  seedName: string;
+  imagePath: string;
+  isLocked: boolean;
+}
+
+export interface CatalogExercise {
+  id: string;
+  name: string;
+  muscle: string;
+  icon: string;
+  metrics: {
+    weight: boolean;
+    reps: boolean;
+    time: boolean;
+    distance: boolean;
+    rpe: boolean;
+  };
+  imagePath: string;
+  isLocked: boolean;
+  variants: CatalogVariant[];
+}
+
+export const CATALOG_DATA: CatalogExercise[] = ${JSON.stringify(cleanCatalog, null, 2)};
+`;
+
+fs.writeFileSync(OUT_CATALOG, catalogTs, 'utf8');
+console.log(`✅ catalogData.ts    — ${cleanCatalog.length} exercises`);
+
+// ── Summary ───────────────────────────────────────────────────────────────────
 const byMuscle = {};
-for (const e of results) {
-  byMuscle[e.muscle] = (byMuscle[e.muscle] || 0) + 1;
+for (const e of cleanCatalog) {
+  if (!e.isLocked) byMuscle[e.muscle] = (byMuscle[e.muscle] || 0) + 1;
 }
 for (const [m, c] of Object.entries(byMuscle).sort()) {
-  const locked = results.filter(e => e.muscle === m && e.isLocked).length;
-  console.log(`  ${m}: ${c} (${locked} locked)`);
+  console.log(`  ${m}: ${c} visible`);
 }

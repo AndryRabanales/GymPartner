@@ -14,7 +14,6 @@
 import { useState, useMemo } from 'react';
 import { X, Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { CURATED_EXERCISES, CATALOG_MUSCLES, type BaseExercise } from '../../data/exerciseCatalog';
-import { COMMON_EQUIPMENT_SEEDS } from '../../services/GymEquipmentService';
 import { ArsenalCard } from '../arsenal/ArsenalCard';
 
 interface Props {
@@ -44,26 +43,17 @@ export const CatalogModal = ({ selected, onToggle, onClose, onConfirm }: Props) 
         [activeMuscle, searchTerm]
     );
 
-    const seedLookup = useMemo(() => {
-        const m = new Map<string, any>();
-        (COMMON_EQUIPMENT_SEEDS as any[]).forEach(s => m.set(s.name, s));
-        return m;
-    }, []);
-
     // Return the Equipment-like object for the currently displayed variant of a base exercise
     const itemForBase = (base: BaseExercise) => {
         const idx = variantIdx[base.id] ?? 0;
         const variant = base.variants[idx] ?? base.variants[0];
-        const seed = seedLookup.get(variant.seedName);
         return {
             id: vid(variant.seedName),
-            // Use base name (e.g. "Press Inclinado") as display title so the card stays
-            // short and readable — the variant pill already shows "Mancuernas" / "Barra" etc.
             name: base.name,
             category: base.muscle,
             target_muscle_group: base.muscle,
             metrics: base.metrics,
-            image_url: seed?.image_url ?? null,
+            image_url: variant.imagePath ?? null,
             icon: variant.icon,
             quantity: 1,
             status: 'ACTIVE' as const,
