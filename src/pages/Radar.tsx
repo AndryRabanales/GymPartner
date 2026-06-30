@@ -189,36 +189,74 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
                     }
                 }
 
-                // 4. GET CURRENT USER'S HOME GYM FOR PRIORITY
-                const { data: myProfile } = await supabase
-                    .from('profiles')
-                    .select('home_gym_id')
-                    .eq('id', authUser?.id)
-                    .maybeSingle();
-                
-                const myHomeGymId = myProfile?.home_gym_id;
+                // 4. GET CURRENT USER'S PROFILE + GYM PASSPORT
+                const [{ data: myProfile }, { data: myPassportData }] = await Promise.all([
+                    supabase.from('profiles').select('home_gym_id').eq('id', authUser!.id).maybeSingle(),
+                    supabase.from('user_gyms').select('gym_id').eq('user_id', authUser!.id)
+                ]);
 
-                // 5. Enrich and SORT Profiles (ELITE CHRONO V7)
+                const myHomeGymId = myProfile?.home_gym_id;
+                const myGymIds = new Set<string>((myPassportData || []).map((g: any) => g.gym_id));
+
+                // ── ALGORITHM V8: Activity · Gym · Freshness · Boost ──────────────
+                //
+                // score = boost(0|50000) + activity(0–1000) + gym(0–500) + freshness(0–200) + jitter(0–80)
+                //
+                // Boost    : paid promotion — always surfaces to top 3–5 slots
+                // Activity : last_active_at recency — most important organic signal
+                // Gym      : same home gym (+400) + shared passport gyms (+100 each, max +300)
+                // Freshness: new accounts get a visibility bonus so they're not buried
+                // Jitter   : small random offset prevents identical order every reload
+
                 const now = new Date();
-                console.log("⌚ [TIME] Hora actual del sistema:", now.toISOString());
+                const nowMs = now.getTime();
+
+                const scoreUser = (p: any): number => {
+                    // ── Boost ─────────────────────────────────────────────────────
+                    const boostDate = p.boost_until ? new Date(p.boost_until) : null;
+                    const isBoosted = boostDate ? boostDate > now : false;
+                    const boostPts = isBoosted ? 50000 : 0;
+
+                    // ── Activity ─────────────────────────────────────────────────
+                    let activityPts = 0;
+                    if (p.last_active_at) {
+                        const diffMs = nowMs - new Date(p.last_active_at).getTime();
+                        const diffHours = diffMs / (1000 * 60 * 60);
+                        if (diffHours < 3)        activityPts = 1000;
+                        else if (diffHours < 24)  activityPts = 700;
+                        else if (diffHours < 168) activityPts = 400; // 7 days
+                        else if (diffHours < 720) activityPts = 100; // 30 days
+                    }
+
+                    // ── Gym en común ──────────────────────────────────────────────
+                    let gymPts = 0;
+                    if (myHomeGymId && p.home_gym_id === myHomeGymId) gymPts += 400;
+                    const theirGyms: string[] = (passportMap[p.id] || []).map((g: any) => g.id);
+                    const sharedPassport = theirGyms.filter(gid => myGymIds.has(gid) && gid !== myHomeGymId);
+                    gymPts += Math.min(sharedPassport.length * 100, 300);
+
+                    // ── Novedad en app ────────────────────────────────────────────
+                    let freshnessPts = 0;
+                    if (p.created_at) {
+                        const daysSinceJoin = (nowMs - new Date(p.created_at).getTime()) / (1000 * 60 * 60 * 24);
+                        if (daysSinceJoin < 7)        freshnessPts = 200;
+                        else if (daysSinceJoin < 30)  freshnessPts = 100;
+                        else if (daysSinceJoin < 90)  freshnessPts = 30;
+                    }
+
+                    // ── Jitter ────────────────────────────────────────────────────
+                    const jitter = Math.random() * 80;
+
+                    return boostPts + activityPts + gymPts + freshnessPts + jitter;
+                };
 
                 const enriched = profiles.map((p, idx) => {
                     const settings = (p.custom_settings as any) || {};
                     let gymInfo = gymMap[p.home_gym_id || ''] || { name: "" };
-                    if (gymInfo.name.includes('Arsenal Personal')) {
-                        gymInfo = { name: "" };
-                    }
-                    
-                    // BOOST DETECTION LOGIC
-                    const boostDate = p.boost_until ? new Date(p.boost_until) : null;
-                    const isBoosted = boostDate ? boostDate > now : false;
-                    
-                    // Convert created_at to timestamp for sorting (Newest = Higher Number)
-                    const joinedTimestamp = p.created_at ? new Date(p.created_at).getTime() : 0;
+                    if (gymInfo.name.includes('Arsenal Personal')) gymInfo = { name: "" };
 
-                    if (idx < 5 || p.boost_until) {
-                        console.log(`👤 [USER] ${p.username} | Boost Until: ${p.boost_until || 'N/A'} | ¿Boost Activo?: ${isBoosted}`);
-                    }
+                    const isBoosted = p.boost_until ? new Date(p.boost_until) > now : false;
+                    const algo_score = scoreUser(p);
 
                     return {
                         ...p,
@@ -233,21 +271,20 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
                         is_following: false,
                         stats_loaded: false,
                         bio: p.description || settings.description || settings.bio || "¡Entrenando duro para subir de rango! 💪 🔥",
-                        is_pro: isBoosted, 
-                        // ALGORITHM V7: Boost First (10^15 weight), then Newest
-                        algo_score: (isBoosted ? 1000000000000000 : 0) + joinedTimestamp
+                        is_pro: isBoosted,
+                        algo_score,
                     };
                 });
 
-                // Final sort: Higher score first
                 const sorted = enriched.sort((a, b) => b.algo_score - a.algo_score);
-                
-                console.log("🏆 [TOP 3] Usuarios ordenados (V7: Boost + Crono):");
-                console.table(sorted.slice(0, 3).map(u => ({ 
-                    username: u.username, 
-                    score: u.algo_score, 
-                    isBoosted: u.is_pro,
-                    date: u.created_at 
+
+                console.log("🏆 [RADAR V8] Top 5 (Activity · Gym · Freshness · Boost):");
+                console.table(sorted.slice(0, 5).map(u => ({
+                    username: u.username,
+                    score: Math.round(u.algo_score),
+                    boosted: u.is_pro,
+                    active: u.last_active_at ? Math.round((nowMs - new Date(u.last_active_at).getTime()) / 3600000) + 'h ago' : 'never',
+                    sameGym: u.home_gym_id === myHomeGymId,
                 })));
 
                 setNearbyUsers(sorted);
