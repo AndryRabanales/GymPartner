@@ -485,14 +485,27 @@ export const MyArsenal = () => {
                 let finalId = ex.exercise_id; // Default to existing ID
                 let foundMatch = false;
 
-                // 1. Check Custom Inventory (Real ID)
-                const customMatch = inventory.find(i => i.id === ex.exercise_id || normalizeText(i.name) === normName);
-                if (customMatch) {
-                    finalId = customMatch.id;
-                    foundMatch = true;
+                // 1. Check CURATED_EXERCISES first — always prefer virtual IDs so the
+                //    catalog grid can highlight the card as selected on edit.
+                for (const base of CURATED_EXERCISES) {
+                    const variantMatch = base.variants.find(v => normalizeText(v.seedName) === normName);
+                    if (variantMatch) {
+                        finalId = `virtual-${variantMatch.seedName}`;
+                        foundMatch = true;
+                        break;
+                    }
                 }
 
-                // 2. Check Global Inventory (Real ID)
+                // 2. Check Custom Inventory (Real ID) — for exercises not in the catalog
+                if (!foundMatch) {
+                    const customMatch = inventory.find(i => i.id === ex.exercise_id || normalizeText(i.name) === normName);
+                    if (customMatch) {
+                        finalId = customMatch.id;
+                        foundMatch = true;
+                    }
+                }
+
+                // 3. Check Global Inventory (Real ID)
                 if (!foundMatch) {
                     const globalMatch = globalInventory.find(i => i.id === ex.exercise_id || normalizeText(i.name) === normName);
                     if (globalMatch) {
@@ -501,7 +514,7 @@ export const MyArsenal = () => {
                     }
                 }
 
-                // 3. Check Seeds (Virtual ID)
+                // 4. Check Seeds (Virtual ID) — fallback for legacy seed names
                 if (!foundMatch) {
                     const seedMatch = COMMON_EQUIPMENT_SEEDS.find(s => normalizeText(s.name) === normName);
                     if (seedMatch) {
