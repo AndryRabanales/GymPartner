@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface FadeInImageProps {
     src: string;
@@ -10,6 +10,10 @@ interface FadeInImageProps {
 
 export const FadeInImage = ({ src, alt, className = "", priority = false }: FadeInImageProps) => {
     const [loaded, setLoaded] = useState(false);
+
+    useEffect(() => {
+        setLoaded(false);
+    }, [src]);
 
     return (
         <div className={`relative overflow-hidden ${className}`}>

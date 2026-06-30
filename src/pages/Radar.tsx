@@ -706,7 +706,8 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
                             </div>
                         )}
 
-                        <UserProfileCard 
+                        <UserProfileCard
+                            key={currentUser.id}
                             user={currentUser}
                             hidePermissions={true}
                             isRadar={true}
