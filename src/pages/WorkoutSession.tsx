@@ -1256,7 +1256,7 @@ export const WorkoutSession = () => {
                                         _rest_duration_ms: restDuration,
                                         _rest_status: restStatus === 'running' ? 'completed' : restStatus
                                     } as any,
-                                    category_snapshot: exercise.category || 'Custom',
+                                    category_snapshot: exercise.target_muscle_group || exercise.category || 'Custom',
                                     is_pr: false, owner_id: myId
                                 };
 
@@ -5093,7 +5093,7 @@ export const WorkoutSession = () => {
                             distance: distanceToSave,
                             rpe: rpeToSave,
                             metrics_data: extendedMetrics,
-                            category_snapshot: exercise.category || 'Custom',
+                            category_snapshot: exercise.target_muscle_group || exercise.category || 'Custom',
                             is_pr: false,
                             owner_id: myId
                         };
