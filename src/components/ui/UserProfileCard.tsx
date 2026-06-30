@@ -212,12 +212,14 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
             {/* --- STATIC IDENTITY SECTION --- */}
             <div className="shrink-0 flex flex-col items-center">
                 {/* Banner */}
-                <div className="h-40 sm:h-48 shrink-0 relative w-full bg-neutral-800 overflow-hidden">
-                    <FadeInImage
-                        src={user.banner_url || FALLBACK_BANNERS[0]}
-                        alt="Banner"
-                        className="w-full h-full object-cover opacity-60"
-                    />
+                <div className="h-40 sm:h-48 shrink-0 relative w-full bg-neutral-900 overflow-hidden">
+                    {user.banner_url && (
+                        <FadeInImage
+                            src={user.banner_url}
+                            alt="Banner"
+                            className="w-full h-full object-cover opacity-60"
+                        />
+                    )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
                 </div>
 
