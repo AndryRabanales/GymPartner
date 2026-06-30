@@ -14,7 +14,10 @@ if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error(`Missing Supabase Keys. URL: ${supabaseUrl ? 'OK' : 'MISSING'}, Key: ${supabaseAnonKey ? 'OK' : 'MISSING'}. Check .env`);
 }
 
-// MANUALLY AUDIT AND CLEAN LOCALSTORAGE SESSION BEFORE INITIALIZATION
+// Only wipe the session token if it is structurally corrupt (unparseable JSON).
+// Never wipe based on expiry — Supabase autoRefreshToken handles renewal even
+// for long-expired tokens using the refresh_token, so wiping an expired
+// access_token prevents the client from ever renewing and forces re-login.
 try {
     const keys = Object.keys(localStorage);
     const sbKey = keys.find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
@@ -22,26 +25,15 @@ try {
         const rawData = localStorage.getItem(sbKey);
         if (rawData) {
             try {
-                const parsed = JSON.parse(rawData);
-                // In some versions, the session is nested under 'currentSession'
-                const sessionObj = parsed?.currentSession || parsed;
-                const expiresAt = sessionObj?.expires_at; // seconds since epoch
-                if (expiresAt) {
-                    const now = Math.floor(Date.now() / 1000);
-                    // If session is expired or within 10 seconds of expiring, wipe it!
-                    if (expiresAt - now < 10) {
-                        console.warn("🧹 [Supabase Config] Manually wiping expired persistent session to prevent getSession locks:", sbKey);
-                        localStorage.removeItem(sbKey);
-                    }
-                }
-            } catch (jsonErr) {
-                console.warn("🧹 [Supabase Config] Wiping corrupted persistent session:", sbKey, jsonErr);
+                JSON.parse(rawData); // just validate it's valid JSON
+            } catch {
+                console.warn("🧹 [Supabase] Wiping corrupted session (invalid JSON):", sbKey);
                 localStorage.removeItem(sbKey);
             }
         }
     }
 } catch (e) {
-    console.error("🧹 [Supabase Config] Error checking persistent session:", e);
+    console.error("🧹 [Supabase] Error checking session storage:", e);
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
