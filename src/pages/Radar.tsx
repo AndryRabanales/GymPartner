@@ -99,8 +99,8 @@ export const Radar = () => {
                             .select('*')
                             .neq('id', authUser.id)
                             .not('username', 'is', null)
-                            .order('created_at', { ascending: false })
-                            .limit(50);
+                            .order('last_active_at', { ascending: false, nullsFirst: false })
+                            .limit(200);
                         resolve({ data, error, isFallback: true });
                     } catch (err) {
                         resolve({ data: null, error: err, isFallback: true });
