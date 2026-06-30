@@ -44,7 +44,7 @@ export const Radar = () => {
     const [loading, setLoading] = useState(true);
     const [scanComplete, setScanComplete] = useState(false);
     const [dragX, setDragX] = useState(0);
-    const [dragState, setDragState] = useState<'idle' | 'dragging' | 'flying-left' | 'flying-right' | 'snapping'>('idle');
+    const [dragState, setDragState] = useState<'idle' | 'dragging' | 'flying-left' | 'flying-right' | 'snapping' | 'entering'>('idle');
     const touchStartXRef = useRef(0);
     const touchStartYRef = useRef(0);
     const isHorizontalDragRef = useRef<boolean | null>(null);
@@ -369,9 +369,14 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
         setDragState(direction === 'left' ? 'flying-left' : 'flying-right');
         setTimeout(() => {
             setCurrentIndex(prev => prev + 1);
-            setDragState('idle');
             setDragX(0);
             dragXRef.current = 0;
+            if (direction === 'left') {
+                setDragState('entering');
+                setTimeout(() => setDragState('idle'), 300);
+            } else {
+                setDragState('idle');
+            }
         }, 220);
     };
 
@@ -389,6 +394,8 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
                 return { transform: 'translateX(150%) rotate(25deg)', opacity: 0, transition: 'transform 220ms linear, opacity 180ms linear' };
             case 'snapping':
                 return { transform: 'translateX(0) rotate(0deg)', transition: 'transform 200ms ease-out' };
+            case 'entering':
+                return { animation: 'slideInFromRight 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards' };
             default:
                 return {};
         }
@@ -602,6 +609,10 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
                         style={cardStyle()}
                     >
                         <style>{`
+                            @keyframes slideInFromRight {
+                                from { transform: translateX(100%); opacity: 0.6; }
+                                to   { transform: translateX(0);    opacity: 1;   }
+                            }
                             @keyframes tinderTutorialSwipe {
                                 0% { transform: translate3d(0, 0, 0) rotate(0deg); }
                                 /* Swipe Left Demo (NOPE) */
