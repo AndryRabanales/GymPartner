@@ -167,6 +167,16 @@ class UserService {
             }
 
             // 2. Link User to Gym (Add to Passport)
+            // Check if user already has this specific gym (to avoid duplicate GX)
+            const { data: existingLink } = await supabase
+                .from('user_gyms')
+                .select('id')
+                .eq('user_id', userId)
+                .eq('gym_id', gymId)
+                .maybeSingle();
+
+            const isNewGym = !existingLink;
+
             // Determine if this is their first gym (set as home base if so)
             const { count } = await supabase
                 .from('user_gyms')
@@ -185,9 +195,11 @@ class UserService {
                 });
 
             if (linkError) throw linkError;
-            
-            // 3. AWARD GX POINTS for Unlocking Gym
-            await this.addGxPoints(userId, 3, 'gym_unlocked');
+
+            // 3. AWARD GX POINTS for Unlocking Gym — only if it's truly new
+            if (isNewGym) {
+                await this.addGxPoints(userId, 3, 'gym_unlocked');
+            }
 
             // 4. Update Profile Cache (if it's home base)
             if (isFirstGym) {
