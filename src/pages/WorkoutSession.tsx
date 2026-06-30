@@ -93,6 +93,34 @@ interface WorkoutExercise {
     category?: string; // SNAPSHOT: For history persistence
 }
 
+// Resolve exercise image from IMAGE_MANIFEST by equipmentId or name fallback
+const getExerciseImageUrl = (equipmentId: string, equipmentName: string): string | null => {
+    if (equipmentId?.startsWith('manifest-')) {
+        const withoutPrefix = equipmentId.slice('manifest-'.length);
+        const sepIdx = withoutPrefix.indexOf('__');
+        const manifestId = sepIdx >= 0 ? withoutPrefix.slice(0, sepIdx) : withoutPrefix;
+        const variantId  = sepIdx >= 0 ? withoutPrefix.slice(sepIdx + 2) : null;
+        const entry = IMAGE_MANIFEST.find(e => e.id === manifestId);
+        if (entry) {
+            const variant = variantId
+                ? (entry.variants.find(v => v.id === variantId) ?? entry.variants[0])
+                : entry.variants[0];
+            return variant?.imagePath ?? entry.imagePath ?? null;
+        }
+    }
+    // Fallback: match by display name (covers virtual-* and DB items)
+    const byName = IMAGE_MANIFEST.find(e =>
+        e.name === equipmentName ||
+        e.variants.some(v => `${e.name} (${v.name})` === equipmentName)
+    );
+    if (byName) {
+        const variant = byName.variants.find(v => `${byName.name} (${v.name})` === equipmentName)
+            ?? byName.variants[0];
+        return variant?.imagePath ?? byName.imagePath ?? null;
+    }
+    return null;
+};
+
 // Smart timestamp parser that safely resolves ISO strings, Unix strings, and numbers
 const parseTimestamp = (val: any): number => {
     if (!val) return 0;
@@ -5741,7 +5769,7 @@ export const WorkoutSession = () => {
                                 return (
                                 <div key={exercise.id} className="h-full flex flex-col bg-neutral-900/40 border border-white/5 rounded-2xl overflow-hidden backdrop-blur-sm shadow-xl mx-1 relative">
                                     {/* Header */}
-                                    <div className="p-4 flex justify-between items-start bg-white/5 border-b border-white/5 shrink-0">
+                                    <div className="p-4 flex justify-between items-center bg-white/5 border-b border-white/5 shrink-0 gap-3">
                                         <div className="flex-1 min-w-0">
                                             {/* Exercise name — full name including variant, no change-variant button.
                                                 Variants are selected in the catalog. During training the name is fixed. */}
@@ -5764,6 +5792,20 @@ export const WorkoutSession = () => {
                                                 );
                                             })()}
                                         </div>
+                                        {/* Exercise image circle */}
+                                        {(() => {
+                                            const imgUrl = getExerciseImageUrl(exercise.equipmentId, exercise.equipmentName);
+                                            return imgUrl ? (
+                                                <div className="shrink-0 w-16 h-16 rounded-full border-2 border-gym-primary/30 bg-neutral-800 overflow-hidden shadow-[0_0_12px_rgba(250,204,21,0.15)]">
+                                                    <img
+                                                        src={imgUrl}
+                                                        alt={exercise.equipmentName}
+                                                        className="w-full h-full object-contain p-1"
+                                                        onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                                                    />
+                                                </div>
+                                            ) : null;
+                                        })()}
                                     </div>
 
                                     {/* Sets Container - Scrollable part */}
