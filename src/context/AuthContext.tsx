@@ -294,65 +294,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         };
     }, []);
 
-    // ⏰ 5-minute Daily Active Tracker (1 GX Point)
-    useEffect(() => {
-        if (!user || !supabase) return;
-
-        const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
-        const localKey = `ginx_5min_reward_${user.id}_${today}`;
-
-        // Fast local check — avoids unnecessary DB calls
-        if (localStorage.getItem(localKey) === 'true') {
-            return;
-        }
-
-        let sessionSecs = parseInt(sessionStorage.getItem(`active_secs_${user.id}_${today}`) || '0', 10);
-        let awarded = false;
-
-        const interval = setInterval(async () => {
-            if (awarded) return;
-            sessionSecs += 1;
-            sessionStorage.setItem(`active_secs_${user.id}_${today}`, sessionSecs.toString());
-
-            if (sessionSecs >= 300) { // 5 minutes
-                clearInterval(interval);
-                awarded = true; // prevent re-entry if effect re-runs before cleanup
-
-                try {
-                    // Atomic DB function: checks + awards in a single transaction.
-                    // Uses FOR UPDATE lock — safe against multi-tab race conditions.
-                    const { data: wasAwarded, error } = await supabase
-                        .rpc('award_5min_daily_gx', { u_id: user.id, today_date: today });
-
-                    if (error) throw error;
-
-                    localStorage.setItem(localKey, 'true');
-
-                    if (wasAwarded) {
-                        console.log('🎉 5 minutes daily active achieved! Awarded GX point.');
-                        const toastModule = await import('react-hot-toast');
-                        toastModule.default.success('🔥 ¡Ganaste +1 GX por estar activo 5 minutos hoy!', {
-                            duration: 5000,
-                            icon: '⚡',
-                            style: {
-                                background: '#171717',
-                                color: '#fff',
-                                border: '1px solid rgba(250, 204, 21, 0.2)',
-                                fontWeight: 'black',
-                                textTransform: 'uppercase',
-                                fontSize: '11px'
-                            }
-                        });
-                    }
-                } catch (err) {
-                    console.error('Error rewarding 5-min active time:', err);
-                }
-            }
-        }, 1000);
-
-        return () => clearInterval(interval);
-    }, [user]);
-
     // ─── Helper: create profile row + process referral (called after age OK) ───
     const doCreateProfile = async (currentUser: User) => {
         if (!supabase) return;
