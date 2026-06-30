@@ -1042,7 +1042,51 @@ class WorkoutService {
     }
 
     // Get User Routines (Filtered by Gym vs Global)
+    // Build the routine list from an offline-routine queue entry so it matches
+    // the shape returned by the DB query (used by getUserRoutines below).
+    private _buildOfflineRoutineRecord(r: any) {
+        return {
+            id: r.tempId,
+            user_id: r.userId,
+            gym_id: r.gymId || null,
+            name: r.name,
+            created_at: r.created_at,
+            is_public: false,
+            _isOfflinePending: true,
+            equipment_ids: (r.exercises || []).map((e: any) => e.id || e.equipmentId),
+            routine_exercises: (r.exercises || []).map((e: any, idx: number) => ({
+                id: `local_${r.tempId}_${idx}`,
+                routine_id: r.tempId,
+                exercise_id: e.id || e.equipmentId,
+                name: e.name || e.equipmentName || '',
+                order_index: idx,
+                track_weight: e.metrics?.weight ?? e.track_weight ?? true,
+                track_reps: e.metrics?.reps ?? e.track_reps ?? true,
+                track_time: e.metrics?.time ?? e.track_time ?? false,
+                track_distance: e.metrics?.distance ?? e.track_distance ?? false,
+                track_rpe: e.metrics?.rpe ?? e.track_rpe ?? false,
+                equipment: { name: e.name || e.equipmentName || '', metrics: e.metrics }
+            }))
+        };
+    }
+
     async getUserRoutines(userId: string, gymId?: string | null) {
+        const cacheKey = `ginx_cached_routines_${userId}_${gymId || 'global'}`;
+
+        // ── Offline: return cached + queued routines ──────────────────────────
+        if (!navigator.onLine) {
+            try {
+                const cached = JSON.parse(localStorage.getItem(cacheKey) || '[]');
+                const offlineQueue: any[] = JSON.parse(localStorage.getItem('ginx_offline_routines') || '[]');
+                const offlineRecords = offlineQueue
+                    .filter(r => r.userId === userId && (r.gymId === gymId || (!r.gymId && !gymId)))
+                    .map(r => this._buildOfflineRoutineRecord(r));
+                return [...offlineRecords, ...cached];
+            } catch {
+                return [];
+            }
+        }
+
         // 1. Fetch Routines Base Data
         let query = supabase
             .from('routines')
@@ -1062,10 +1106,30 @@ class WorkoutService {
 
         if (routinesError) {
             console.error('Error fetching routines:', routinesError);
-            return [];
+            // Network failure while supposedly online — return cache + offline queue
+            try {
+                const cached = JSON.parse(localStorage.getItem(cacheKey) || '[]');
+                const offlineQueue: any[] = JSON.parse(localStorage.getItem('ginx_offline_routines') || '[]');
+                const offlineRecords = offlineQueue
+                    .filter(r => r.userId === userId && (r.gymId === gymId || (!r.gymId && !gymId)))
+                    .map(r => this._buildOfflineRoutineRecord(r));
+                return [...offlineRecords, ...cached];
+            } catch {
+                return [];
+            }
         }
 
-        if (!routinesData || routinesData.length === 0) return [];
+        if (!routinesData || routinesData.length === 0) {
+            // Still save empty array to overwrite stale cache
+            try { localStorage.setItem(cacheKey, '[]'); } catch { /* ignore */ }
+            // But include any offline-queued routines
+            try {
+                const offlineQueue: any[] = JSON.parse(localStorage.getItem('ginx_offline_routines') || '[]');
+                return offlineQueue
+                    .filter(r => r.userId === userId && (r.gymId === gymId || (!r.gymId && !gymId)))
+                    .map(r => this._buildOfflineRoutineRecord(r));
+            } catch { return []; }
+        }
 
         const routineIds = routinesData.map(r => r.id);
 
@@ -1128,7 +1192,7 @@ class WorkoutService {
         }
 
         // 5. Merge Data
-        return routinesData.map(r => {
+        const onlineResult = routinesData.map(r => {
             const myExercisesRaw = allExercises.filter(e => e.routine_id === r.id);
 
             // Attach exercise information
@@ -1141,16 +1205,44 @@ class WorkoutService {
                 ...r,
                 equipment_ids: [
                     ...myExercises.map(e => e.exercise_id),
-                    // ...myItems.map(i => i.equipment_id) // REMOVED
                 ],
                 routine_exercises: myExercises,
-                // routine_items: myItems // REMOVED
             };
         });
+
+        // Cache for offline use
+        try { localStorage.setItem(cacheKey, JSON.stringify(onlineResult)); } catch { /* ignore quota */ }
+
+        // Prepend any offline-queued routines (not yet synced)
+        try {
+            const offlineQueue: any[] = JSON.parse(localStorage.getItem('ginx_offline_routines') || '[]');
+            const offlineRecords = offlineQueue
+                .filter(r => r.userId === userId && (r.gymId === gymId || (!r.gymId && !gymId)))
+                .map(r => this._buildOfflineRoutineRecord(r));
+            return [...offlineRecords, ...onlineResult];
+        } catch { return onlineResult; }
+    }
+
+    // Save a routine locally when offline; synced by flushPendingSets on reconnect.
+    private _queueOfflineRoutine(userId: string, name: string, exercises: any[], gymId?: string | null) {
+        const tempId = `local_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        try {
+            const queue: any[] = JSON.parse(localStorage.getItem('ginx_offline_routines') || '[]');
+            queue.unshift({ tempId, userId, gymId: gymId || null, name, exercises, created_at: new Date().toISOString() });
+            localStorage.setItem('ginx_offline_routines', JSON.stringify(queue));
+        } catch (e) {
+            console.error('Error queuing offline routine:', e);
+        }
+        return { data: { id: tempId, _isOfflinePending: true } };
     }
 
     // Create a new Routine (Master or Gym-Specific)
     async createRoutine(userId: string, name: string, exercises: string[] | any[], gymId?: string | null) {
+        // Offline: queue locally and return a temp ID
+        if (!navigator.onLine) {
+            return this._queueOfflineRoutine(userId, name, exercises as any[], gymId);
+        }
+
         // 1. Create Routine
         const { data: routineData, error: routineError } = await supabase
             .from('routines')
@@ -1166,6 +1258,10 @@ class WorkoutService {
 
         if (routineError) {
             console.error('Error creating routine:', routineError);
+            // Network failure while supposedly online — also queue
+            if (!navigator.onLine) {
+                return this._queueOfflineRoutine(userId, name, exercises as any[], gymId);
+            }
             return { error: routineError };
         }
 
@@ -1568,11 +1664,38 @@ class WorkoutService {
         }
     }
 
+    // Push any routines that were created offline to Supabase now that we're back online.
+    // Called by flushPendingSets — no need to call it directly.
+    private async _flushOfflineRoutines(): Promise<void> {
+        try {
+            const queue: any[] = JSON.parse(localStorage.getItem('ginx_offline_routines') || '[]');
+            if (queue.length === 0) return;
+            const still: any[] = [];
+            for (const r of queue) {
+                // Call createRoutine — it checks navigator.onLine internally, but we're here
+                // because we're online (flushPendingSets is triggered by the 'online' event).
+                const res = await this.createRoutine(r.userId, r.name, r.exercises, r.gymId);
+                if (res.error || !res.data || (res.data as any)._isOfflinePending) {
+                    still.push(r); // still offline or failed — try again next flush
+                } else {
+                    // Invalidate cache so next load picks up the real ID from Supabase
+                    localStorage.removeItem(`ginx_cached_routines_${r.userId}_${r.gymId || 'global'}`);
+                }
+            }
+            localStorage.setItem('ginx_offline_routines', JSON.stringify(still));
+        } catch (e) {
+            console.error('Error flushing offline routines:', e);
+        }
+    }
+
     // Retry every queued set across every session. Also resolves offline sessions
     // (created without connectivity) by creating the Supabase row and remapping
     // payloads before flushing. Safe to call repeatedly — on app start AND on
     // every 'online' event.
     async flushPendingSets(): Promise<{ recovered: number; stillPending: number }> {
+        // Flush offline routines first (they don't depend on session IDs)
+        await this._flushOfflineRoutines();
+
         let recovered = 0;
         let stillPending = 0;
         const indexKey = 'ginx_pending_sync_sessions';

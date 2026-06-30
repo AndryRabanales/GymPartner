@@ -1,12 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Loader, Calendar, MapPin, Clock, Dumbbell, Share2, Trash2, CheckCircle2, Circle, Loader2 } from 'lucide-react';
+import { Loader, Calendar, MapPin, Clock, Dumbbell, Share2, Trash2, CheckCircle2, Circle, Loader2, WifiOff } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PublicTeaser } from '../components/common/PublicTeaser';
 import { ShareHistoryModal } from '../components/profile/ShareHistoryModal';
 import { workoutService } from '../services/WorkoutService';
 import toast from 'react-hot-toast';
+
+interface PendingWorkout {
+    sessionId: string;
+    started_at: string;
+    sets: number;
+}
 
 interface WorkoutRecord {
     id: string;
@@ -32,6 +38,28 @@ export const HistoryPage = () => {
     const [deleting, setDeleting] = useState(false);
     const [loading, setLoading] = useState(true);
     const [history, setHistory] = useState<WorkoutRecord[]>([]);
+    const [pendingWorkouts, setPendingWorkouts] = useState<PendingWorkout[]>([]);
+
+    // Load any offline-queued workouts from localStorage
+    useEffect(() => {
+        try {
+            const index: string[] = JSON.parse(localStorage.getItem('ginx_pending_sync_sessions') || '[]');
+            const items: PendingWorkout[] = index.flatMap(sessionId => {
+                const setsRaw = localStorage.getItem(`ginx_pending_sets_${sessionId}`);
+                const sets: any[] = setsRaw ? JSON.parse(setsRaw) : [];
+                const metaRaw = localStorage.getItem(`ginx_offline_session_${sessionId}`);
+                // Only show sessions that have queued sets OR a finish queued
+                const hasFinish = !!localStorage.getItem(`ginx_offline_finish_${sessionId}`);
+                if (sets.length === 0 && !hasFinish) return [];
+                let started_at = new Date().toISOString();
+                if (metaRaw) {
+                    try { started_at = JSON.parse(metaRaw).started_at; } catch { /* ignore */ }
+                }
+                return [{ sessionId, started_at, sets: sets.length }];
+            });
+            setPendingWorkouts(items);
+        } catch { /* ignore */ }
+    }, []);
 
     let pressTimer: any;
     const handlePressStart = (id: string) => {
@@ -332,7 +360,7 @@ export const HistoryPage = () => {
         return <div className="min-h-screen flex items-center justify-center text-gym-primary"><Loader className="animate-spin" size={32} /></div>;
     }
 
-    if (history.length === 0) {
+    if (history.length === 0 && pendingWorkouts.length === 0) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
                 <div className="bg-neutral-900 p-8 rounded-3xl border border-neutral-800 max-w-md w-full">
@@ -421,6 +449,36 @@ export const HistoryPage = () => {
                     userId={user.id}
                     onClose={() => setShowShareModal(false)}
                 />
+            )}
+
+            {/* Pending offline workouts */}
+            {pendingWorkouts.length > 0 && (
+                <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                        <WifiOff size={16} className="text-yellow-500" />
+                        <h2 className="text-sm font-black text-yellow-500 uppercase tracking-widest">Pendiente de sincronización</h2>
+                        <div className="h-px flex-1 bg-yellow-500/20"></div>
+                    </div>
+                    {pendingWorkouts.map(pw => (
+                        <div key={pw.sessionId} className="bg-neutral-950 border border-yellow-500/25 rounded-2xl p-4 flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center flex-shrink-0">
+                                <WifiOff size={18} className="text-yellow-500" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-white font-bold text-sm">
+                                    {new Date(pw.started_at).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}
+                                </p>
+                                <p className="text-neutral-500 text-xs mt-0.5">
+                                    {pw.sets > 0 ? `${pw.sets} serie${pw.sets !== 1 ? 's' : ''} guardada${pw.sets !== 1 ? 's' : ''}` : 'Sesión guardada'}
+                                    {' · '}Se sincronizará automáticamente al conectarte
+                                </p>
+                            </div>
+                            <span className="text-[10px] font-black text-yellow-500 bg-yellow-500/10 border border-yellow-500/20 px-2 py-1 rounded-lg uppercase tracking-wider flex-shrink-0">
+                                Offline
+                            </span>
+                        </div>
+                    ))}
+                </div>
             )}
 
             {/* Timeline */}
