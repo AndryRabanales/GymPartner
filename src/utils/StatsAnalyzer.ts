@@ -42,11 +42,16 @@ export class StatsAnalyzer {
                 const mapping: Record<string, string> = {
                     'chest': 'Pecho', 'pectorales': 'Pecho', 'pecho': 'Pecho',
                     'back': 'Espalda', 'dorsales': 'Espalda', 'espalda': 'Espalda',
-                    'legs': 'Pierna', 'cuádriceps': 'Pierna', 'isquios': 'Pierna', 'glúteos': 'Pierna', 'pierna': 'Pierna',
+                    'legs': 'Pierna', 'cuádriceps': 'Pierna', 'cuadriceps': 'Pierna',
+                    'isquios': 'Pierna', 'isquiotibiales': 'Pierna',
+                    'glúteos': 'Pierna', 'gluteos': 'Pierna', 'pierna': 'Pierna',
+                    'pantorrillas': 'Pierna', 'gemelos': 'Pierna',
                     'shoulders': 'Hombro', 'deltoides': 'Hombro', 'hombro': 'Hombro',
                     'biceps': 'Bíceps', 'bíceps': 'Bíceps',
                     'triceps': 'Tríceps', 'tríceps': 'Tríceps',
+                    'antebrazo': 'Bíceps', 'forearm': 'Bíceps',
                     'abs': 'Core', 'abdominales': 'Core', 'core': 'Core',
+                    'cuello': 'Core', 'neck': 'Core',
                     'cardio': 'Cardio'
                 };
 

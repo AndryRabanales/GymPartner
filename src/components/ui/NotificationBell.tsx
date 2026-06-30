@@ -1,24 +1,25 @@
 import { useState, useEffect } from 'react';
 import { Bell } from 'lucide-react';
 import { notificationService } from '../../services/NotificationService';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export const NotificationBell = () => {
     const [unreadCount, setUnreadCount] = useState(0);
     const navigate = useNavigate();
+    const location = useLocation();
 
-    // Cargar conteo inicial
+    // Refrescar al volver de /notifications (donde se marcan como leídas)
     useEffect(() => {
         loadUnreadCount();
+    }, [location.pathname]);
 
-        // Polling inteligente cada 60s
+    // Polling cada 60s mientras la pestaña esté activa
+    useEffect(() => {
         const interval = setInterval(() => {
-            // Solo pedir datos si la pestaña está activa para evitar ERR_NETWORK_IO_SUSPENDED
             if (document.visibilityState === 'visible') {
                 loadUnreadCount();
             }
         }, 60000);
-        
         return () => clearInterval(interval);
     }, []);
 

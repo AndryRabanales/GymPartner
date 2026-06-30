@@ -50,14 +50,22 @@ export const notificationService = {
             return cachedUnreadCount;
         }
 
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return 0;
+
+        // Count only notifications that actually appear on the NotificationsPage:
+        // - belongs to this user
+        // - not an invitation (handled in InboxPage)
+        // - not self-sent (NotificationsPage filters these out)
         const { count, error } = await supabase
             .from('notifications')
             .select('id', { count: 'exact' })
+            .eq('user_id', user.id)
             .neq('type', 'invitation')
-            .eq('is_read', false);
+            .eq('is_read', false)
+            .neq('data->>sender_id', user.id);
 
         if (error) {
-            // Suppress network errors to avoid console spam
             if (error.message?.includes('fetch') || error.message?.includes('network')) {
                 return cachedUnreadCount;
             }
@@ -171,6 +179,7 @@ export const notificationService = {
             .update({ is_read: true })
             .eq('user_id', user.id)
             .neq('type', 'invitation')
+            .neq('data->>sender_id', user.id)
             .eq('is_read', false);
 
         if (error) {

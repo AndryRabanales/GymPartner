@@ -2162,7 +2162,7 @@ export const WorkoutSession = () => {
                     id: `virtual-${seed.name}`,
                     name: seed.name,
                     category: seed.category,
-                    target_muscle_group: seed.category,
+                    target_muscle_group: seed.targetMuscle,
                     metrics: seed.metrics
                 } as any);
             }
@@ -2352,6 +2352,7 @@ export const WorkoutSession = () => {
             effectiveInventory.push({
                 ...seed,
                 id: `virtual-${seed.name}`,
+                target_muscle_group: seed.targetMuscle,
                 // @ts-expect-error - ignore typing
                 gym_id: 'virtual',
                 condition: 'GOOD',
@@ -2469,7 +2470,7 @@ export const WorkoutSession = () => {
     const catalogItems = COMMON_EQUIPMENT_SEEDS.filter(seed => {
         if (activeMuscleFilter) {
             // @ts-expect-error - ignore typing
-            return getMuscleGroup({ name: seed.name, category: seed.category }, userSettings) === activeMuscleFilter;
+            return getMuscleGroup({ name: seed.name, category: seed.category, target_muscle_group: seed.targetMuscle } as any, userSettings) === activeMuscleFilter;
         }
         return true;
     });
