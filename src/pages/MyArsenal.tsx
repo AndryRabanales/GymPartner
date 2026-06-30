@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Plus, Search, ChevronRight, Check, Swords, Loader, Trash2, Dumbbell, Save, Edit2, X, Share2 } from 'lucide-react';
+import { ArrowLeft, Plus, Search, ChevronLeft, ChevronRight, Check, Swords, Loader, Trash2, Dumbbell, Save, Edit2, X, Share2 } from 'lucide-react';
 import { userService } from '../services/UserService';
 
 import type { Equipment } from '../services/GymEquipmentService';
@@ -11,9 +11,10 @@ import { workoutService } from '../services/WorkoutService';
 import { supabase } from '../lib/supabase';
 import { PublicTeaser } from '../components/common/PublicTeaser';
 import { normalizeText, getMuscleGroup } from '../utils/inventoryUtils';
-import { ArsenalGrid } from '../components/arsenal/ArsenalGrid';
+import { ArsenalCard } from '../components/arsenal/ArsenalCard';
 import { EquipmentForm } from '../components/arsenal/EquipmentForm';
 import { ShareRoutineModal } from '../components/profile/ShareRoutineModal';
+import { CURATED_EXERCISES, CATALOG_MUSCLES } from '../data/exerciseCatalog';
 
 // Local constants removed in favor of Service imports
 
@@ -246,20 +247,27 @@ export const MyArsenal = () => {
     const [userSettings, setUserSettings] = useState<CustomSettings>({ categories: [], metrics: [] });
     const [editingItem, setEditingItem] = useState<Equipment | null>(null);
 
-    const [activeMuscleFilter, setActiveMuscleFilter] = useState<string | null>(null);
-    const catalogScrollRef = useRef<HTMLDivElement>(null);
+    // Catalog grid state (MACHINES view)
+    const [catalogActiveMuscle, setCatalogActiveMuscle] = useState<string>('PECHO');
+    const [catalogVariantIdx, setCatalogVariantIdx] = useState<Record<string, number>>({});
 
-    const scrollToCategory = (category: string) => {
-        setActiveMuscleFilter(category);
-        setTimeout(() => {
-            const element = document.getElementById(`category-section-${category}`);
-            if (element) {
-                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            } else if (catalogScrollRef.current) {
-                catalogScrollRef.current.scrollTop = 0;
-            }
-        }, 100);
-    };
+    const catalogExercises = useMemo(
+        () => CURATED_EXERCISES.filter(b =>
+            b.muscle === catalogActiveMuscle &&
+            (searchTerm === '' || b.name.toLowerCase().includes(searchTerm.toLowerCase()))
+        ),
+        [catalogActiveMuscle, searchTerm]
+    );
+
+    const seedLookupForCatalog = useMemo(() => {
+        const m = new Map<string, any>();
+        (COMMON_EQUIPMENT_SEEDS as any[]).forEach(s => m.set(s.name, s));
+        return m;
+    }, []);
+
+    const EMPTY_CARD_SETTINGS = { categories: [], metrics: [] };
+
+    const scrollToCategory = (_category: string) => { /* no-op: tabs now filter directly */ };
 
 
 
@@ -1187,130 +1195,110 @@ export const MyArsenal = () => {
                         />
                     </div>
 
-                    {/* Muscle Filter Bar */}
-                    <div className="flex gap-2 overflow-x-auto py-1.5 px-1 no-scrollbar scroll-smooth items-center min-h-[40px] border-t border-white/5">
-                        {/* --- PECHO --- */}
-                        <button
-                            type="button"
-                            onClick={() => scrollToCategory("PECHO")}
-                            className={`shrink-0 px-5 py-2 rounded-xl text-xs font-black italic uppercase tracking-tighter transition-all border-2 ${activeMuscleFilter === "PECHO" ? 'bg-gym-primary text-black border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-neutral-900 text-gym-primary border-neutral-800'}`}
-                        >
-                            PECHO
-                        </button>
-                        {["PECHO", "HOMBRO", "TRÍCEPS"].map(sub => (
+                    {/* Muscle Filter Tabs */}
+                    <div className="flex gap-2 overflow-x-auto py-2 no-scrollbar border-t border-white/5">
+                        {CATALOG_MUSCLES.map(m => (
                             <button
+                                key={m}
                                 type="button"
-                                key={sub}
-                                onClick={() => scrollToCategory(sub)}
-                                className={`shrink-0 px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all border ${activeMuscleFilter === sub ? 'bg-white text-black border-white' : 'bg-neutral-800 text-neutral-400 border-neutral-700'}`}
+                                onClick={() => { setCatalogActiveMuscle(m); }}
+                                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider border transition-all
+                                    ${catalogActiveMuscle === m
+                                        ? 'bg-gym-primary text-black border-gym-primary'
+                                        : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:border-gym-primary/40'
+                                    }`}
                             >
-                                {sub}
+                                {m}
                             </button>
                         ))}
-
-                        <div className="w-px h-6 bg-neutral-800 mx-2 shrink-0" />
-
-                        {/* --- ESPALDA --- */}
-                        <button
-                            type="button"
-                            onClick={() => scrollToCategory("ESPALDA")}
-                            className={`shrink-0 px-5 py-2 rounded-xl text-xs font-black italic uppercase tracking-tighter transition-all border-2 ${activeMuscleFilter === "ESPALDA" ? 'bg-gym-primary text-black border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-neutral-900 text-gym-primary border-neutral-800'}`}
-                        >
-                            ESPALDA
-                        </button>
-                        {["ESPALDA", "BÍCEPS", "ANTEBRAZO"].map(sub => (
-                            <button
-                                type="button"
-                                key={sub}
-                                onClick={() => scrollToCategory(sub)}
-                                className={`shrink-0 px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all border ${activeMuscleFilter === sub ? 'bg-white text-black border-white' : 'bg-neutral-800 text-neutral-400 border-neutral-700'}`}
-                            >
-                                {sub}
-                            </button>
-                        ))}
-
-                        <div className="w-px h-6 bg-neutral-800 mx-2 shrink-0" />
-
-                        {/* --- PIERNA --- */}
-                        <button
-                            type="button"
-                            onClick={() => scrollToCategory("PIERNA")}
-                            className={`shrink-0 px-5 py-2 rounded-xl text-xs font-black italic uppercase tracking-tighter transition-all border-2 ${activeMuscleFilter === "PIERNA" ? 'bg-gym-primary text-black border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-neutral-900 text-gym-primary border-neutral-800'}`}
-                        >
-                            PIERNA
-                        </button>
-                        {["CUÁDRICEPS", "ISQUIOTIBIALES", "GLÚTEOS", "PANTORRILLAS", "ADUCTORES"].map(sub => (
-                            <button
-                                type="button"
-                                key={sub}
-                                onClick={() => scrollToCategory(sub)}
-                                className={`shrink-0 px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all border ${activeMuscleFilter === sub ? 'bg-white text-black border-white' : 'bg-neutral-800 text-neutral-400 border-neutral-700'}`}
-                            >
-                                {sub}
-                            </button>
-                        ))}
-
-                        <div className="w-px h-6 bg-neutral-800 mx-2 shrink-0" />
-
-                        {/* --- CORE --- */}
-                        <button
-                            type="button"
-                            onClick={() => scrollToCategory("CORE")}
-                            className={`shrink-0 px-5 py-2 rounded-xl text-xs font-black italic uppercase tracking-tighter transition-all border-2 ${activeMuscleFilter === "CORE" ? 'bg-gym-primary text-black border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-neutral-900 text-gym-primary border-neutral-800'}`}
-                        >
-                            CORE
-                        </button>
-                        {["ABDOMINALES", "LUMBARES", "CUELLO"].map(sub => (
-                            <button
-                                type="button"
-                                key={sub}
-                                onClick={() => scrollToCategory(sub)}
-                                className={`shrink-0 px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all border ${activeMuscleFilter === sub ? 'bg-white text-black border-white' : 'bg-neutral-800 text-neutral-400 border-neutral-700'}`}
-                            >
-                                {sub}
-                            </button>
-                        ))}
-
-                        <div className="w-px h-6 bg-neutral-800 mx-2 shrink-0" />
-
-                        {/* --- CARDIO --- */}
-                        <button
-                            type="button"
-                            onClick={() => scrollToCategory("CARDIO")}
-                            className={`shrink-0 px-5 py-2 rounded-xl text-xs font-black italic uppercase tracking-tighter transition-all border-2 ${activeMuscleFilter === "CARDIO" ? 'bg-gym-primary text-black border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-neutral-900 text-gym-primary border-neutral-800'}`}
-                        >
-                            CARDIO
-                        </button>
                     </div>
                 </div>
             </div>
 
-            {/* MAIN CONTENT AREA */}
-            <div 
-                ref={catalogScrollRef} 
-                className="flex-1 overflow-y-auto min-h-0 px-4 md:px-6 pb-36 pt-4 w-full bg-black/40 rounded-2xl border border-neutral-900/60"
-            >
-                <div className="max-w-7xl mx-auto">
-                    <ArsenalGrid
-                        inventory={effectiveInventory}
-                        selectedItems={selectedItems}
-                        userSettings={userSettings}
-                        searchTerm={searchTerm}
-                        onToggleSelection={toggleSelection}
-                        onOpenCatalog={handleOpenCatalog}
-                        onEditItem={handleEditEquipment}
-                        routineConfigs={routineConfigs}
-                        globalMetrics={globalMetrics}
-                        onToggleGlobalMetric={handleToggleGlobalMetric}
-                        metricOverrides={metricOverrides}
-                        sectionOrder={[
-                            'PECHO', 'HOMBRO', 'TRÍCEPS',
-                            'ESPALDA', 'BÍCEPS', 'ANTEBRAZO',
-                            'CUÁDRICEPS', 'ISQUIOTIBIALES', 'GLÚTEOS', 'PANTORRILLAS', 'ADUCTORES',
-                            'ABDOMINALES', 'LUMBARES', 'CUELLO', 'CARDIO'
-                        ]}
-                    />
-                </div>
+            {/* MAIN CONTENT — Exercise Catalog Grid */}
+            <div className="flex-1 overflow-y-auto min-h-0 px-4 pb-36 pt-3">
+                {catalogExercises.length === 0 ? (
+                    <div className="text-center text-neutral-600 font-bold py-12">Sin resultados</div>
+                ) : (
+                    <div className="grid grid-cols-3 gap-3 mt-1">
+                        {catalogExercises.map(base => {
+                            const currentIdx = catalogVariantIdx[base.id] ?? 0;
+                            const currentVariant = base.variants[currentIdx] ?? base.variants[0];
+                            const virtualId = `virtual-${currentVariant.seedName}`;
+                            const isSel = selectedItems.has(virtualId);
+                            const hasVariants = base.variants.length > 1;
+                            const seed = seedLookupForCatalog.get(currentVariant.seedName);
+                            const cardItem = {
+                                id: virtualId,
+                                name: base.name,
+                                category: base.muscle,
+                                target_muscle_group: base.muscle,
+                                metrics: base.metrics,
+                                image_url: seed?.image_url ?? null,
+                                icon: currentVariant.icon,
+                                quantity: 1,
+                                status: 'ACTIVE' as const,
+                            };
+
+                            return (
+                                <div
+                                    key={base.id}
+                                    className={`relative cursor-pointer rounded-lg transition-all h-52 ${isSel ? 'ring-2 ring-gym-primary ring-offset-2 ring-offset-black' : ''}`}
+                                    onClick={(e) => {
+                                        if ((e.target as HTMLElement).closest('[data-variant-btn="true"]')) return;
+                                        setSelectedItems(prev => {
+                                            const next = new Set(prev);
+                                            if (next.has(virtualId)) next.delete(virtualId);
+                                            else next.add(virtualId);
+                                            return next;
+                                        });
+                                    }}
+                                >
+                                    <ArsenalCard
+                                        item={cardItem as any}
+                                        isSelected={isSel}
+                                        userSettings={EMPTY_CARD_SETTINGS}
+                                        onEdit={() => {}}
+                                        variantLabel={hasVariants ? currentVariant.label : undefined}
+                                        variantTotal={hasVariants ? base.variants.length : undefined}
+                                    />
+                                    {hasVariants && (
+                                        <>
+                                            <button
+                                                data-variant-btn="true"
+                                                onPointerDown={e => e.stopPropagation()}
+                                                onClick={e => {
+                                                    e.stopPropagation();
+                                                    setCatalogVariantIdx(prev => ({
+                                                        ...prev,
+                                                        [base.id]: (currentIdx - 1 + base.variants.length) % base.variants.length
+                                                    }));
+                                                }}
+                                                className="absolute left-0 top-1/2 -translate-y-1/2 z-30 flex items-center justify-center w-7 h-10 rounded-r-xl bg-black/70 border border-white/20 border-l-0 text-white hover:text-gym-primary hover:bg-black/90 hover:border-gym-primary/50 transition-all backdrop-blur-sm shadow-lg"
+                                            >
+                                                <ChevronLeft size={18} strokeWidth={3} />
+                                            </button>
+                                            <button
+                                                data-variant-btn="true"
+                                                onPointerDown={e => e.stopPropagation()}
+                                                onClick={e => {
+                                                    e.stopPropagation();
+                                                    setCatalogVariantIdx(prev => ({
+                                                        ...prev,
+                                                        [base.id]: (currentIdx + 1) % base.variants.length
+                                                    }));
+                                                }}
+                                                className="absolute right-0 top-1/2 -translate-y-1/2 z-30 flex items-center justify-center w-7 h-10 rounded-l-xl bg-black/70 border border-white/20 border-r-0 text-white hover:text-gym-primary hover:bg-black/90 hover:border-gym-primary/50 transition-all backdrop-blur-sm shadow-lg"
+                                            >
+                                                <ChevronRight size={18} strokeWidth={3} />
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
 
             {addingMode && (

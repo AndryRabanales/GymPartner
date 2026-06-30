@@ -533,12 +533,21 @@ const ABDOMINALES: BaseExercise[] = [
 
 // ─────────────────────────── CARDIO ─────────────────────────────────────────
 const CARDIO: BaseExercise[] = [
-    { id: 'cinta',     name: 'Cinta de Correr',    muscle: 'CARDIO', icon: '🏃', metrics: { weight: false, reps: false, time: true, distance: true, rpe: false }, variants: [{ id: 'cinta',     label: 'Cinta',      seedName: 'Cinta de Correr',          icon: '🏃' }] },
-    { id: 'bicicleta', name: 'Bicicleta Estática',  muscle: 'CARDIO', icon: '🚴', metrics: { weight: false, reps: false, time: true, distance: true, rpe: false }, variants: [{ id: 'estatica',  label: 'Estática',   seedName: 'Bicicleta Estática',       icon: '🚴' }] },
-    { id: 'eliptica',  name: 'Elíptica',             muscle: 'CARDIO', icon: '⛷️', metrics: { weight: false, reps: false, time: true, distance: true, rpe: false }, variants: [{ id: 'eliptica',  label: 'Elíptica',   seedName: 'Elíptica',                 icon: '⛷️' }] },
-    { id: 'remo_c2',   name: 'Remo (Cardio)',        muscle: 'CARDIO', icon: '🚣', metrics: { weight: false, reps: false, time: true, distance: true, rpe: false }, variants: [{ id: 'concept2',  label: 'Concept2',   seedName: 'Remo (Concept2)',           icon: '🚣' }] },
-    { id: 'escaladora',name: 'Escaladora',           muscle: 'CARDIO', icon: '🧗', metrics: { weight: false, reps: false, time: true, distance: true, rpe: false }, variants: [{ id: 'stairmaster',label: 'Stairmaster',seedName: 'Escaladora (Stairmaster)',  icon: '🧗' }] },
-    { id: 'cuerda',    name: 'Salto a la Cuerda',   muscle: 'CARDIO', icon: '🪢', metrics: { weight: false, reps: false, time: true, distance: false, rpe: false }, variants: [{ id: 'cuerda',    label: 'Cuerda',     seedName: 'Salto de Cuerda',          icon: '🪢' }] },
+    {
+        id: 'caminadoras',
+        name: 'Caminadoras',
+        muscle: 'CARDIO',
+        icon: '🚴',
+        metrics: { weight: false, reps: false, time: true, distance: true, rpe: false },
+        variants: [
+            { id: 'bicicleta',  label: 'Bicicleta',  seedName: 'Cardio (Bicicleta)',       icon: '🚴' },
+            { id: 'cinta',      label: 'Cinta',       seedName: 'Cardio (Cinta de Correr)', icon: '🏃' },
+            { id: 'eliptica',   label: 'Elíptica',    seedName: 'Cardio (Elíptica)',        icon: '⛷️' },
+            { id: 'escaladora', label: 'Escaladora',  seedName: 'Cardio (Escaladora)',      icon: '🧗' },
+        ]
+    },
+    { id: 'remo_c2', name: 'Remo (Cardio)',     muscle: 'CARDIO', icon: '🚣', metrics: { weight: false, reps: false, time: true, distance: true,  rpe: false }, variants: [{ id: 'remo',   label: 'Remo',   seedName: 'Cardio (Remo)',           icon: '🚣' }] },
+    { id: 'cuerda',  name: 'Salto a la Cuerda', muscle: 'CARDIO', icon: '🪢', metrics: { weight: false, reps: false, time: true, distance: false, rpe: false }, variants: [{ id: 'cuerda', label: 'Cuerda', seedName: 'Cardio (Saltar Cuerda)',   icon: '🪢' }] },
 ];
 
 // ─────────────────────────── GEMELOS ────────────────────────────────────────
