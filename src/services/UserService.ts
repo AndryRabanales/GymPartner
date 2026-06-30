@@ -167,15 +167,6 @@ class UserService {
             }
 
             // 2. Link User to Gym (Add to Passport)
-            // Check if user already has this specific gym (to avoid duplicate GX)
-            const { data: existingLink } = await supabase
-                .from('user_gyms')
-                .select('id')
-                .eq('user_id', userId)
-                .eq('gym_id', gymId)
-                .maybeSingle();
-
-            const isNewGym = !existingLink;
 
             // Determine if this is their first gym (set as home base if so)
             const { count } = await supabase
@@ -185,16 +176,23 @@ class UserService {
 
             const isFirstGym = count === 0;
 
-            const { error: linkError } = await supabase
+            // Atomic insert: ON CONFLICT DO NOTHING returns the row ONLY if actually inserted.
+            // This prevents the race condition where two concurrent calls (auto-checkin + workout start)
+            // both read isNewGym=true before either has written, causing double +3 GX.
+            const { data: insertResult, error: linkError } = await supabase
                 .from('user_gyms')
                 .upsert({
                     user_id: userId,
                     gym_id: gymId,
                     since: new Date().toISOString(),
-                    is_home_base: isFirstGym // Set as true only if it's the first one
-                });
+                    is_home_base: isFirstGym
+                }, { onConflict: 'user_id,gym_id', ignoreDuplicates: true })
+                .select('id');
 
             if (linkError) throw linkError;
+
+            // isNewGym is true only if the INSERT actually wrote a new row
+            const isNewGym = Array.isArray(insertResult) && insertResult.length > 0;
 
             // 3. AWARD GX POINTS for Unlocking Gym — only if it's truly new
             if (isNewGym) {
