@@ -317,7 +317,7 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
                 {user.gym_name ? (
                     <div 
                         className="rounded-[2.5rem] border border-white/5 relative overflow-hidden group shadow-2xl min-h-[140px]"
-                        style={{ backgroundColor: user.gym_color || '#E5FF00' }}
+                        style={{ backgroundColor: user.gym_color || '#3A2C00' }}
                     >
                         {user.gym_image && (
                             <div className="absolute inset-0 opacity-100">

@@ -85,7 +85,7 @@ export const PublicProfile = () => {
                     gym_name: (bestGym?.gyms as any)?.name || null,
                     // PRIORITIZE Public Assets from Profile Table
                     gym_image: profileData.main_base_image || null,
-                    gym_color: profileData.main_base_color || '#E5FF00',
+                    gym_color: profileData.main_base_color || '#3A2C00',
                     training_days_count: profileData.checkins_count || 0,
                     followers_count: stats.followersCount,
                     following_count: stats.followingCount,

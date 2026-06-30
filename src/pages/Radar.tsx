@@ -267,7 +267,7 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
                         ...p,
                         gym_name: gymInfo.name,
                         gym_image: p.main_base_image || null,
-                        gym_color: p.main_base_color || '#E5FF00',
+                        gym_color: p.main_base_color || '#3A2C00',
                         gym_passport: passportMap[p.id] || [],
                         banner_url: settings.banner_url || null,
                         training_days_count: p.checkins_count || 0,
