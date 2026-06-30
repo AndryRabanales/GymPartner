@@ -6,6 +6,7 @@ import { PublicTeaser } from '../components/common/PublicTeaser';
 import { userService } from '../services/UserService';
 import type { UserPrimaryGym } from '../services/UserService';
 import { PlayerProfileModal } from '../components/profile/PlayerProfileModal';
+import { cloudinaryService } from '../services/CloudinaryService';
 
 import { socialService } from '../services/SocialService';
 import { notificationService } from '../services/NotificationService';
@@ -190,7 +191,13 @@ export const RankingPage = () => {
                             {getRankBadge(player.rank)}
                         </div>
                         <div className="w-12 h-12 rounded-xl bg-neutral-800 overflow-hidden shrink-0 border border-white/10">
-                            <img src={player.avatar_url} alt={player.username} className="w-full h-full object-cover" />
+                            <img
+                                src={cloudinaryService.getOptimizedImageUrl(player.avatar_url, { width: 96, height: 96 })}
+                                alt={player.username}
+                                loading="lazy"
+                                decoding="async"
+                                className="w-full h-full object-cover"
+                            />
                         </div>
                         <div className="flex-1 min-w-0">
                             <h3 className="font-black text-sm text-white truncate uppercase italic tracking-tight flex items-center gap-1">

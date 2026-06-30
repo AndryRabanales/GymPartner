@@ -215,9 +215,10 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
                 <div className="h-40 sm:h-48 shrink-0 relative w-full bg-neutral-900 overflow-hidden">
                     {user.banner_url && (
                         <FadeInImage
-                            src={user.banner_url}
+                            src={cloudinaryService.getOptimizedImageUrl(user.banner_url, { width: 750, height: 400 })}
                             alt="Banner"
                             className="w-full h-full object-cover opacity-60"
+                            priority
                         />
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
@@ -233,6 +234,7 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onClose,
                                     src={cloudinaryService.getOptimizedImageUrl(user.avatar_url, { width: 150, height: 150 })}
                                     alt={user.username || 'Atleta'}
                                     className="w-full h-full object-cover"
+                                    priority
                                 />
                             ) : (
                                 <div className="w-full h-full bg-gradient-to-br from-neutral-800 to-black flex items-center justify-center">

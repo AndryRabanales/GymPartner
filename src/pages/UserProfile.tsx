@@ -502,7 +502,7 @@ export const UserProfile = () => {
                     <div
                         className="bg-neutral-900/95 backdrop-blur-xl rounded-[14px] p-3 sm:p-4 relative overflow-hidden transition-all group w-full h-[360px] min-h-[360px] flex flex-col justify-between"
                         style={profile?.custom_settings?.banner_url ? {
-                            backgroundImage: `url(${profile.custom_settings.banner_url})`,
+                            backgroundImage: `url(${cloudinaryService.getOptimizedImageUrl(profile.custom_settings.banner_url, { width: 800, height: 360, crop: 'fill' })})`,
                             backgroundSize: 'cover',
                             backgroundPosition: 'center',
                             height: '360px'
@@ -531,6 +531,8 @@ export const UserProfile = () => {
                                     <img
                                         src={cloudinaryService.getOptimizedImageUrl(userAvatar, { width: 200, height: 200 })}
                                         alt="Profile"
+                                        loading="eager"
+                                        decoding="async"
                                         className="w-full h-full object-cover scale-110 group-hover:scale-125 transition-transform duration-700"
                                     />
                                 </div>

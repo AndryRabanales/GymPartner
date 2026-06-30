@@ -4,9 +4,11 @@ interface FadeInImageProps {
     src: string;
     alt: string;
     className?: string;
+    /** true = load eagerly with high priority (above-the-fold images) */
+    priority?: boolean;
 }
 
-export const FadeInImage = ({ src, alt, className = "" }: FadeInImageProps) => {
+export const FadeInImage = ({ src, alt, className = "", priority = false }: FadeInImageProps) => {
     const [loaded, setLoaded] = useState(false);
 
     return (
@@ -18,9 +20,9 @@ export const FadeInImage = ({ src, alt, className = "" }: FadeInImageProps) => {
                 src={src}
                 alt={alt}
                 onLoad={() => setLoaded(true)}
-                className={`w-full h-full object-cover transition-opacity duration-1000 ${
-                    loaded ? 'opacity-100' : 'opacity-0'
-                }`}
+                loading={priority ? 'eager' : 'lazy'}
+                decoding="async"
+                className={`w-full h-full object-cover transition-opacity duration-200 ${loaded ? 'opacity-100' : 'opacity-0'}`}
             />
         </div>
     );
