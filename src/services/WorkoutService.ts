@@ -1258,11 +1258,8 @@ class WorkoutService {
 
         if (routineError) {
             console.error('Error creating routine:', routineError);
-            // Network failure while supposedly online — also queue
-            if (!navigator.onLine) {
-                return this._queueOfflineRoutine(userId, name, exercises as any[], gymId);
-            }
-            return { error: routineError };
+            // Queue on any failure — navigator.onLine is unreliable with weak WiFi
+            return this._queueOfflineRoutine(userId, name, exercises as any[], gymId);
         }
 
         // 2. Link Exercises

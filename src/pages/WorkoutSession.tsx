@@ -3285,16 +3285,15 @@ export const WorkoutSession = () => {
             );
             
             if (startError) {
-                if (!navigator.onLine) {
-                    // Offline: generate a local UUID and queue the session for later sync
+                // Solo: any network failure (weak WiFi or full offline) → queue locally.
+                // navigator.onLine is unreliable with unstable connections — rely on the
+                // actual request failure instead. Multiplayer still requires a real connection.
+                if (!finalIsMultiplayer) {
                     const localId = crypto.randomUUID();
                     workoutService.queueOfflineSession(localId, {
                         user_id: user.id,
                         gym_id: finalGymId || undefined,
-                        is_multiplayer: finalIsMultiplayer,
-                        multiplayer_mode: finalMultiplayerMode || undefined,
-                        partner_id: finalPartnerId || undefined,
-                        partner_session_id: (forcePartnerSessionId || partnerSessionId) || undefined,
+                        is_multiplayer: false,
                         started_at: new Date().toISOString(),
                     });
                     sessionIdRef.current = localId;
@@ -3304,7 +3303,7 @@ export const WorkoutSession = () => {
                     setIsFinished(false);
                     localStorage.removeItem(STORAGE_KEY);
                     import('react-hot-toast').then(({ default: t }) =>
-                        t('📴 Sin conexión — tu entrenamiento se guardará automáticamente al reconectarte.', { duration: 5000 })
+                        t('📶 Conexión inestable — entrenando en modo offline. Se sincronizará al reconectarte.', { duration: 5000 })
                     );
                     return { gymId: finalGymId, freshArsenal };
                 }
@@ -5313,7 +5312,9 @@ export const WorkoutSession = () => {
                     result = { success: true };
                 } else {
                     result = await workoutService.finishSession(finalSessionId, flowNotes, currentRoutineName, true, geoVerified);
-                    if (!result.success && !navigator.onLine) {
+                    if (!result.success) {
+                        // Queue offline on ANY failure (weak WiFi also causes failures,
+                        // navigator.onLine is not reliable with unstable connections)
                         workoutService.queueOfflineFinish(finalSessionId, {
                             notes: flowNotes,
                             routineName: currentRoutineName,
