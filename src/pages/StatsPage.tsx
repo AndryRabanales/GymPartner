@@ -161,7 +161,7 @@ export const StatsPage = () => {
                     .sort((a, b) => b.max - a.max)
                     .slice(0, 10); // Top 10 strongest lifts
 
-                setStats({
+                const freshStats = {
                     totalWorkouts: sessions.length,
                     totalVolume: Math.round(totalVolume),
                     totalTimeMinutes: Math.round(totalTime),
@@ -173,10 +173,23 @@ export const StatsPage = () => {
                         followers: socialStats.followersCount,
                         following: socialStats.followingCount
                     }
-                });
+                };
+                setStats(freshStats);
+                try {
+                    localStorage.setItem(`ginx_cached_stats_${user.id}`, JSON.stringify(freshStats));
+                } catch { /* ignore quota errors */ }
                 setLoading(false);
             } catch (error) {
                 console.error('Error loading stats:', error);
+                // Offline or network error — show last cached stats if available
+                try {
+                    const cached = localStorage.getItem(`ginx_cached_stats_${user.id}`);
+                    if (cached) {
+                        setStats(JSON.parse(cached));
+                        setLoading(false);
+                        return;
+                    }
+                } catch { /* ignore */ }
                 setStats({
                     totalWorkouts: 0,
                     totalVolume: 0,

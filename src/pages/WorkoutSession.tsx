@@ -3284,7 +3284,32 @@ export const WorkoutSession = () => {
                 forcePartnerSessionId || partnerSessionId || undefined
             );
             
-            if (startError) throw startError;
+            if (startError) {
+                if (!navigator.onLine) {
+                    // Offline: generate a local UUID and queue the session for later sync
+                    const localId = crypto.randomUUID();
+                    workoutService.queueOfflineSession(localId, {
+                        user_id: user.id,
+                        gym_id: finalGymId || undefined,
+                        is_multiplayer: finalIsMultiplayer,
+                        multiplayer_mode: finalMultiplayerMode || undefined,
+                        partner_id: finalPartnerId || undefined,
+                        partner_session_id: (forcePartnerSessionId || partnerSessionId) || undefined,
+                        started_at: new Date().toISOString(),
+                    });
+                    sessionIdRef.current = localId;
+                    setSessionId(localId);
+                    setStartTime(new Date());
+                    setElapsedTime("00:00");
+                    setIsFinished(false);
+                    localStorage.removeItem(STORAGE_KEY);
+                    import('react-hot-toast').then(({ default: t }) =>
+                        t('📴 Sin conexión — tu entrenamiento se guardará automáticamente al reconectarte.', { duration: 5000 })
+                    );
+                    return { gymId: finalGymId, freshArsenal };
+                }
+                throw startError;
+            }
 
             // Clear local backup on success
             localStorage.removeItem(STORAGE_KEY);
@@ -5278,7 +5303,25 @@ export const WorkoutSession = () => {
 
             } else {
                 // ── SOLO: Standard finalization ───────────────────────────────────
-                result = await workoutService.finishSession(finalSessionId, flowNotes, currentRoutineName, true, geoVerified);
+                const isOfflineSession = !!localStorage.getItem(`ginx_offline_session_${finalSessionId}`);
+                if (isOfflineSession) {
+                    workoutService.queueOfflineFinish(finalSessionId, {
+                        notes: flowNotes,
+                        routineName: currentRoutineName,
+                        geoVerified,
+                    });
+                    result = { success: true };
+                } else {
+                    result = await workoutService.finishSession(finalSessionId, flowNotes, currentRoutineName, true, geoVerified);
+                    if (!result.success && !navigator.onLine) {
+                        workoutService.queueOfflineFinish(finalSessionId, {
+                            notes: flowNotes,
+                            routineName: currentRoutineName,
+                            geoVerified,
+                        });
+                        result = { success: true };
+                    }
+                }
             }
 
             localStorage.setItem(`exercise_fill_flow_${finalSessionId}`, JSON.stringify(exerciseFillFlow));

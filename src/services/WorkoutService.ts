@@ -30,6 +30,22 @@ export interface WorkoutSetData {
     owner_id?: string; // NEW: Explicitly track who performed this set
 }
 
+interface OfflineSessionMeta {
+    user_id: string;
+    gym_id?: string;
+    is_multiplayer: boolean;
+    multiplayer_mode?: string;
+    partner_id?: string;
+    partner_session_id?: string;
+    started_at: string;
+}
+
+interface OfflineFinishMeta {
+    notes?: string;
+    routineName?: string;
+    geoVerified?: boolean;
+}
+
 class WorkoutService {
     // Start a new empty session (The "Battle" begins)
     async startSession(
@@ -1525,9 +1541,37 @@ class WorkoutService {
         }
     }
 
-    // Retry every queued set across every session. Safe to call repeatedly
-    // (on app start AND on every 'online' event) — sets that save successfully
-    // are removed from the queue; the rest stay queued for the next attempt.
+    // Store session metadata for a workout started without connectivity.
+    // The Supabase row is created (and set payloads remapped) in flushPendingSets
+    // when connectivity returns.
+    queueOfflineSession(localId: string, meta: OfflineSessionMeta): void {
+        try {
+            localStorage.setItem(`ginx_offline_session_${localId}`, JSON.stringify(meta));
+            const indexKey = 'ginx_pending_sync_sessions';
+            const idx: string[] = JSON.parse(localStorage.getItem(indexKey) || '[]');
+            if (!idx.includes(localId)) {
+                idx.push(localId);
+                localStorage.setItem(indexKey, JSON.stringify(idx));
+            }
+        } catch (e) {
+            console.error('Error queuing offline session:', e);
+        }
+    }
+
+    // Store finalization data for a session that could not be finalized online.
+    // Picked up by flushPendingSets after sets are saved successfully.
+    queueOfflineFinish(sessionId: string, meta: OfflineFinishMeta): void {
+        try {
+            localStorage.setItem(`ginx_offline_finish_${sessionId}`, JSON.stringify(meta));
+        } catch (e) {
+            console.error('Error queuing offline finish:', e);
+        }
+    }
+
+    // Retry every queued set across every session. Also resolves offline sessions
+    // (created without connectivity) by creating the Supabase row and remapping
+    // payloads before flushing. Safe to call repeatedly — on app start AND on
+    // every 'online' event.
     async flushPendingSets(): Promise<{ recovered: number; stillPending: number }> {
         let recovered = 0;
         let stillPending = 0;
@@ -1540,14 +1584,51 @@ class WorkoutService {
             const stillPendingSessionIds: string[] = [];
 
             for (const sessionId of sessionIds) {
-                const key = `ginx_pending_sets_${sessionId}`;
-                const queued: WorkoutSetData[] = JSON.parse(localStorage.getItem(key) || '[]');
-                if (queued.length === 0) {
-                    localStorage.removeItem(key);
-                    continue;
+                // ── Resolve offline session first ──────────────────────────────────
+                let resolvedId = sessionId;
+                const offlineMetaRaw = localStorage.getItem(`ginx_offline_session_${sessionId}`);
+                if (offlineMetaRaw) {
+                    try {
+                        const offlineMeta: OfflineSessionMeta = JSON.parse(offlineMetaRaw);
+                        const { data: realSession, error } = await this.startSession(
+                            offlineMeta.user_id,
+                            offlineMeta.gym_id,
+                            offlineMeta.is_multiplayer,
+                            offlineMeta.multiplayer_mode,
+                            offlineMeta.partner_id,
+                            offlineMeta.partner_session_id,
+                        );
+                        if (error || !realSession) {
+                            stillPendingSessionIds.push(sessionId);
+                            continue; // still offline — retry next flush
+                        }
+                        resolvedId = realSession.id;
+                        // Remap pending set payloads to the real session ID
+                        const oldSetsKey = `ginx_pending_sets_${sessionId}`;
+                        const pendingSets: WorkoutSetData[] = JSON.parse(localStorage.getItem(oldSetsKey) || '[]');
+                        localStorage.setItem(
+                            `ginx_pending_sets_${resolvedId}`,
+                            JSON.stringify(pendingSets.map(p => ({ ...p, session_id: resolvedId })))
+                        );
+                        localStorage.removeItem(oldSetsKey);
+                        localStorage.removeItem(`ginx_offline_session_${sessionId}`);
+                        // Remap finish meta too
+                        const finishMetaRaw = localStorage.getItem(`ginx_offline_finish_${sessionId}`);
+                        if (finishMetaRaw) {
+                            localStorage.setItem(`ginx_offline_finish_${resolvedId}`, finishMetaRaw);
+                            localStorage.removeItem(`ginx_offline_finish_${sessionId}`);
+                        }
+                    } catch {
+                        stillPendingSessionIds.push(sessionId);
+                        continue;
+                    }
                 }
 
+                // ── Flush sets ─────────────────────────────────────────────────────
+                const key = `ginx_pending_sets_${resolvedId}`;
+                const queued: WorkoutSetData[] = JSON.parse(localStorage.getItem(key) || '[]');
                 const remaining: WorkoutSetData[] = [];
+
                 for (const payload of queued) {
                     try {
                         const res = await this.logSet(payload);
@@ -1563,10 +1644,32 @@ class WorkoutService {
 
                 if (remaining.length > 0) {
                     localStorage.setItem(key, JSON.stringify(remaining));
-                    stillPendingSessionIds.push(sessionId);
+                    stillPendingSessionIds.push(resolvedId);
                     stillPending += remaining.length;
                 } else {
                     localStorage.removeItem(key);
+                }
+
+                // ── Finalize if queued ─────────────────────────────────────────────
+                const finishKey = `ginx_offline_finish_${resolvedId}`;
+                const finishMetaRaw = localStorage.getItem(finishKey);
+                if (finishMetaRaw && !stillPendingSessionIds.includes(resolvedId)) {
+                    try {
+                        const finishMeta: OfflineFinishMeta = JSON.parse(finishMetaRaw);
+                        const res = await this.finishSession(
+                            resolvedId,
+                            finishMeta.notes,
+                            finishMeta.routineName,
+                            true,
+                            finishMeta.geoVerified,
+                            true,
+                        );
+                        if (res.success) {
+                            localStorage.removeItem(finishKey);
+                        }
+                    } catch {
+                        // Will retry on next flush
+                    }
                 }
             }
 
