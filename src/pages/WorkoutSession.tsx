@@ -5796,7 +5796,7 @@ export const WorkoutSession = () => {
                                         {(() => {
                                             const imgUrl = getExerciseImageUrl(exercise.equipmentId, exercise.equipmentName);
                                             return imgUrl ? (
-                                                <div className="shrink-0 w-16 h-16 rounded-full border-2 border-gym-primary/30 bg-neutral-800 overflow-hidden shadow-[0_0_12px_rgba(250,204,21,0.15)]">
+                                                <div className="shrink-0 w-24 h-24 rounded-full border-2 border-gym-primary/40 bg-neutral-800 overflow-hidden shadow-[0_0_16px_rgba(250,204,21,0.2)]">
                                                     <img
                                                         src={imgUrl}
                                                         alt={exercise.equipmentName}
