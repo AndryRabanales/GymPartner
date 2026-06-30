@@ -10,49 +10,52 @@ interface WorkoutCarouselProps {
 type AnimState = 'idle' | 'dragging' | 'flying-left' | 'flying-right' | 'snapping';
 
 export const WorkoutCarousel: React.FC<WorkoutCarouselProps> = ({ children, currentIndex, onIndexChange }) => {
-    const [dragX, setDragX] = useState(0);
+    const [dragX, setDragX]       = useState(0);
     const [animState, setAnimState] = useState<AnimState>('idle');
+    const [flyDuration, setFlyDuration] = useState(180);
 
-    const containerRef = useRef<HTMLDivElement>(null);
-    const touchStartX = useRef(0);
-    const touchStartY = useRef(0);
-    const touchStartTime = useRef(0);
-    const dragXRef = useRef(0);
-    const isHorizontal = useRef<boolean | null>(null);
+    const containerRef      = useRef<HTMLDivElement>(null);
+    const touchStartX       = useRef(0);
+    const touchStartY       = useRef(0);
+    const dragXRef          = useRef(0);
+    const isHorizontal      = useRef<boolean | null>(null);
+    // Last N pointer samples for real instantaneous velocity
+    const recentMoves       = useRef<{ x: number; t: number }[]>([]);
 
-    // Which card to show peeking behind during drag / fly
     const peekIndex = dragXRef.current < 0
         ? Math.min(children.length - 1, currentIndex + 1)
         : Math.max(0, currentIndex - 1);
 
-    const flyOff = useCallback((direction: 'left' | 'right') => {
+    const flyOff = useCallback((direction: 'left' | 'right', durationMs = 180) => {
         const nextIndex = direction === 'left'
             ? Math.min(children.length - 1, currentIndex + 1)
             : Math.max(0, currentIndex - 1);
 
         if (nextIndex === currentIndex) {
+            // Edge of deck — quick elastic return, no bounce
             setAnimState('snapping');
             setDragX(0);
             dragXRef.current = 0;
-            setTimeout(() => setAnimState('idle'), 380);
+            setTimeout(() => setAnimState('idle'), 220);
             return;
         }
 
+        setFlyDuration(durationMs);
         setAnimState(direction === 'left' ? 'flying-left' : 'flying-right');
         setTimeout(() => {
             setAnimState('idle');
             setDragX(0);
             dragXRef.current = 0;
             onIndexChange(nextIndex);
-        }, 290);
+        }, durationMs + 20); // tiny buffer so transition finishes before re-render
     }, [currentIndex, children.length, onIndexChange]);
 
     const onTouchStart = (e: React.TouchEvent) => {
         if (animState !== 'idle') return;
         touchStartX.current = e.touches[0].clientX;
         touchStartY.current = e.touches[0].clientY;
-        touchStartTime.current = Date.now();
         isHorizontal.current = null;
+        recentMoves.current = [];
         setAnimState('dragging');
     };
 
@@ -71,85 +74,92 @@ export const WorkoutCarousel: React.FC<WorkoutCarouselProps> = ({ children, curr
         let offset = dx;
         const atLeft  = currentIndex === 0 && dx > 0;
         const atRight = currentIndex === children.length - 1 && dx < 0;
-        if (atLeft || atRight) offset = dx * 0.12;
+        if (atLeft || atRight) offset = dx * 0.10;
 
         dragXRef.current = offset;
         setDragX(offset);
+
+        // Keep last 6 frames for velocity calculation
+        const now = Date.now();
+        recentMoves.current.push({ x: offset, t: now });
+        if (recentMoves.current.length > 6) recentMoves.current.shift();
     };
 
     const onTouchEnd = () => {
-        if (animState !== 'dragging') {
-            setAnimState('idle');
-            return;
-        }
-        if (!isHorizontal.current) {
-            setAnimState('idle');
-            return;
+        if (animState !== 'dragging') { setAnimState('idle'); return; }
+        if (!isHorizontal.current)   { setAnimState('idle'); return; }
+
+        const width = containerRef.current?.offsetWidth || 375;
+
+        // Real instantaneous velocity from last 2 samples (px/ms)
+        const moves = recentMoves.current;
+        let velocity = 0;
+        if (moves.length >= 2) {
+            const a = moves[moves.length - 2];
+            const b = moves[moves.length - 1];
+            const dt = Math.max(b.t - a.t, 1);
+            velocity = Math.abs(b.x - a.x) / dt;
         }
 
-        const elapsed    = Math.max(Date.now() - touchStartTime.current, 1);
-        const velocity   = Math.abs(dragXRef.current) / elapsed; // px/ms
-        const width      = containerRef.current?.offsetWidth || 375;
-        const threshold  = width * 0.28;
+        const threshold = width * 0.20; // 20% of card width
 
-        if (dragXRef.current < -threshold || (velocity > 0.45 && dragXRef.current < -15)) {
-            flyOff('left');
-        } else if (dragXRef.current > threshold || (velocity > 0.45 && dragXRef.current > 15)) {
-            flyOff('right');
+        // Fly duration: faster swipe → shorter exit. Clamp 80–200ms.
+        const duration = Math.max(80, Math.min(200, Math.round(120 / Math.max(velocity, 0.4))));
+
+        if (dragXRef.current < -threshold || (velocity > 0.25 && dragXRef.current < 0)) {
+            flyOff('left', duration);
+        } else if (dragXRef.current > threshold || (velocity > 0.25 && dragXRef.current > 0)) {
+            flyOff('right', duration);
         } else {
-            setAnimState('snapping');
+            // No momentum — snap straight back, no animation
+            setAnimState('idle');
             setDragX(0);
             dragXRef.current = 0;
-            setTimeout(() => setAnimState('idle'), 380);
         }
     };
 
-    /* ── Card style helpers ── */
-    const width = containerRef.current?.offsetWidth || 375;
-    const rot   = (dragX / width) * 18; // max ±18deg tilt while dragging
+    /* ── Styles ── */
+    const width      = containerRef.current?.offsetWidth || 375;
+    const rot        = (dragX / width) * 20; // up to ±20° while dragging
+    const dragProgress = Math.min(Math.abs(dragX) / (width * 0.35), 1);
+
+    // linear timing = card exits at the same speed it was being dragged
+    const flyTransition = `transform ${flyDuration}ms linear, opacity ${Math.round(flyDuration * 0.7)}ms linear`;
 
     const topCardStyle = (): React.CSSProperties => {
         switch (animState) {
             case 'dragging':
-                return { transform: `translateX(${dragX}px) rotate(${rot}deg)`, transition: 'none', zIndex: 10, opacity: 1 };
+                return { transform: `translateX(${dragX}px) rotate(${rot}deg)`, transition: 'none', zIndex: 10 };
             case 'flying-left':
-                // Throw: starts from drag position, accelerates off screen (easeIn). No deceleration.
-                return { transform: 'translateX(-160%) rotate(-22deg)', opacity: 0, transition: 'transform 220ms cubic-bezier(0.4,0,1,1), opacity 180ms ease-in', zIndex: 10 };
+                return { transform: 'translateX(-170%) rotate(-28deg) translateY(-10px)', opacity: 0, transition: flyTransition, zIndex: 10 };
             case 'flying-right':
-                return { transform: 'translateX(160%) rotate(22deg)', opacity: 0, transition: 'transform 220ms cubic-bezier(0.4,0,1,1), opacity 180ms ease-in', zIndex: 10 };
+                return { transform: 'translateX(170%) rotate(28deg) translateY(-10px)', opacity: 0, transition: flyTransition, zIndex: 10 };
             case 'snapping':
-                // Smooth slide back — no bounce/spring
-                return { transform: 'translateX(0) rotate(0deg)', transition: 'transform 300ms cubic-bezier(0.25,0.46,0.45,0.94)', zIndex: 10 };
-            default: // idle
-                return { transform: 'translateX(0) rotate(0deg)', transition: 'transform 220ms cubic-bezier(0.25,0.46,0.45,0.94)', zIndex: 10 };
+                return { transform: 'translateX(0) rotate(0deg)', transition: 'transform 200ms cubic-bezier(0.25,0.46,0.45,0.94)', zIndex: 10 };
+            default:
+                return { transform: 'translateX(0) rotate(0deg)', transition: 'none', zIndex: 10 };
         }
     };
 
-    // Progress 0→1 as drag approaches threshold
-    const dragProgress = Math.min(Math.abs(dragX) / (width * 0.4), 1);
-
     const peekCardStyle = (): React.CSSProperties => {
-        const baseScale = 0.91;
-        const baseY     = 12;
-        const isFlyingOrDragging = animState === 'flying-left' || animState === 'flying-right'
-                                || (animState === 'dragging' && Math.abs(dragX) > 6);
+        const base  = 0.92;
+        const baseY = 10;
+        const flying = animState === 'flying-left' || animState === 'flying-right';
+        const active = flying || (animState === 'dragging' && Math.abs(dragX) > 6);
 
-        const scale = isFlyingOrDragging
-            ? baseScale + (1 - baseScale) * (animState === 'dragging' ? dragProgress : 1)
-            : baseScale;
-        const ty = isFlyingOrDragging
-            ? baseY * (1 - (animState === 'dragging' ? dragProgress : 1))
-            : baseY;
+        const scale = active ? base + (1 - base) * (flying ? 1 : dragProgress) : base;
+        const ty    = active ? baseY * (1 - (flying ? 1 : dragProgress)) : baseY;
 
         return {
             transform: `scale(${scale}) translateY(${ty}px)`,
-            transition: animState === 'dragging' ? 'none' : 'transform 290ms cubic-bezier(0.25,0.46,0.45,0.94)',
+            transition: animState === 'dragging' ? 'none' : `transform ${flyDuration}ms linear`,
             zIndex: 9,
-            opacity: isFlyingOrDragging ? 1 : 0.6,
+            opacity: active ? 1 : 0.55,
         };
     };
 
-    const showPeek = animState === 'dragging' || animState === 'flying-left' || animState === 'flying-right';
+    const flying = animState === 'flying-left' || animState === 'flying-right';
+    const showPeek = animState === 'dragging' || flying;
     const flyingPeekIndex = animState === 'flying-left'
         ? Math.min(children.length - 1, currentIndex + 1)
         : animState === 'flying-right'
@@ -159,14 +169,13 @@ export const WorkoutCarousel: React.FC<WorkoutCarouselProps> = ({ children, curr
 
     return (
         <div ref={containerRef} className="relative w-full h-full flex flex-col select-none">
-            {/* Card stack area */}
             <div
                 className="flex-1 relative"
                 onTouchStart={onTouchStart}
                 onTouchMove={onTouchMove}
                 onTouchEnd={onTouchEnd}
             >
-                {/* Peek card — sits behind */}
+                {/* Card behind */}
                 {peekVisible && (
                     <div className="absolute inset-0 rounded-2xl overflow-hidden" style={peekCardStyle()}>
                         <div className="h-full overflow-y-auto pb-20">{children[flyingPeekIndex]}</div>
@@ -178,14 +187,14 @@ export const WorkoutCarousel: React.FC<WorkoutCarouselProps> = ({ children, curr
                     className="absolute inset-0 rounded-2xl overflow-hidden will-change-transform"
                     style={topCardStyle()}
                 >
-                    {/* Directional tint overlay while dragging */}
-                    {animState === 'dragging' && Math.abs(dragX) > 10 && (
+                    {/* Tint while dragging */}
+                    {animState === 'dragging' && Math.abs(dragX) > 8 && (
                         <div
-                            className="absolute inset-0 pointer-events-none z-20 rounded-2xl transition-opacity"
+                            className="absolute inset-0 pointer-events-none z-20 rounded-2xl"
                             style={{
                                 background: dragX < 0
-                                    ? 'linear-gradient(to left, rgba(239,68,68,0.12), transparent)'
-                                    : 'linear-gradient(to right, rgba(250,204,21,0.10), transparent)',
+                                    ? 'linear-gradient(to left, rgba(239,68,68,0.15), transparent)'
+                                    : 'linear-gradient(to right, rgba(250,204,21,0.12), transparent)',
                                 opacity: dragProgress,
                             }}
                         />
@@ -194,12 +203,12 @@ export const WorkoutCarousel: React.FC<WorkoutCarouselProps> = ({ children, curr
                 </div>
             </div>
 
-            {/* Navigation */}
+            {/* Nav */}
             <div className="absolute bottom-4 left-0 right-0 flex justify-center items-center gap-4 pointer-events-none">
                 <div className={`transition-opacity duration-200 ${currentIndex > 0 ? 'opacity-100' : 'opacity-0'}`}>
                     <button
                         className="bg-black/50 backdrop-blur-md p-2 rounded-full border border-white/10 pointer-events-auto active:scale-90 transition-transform"
-                        onClick={() => animState === 'idle' && flyOff('right')}
+                        onClick={() => animState === 'idle' && flyOff('right', 160)}
                     >
                         <ChevronLeft className="text-white" size={24} />
                     </button>
@@ -209,7 +218,7 @@ export const WorkoutCarousel: React.FC<WorkoutCarouselProps> = ({ children, curr
                     {children.map((_, idx) => (
                         <div
                             key={idx}
-                            className={`rounded-full transition-all duration-250 ${
+                            className={`rounded-full transition-all duration-200 ${
                                 idx === currentIndex ? 'w-6 h-2 bg-gym-primary' : 'w-2 h-2 bg-white/20'
                             }`}
                         />
@@ -219,7 +228,7 @@ export const WorkoutCarousel: React.FC<WorkoutCarouselProps> = ({ children, curr
                 <div className={`transition-opacity duration-200 ${currentIndex < children.length - 1 ? 'opacity-100' : 'opacity-0'}`}>
                     <button
                         className="bg-gym-primary/90 text-black p-2 rounded-full shadow-[0_0_12px_rgba(250,204,21,0.4)] pointer-events-auto active:scale-90 transition-transform"
-                        onClick={() => animState === 'idle' && flyOff('left')}
+                        onClick={() => animState === 'idle' && flyOff('left', 160)}
                     >
                         <ChevronRight size={24} strokeWidth={3} />
                     </button>
