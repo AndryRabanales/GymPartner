@@ -106,20 +106,22 @@ export const WorkoutCarousel: React.FC<WorkoutCarouselProps> = ({ children, curr
 
     /* ── Card style helpers ── */
     const width = containerRef.current?.offsetWidth || 375;
-    const rot   = (dragX / width) * 14; // max ±14deg tilt
+    const rot   = (dragX / width) * 18; // max ±18deg tilt while dragging
 
     const topCardStyle = (): React.CSSProperties => {
         switch (animState) {
             case 'dragging':
                 return { transform: `translateX(${dragX}px) rotate(${rot}deg)`, transition: 'none', zIndex: 10, opacity: 1 };
             case 'flying-left':
-                return { transform: 'translateX(-115%) rotate(-16deg)', opacity: 0, transition: 'transform 290ms cubic-bezier(0.6,0,0.9,0.5), opacity 290ms ease', zIndex: 10 };
+                // Throw: starts from drag position, accelerates off screen (easeIn). No deceleration.
+                return { transform: 'translateX(-160%) rotate(-22deg)', opacity: 0, transition: 'transform 220ms cubic-bezier(0.4,0,1,1), opacity 180ms ease-in', zIndex: 10 };
             case 'flying-right':
-                return { transform: 'translateX(115%) rotate(16deg)', opacity: 0, transition: 'transform 290ms cubic-bezier(0.6,0,0.9,0.5), opacity 290ms ease', zIndex: 10 };
+                return { transform: 'translateX(160%) rotate(22deg)', opacity: 0, transition: 'transform 220ms cubic-bezier(0.4,0,1,1), opacity 180ms ease-in', zIndex: 10 };
             case 'snapping':
-                return { transform: 'translateX(0) rotate(0deg)', transition: 'transform 380ms cubic-bezier(0.34,1.56,0.64,1)', zIndex: 10 };
+                // Smooth slide back — no bounce/spring
+                return { transform: 'translateX(0) rotate(0deg)', transition: 'transform 300ms cubic-bezier(0.25,0.46,0.45,0.94)', zIndex: 10 };
             default: // idle
-                return { transform: 'translateX(0) rotate(0deg)', transition: 'transform 260ms cubic-bezier(0.25,0.46,0.45,0.94)', zIndex: 10 };
+                return { transform: 'translateX(0) rotate(0deg)', transition: 'transform 220ms cubic-bezier(0.25,0.46,0.45,0.94)', zIndex: 10 };
         }
     };
 
