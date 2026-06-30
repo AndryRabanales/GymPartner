@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSwipeable } from 'react-swipeable';
 import { 
     X, 
     UserPlus, 
@@ -44,7 +43,13 @@ export const Radar = () => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [loading, setLoading] = useState(true);
     const [scanComplete, setScanComplete] = useState(false);
-    const [direction, setDirection] = useState<'left' | 'right' | null>(null);
+    const [dragX, setDragX] = useState(0);
+    const [dragState, setDragState] = useState<'idle' | 'dragging' | 'flying-left' | 'flying-right' | 'snapping'>('idle');
+    const touchStartXRef = useRef(0);
+    const touchStartYRef = useRef(0);
+    const isHorizontalDragRef = useRef<boolean | null>(null);
+    const dragXRef = useRef(0);
+    const recentPointsRef = useRef<{ x: number; t: number }[]>([]);
     const [isBoostModalOpen, setIsBoostModalOpen] = useState(false);
     const [isBoosting, setIsBoosting] = useState(false);
     const [isInviting, setIsInviting] = useState(false);
@@ -360,19 +365,108 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
         }
     };
 
-    const handleSkip = async () => {
-        const targetId = currentUser?.id;
-        setDirection('left');
-        
-        // Track "Ignore" in background
-        if (targetId) {
-            await supabase.rpc('increment_profile_skips', { u_id: targetId });
-        }
-
+    const flyOff = (direction: 'left' | 'right') => {
+        setDragState(direction === 'left' ? 'flying-left' : 'flying-right');
         setTimeout(() => {
             setCurrentIndex(prev => prev + 1);
-            setDirection(null);
-        }, 300);
+            setDragState('idle');
+            setDragX(0);
+            dragXRef.current = 0;
+        }, 220);
+    };
+
+    const cardStyle = (): React.CSSProperties => {
+        if (isPlayingTutorial) {
+            return { animation: 'tinderTutorialSwipe 3s ease-in-out infinite' };
+        }
+        const rot = dragX * 0.06;
+        switch (dragState) {
+            case 'dragging':
+                return { transform: `translateX(${dragX}px) rotate(${rot}deg)`, transition: 'none' };
+            case 'flying-left':
+                return { transform: 'translateX(-150%) rotate(-25deg)', opacity: 0, transition: 'transform 220ms linear, opacity 180ms linear' };
+            case 'flying-right':
+                return { transform: 'translateX(150%) rotate(25deg)', opacity: 0, transition: 'transform 220ms linear, opacity 180ms linear' };
+            case 'snapping':
+                return { transform: 'translateX(0) rotate(0deg)', transition: 'transform 200ms ease-out' };
+            default:
+                return {};
+        }
+    };
+
+    const onCardTouchStart = (e: React.TouchEvent) => {
+        if (dragState !== 'idle') return;
+        const x = e.touches[0].clientX;
+        touchStartXRef.current = x;
+        touchStartYRef.current = e.touches[0].clientY;
+        isHorizontalDragRef.current = null;
+        recentPointsRef.current = [{ x: 0, t: Date.now() }];
+        dragXRef.current = 0;
+        setDragState('dragging');
+    };
+
+    const onCardTouchMove = (e: React.TouchEvent) => {
+        if (dragState !== 'dragging') return;
+        const dx = e.touches[0].clientX - touchStartXRef.current;
+        const dy = e.touches[0].clientY - touchStartYRef.current;
+
+        if (isHorizontalDragRef.current === null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+            isHorizontalDragRef.current = Math.abs(dx) > Math.abs(dy);
+        }
+        if (!isHorizontalDragRef.current) return;
+        e.preventDefault();
+
+        const now = Date.now();
+        recentPointsRef.current.push({ x: dx, t: now });
+        if (recentPointsRef.current.length > 5) recentPointsRef.current.shift();
+
+        dragXRef.current = dx;
+        setDragX(dx);
+    };
+
+    const onCardTouchEnd = () => {
+        if (dragState !== 'dragging') { setDragState('idle'); return; }
+        if (!isHorizontalDragRef.current) {
+            setDragState('idle');
+            setDragX(0);
+            dragXRef.current = 0;
+            return;
+        }
+
+        const dx = dragXRef.current;
+        const points = recentPointsRef.current;
+        let velocity = 0;
+        if (points.length >= 2) {
+            const a = points[points.length - 2];
+            const b = points[points.length - 1];
+            velocity = (b.x - a.x) / Math.max(b.t - a.t, 1);
+        }
+
+        const DIST = 80;
+        const VEL  = 0.35;
+
+        if (dx < -DIST || (velocity < -VEL && dx < 0)) {
+            handleSkip();
+        } else if (dx > DIST || (velocity > VEL && dx > 0)) {
+            handleInvite();
+        } else {
+            if (Math.abs(dx) > 15) {
+                setDragState('snapping');
+                setTimeout(() => { setDragState('idle'); setDragX(0); dragXRef.current = 0; }, 200);
+            } else {
+                setDragState('idle');
+                setDragX(0);
+                dragXRef.current = 0;
+            }
+        }
+    };
+
+    const handleSkip = () => {
+        const targetId = currentUser?.id;
+        if (targetId) {
+            supabase.rpc('increment_profile_skips', { u_id: targetId });
+        }
+        flyOff('left');
     };
 
     const handleFollow = async () => {
@@ -435,19 +529,13 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
 
     const handleInvite = async () => {
         if (!currentUser || isInviting) return;
+        flyOff('right');
         setIsInviting(true);
         try {
             const success = await notificationService.sendInvitation(currentUser.id, currentUser.username);
             if (success) {
-                // Track "Match" success
                 await supabase.rpc('increment_profile_matches', { u_id: currentUser.id });
-                
                 toast.success("Desafío enviado!");
-                setDirection('right');
-                setTimeout(() => {
-                    setCurrentIndex(prev => prev + 1);
-                    setDirection(null);
-                }, 300);
             }
         } catch (error) {
             toast.error("Error al enviar invitación");
@@ -455,12 +543,6 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
             setIsInviting(false);
         }
     };
-
-    const swipeHandlers = useSwipeable({
-        onSwipedLeft: handleSkip,
-        onSwipedRight: handleInvite,
-        trackMouse: true
-    });
 
     return (
         <div className="flex-1 w-full flex flex-col relative overflow-hidden bg-transparent selection:bg-gym-primary selection:text-black">
@@ -513,18 +595,11 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
                 {/* ACTIVE CARD CONTAINER - FLOATING STYLE */}
                 {scanComplete && nearbyUsers.length > 0 && currentUser && !loading && (
                     <div
-                        {...swipeHandlers}
-                        className={`flex-1 flex flex-col relative w-[94%] mx-auto mb-1 transition-all duration-300 select-none overflow-hidden ${direction === 'left' ? 'animate-[slideOutLeft_0.3s_ease-out_forwards]' :
-                            direction === 'right' ? 'animate-[slideOutRight_0.3s_ease-out_forwards]' :
-                                'animate-in fade-in zoom-in-95 slide-in-from-bottom-12 duration-700'
-                            }`}
-                        style={{
-                            perspective: '1000px',
-                            transform: direction 
-                                ? `translateX(${direction === 'left' ? '-100%' : '100%'}) rotate(${direction === 'left' ? '-15deg' : '15deg'})` 
-                                : 'none',
-                            animation: isPlayingTutorial ? 'tinderTutorialSwipe 3s ease-in-out infinite' : undefined
-                        }}
+                        className="flex-1 flex flex-col relative w-[94%] mx-auto mb-1 select-none overflow-hidden"
+                        onTouchStart={onCardTouchStart}
+                        onTouchMove={onCardTouchMove}
+                        onTouchEnd={onCardTouchEnd}
+                        style={cardStyle()}
                     >
                         <style>{`
                             @keyframes tinderTutorialSwipe {
