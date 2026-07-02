@@ -43,15 +43,7 @@ workflows:
           keychain initialize
 
           # Revoke existing distribution certificates so we can create a fresh one
-          CERT_IDS=$(app-store-connect --json certificates list --type DISTRIBUTION 2>/dev/null | python3 -c "
-import sys, json
-try:
-    data = json.load(sys.stdin)
-    certs = data if isinstance(data, list) else data.get('data', [])
-    for c in certs:
-        print(c.get('id', ''))
-except: pass
-" 2>/dev/null || true)
+          CERT_IDS=$(app-store-connect --json certificates list --type DISTRIBUTION 2>/dev/null | python3 -c "import sys,json; data=json.load(sys.stdin); [print(c.get('id','')) for c in (data if isinstance(data,list) else data.get('data',[]))]" 2>/dev/null || true)
           for cid in $CERT_IDS; do
             [ -n "$cid" ] && app-store-connect certificates revoke "$cid" 2>/dev/null || true
           done
