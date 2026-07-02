@@ -49,19 +49,20 @@ interface OfflineFinishMeta {
 class WorkoutService {
     // Start a new empty session (The "Battle" begins)
     async startSession(
-        userId: string, 
+        userId: string,
         gymId?: string,
         isMultiplayer?: boolean,
         multiplayerMode?: string,
         partnerId?: string,
-        partnerSessionId?: string
+        partnerSessionId?: string,
+        startedAt?: string
     ): Promise<{ data?: WorkoutSession; error?: any }> {
         const { data, error } = await supabase
             .from('workout_sessions')
             .insert({
                 user_id: userId,
                 gym_id: gymId,
-                started_at: new Date().toISOString(),
+                started_at: startedAt || new Date().toISOString(),
                 is_multiplayer: isMultiplayer || false,
                 multiplayer_mode: multiplayerMode || null,
                 partner_id: partnerId || null,
@@ -1726,6 +1727,7 @@ class WorkoutService {
                             offlineMeta.multiplayer_mode,
                             offlineMeta.partner_id,
                             offlineMeta.partner_session_id,
+                            offlineMeta.started_at,
                         );
                         if (error || !realSession) {
                             stillPendingSessionIds.push(sessionId);
