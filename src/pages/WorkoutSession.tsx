@@ -450,6 +450,7 @@ export const WorkoutSession = () => {
     const [showCoopExitModal, setShowCoopExitModal] = useState(false);
     const [showForceExitModal, setShowForceExitModal] = useState(false);
     const [showCancelModal, setShowCancelModal] = useState(false);
+    const [showEmptySessionModal, setShowEmptySessionModal] = useState(false);
     // ── PAUSAR SESIÓN COMPLETA (spec §1.2, líneas 45/49) ─────────────────────
     // "...pausar la sesión completa... Pausar y reanudar conserva exactamente
     // los datos y el tiempo transcurrido — no se pierde ni se duplica
@@ -3613,7 +3614,8 @@ export const WorkoutSession = () => {
         if (exercise && exerciseHasFinalizedData(exercise, finalizedParticipantsRef.current)) return;
 
         deletedExerciseIdsRef.current.add(id);
-        setActiveExercises(prev => prev.filter(e => e.id !== id));
+        const remaining = activeExercises.filter(e => e.id !== id);
+        setActiveExercises(remaining);
         setIsRoutineModified(true);
         // Broadcast immediately (bypass the 500ms debounce) so partners remove it right away
         if (isMultiplayer && channelRef.current && user) {
@@ -3622,6 +3624,10 @@ export const WorkoutSession = () => {
                 event: 'remove_exercise',
                 payload: { exerciseId: id, sender: user.id }
             }).catch(e => console.error('Error broadcasting exercise removal:', e));
+        }
+        // When the last exercise is removed, ask the user what they want to do
+        if (!isMultiplayer && remaining.length === 0) {
+            setShowEmptySessionModal(true);
         }
     };
 
@@ -6334,6 +6340,35 @@ export const WorkoutSession = () => {
 
 
             {/* --- MODALS --- */}
+
+            {/* Empty Session Modal — shown when the last exercise is deleted */}
+            {showEmptySessionModal && (
+                <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/70 backdrop-blur-sm p-4 pb-8">
+                    <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-sm shadow-2xl p-6 flex flex-col gap-4">
+                        <p className="text-white font-black text-base text-center leading-snug">
+                            No tienes ejercicios en tu sesión.
+                        </p>
+                        <p className="text-neutral-400 text-sm text-center">
+                            ¿Quieres cancelar la sesión completa o agregar un nuevo ejercicio?
+                        </p>
+                        <button
+                            onClick={() => {
+                                setShowEmptySessionModal(false);
+                                handleCancelSession();
+                            }}
+                            className="w-full py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 font-black text-sm uppercase tracking-wide hover:bg-red-500/20 transition-colors"
+                        >
+                            Cancelar sesión completa
+                        </button>
+                        <button
+                            onClick={() => setShowEmptySessionModal(false)}
+                            className="w-full py-3 rounded-xl bg-gym-primary/10 border border-gym-primary/30 text-gym-primary font-black text-sm uppercase tracking-wide hover:bg-gym-primary/20 transition-colors"
+                        >
+                            Agregar ejercicio
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Force Exit Modal */}
             <ForceExitModal
