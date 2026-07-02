@@ -2519,18 +2519,19 @@ export const WorkoutSession = () => {
 
         const MAX_SESSION_MS = 5 * 60 * 60 * 1000; // 5 hours hard limit
 
+        // Anchor performance.now() (monotonic hardware clock) to the wall-clock
+        // elapsed at effect start. All subsequent deltas use perf.now() so manual
+        // system-clock changes never affect the displayed timer.
+        const wallElapsedAtStart = Math.max(0, Date.now() - new Date(startTime).getTime());
+        const perfAnchor = performance.now() - wallElapsedAtStart;
+
         const tick = () => {
-            const now = new Date();
-            const diff = Math.max(0, now.getTime() - new Date(startTime).getTime());
+            const diff = Math.max(0, performance.now() - perfAnchor);
 
             // ⏱️ AUTO-KILL: Force-end sessions that exceed 5 hours.
-            // Uses the RAW elapsed time (never the paused-adjusted display) —
-            // pausing the visible clock must never let a session live past the
-            // hard limit and become a zombie.
             if (diff >= MAX_SESSION_MS) {
                 setIsFinished(true);
                 isLeavingPageRef.current = true;
-                // Clean up all local state silently
                 if (sessionId) {
                     localStorage.removeItem(`workout_draft_${sessionId}`);
                     workoutService.deleteSession(sessionId).catch(() => {});
@@ -2542,16 +2543,11 @@ export const WorkoutSession = () => {
                 return;
             }
 
-            // 🕐 DISPLAY: subtract all paused time (completed pauses + the one
-            // currently in progress, if any) so the shown clock freezes the
-            // instant the user pauses and resumes from EXACTLY that value with
-            // zero loss/duplication — spec §1.2 línea 49: "Pausar y reanudar
-            // conserva exactamente los datos y el tiempo transcurrido". While
-            // paused, `diff` and `pausedMs` grow at the same rate, so
-            // `displayDiff` stays perfectly constant — no extra branching needed.
+            // 🕐 DISPLAY: subtract paused time. pausedAtRef also uses perf.now()
+            // so pause durations are equally immune to clock changes.
             let pausedMs = accumulatedPauseMsRef.current;
-            if (pausedAtRef.current) {
-                pausedMs += (now.getTime() - pausedAtRef.current);
+            if (pausedAtRef.current !== null) {
+                pausedMs += (performance.now() - pausedAtRef.current);
             }
             const displayDiff = Math.max(0, diff - pausedMs);
 
@@ -2567,7 +2563,7 @@ export const WorkoutSession = () => {
         };
 
         tick(); // Immediate update
-        const interval = setInterval(tick, 200); // High-frequency tick (200ms) to ensure perfect cross-device synchronization
+        const interval = setInterval(tick, 200);
         return () => clearInterval(interval);
     }, [startTime, isFinished, sessionId]);
 
@@ -4685,7 +4681,7 @@ export const WorkoutSession = () => {
     // tiempo pausado del reloj que ve el usuario (ver Timer Effect arriba).
     const handlePauseSession = () => {
         if (isSessionPaused || isFinished) return;
-        pausedAtRef.current = Date.now();
+        pausedAtRef.current = performance.now();
         setIsSessionPaused(true);
         setShowExitMenu(false);
         import('react-hot-toast').then(({ default: t }) =>
@@ -4700,7 +4696,7 @@ export const WorkoutSession = () => {
     const handleResumeSession = () => {
         if (!isSessionPaused) return;
         if (pausedAtRef.current) {
-            accumulatedPauseMsRef.current += (Date.now() - pausedAtRef.current);
+            accumulatedPauseMsRef.current += (performance.now() - pausedAtRef.current);
             pausedAtRef.current = null;
         }
         setIsSessionPaused(false);
