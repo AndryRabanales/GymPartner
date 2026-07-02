@@ -545,7 +545,7 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
                 toast.success("Desafío enviado!");
             }
         } catch (error) {
-            toast.error("Error al enviar invitación");
+            toast.error(!navigator.onLine ? "Sin conexión. Intenta de nuevo cuando tengas internet." : "Error al enviar invitación. Intenta de nuevo.");
         } finally {
             setIsInviting(false);
         }

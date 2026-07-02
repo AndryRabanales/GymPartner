@@ -793,6 +793,7 @@ export const NotificationsPage = () => {
         const senderId = notification.data?.sender_id;
         if (!senderId) return;
 
+        // Optimistic update
         setNotifications(prev => prev.map(n =>
             n.id === notification.id
                 ? { ...n, data: { ...n.data, status: 'accepted' }, is_read: true }
@@ -804,9 +805,23 @@ export const NotificationsPage = () => {
             const chatId = await notificationService.acceptInvitation(senderId);
             if (chatId) {
                 navigate(`/chat/${chatId}`);
+            } else {
+                // Revert optimistic update — something failed
+                setNotifications(prev => prev.map(n =>
+                    n.id === notification.id
+                        ? { ...n, data: { ...n.data, status: undefined } }
+                        : n
+                ));
+                toast.error(!navigator.onLine ? "Sin conexión. Intenta de nuevo cuando tengas internet." : "No se pudo aceptar. Intenta de nuevo.");
             }
         } catch (error) {
             console.error("Error accepting invite:", error);
+            setNotifications(prev => prev.map(n =>
+                n.id === notification.id
+                    ? { ...n, data: { ...n.data, status: undefined } }
+                    : n
+            ));
+            toast.error(!navigator.onLine ? "Sin conexión. Intenta de nuevo cuando tengas internet." : "No se pudo aceptar. Intenta de nuevo.");
         }
     };
 
@@ -821,6 +836,12 @@ export const NotificationsPage = () => {
             await notificationService.updateInvitationStatus(notification, 'rejected');
         } catch (error) {
             console.error("Error rejecting invite:", error);
+            setNotifications(prev => prev.map(n =>
+                n.id === notification.id
+                    ? { ...n, data: { ...n.data, status: undefined } }
+                    : n
+            ));
+            toast.error(!navigator.onLine ? "Sin conexión. Intenta de nuevo cuando tengas internet." : "No se pudo rechazar. Intenta de nuevo.");
         }
     };
 

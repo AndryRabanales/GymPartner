@@ -6,6 +6,7 @@ import { chatService } from '../services/ChatService';
 import type { ChatPreview } from '../services/ChatService';
 import { FadeInImage } from '../components/ui/FadeInImage';
 import { notificationService } from '../services/NotificationService';
+import toast from 'react-hot-toast';
 export const InboxPage = () => {
     const [chats, setChats] = useState<ChatPreview[]>([]);
     const [invitations, setInvitations] = useState<any[]>([]);
@@ -199,10 +200,13 @@ export const InboxPage = () => {
             const chatId = await notificationService.acceptInvitation(senderId);
             if (chatId) {
                 navigate(`/chat/${chatId}`);
+            } else {
+                toast.error(!navigator.onLine ? "Sin conexión. Intenta de nuevo cuando tengas internet." : "No se pudo aceptar. Intenta de nuevo.");
             }
             loadData();
         } catch (error) {
             console.error("Error accepting invite:", error);
+            toast.error(!navigator.onLine ? "Sin conexión. Intenta de nuevo cuando tengas internet." : "No se pudo aceptar. Intenta de nuevo.");
         } finally {
             setProcessingId(null);
         }
@@ -216,6 +220,7 @@ export const InboxPage = () => {
             loadData();
         } catch (error) {
             console.error("Error rejecting invite:", error);
+            toast.error(!navigator.onLine ? "Sin conexión. Intenta de nuevo cuando tengas internet." : "No se pudo rechazar. Intenta de nuevo.");
         } finally {
             setProcessingId(null);
         }
