@@ -54,7 +54,7 @@ workflows:
 
           for cid in $CERT_IDS; do
             echo "Revoking: $cid"
-            app-store-connect certificates revoke "$cid" || true
+            app-store-connect certificates delete "$cid" || true
           done
 
           # Use a persistent private key stored as env variable
