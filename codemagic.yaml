@@ -39,11 +39,14 @@ workflows:
       - name: Set up keychain and signing
         script: |
           keychain initialize
+          openssl genrsa -out /tmp/cert_key.pem 2048
           app-store-connect fetch-signing-files \
             "$BUNDLE_ID" \
             --type IOS_APP_STORE \
-            --create
-          keychain add-certificates
+            --create \
+            --certificate-key @file:/tmp/cert_key.pem \
+            --p12-password ""
+          keychain add-certificates --p12-password ""
 
       - name: Build iOS IPA
         script: |
