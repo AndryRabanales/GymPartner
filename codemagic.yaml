@@ -48,8 +48,8 @@ workflows:
           echo "$RAW"
           echo "=== END RAW CERT LIST ==="
 
-          # Extract IDs from text output (first column, skip header lines)
-          CERT_IDS=$(echo "$RAW" | awk 'NF>0 && $1 ~ /^[A-Z0-9]{6,}$/ {print $1}' | grep -v "^Found\|^-\|^ID" || true)
+          # Extract IDs from lines like "Id: 97A9S824HW"
+          CERT_IDS=$(echo "$RAW" | awk '/^Id: /{print $2}' || true)
           echo "=== IDs to revoke: [$CERT_IDS] ==="
 
           for cid in $CERT_IDS; do
