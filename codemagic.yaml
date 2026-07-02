@@ -81,20 +81,43 @@ workflows:
 
           xcode-project use-profiles
 
-          cat > /tmp/export_options.plist << 'EOF'
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-              <key>method</key>
-              <string>app-store</string>
-              <key>teamID</key>
-              <string>CDZRQL6QF6</string>
-              <key>uploadSymbols</key>
-              <true/>
-          </dict>
-          </plist>
-          EOF
+          # Get the name of the installed provisioning profile for com.ginx.app
+          PROFILE_NAME=$(ls ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision 2>/dev/null | while read f; do
+            security cms -D -i "$f" 2>/dev/null | python3 -c "
+import sys, plistlib
+try:
+    p = plistlib.loads(sys.stdin.buffer.read())
+    app_id = p.get('Entitlements', {}).get('application-identifier', '')
+    if 'com.ginx.app' in app_id:
+        print(p.get('Name', ''))
+except: pass
+" 2>/dev/null
+          done | head -1)
+          echo "Provisioning profile name: [$PROFILE_NAME]"
+
+          cat > /tmp/export_options.plist << PLISTEOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>method</key>
+    <string>app-store</string>
+    <key>teamID</key>
+    <string>CDZRQL6QF6</string>
+    <key>signingStyle</key>
+    <string>manual</string>
+    <key>signingCertificate</key>
+    <string>Apple Distribution</string>
+    <key>provisioningProfiles</key>
+    <dict>
+        <key>com.ginx.app</key>
+        <string>${PROFILE_NAME}</string>
+    </dict>
+    <key>uploadSymbols</key>
+    <true/>
+</dict>
+</plist>
+PLISTEOF
 
           xcode-project build-ipa \
             --workspace "$XCODE_WORKSPACE" \
