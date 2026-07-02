@@ -75,7 +75,7 @@ export const GymMap = () => {
     }, [placesLib, map]);
 
     // Geolocation Effect
-    const { location: userLocation, loading: gpsLoading } = useGeolocation();
+    const { location: userLocation, loading: gpsLoading, error: gpsError } = useGeolocation();
     const [hasCenteredOnce, setHasCenteredOnce] = useState(false);
 
     useEffect(() => {
@@ -475,6 +475,29 @@ export const GymMap = () => {
                     <br />
                     Configura <code>VITE_GOOGLE_MAPS_API_KEY</code> en tu archivo <code>.env</code>.
                 </p>
+            </div>
+        );
+    }
+
+    if (gpsError && !userLocation) {
+        return (
+            <div className="w-full h-[calc(100vh-100px)] flex flex-col items-center justify-center bg-neutral-950 text-white p-8 gap-6">
+                <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-center">
+                    <MapPin size={28} className="text-red-400" />
+                </div>
+                <div className="text-center flex flex-col gap-2">
+                    <h2 className="text-lg font-black uppercase italic tracking-tight">Ubicación desactivada</h2>
+                    <p className="text-neutral-400 text-sm leading-relaxed max-w-xs">
+                        Para ver tu gimnasio y los que están cerca, GINX necesita acceso a tu ubicación.
+                    </p>
+                </div>
+                <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 w-full max-w-xs flex flex-col gap-2 text-sm text-neutral-300">
+                    <p className="font-black text-white text-xs uppercase tracking-wide mb-1">Cómo activarlo:</p>
+                    <p>1. Ve a <span className="text-gym-primary font-bold">Ajustes</span> de tu teléfono</p>
+                    <p>2. Busca <span className="text-gym-primary font-bold">Aplicaciones → GINX</span></p>
+                    <p>3. Activa el permiso de <span className="text-gym-primary font-bold">Ubicación</span></p>
+                    <p>4. Regresa a la app</p>
+                </div>
             </div>
         );
     }
