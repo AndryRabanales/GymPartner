@@ -3639,9 +3639,19 @@ export const WorkoutSession = () => {
         rpe: 10,
     };
     const clampMetric = (field: string, val: number) => {
-        if (isNaN(val)) return 0;
+        if (!isFinite(val) || isNaN(val)) return 0;
         const max = METRIC_MAX[field] ?? 9999;
         return Math.min(Math.max(0, val), max);
+    };
+
+    // Prevents pasting scientific notation, negative numbers, or non-numeric text
+    // into metric inputs. Only plain positive integers/decimals are allowed.
+    const handleMetricPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+        const text = e.clipboardData.getData('text').trim();
+        // Allow only plain positive numbers: digits with optional single decimal point
+        if (!/^\d+(\.\d+)?$/.test(text)) {
+            e.preventDefault();
+        }
     };
 
     const updateSet = (exerciseIndex: number, setIndex: number, field: string, value: string | number, isCustom: boolean = false) => {
@@ -5986,6 +5996,7 @@ export const WorkoutSession = () => {
                                                                                             onChange={(e) => updatePlayerSet(mapIndex, setIndex, p.id, 'weight', toInternalWeight(e.target.value, exercise.weightUnit || 'kg'))}
                                                                                             onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
                                                                                             onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
+                                                                                            onPaste={handleMetricPaste}
                                                                                             className={`w-full bg-neutral-800 text-center font-black text-[16px] rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${rowCompleted ? 'text-neutral-500 bg-neutral-900/40' : 'text-white'} ${rowLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                                             placeholder="0"
                                                                                         />
@@ -6012,6 +6023,7 @@ export const WorkoutSession = () => {
                                                                                             onChange={(e) => updatePlayerSet(mapIndex, setIndex, p.id, 'reps', e.target.value)}
                                                                                             onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
                                                                                             onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
+                                                                                            onPaste={handleMetricPaste}
                                                                                             className={`w-full bg-neutral-800 text-center font-black text-[16px] rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${rowCompleted ? 'text-neutral-500 bg-neutral-900/40' : 'text-white'} ${rowLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                                             placeholder="0"
                                                                                         />
@@ -6038,6 +6050,7 @@ export const WorkoutSession = () => {
                                                                                             onChange={(e) => updatePlayerSet(mapIndex, setIndex, p.id, 'time', e.target.value)}
                                                                                             onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
                                                                                             onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
+                                                                                            onPaste={handleMetricPaste}
                                                                                             className="w-full bg-neutral-800 text-center font-black text-[16px] rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none"
                                                                                             placeholder="0s"
                                                                                         />
@@ -6064,6 +6077,7 @@ export const WorkoutSession = () => {
                                                                                             onChange={(e) => updatePlayerSet(mapIndex, setIndex, p.id, 'distance', e.target.value)}
                                                                                             onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
                                                                                             onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
+                                                                                            onPaste={handleMetricPaste}
                                                                                             className="w-full bg-neutral-800 text-center font-black text-[16px] rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none"
                                                                                             placeholder="0m"
                                                                                         />
@@ -6080,6 +6094,7 @@ export const WorkoutSession = () => {
                                                                                         <input
                                                                                             type="number"
                                                                                             inputMode="numeric"
+                                                                                            min={0}
                                                                                             max={10}
                                                                                             disabled={inputDisabled}
                                                                                             data-player-id={p.id}
@@ -6089,6 +6104,7 @@ export const WorkoutSession = () => {
                                                                                             onChange={(e) => updatePlayerSet(mapIndex, setIndex, p.id, 'rpe', e.target.value)}
                                                                                             onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
                                                                                             onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
+                                                                                            onPaste={handleMetricPaste}
                                                                                             className="w-full bg-neutral-800 text-center font-black text-[16px] rounded-lg py-2 text-white placeholder-white/20 focus:ring-2 focus:ring-gym-primary outline-none"
                                                                                             placeholder="-"
                                                                                         />
@@ -6114,6 +6130,7 @@ export const WorkoutSession = () => {
                                                                                                 onChange={(e) => updateSet(mapIndex, setIndex, key, e.target.value, true)} // isCustom=true
                                                                                                 onBlur={(e) => handlePlayerInputBlur(mapIndex, setIndex, p.id, e)}
                                                                                                 onKeyDown={(e) => handleInputKeyDown(mapIndex, setIndex, e)}
+                                                                                                onPaste={handleMetricPaste}
                                                                                                 className="w-full bg-neutral-800 text-center font-black text-[16px] rounded-lg py-2 text-white focus:ring-2 focus:ring-gym-primary outline-none"
                                                                                             />
                                                                                         )}
