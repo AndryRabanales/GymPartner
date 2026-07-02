@@ -3631,18 +3631,32 @@ export const WorkoutSession = () => {
         }
     };
 
+    const METRIC_MAX: Record<string, number> = {
+        weight: 500,   // kg internal — world-record level
+        reps: 200,
+        time: 7200,    // seconds (2 h)
+        distance: 100000, // meters (100 km)
+        rpe: 10,
+    };
+    const clampMetric = (field: string, val: number) => {
+        if (isNaN(val)) return 0;
+        const max = METRIC_MAX[field] ?? 9999;
+        return Math.min(Math.max(0, val), max);
+    };
+
     const updateSet = (exerciseIndex: number, setIndex: number, field: string, value: string | number, isCustom: boolean = false) => {
         const updated = [...activeExercises];
-        const val = typeof value === 'string' ? parseFloat(value) : value;
+        const raw = typeof value === 'string' ? parseFloat(value) : value;
+        const val = isCustom ? (isNaN(raw) ? 0 : Math.min(raw, 9999)) : clampMetric(field, raw);
 
         if (isCustom) {
             if (!updated[exerciseIndex].sets[setIndex].custom) {
                 updated[exerciseIndex].sets[setIndex].custom = {};
             }
-            updated[exerciseIndex].sets[setIndex].custom![field] = isNaN(val) ? 0 : val;
+            updated[exerciseIndex].sets[setIndex].custom![field] = val;
         } else {
             // @ts-expect-error - ignore typing
-            updated[exerciseIndex].sets[setIndex][field] = isNaN(val) ? 0 : val;
+            updated[exerciseIndex].sets[setIndex][field] = val;
         }
 
         // CRDT: Update modification timestamp
@@ -4047,11 +4061,11 @@ export const WorkoutSession = () => {
 
             const numVal = typeof value === 'string' ? parseFloat(value) : value;
 
-            if (fieldKey === 'weight') set.playerWeights[targetUserId] = isNaN(numVal) ? 0 : numVal;
-            if (fieldKey === 'reps') set.playerReps[targetUserId] = isNaN(numVal) ? 0 : numVal;
-            if (fieldKey === 'time') set.playerTimes[targetUserId] = isNaN(numVal) ? 0 : numVal;
-            if (fieldKey === 'distance') set.playerDistances[targetUserId] = isNaN(numVal) ? 0 : numVal;
-            if (fieldKey === 'rpe') set.playerRpes[targetUserId] = isNaN(numVal) ? 0 : numVal;
+            if (fieldKey === 'weight') set.playerWeights[targetUserId] = clampMetric('weight', numVal);
+            if (fieldKey === 'reps') set.playerReps[targetUserId] = clampMetric('reps', numVal);
+            if (fieldKey === 'time') set.playerTimes[targetUserId] = clampMetric('time', numVal);
+            if (fieldKey === 'distance') set.playerDistances[targetUserId] = clampMetric('distance', numVal);
+            if (fieldKey === 'rpe') set.playerRpes[targetUserId] = clampMetric('rpe', numVal);
             if (fieldKey === 'completed') set.playerCompleted[targetUserId] = Boolean(value);
             if (fieldKey === 'locked') set.playerLocked[targetUserId] = Boolean(value);
 
@@ -5988,6 +6002,8 @@ export const WorkoutSession = () => {
                                                                                         <input
                                                                                             type="number"
                                                                                             inputMode="numeric"
+                                                                                            min={0}
+                                                                                            max={200}
                                                                                             disabled={inputDisabled}
                                                                                             data-player-id={p.id}
                                                                                             data-set-index={setIndex}
@@ -6012,6 +6028,8 @@ export const WorkoutSession = () => {
                                                                                         <input
                                                                                             type="number"
                                                                                             inputMode="numeric"
+                                                                                            min={0}
+                                                                                            max={7200}
                                                                                             disabled={inputDisabled}
                                                                                             data-player-id={p.id}
                                                                                             data-set-index={setIndex}
@@ -6036,6 +6054,8 @@ export const WorkoutSession = () => {
                                                                                         <input
                                                                                             type="number"
                                                                                             inputMode="decimal"
+                                                                                            min={0}
+                                                                                            max={100000}
                                                                                             disabled={inputDisabled}
                                                                                             data-player-id={p.id}
                                                                                             data-set-index={setIndex}
