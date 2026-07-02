@@ -8,9 +8,6 @@ workflows:
       app_store_connect: Codemagic
 
     environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.ginx.app
       vars:
         XCODE_WORKSPACE: ios/App/App.xcworkspace
         XCODE_SCHEME: App
@@ -37,7 +34,7 @@ workflows:
           xcrun agvtool new-version -all $BUILD_NUMBER
         working_directory: ios/App
 
-      - name: Fetch signing certificate and profile
+      - name: Set up keychain and signing
         script: |
           keychain initialize
           app-store-connect fetch-signing-files \
