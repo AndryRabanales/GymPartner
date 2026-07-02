@@ -45,5 +45,9 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>GINX usa tu ubicación para encontrar gimnasios cercanos y validar tu entrenamiento.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>GINX usa tu ubicación para encontrar gimnasios cercanos y validar tu entrenamiento.</string>
 </dict>
 </plist>
