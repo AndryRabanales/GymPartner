@@ -39,13 +39,30 @@ workflows:
       - name: Set up keychain and signing
         script: |
           keychain initialize
-          openssl genrsa -out /tmp/cert_key.pem 2048
+
+          # Revoke existing distribution certificates so we can create a fresh one
+          app-store-connect certificates list \
+            --type DISTRIBUTION \
+            --json 2>/dev/null \
+            | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+for c in (data if isinstance(data, list) else data.get('data', [])):
+    print(c.get('id') or c.get('attributes', {}).get('serialNumber', ''))
+" | while IFS= read -r cid; do
+            [ -n "$cid" ] && app-store-connect certificates revoke "$cid" || true
+          done || true
+
+          # Use a persistent private key stored as env variable
+          echo "$CERT_PRIVATE_KEY" | base64 --decode > /tmp/cert_key.pem
+
           app-store-connect fetch-signing-files \
             "$BUNDLE_ID" \
             --type IOS_APP_STORE \
             --create \
             --certificate-key @file:/tmp/cert_key.pem \
             --p12-password ""
+
           keychain add-certificates
 
       - name: Build iOS IPA
