@@ -14,6 +14,7 @@ workflows:
       vars:
         XCODE_WORKSPACE: ios/App/App.xcworkspace
         XCODE_SCHEME: App
+        BUNDLE_ID: com.ginx.app
       node: 20.17.0
 
     scripts:
@@ -33,9 +34,17 @@ workflows:
 
       - name: Set build number
         script: |
-          BUILD_NUMBER=$(($BUILD_NUMBER))
           xcrun agvtool new-version -all $BUILD_NUMBER
         working_directory: ios/App
+
+      - name: Fetch signing certificate and profile
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files \
+            "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+          keychain add-certificates
 
       - name: Build iOS IPA
         script: |
