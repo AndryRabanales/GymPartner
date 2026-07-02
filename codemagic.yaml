@@ -72,20 +72,7 @@ workflows:
 
       - name: Patch Info.plist
         script: |
-          INFO_PLIST="ios/App/App/Info.plist"
-          python3 -c "
-import plistlib
-with open('$INFO_PLIST', 'rb') as f:
-    p = plistlib.load(f)
-scheme = 'com.ginx.app'
-types = p.get('CFBundleURLTypes', [])
-if not any(scheme in t.get('CFBundleURLSchemes', []) for t in types):
-    types.append({'CFBundleURLSchemes': [scheme], 'CFBundleURLName': scheme})
-    p['CFBundleURLTypes'] = types
-with open('$INFO_PLIST', 'wb') as f:
-    plistlib.dump(p, f)
-print('URL scheme registered:', scheme)
-"
+          python3 -c "import plistlib; p=plistlib.load(open('ios/App/App/Info.plist','rb')); s='com.ginx.app'; ts=p.get('CFBundleURLTypes',[]); ts.append({'CFBundleURLSchemes':[s],'CFBundleURLName':s}) if not any(s in t.get('CFBundleURLSchemes',[]) for t in ts) else None; p['CFBundleURLTypes']=ts; plistlib.dump(p,open('ios/App/App/Info.plist','wb')); print('URL scheme OK')"
 
       - name: Build iOS IPA
         script: |
