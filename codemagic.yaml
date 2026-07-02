@@ -21,14 +21,13 @@ workflows:
       - name: Build web assets
         script: npm run build
 
-      - name: Capacitor sync iOS
-        script: |
-          npx cap sync ios
-          # Capacitor 8 requires iOS 16.0 minimum
-          sed -i '' "s/platform :ios, '14.0'/platform :ios, '16.0'/" ios/App/Podfile
+      - name: Capacitor copy iOS
+        script: npx cap copy ios
 
       - name: Install CocoaPods
         script: |
+          # Capacitor 8 requires iOS 16.0 minimum
+          sed -i '' "s/platform :ios, '14.0'/platform :ios, '16.0'/" ios/App/Podfile
           cd ios/App
           pod install
 
