@@ -46,7 +46,7 @@ workflows:
             --create \
             --certificate-key @file:/tmp/cert_key.pem \
             --p12-password ""
-          keychain add-certificates --p12-password ""
+          keychain add-certificates
 
       - name: Build iOS IPA
         script: |
