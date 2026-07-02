@@ -1652,10 +1652,19 @@ class WorkoutService {
     }
 
     // Store finalization data for a session that could not be finalized online.
-    // Picked up by flushPendingSets after sets are saved successfully.
+    // Picked up by flushPendingSets on reconnect.
     queueOfflineFinish(sessionId: string, meta: OfflineFinishMeta): void {
         try {
             localStorage.setItem(`ginx_offline_finish_${sessionId}`, JSON.stringify(meta));
+            // Register in the sync index so flushPendingSets processes this session
+            // even when no sets failed (e.g. session started online, all sets saved,
+            // but internet dropped exactly at the Finalizar tap).
+            const indexKey = 'ginx_pending_sync_sessions';
+            const idx: string[] = JSON.parse(localStorage.getItem(indexKey) || '[]');
+            if (!idx.includes(sessionId)) {
+                idx.push(sessionId);
+                localStorage.setItem(indexKey, JSON.stringify(idx));
+            }
         } catch (e) {
             console.error('Error queuing offline finish:', e);
         }
