@@ -82,17 +82,7 @@ workflows:
           xcode-project use-profiles
 
           # Get the name of the installed provisioning profile for com.ginx.app
-          PROFILE_NAME=$(ls ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision 2>/dev/null | while read f; do
-            security cms -D -i "$f" 2>/dev/null | python3 -c "
-import sys, plistlib
-try:
-    p = plistlib.loads(sys.stdin.buffer.read())
-    app_id = p.get('Entitlements', {}).get('application-identifier', '')
-    if 'com.ginx.app' in app_id:
-        print(p.get('Name', ''))
-except: pass
-" 2>/dev/null
-          done | head -1)
+          PROFILE_NAME=$(ls ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision 2>/dev/null | while read f; do security cms -D -i "$f" 2>/dev/null | python3 -c "import sys,plistlib; p=plistlib.loads(sys.stdin.buffer.read()); app_id=p.get('Entitlements',{}).get('application-identifier',''); print(p.get('Name','')) if 'com.ginx.app' in app_id else None" 2>/dev/null; done | grep -v '^None$' | head -1)
           echo "Provisioning profile name: [$PROFILE_NAME]"
 
           cat > /tmp/export_options.plist << PLISTEOF
