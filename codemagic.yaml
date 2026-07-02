@@ -70,6 +70,23 @@ workflows:
 
           keychain add-certificates
 
+      - name: Patch Info.plist
+        script: |
+          INFO_PLIST="ios/App/App/Info.plist"
+          python3 -c "
+import plistlib
+with open('$INFO_PLIST', 'rb') as f:
+    p = plistlib.load(f)
+scheme = 'com.ginx.app'
+types = p.get('CFBundleURLTypes', [])
+if not any(scheme in t.get('CFBundleURLSchemes', []) for t in types):
+    types.append({'CFBundleURLSchemes': [scheme], 'CFBundleURLName': scheme})
+    p['CFBundleURLTypes'] = types
+with open('$INFO_PLIST', 'wb') as f:
+    plistlib.dump(p, f)
+print('URL scheme registered:', scheme)
+"
+
       - name: Build iOS IPA
         script: |
           # Patch Xcode project with correct Team ID, bundle ID and deployment target
