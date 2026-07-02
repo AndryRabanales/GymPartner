@@ -42,10 +42,19 @@ workflows:
         script: |
           keychain initialize
 
-          # Revoke existing distribution certificates so we can create a fresh one
-          CERT_IDS=$(app-store-connect --json certificates list --type DISTRIBUTION 2>/dev/null | python3 -c "import sys,json; data=json.load(sys.stdin); [print(c.get('id','')) for c in (data if isinstance(data,list) else data.get('data',[]))]" 2>/dev/null || true)
+          # DEBUG: show raw certificate list output so we know the format
+          echo "=== RAW CERT LIST ==="
+          RAW=$(app-store-connect certificates list --type DISTRIBUTION 2>&1 || true)
+          echo "$RAW"
+          echo "=== END RAW CERT LIST ==="
+
+          # Extract IDs from text output (first column, skip header lines)
+          CERT_IDS=$(echo "$RAW" | awk 'NF>0 && $1 ~ /^[A-Z0-9]{6,}$/ {print $1}' | grep -v "^Found\|^-\|^ID" || true)
+          echo "=== IDs to revoke: [$CERT_IDS] ==="
+
           for cid in $CERT_IDS; do
-            [ -n "$cid" ] && app-store-connect certificates revoke "$cid" 2>/dev/null || true
+            echo "Revoking: $cid"
+            app-store-connect certificates revoke "$cid" || true
           done
 
           # Use a persistent private key stored as env variable
