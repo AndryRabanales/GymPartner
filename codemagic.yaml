@@ -43,17 +43,18 @@ workflows:
           keychain initialize
 
           # Revoke existing distribution certificates so we can create a fresh one
-          app-store-connect certificates list \
-            --type DISTRIBUTION \
-            --json 2>/dev/null \
-            | python3 -c "
+          CERT_IDS=$(app-store-connect --json certificates list --type DISTRIBUTION 2>/dev/null | python3 -c "
 import sys, json
-data = json.load(sys.stdin)
-for c in (data if isinstance(data, list) else data.get('data', [])):
-    print(c.get('id') or c.get('attributes', {}).get('serialNumber', ''))
-" | while IFS= read -r cid; do
-            [ -n "$cid" ] && app-store-connect certificates revoke "$cid" || true
-          done || true
+try:
+    data = json.load(sys.stdin)
+    certs = data if isinstance(data, list) else data.get('data', [])
+    for c in certs:
+        print(c.get('id', ''))
+except: pass
+" 2>/dev/null || true)
+          for cid in $CERT_IDS; do
+            [ -n "$cid" ] && app-store-connect certificates revoke "$cid" 2>/dev/null || true
+          done
 
           # Use a persistent private key stored as env variable
           echo "$CERT_PRIVATE_KEY" | base64 --decode > /tmp/cert_key.pem
