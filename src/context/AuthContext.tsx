@@ -3,6 +3,8 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 import { userService } from '../services/UserService';
 import { pushService } from '../services/PushService';
+import { profileCache } from '../lib/offlineCache';
+import { workoutService } from '../services/WorkoutService';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
 import { App } from '@capacitor/app';
@@ -268,6 +270,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     pushService.initialize().catch(() => { /* silent */ });
                 }
             }
+
+            // Seed offline cache whenever we have a user AND internet (any auth event)
+            if (currentUser && navigator.onLine) {
+                warmupOfflineCache(currentUser.id).catch(() => {});
+            }
         });
 
         // Safety net: if onAuthStateChange never fires (e.g. Supabase SDK issue),
@@ -333,11 +340,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
     };
 
+    // ─── Helper: pre-seed offline cache whenever internet is available ───────
+    const warmupOfflineCache = async (userId: string) => {
+        if (!navigator.onLine || !supabase) return;
+        try {
+            const { data: profileData } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', userId)
+                .maybeSingle();
+            if (profileData) profileCache.save(profileData).catch(() => {});
+            // getUserRoutines saves to routineCache internally when online
+            workoutService.getUserRoutines(userId, null).catch(() => {});
+        } catch {
+            // Best-effort warm-up — never block the user
+        }
+    };
+
     // ─── Helper: ensure profile row exists in public.profiles ───
     // For NEW users: pauses the app and shows AgeGateScreen first.
     // For EXISTING users: skips profile creation, processes referrals only.
     const ensureProfileExists = async (currentUser: User) => {
-        if (!supabase) return;
+        if (!supabase || !navigator.onLine) return; // Skip entirely when offline
 
         try {
             const { data: existing, error: checkErr } = await supabase
