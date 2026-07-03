@@ -517,6 +517,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setSession(null);
         hasInitialized.current = false;
 
+        // 1b. Clear offline cache so a different user doesn't see stale data
+        profileCache.clear().catch(() => {});
+
         // 2. Wipe all Supabase keys from localStorage
         try {
             const toRemove: string[] = [];
