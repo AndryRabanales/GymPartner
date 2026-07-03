@@ -502,9 +502,16 @@ export const AppLayout = () => {
 
         flush(); // try immediately (covers reconnection that happened while app was closed)
         window.addEventListener('online', flush);
+
+        // Also flush when app comes back to foreground — handles the case where
+        // internet reconnected while the app was backgrounded (online event was missed).
+        const handleVisibility = () => { if (document.visibilityState === 'visible') flush(); };
+        document.addEventListener('visibilitychange', handleVisibility);
+
         return () => {
             cancelled = true;
             window.removeEventListener('online', flush);
+            document.removeEventListener('visibilitychange', handleVisibility);
         };
     }, [user?.id]);
 
