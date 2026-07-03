@@ -27,6 +27,7 @@
     "@capacitor/core": "^8.3.4",
     "@capacitor/geolocation": "^8.2.0",
     "@capacitor/ios": "^8.3.4",
+    "@capacitor/preferences": "^8.0.1",
     "@capacitor/push-notifications": "^8.1.1",
     "@google/generative-ai": "^0.24.1",
     "@supabase/supabase-js": "^2.89.0",
