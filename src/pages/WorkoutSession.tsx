@@ -5168,9 +5168,42 @@ export const WorkoutSession = () => {
                             }
                         }));
                         savedCount++;
+                    } else if (!navigator.onLine) {
+                        // Offline: can't resolve exercise ID now — queue with placeholder
+                        // so flushPendingSets() resolves and saves when internet returns.
+                        let finalRestDuration = (set.playerRestAccumulated?.[myId]) || 0;
+                        const activeRestStatus = set.playerRestStatus?.[myId];
+                        const activeRestLastStartTime = set.playerRestLastStartTime?.[myId];
+                        if (activeRestStatus === 'running' && activeRestLastStartTime) {
+                            finalRestDuration += (Date.now() - activeRestLastStartTime);
+                        }
+                        const extendedMetrics = {
+                            ...(set.custom || {}),
+                            ...(isCompletedToSave ? { _checklist_timestamp: (set.playerCompletedAt?.[myId]) || Date.now() } : {}),
+                            ...(exercise.weightUnit === 'lb' ? { _weight_unit: 'lb' } : {}),
+                            _rest_duration_ms: finalRestDuration,
+                            _rest_status: activeRestStatus === 'running' ? 'completed' : activeRestStatus
+                        } as any;
+                        workoutService.queuePendingSet(finalSessionId, {
+                            session_id: finalSessionId,
+                            exercise_id: `__offline_${Date.now()}_${j}`,
+                            _exercise_name: exercise.equipmentName,
+                            set_number: j + 1,
+                            sets: 1,
+                            weight_kg: weightToSave,
+                            reps: repsToSave,
+                            time: timeToSave,
+                            distance: distanceToSave,
+                            rpe: rpeToSave,
+                            metrics_data: extendedMetrics,
+                            category_snapshot: exercise.target_muscle_group || exercise.category || 'Custom',
+                            is_pr: false,
+                            owner_id: myId
+                        });
+                        pendingSyncCount++;
+                        savedCount++;
                     } else {
                         console.error(`❌ Failed to resolve exercise ID for "${exercise.equipmentName}", set skipped.`);
-                        // Notify user that this exercise's sets were NOT saved
                         import('react-hot-toast').then(({ default: t }) =>
                             t.error(`⚠️ No se encontró "${exercise.equipmentName}" en la base de datos. Sus series no serán guardadas.`, { duration: 6000 })
                         );

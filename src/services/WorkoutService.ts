@@ -25,10 +25,11 @@ export interface WorkoutSetData {
     rpe?: number;
     time?: number;
     distance?: number;
-    metrics_data?: Record<string, number>; // Flexible JSONB storage
+    metrics_data?: Record<string, any>; // Flexible JSONB storage
     is_pr?: boolean;
     category_snapshot?: string; // HISTORICAL: Preserves category at time of log
     owner_id?: string; // NEW: Explicitly track who performed this set
+    _exercise_name?: string; // Offline only: exercise name when exercise_id couldn't be resolved
 }
 
 interface OfflineSessionMeta {
@@ -1750,7 +1751,38 @@ class WorkoutService {
 
                 for (const payload of queued) {
                     try {
-                        const res = await this.logSet(payload);
+                        let finalPayload = payload;
+
+                        // Resolve exercise_id for sets queued offline without network access
+                        if (payload.exercise_id?.startsWith('__offline_') && payload._exercise_name) {
+                            const { data: existing } = await supabase
+                                .from('exercises')
+                                .select('id')
+                                .ilike('name', payload._exercise_name.trim())
+                                .limit(1)
+                                .maybeSingle();
+
+                            let realId = existing?.id;
+
+                            if (!realId) {
+                                const { data: newEx } = await supabase
+                                    .from('exercises')
+                                    .insert({ name: payload._exercise_name.trim() })
+                                    .select('id')
+                                    .single();
+                                realId = newEx?.id;
+                            }
+
+                            if (!realId) {
+                                remaining.push(payload); // still can't resolve, retry later
+                                continue;
+                            }
+
+                            const { _exercise_name: _, ...rest } = payload;
+                            finalPayload = { ...rest, exercise_id: realId };
+                        }
+
+                        const res = await this.logSet(finalPayload);
                         if (res.data) {
                             recovered++;
                         } else {
