@@ -1799,6 +1799,38 @@ class WorkoutService {
 
         return { recovered, stillPending };
     }
+
+    // Fetch ALL user routines (no gym filter) and save to global cache.
+    // Called on login to seed offline cache — ensures gym-specific routines
+    // are available offline regardless of GPS / gymId resolution.
+    async warmupAllRoutines(userId: string): Promise<void> {
+        if (!supabase) return;
+        const { data: routinesData, error } = await supabase
+            .from('routines')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false });
+
+        if (error || !routinesData || routinesData.length === 0) return;
+
+        const routineIds = routinesData.map(r => r.id);
+
+        const { data: exercisesData } = await supabase
+            .from('routine_exercises')
+            .select(`id, routine_id, exercise_id, name, order_index,
+                     track_weight, track_reps, track_time, track_pr,
+                     custom_metric, target_sets, target_reps_text`)
+            .in('routine_id', routineIds);
+
+        const allExercises = exercisesData || [];
+
+        const result = routinesData.map(r => ({
+            ...r,
+            routine_exercises: allExercises.filter(e => e.routine_id === r.id),
+        }));
+
+        await routineCache.save(userId, null, result);
+    }
 }
 
 export const workoutService = new WorkoutService();

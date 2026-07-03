@@ -116,7 +116,7 @@ class GymEquipmentService {
             .eq('gym_id', gymId)
             .order('name');
 
-        if (error) throw error;
+        if (error) { console.error('Error fetching inventory:', error); return []; }
         return data || [];
     }
 
@@ -129,7 +129,7 @@ class GymEquipmentService {
             .eq('verified_by', userId)
             .order('name');
 
-        if (error) throw error;
+        if (error) { console.error('Error fetching personal inventory:', error); return []; }
         return data || [];
     }
 

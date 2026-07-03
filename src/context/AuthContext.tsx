@@ -350,8 +350,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 .eq('id', userId)
                 .maybeSingle();
             if (profileData) profileCache.save(profileData).catch(() => {});
-            // getUserRoutines saves to routineCache internally when online
-            workoutService.getUserRoutines(userId, null).catch(() => {});
+            // Cache ALL user routines (including gym-specific) so offline works regardless of location
+            workoutService.warmupAllRoutines(userId).catch(() => {});
         } catch {
             // Best-effort warm-up — never block the user
         }
