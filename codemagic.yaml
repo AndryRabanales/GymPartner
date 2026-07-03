@@ -72,7 +72,7 @@ workflows:
 
       - name: Patch Info.plist
         script: |
-          python3 -c "import plistlib; p=plistlib.load(open('ios/App/App/Info.plist','rb')); s='com.ginx.app'; ts=p.get('CFBundleURLTypes',[]); ts.append({'CFBundleURLSchemes':[s],'CFBundleURLName':s}) if not any(s in t.get('CFBundleURLSchemes',[]) for t in ts) else None; p['CFBundleURLTypes']=ts; plistlib.dump(p,open('ios/App/App/Info.plist','wb')); print('URL scheme OK')"
+          python3 -c "import plistlib; p=plistlib.load(open('ios/App/App/Info.plist','rb')); s='com.ginx.app'; ts=p.get('CFBundleURLTypes',[]); [ts.append({'CFBundleURLSchemes':[s],'CFBundleURLName':s}) for _ in [None] if not any(s in t.get('CFBundleURLSchemes',[]) for t in ts)]; p['CFBundleURLTypes']=ts; p['NSAppTransportSecurity']={'NSAllowsArbitraryLoads':True,'NSAllowsArbitraryLoadsInWebContent':True}; plistlib.dump(p,open('ios/App/App/Info.plist','wb')); print('Info.plist OK')"
 
       - name: Build iOS IPA
         script: |
