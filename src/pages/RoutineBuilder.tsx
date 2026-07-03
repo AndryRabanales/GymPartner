@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { userService } from '../services/UserService';
+import { routineCache } from '../lib/offlineCache';
 import { CURATED_EXERCISES } from '../data/exerciseCatalog';
 import { CatalogModal } from '../components/workout/CatalogModal';
 import { ArrowLeft, Plus, Save, Trash2, Dumbbell, Clock, Hash, Trophy } from 'lucide-react';
@@ -35,12 +36,27 @@ export const RoutineBuilder = () => {
 
     const loadRoutineForEdit = async (routineId: string) => {
         try {
-            const routine = await userService.getRoutineDetails(routineId);
+            let routine = await userService.getRoutineDetails(routineId).catch(() => null);
+
+            // Offline fallback: find the routine in any cached routines list
+            if (!routine && user) {
+                const globalCache = await routineCache.load(user.id, null);
+                const allCached = globalCache;
+                // Also check gym-specific caches by trying all cached keys
+                const found = allCached.find((r: any) => r.id === routineId);
+                if (found) {
+                    routine = {
+                        name: found.name,
+                        exercises: found.routine_exercises || []
+                    };
+                }
+            }
+
             if (!routine) return;
             setName(routine.name);
-            if (routine.exercises) {
-                const mapped: RoutineExerciseConfig[] = routine.exercises.map((ex: any) => ({
-                    // Normalise old UUID-based IDs to virtual format
+            const exercises = routine.exercises || routine.routine_exercises || [];
+            if (exercises.length > 0) {
+                const mapped: RoutineExerciseConfig[] = exercises.map((ex: any) => ({
                     exercise_id: ex.exercise_id?.startsWith('virtual-') ? ex.exercise_id : `virtual-${ex.name}`,
                     name: ex.name,
                     track_weight: ex.track_weight ?? true,
@@ -52,6 +68,7 @@ export const RoutineBuilder = () => {
                     custom_metric: ex.custom_metric || ''
                 }));
                 setSelectedExercises(mapped);
+                setSelectedCatalogItems(new Set(mapped.map(ex => ex.exercise_id)));
             }
         } catch (err) {
             console.error('Error loading routine for edit:', err);

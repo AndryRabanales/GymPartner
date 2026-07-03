@@ -1075,7 +1075,11 @@ class WorkoutService {
     async getUserRoutines(userId: string, gymId?: string | null) {
         // ── Offline: return cached + queued routines ──────────────────────────
         if (!navigator.onLine) {
-            const cached = await routineCache.load(userId, gymId);
+            let cached = await routineCache.load(userId, gymId);
+            // If specific gymId cache is empty, fall back to global cache
+            if (cached.length === 0 && gymId) cached = await routineCache.load(userId, null);
+            // If still empty (gymId was null), also try global
+            if (cached.length === 0) cached = await routineCache.load(userId, null);
             const offlineQueue = await offlineRoutineQueue.getAll();
             const offlineRecords = offlineQueue
                 .filter((r: any) => r.userId === userId && (r.gymId === gymId || (!r.gymId && !gymId)))
@@ -1197,8 +1201,15 @@ class WorkoutService {
             };
         });
 
-        // Cache for offline use
+        // Cache for offline use — save under specific gymId AND global fallback
         routineCache.save(userId, gymId, onlineResult).catch(() => {});
+        if (gymId) {
+            // Merge into global cache so offline access works even when GPS can't resolve gymId
+            routineCache.load(userId, null).then(existing => {
+                const merged = [...onlineResult, ...existing.filter((r: any) => !onlineResult.some((x: any) => x.id === r.id))];
+                routineCache.save(userId, null, merged).catch(() => {});
+            }).catch(() => {});
+        }
 
         // Prepend any offline-queued routines (not yet synced)
         const offlineQueue = await offlineRoutineQueue.getAll();
