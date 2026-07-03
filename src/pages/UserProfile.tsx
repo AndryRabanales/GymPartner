@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { profileCache } from '../lib/offlineCache';
 import { MapPin, Edit2, LogIn, Loader, Swords, Dumbbell, LineChart, History, Star, Search, ArrowLeft, ArrowRight, Crown, Map as MapIcon, Image as ImageIcon, Palette, Dices, Coins, Share2, Trash2, Heart, X } from 'lucide-react'; // Added Dices, Share2, Trash2
 // import { UserPlus, Grid } from 'lucide-react'; // UNUSED: Hidden Community Features
 // import { Grid } from 'lucide-react'; // UNUSED: Hidden Community Features
@@ -201,9 +202,20 @@ export const UserProfile = () => {
             .substring(0, 30);
         const defaultAvatar = user?.user_metadata?.avatar_url || '';
 
+        // Offline: load from native cache immediately so the profile renders without network
+        if (!navigator.onLine) {
+            const cached = await profileCache.load();
+            if (cached) {
+                setProfile(cached as any);
+                console.log('📦 [loadUserData] Loaded profile from offline cache.');
+            }
+            setLoading(false);
+            return;
+        }
+
         // Keep loading=true until real DB data arrives - prevents the flash of incomplete content
         try {
-            let { data, error } = await supabase
+            let { data, error } = await supabase!
                 .from('profiles')
                 .select('*')
                 .eq('id', user!.id)
@@ -211,6 +223,12 @@ export const UserProfile = () => {
 
             if (error) {
                 console.error("❌ [loadUserData Error] Supabase profiles fetch failed:", error);
+                // Network failed even though navigator.onLine was true — use cache
+                const cached = await profileCache.load();
+                if (cached) {
+                    setProfile(cached as any);
+                    console.log('📦 [loadUserData] Fallback to cache after network error.');
+                }
                 setLoading(false);
                 return;
             }
@@ -245,6 +263,7 @@ export const UserProfile = () => {
 
             if (profileData) {
                 setProfile(profileData);
+                profileCache.save(profileData).catch(() => {});
 
                 // REFERRAL CHECK
                 const pendingRef = sessionStorage.getItem('gym_referral_id');

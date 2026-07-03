@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { routineCache, offlineRoutineQueue, nativeStore } from '../lib/offlineCache';
 
 export interface WorkoutSession {
     id: string;
@@ -1072,20 +1073,14 @@ class WorkoutService {
     }
 
     async getUserRoutines(userId: string, gymId?: string | null) {
-        const cacheKey = `ginx_cached_routines_${userId}_${gymId || 'global'}`;
-
         // ── Offline: return cached + queued routines ──────────────────────────
         if (!navigator.onLine) {
-            try {
-                const cached = JSON.parse(localStorage.getItem(cacheKey) || '[]');
-                const offlineQueue: any[] = JSON.parse(localStorage.getItem('ginx_offline_routines') || '[]');
-                const offlineRecords = offlineQueue
-                    .filter(r => r.userId === userId && (r.gymId === gymId || (!r.gymId && !gymId)))
-                    .map(r => this._buildOfflineRoutineRecord(r));
-                return [...offlineRecords, ...cached];
-            } catch {
-                return [];
-            }
+            const cached = await routineCache.load(userId, gymId);
+            const offlineQueue = await offlineRoutineQueue.getAll();
+            const offlineRecords = offlineQueue
+                .filter((r: any) => r.userId === userId && (r.gymId === gymId || (!r.gymId && !gymId)))
+                .map((r: any) => this._buildOfflineRoutineRecord(r));
+            return [...offlineRecords, ...cached];
         }
 
         // 1. Fetch Routines Base Data
@@ -1107,29 +1102,20 @@ class WorkoutService {
 
         if (routinesError) {
             console.error('Error fetching routines:', routinesError);
-            // Network failure while supposedly online — return cache + offline queue
-            try {
-                const cached = JSON.parse(localStorage.getItem(cacheKey) || '[]');
-                const offlineQueue: any[] = JSON.parse(localStorage.getItem('ginx_offline_routines') || '[]');
-                const offlineRecords = offlineQueue
-                    .filter(r => r.userId === userId && (r.gymId === gymId || (!r.gymId && !gymId)))
-                    .map(r => this._buildOfflineRoutineRecord(r));
-                return [...offlineRecords, ...cached];
-            } catch {
-                return [];
-            }
+            const cached = await routineCache.load(userId, gymId);
+            const offlineQueue = await offlineRoutineQueue.getAll();
+            const offlineRecords = offlineQueue
+                .filter((r: any) => r.userId === userId && (r.gymId === gymId || (!r.gymId && !gymId)))
+                .map((r: any) => this._buildOfflineRoutineRecord(r));
+            return [...offlineRecords, ...cached];
         }
 
         if (!routinesData || routinesData.length === 0) {
-            // Still save empty array to overwrite stale cache
-            try { localStorage.setItem(cacheKey, '[]'); } catch { /* ignore */ }
-            // But include any offline-queued routines
-            try {
-                const offlineQueue: any[] = JSON.parse(localStorage.getItem('ginx_offline_routines') || '[]');
-                return offlineQueue
-                    .filter(r => r.userId === userId && (r.gymId === gymId || (!r.gymId && !gymId)))
-                    .map(r => this._buildOfflineRoutineRecord(r));
-            } catch { return []; }
+            await routineCache.save(userId, gymId, []);
+            const offlineQueue = await offlineRoutineQueue.getAll();
+            return offlineQueue
+                .filter((r: any) => r.userId === userId && (r.gymId === gymId || (!r.gymId && !gymId)))
+                .map((r: any) => this._buildOfflineRoutineRecord(r));
         }
 
         const routineIds = routinesData.map(r => r.id);
@@ -1212,28 +1198,21 @@ class WorkoutService {
         });
 
         // Cache for offline use
-        try { localStorage.setItem(cacheKey, JSON.stringify(onlineResult)); } catch { /* ignore quota */ }
+        routineCache.save(userId, gymId, onlineResult).catch(() => {});
 
         // Prepend any offline-queued routines (not yet synced)
-        try {
-            const offlineQueue: any[] = JSON.parse(localStorage.getItem('ginx_offline_routines') || '[]');
-            const offlineRecords = offlineQueue
-                .filter(r => r.userId === userId && (r.gymId === gymId || (!r.gymId && !gymId)))
-                .map(r => this._buildOfflineRoutineRecord(r));
-            return [...offlineRecords, ...onlineResult];
-        } catch { return onlineResult; }
+        const offlineQueue = await offlineRoutineQueue.getAll();
+        const offlineRecords = offlineQueue
+            .filter((r: any) => r.userId === userId && (r.gymId === gymId || (!r.gymId && !gymId)))
+            .map((r: any) => this._buildOfflineRoutineRecord(r));
+        return [...offlineRecords, ...onlineResult];
     }
 
     // Save a routine locally when offline; synced by flushPendingSets on reconnect.
     private _queueOfflineRoutine(userId: string, name: string, exercises: any[], gymId?: string | null) {
         const tempId = `local_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-        try {
-            const queue: any[] = JSON.parse(localStorage.getItem('ginx_offline_routines') || '[]');
-            queue.unshift({ tempId, userId, gymId: gymId || null, name, exercises, created_at: new Date().toISOString() });
-            localStorage.setItem('ginx_offline_routines', JSON.stringify(queue));
-        } catch (e) {
-            console.error('Error queuing offline routine:', e);
-        }
+        offlineRoutineQueue.add({ tempId, userId, gymId: gymId || null, name, exercises, created_at: new Date().toISOString() })
+            .catch(e => console.error('Error queuing offline routine:', e));
         return { data: { id: tempId, _isOfflinePending: true } };
     }
 
@@ -1675,21 +1654,19 @@ class WorkoutService {
     // Called by flushPendingSets — no need to call it directly.
     private async _flushOfflineRoutines(): Promise<void> {
         try {
-            const queue: any[] = JSON.parse(localStorage.getItem('ginx_offline_routines') || '[]');
+            const queue = await offlineRoutineQueue.getAll();
             if (queue.length === 0) return;
             const still: any[] = [];
             for (const r of queue) {
-                // Call createRoutine — it checks navigator.onLine internally, but we're here
-                // because we're online (flushPendingSets is triggered by the 'online' event).
                 const res = await this.createRoutine(r.userId, r.name, r.exercises, r.gymId);
                 if (res.error || !res.data || (res.data as any)._isOfflinePending) {
-                    still.push(r); // still offline or failed — try again next flush
+                    still.push(r);
                 } else {
                     // Invalidate cache so next load picks up the real ID from Supabase
-                    localStorage.removeItem(`ginx_cached_routines_${r.userId}_${r.gymId || 'global'}`);
+                    await routineCache.save(r.userId, r.gymId, []);
                 }
             }
-            localStorage.setItem('ginx_offline_routines', JSON.stringify(still));
+            await offlineRoutineQueue.save(still);
         } catch (e) {
             console.error('Error flushing offline routines:', e);
         }
