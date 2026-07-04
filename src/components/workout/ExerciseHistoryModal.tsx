@@ -272,7 +272,7 @@ export const ExerciseHistoryModal: React.FC<ExerciseHistoryModalProps> = ({
                         <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
                             <WifiOff className="text-neutral-600" size={32} />
                             <p className="text-neutral-400 text-sm font-bold">Sin conexión</p>
-                            <p className="text-neutral-600 text-xs max-w-[240px]">El historial de este ejercicio necesita internet. Tus series de hoy se guardan igual.</p>
+                            <p className="text-neutral-600 text-xs max-w-[240px]">Abre el historial de este ejercicio una vez con internet y quedará guardado para verlo sin conexión. Tus series de hoy se guardan igual.</p>
                         </div>
                     ) : history.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">

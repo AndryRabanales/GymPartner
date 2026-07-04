@@ -1837,11 +1837,28 @@ class WorkoutService {
      * grouped by session, newest first. Used by the in-workout "Historial" button
      * so the user can self-compare while training.
      */
+    private _exHistoryCacheKey(userId: string, exerciseName: string) {
+        return `ginx_exhist_${userId}_${exerciseName.trim().toLowerCase()}`;
+    }
+
     async getExerciseHistory(userId: string, exerciseName: string, equipmentId?: string): Promise<{
         date: string;
         sessionId: string;
         sets: { set_number: number; weight_kg: number; reps: number; time: number; distance: number; rpe: number; is_pr: boolean }[];
     }[]> {
+        const cacheKey = this._exHistoryCacheKey(userId, exerciseName);
+
+        // Offline: serve the snapshot saved the last time this exercise's
+        // history was viewed online.
+        if (!navigator.onLine) {
+            try {
+                const raw = await nativeStore.get(cacheKey);
+                return raw ? JSON.parse(raw) : [];
+            } catch {
+                return [];
+            }
+        }
+
         try {
             // 1. Collect candidate exercise IDs: logs are keyed by `exercises.id`
             // (resolved by name at finalize) but legacy/gym flows may use the
@@ -1886,7 +1903,7 @@ class WorkoutService {
                 bySession.get(l.session_id)!.push(l);
             });
 
-            return Array.from(bySession.entries())
+            const result = Array.from(bySession.entries())
                 .map(([sessionId, sessionLogs]) => ({
                     sessionId,
                     date: dateBySession.get(sessionId) || sessionLogs[0]?.created_at || '',
@@ -1904,9 +1921,19 @@ class WorkoutService {
                         })),
                 }))
                 .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+            // Snapshot for offline viewing (best-effort, never blocks)
+            nativeStore.set(cacheKey, JSON.stringify(result)).catch(() => {});
+            return result;
         } catch (err) {
             console.error('Error fetching exercise history:', err);
-            return [];
+            // Weak/failed connection: fall back to the last snapshot
+            try {
+                const raw = await nativeStore.get(cacheKey);
+                return raw ? JSON.parse(raw) : [];
+            } catch {
+                return [];
+            }
         }
     }
 

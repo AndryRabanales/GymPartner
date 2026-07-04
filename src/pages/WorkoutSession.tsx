@@ -4841,19 +4841,18 @@ export const WorkoutSession = () => {
     const openExerciseHistory = async (exercise: WorkoutExercise) => {
         setHistoryExercise(exercise);
         setHistoryEntries([]);
-        if (!navigator.onLine) {
-            setHistoryOffline(true);
-            setHistoryLoading(false);
-            return;
-        }
         setHistoryOffline(false);
         setHistoryLoading(true);
+        // Works offline too: the service serves the snapshot cached the last
+        // time this exercise's history was viewed with internet.
         const entries = await workoutService.getExerciseHistory(
             user!.id,
             exercise.equipmentName,
             exercise.equipmentId
         );
         setHistoryEntries(entries);
+        // Only show the offline empty-state when there's no snapshot to show
+        setHistoryOffline(!navigator.onLine && entries.length === 0);
         setHistoryLoading(false);
     };
 
