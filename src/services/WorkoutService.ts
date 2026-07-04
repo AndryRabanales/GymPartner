@@ -1856,10 +1856,14 @@ class WorkoutService {
 
         const allExercises = exercisesData || [];
 
-        const result = routinesData.map(r => ({
-            ...r,
-            routine_exercises: allExercises.filter(e => e.routine_id === r.id),
-        }));
+        const result = routinesData.map(r => {
+            const myExercises = allExercises.filter(e => e.routine_id === r.id);
+            return {
+                ...r,
+                equipment_ids: myExercises.map(e => e.exercise_id),
+                routine_exercises: myExercises,
+            };
+        });
 
         await routineCache.save(userId, null, result);
     }

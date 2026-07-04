@@ -468,7 +468,9 @@ export const MyArsenal = () => {
         // Fetch Full details to get Names and Configs
         try {
             const details = await userService.getRoutineDetails(routine.id);
-            const exercises = details?.exercises || [];
+            // Offline fallback: getRoutineDetails returns null without network —
+            // use the exercises already present in the cached routine record.
+            const exercises = details?.exercises || routine.routine_exercises || [];
 
             const resolvedIDs = new Set<string>();
             const newConfigs = new Map<string, any>();
@@ -729,6 +731,39 @@ export const MyArsenal = () => {
 
         setIsSaving(true);
         try {
+            // ── OFFLINE: skip DB resolution entirely — queue the routine locally.
+            // Virtual IDs and names are kept as-is; flushPendingSets() creates the
+            // real routine in Supabase when connectivity returns.
+            if (!navigator.onLine) {
+                if (editingRoutineId) {
+                    alert("📡 Sin conexión — editar una rutina existente requiere internet. Tus cambios no se guardaron; inténtalo al reconectar.");
+                    return;
+                }
+                const offlinePayload = Array.from(selectedItems).map(id => {
+                    const item = inventory.find(i => i.id === id) || globalInventory.find(i => i.id === id);
+                    const name = item?.name || (id.startsWith('virtual-') ? id.replace('virtual-', '') : id);
+                    const config = routineConfigs.get(id) || {};
+                    const defaultMetrics = (item?.metrics as any) || { weight: true, reps: true };
+                    return {
+                        id,
+                        name,
+                        track_weight: config.track_weight !== undefined ? config.track_weight : (defaultMetrics.weight ?? true),
+                        track_reps: config.track_reps !== undefined ? config.track_reps : (defaultMetrics.reps ?? true),
+                        track_time: config.track_time !== undefined ? config.track_time : (defaultMetrics.time ?? false),
+                        track_pr: config.track_pr !== undefined ? config.track_pr : (defaultMetrics.track_pr ?? false),
+                        track_distance: config.track_distance !== undefined ? config.track_distance : (defaultMetrics.distance ?? false),
+                        track_rpe: config.track_rpe !== undefined ? config.track_rpe : (defaultMetrics.rpe ?? false),
+                        custom_metric: config.custom_metric !== undefined ? config.custom_metric : (defaultMetrics.custom_metric ?? null)
+                    };
+                });
+                await workoutService.createRoutine(user.id, routineName, offlinePayload, routeGymId);
+                alert("📡 Sin conexión — rutina guardada en tu dispositivo. Se subirá automáticamente cuando vuelvas a tener internet.");
+                handleCreateNew();
+                initialize();
+                setViewMode('ROUTINES');
+                return;
+            }
+
             const finalEquipmentIds: string[] = [];
             const finalConfigPayload: any[] = [];
 
