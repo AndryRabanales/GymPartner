@@ -4589,11 +4589,17 @@ export const WorkoutSession = () => {
     // Strategy: push MULTIPLE sentinel entries so rapid back-taps can't drain
     // the history stack before the handler fires and re-pushes them.
     const guardPushCountRef = useRef(0);
+    // history.go() below is ASYNC: its popstate can arrive AFTER this effect
+    // re-registers handlePopState (e.g. user pressed Finalizar then immediately
+    // cancelled back to the workout). Without this guard, that stale popstate
+    // is mistaken for a user back-tap and kicks them out of the session.
+    const suppressPopUntilRef = useRef(0);
     useEffect(() => {
         if (!user || isFinished) {
             // Session just ended — pop back the sentinel entries we pushed so
             // the user's history stack isn't polluted after finishing.
             if (guardPushCountRef.current > 0) {
+                suppressPopUntilRef.current = Date.now() + 800;
                 window.history.go(-guardPushCountRef.current);
                 guardPushCountRef.current = 0;
             }
@@ -4608,6 +4614,9 @@ export const WorkoutSession = () => {
         guardPushCountRef.current += INITIAL;
 
         const handlePopState = (e: PopStateEvent) => {
+            // Ignore the stale popstate produced by our own sentinel cleanup
+            // (history.go above) — it is NOT a user back-tap.
+            if (Date.now() < suppressPopUntilRef.current) return;
             if (isLeavingPageRef.current || !user || isFinished) return;
             // Broadcast temp-exit so coop partners lock this user's inputs
             if (channelRef.current && isMultiplayer) {
@@ -4917,7 +4926,10 @@ export const WorkoutSession = () => {
                 const exerciseName = ex.equipmentName;
                 const targetGym = resolvedGymId;
 
-                const needsResolution = finalId.startsWith('virtual-') || finalId.startsWith('manifest-');
+                // Offline: skip DB resolution — createRoutine queues locally and
+                // virtual/manifest IDs are preserved until sync.
+                const needsResolution = navigator.onLine &&
+                    (finalId.startsWith('virtual-') || finalId.startsWith('manifest-'));
 
                 if (needsResolution) {
                     try {
@@ -5011,6 +5023,19 @@ export const WorkoutSession = () => {
                 if (newSession && newSession.data) {
                     finalSessionId = newSession.data.id;
                     setSessionId(finalSessionId);
+                } else if (!isMultiplayer) {
+                    // Offline/weak-signal fallback (solo only): create a LOCAL session
+                    // so the finish flow continues and everything queues for sync.
+                    // Never discard the user's workout data over a network failure.
+                    const localId = crypto.randomUUID();
+                    workoutService.queueOfflineSession(localId, {
+                        user_id: user!.id,
+                        gym_id: resolvedGymId || undefined,
+                        is_multiplayer: false,
+                        started_at: (startTime || new Date()).toISOString(),
+                    });
+                    finalSessionId = localId;
+                    setSessionId(localId);
                 } else {
                     console.error('❌ Failed to create emergency session!', newSession.error);
                     alert("⚠️ FALLA DE BASE DE DATOS AL INICIAR SESIÓN:\n" + JSON.stringify(newSession.error, null, 2));
