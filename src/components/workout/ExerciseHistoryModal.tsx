@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { X, History, Loader, Trophy, WifiOff } from 'lucide-react';
+import { X, History, Loader, Trophy, WifiOff, Minus, Plus } from 'lucide-react';
 
 export interface ExerciseHistoryEntry {
     date: string;
@@ -77,6 +77,13 @@ export const ExerciseHistoryModal: React.FC<ExerciseHistoryModalProps> = ({
 
     const [sortBy, setSortBy] = useState<SortKey>('recent');
     const [range, setRange] = useState<RangeKey>('all');
+    // Rep-max PR: when active, best mark + medals only consider sets with
+    // reps >= target ("my best weight doing at least N reps"). Strength only.
+    const [repTarget, setRepTarget] = useState<number | null>(null);
+    const canUseRepTarget = !isCardio && showWeight && showReps;
+
+    const qualifies = (s: ExerciseHistoryEntry['sets'][0]) =>
+        !repTarget || !canUseRepTarget || s.reps >= repTarget;
 
     // Best value of a metric within one session (sessions are ranked by their best set)
     const sessionBest = (entry: ExerciseHistoryEntry, key: 'weight_kg' | 'reps' | 'time' | 'distance') =>
@@ -108,24 +115,28 @@ export const ExerciseHistoryModal: React.FC<ExerciseHistoryModalProps> = ({
         return sorted;
     }, [history, sortBy, range]);
 
-    // Best mark WITHIN the selected range (self-comparison anchor)
-    const bestMark = useMemo(() => {
-        let best: { entry: ExerciseHistoryEntry; set: ExerciseHistoryEntry['sets'][0] } | null = null;
+    // Best mark WITHIN the selected range (self-comparison anchor), respecting
+    // the rep target when active. Also ranks the podium: top-3 sets 🥇🥈🥉.
+    const { bestMark, medalBySet } = useMemo(() => {
         const primaryKey = isCardio ? (showTime ? 'time' : 'distance') : 'weight_kg';
+        const ranked: { entry: ExerciseHistoryEntry; set: ExerciseHistoryEntry['sets'][0]; val: number }[] = [];
         for (const entry of visibleHistory) {
             for (const s of entry.sets) {
+                if (!qualifies(s)) continue;
                 const val = Number((s as any)[primaryKey]) || 0;
                 if (val <= 0) continue;
-                if (!best) { best = { entry, set: s }; continue; }
-                const bestVal = Number((best.set as any)[primaryKey]) || 0;
-                // Tiebreak strength by reps at the same weight
-                if (val > bestVal || (val === bestVal && !isCardio && s.reps > best.set.reps)) {
-                    best = { entry, set: s };
-                }
+                ranked.push({ entry, set: s, val });
             }
         }
-        return best;
-    }, [visibleHistory, isCardio, showTime]);
+        ranked.sort((a, b) => b.val - a.val || (isCardio ? 0 : b.set.reps - a.set.reps));
+        const medals = new Map<ExerciseHistoryEntry['sets'][0], string>();
+        const MEDAL_ICONS = ['🥇', '🥈', '🥉'];
+        ranked.slice(0, 3).forEach((r, i) => medals.set(r.set, MEDAL_ICONS[i]));
+        return {
+            bestMark: ranked.length > 0 ? { entry: ranked[0].entry, set: ranked[0].set } : null,
+            medalBySet: medals,
+        };
+    }, [visibleHistory, isCardio, showTime, repTarget, canUseRepTarget]);
 
     const bestMarkText = bestMark
         ? isCardio
@@ -164,14 +175,20 @@ export const ExerciseHistoryModal: React.FC<ExerciseHistoryModalProps> = ({
                         </button>
                     </div>
 
-                    {/* Best mark within the selected range */}
-                    {!loading && !offline && bestMarkText && (
+                    {/* Best mark within the selected range (+ rep target when active) */}
+                    {!loading && !offline && (bestMarkText || (repTarget && canUseRepTarget)) && (
                         <div className="mt-2 flex items-center gap-1.5 bg-gym-primary/10 border border-gym-primary/25 rounded-xl px-3 py-1.5 w-fit">
                             <Trophy size={12} className="text-gym-primary shrink-0" />
                             <span className="text-[11px] font-black text-white">
-                                Tu mejor {BEST_LABEL[range]}: <span className="text-gym-primary">{bestMarkText}</span>
-                                {bestMark?.entry.date && (
-                                    <span className="text-neutral-500 font-bold"> — {new Date(bestMark.entry.date).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}</span>
+                                {bestMarkText ? (
+                                    <>
+                                        Tu mejor {BEST_LABEL[range]}{repTarget && canUseRepTarget ? ` a ${repTarget}+ reps` : ''}: <span className="text-gym-primary">{bestMarkText}</span>
+                                        {bestMark?.entry.date && (
+                                            <span className="text-neutral-500 font-bold"> — {new Date(bestMark.entry.date).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}</span>
+                                        )}
+                                    </>
+                                ) : (
+                                    <span className="text-neutral-400">Sin series de {repTarget}+ reps en este período</span>
                                 )}
                             </span>
                         </div>
@@ -208,6 +225,38 @@ export const ExerciseHistoryModal: React.FC<ExerciseHistoryModalProps> = ({
                                     </button>
                                 ))}
                             </div>
+
+                            {/* Rep-max target: "my best weight doing at least N reps" */}
+                            {canUseRepTarget && (
+                                <div className="flex items-center gap-1.5">
+                                    <button
+                                        onClick={() => setRepTarget(repTarget ? null : 8)}
+                                        className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider transition-all border ${repTarget
+                                            ? 'bg-gym-primary/20 text-gym-primary border-gym-primary/50'
+                                            : 'bg-transparent text-neutral-500 border-neutral-800 hover:border-neutral-600 hover:text-white'
+                                        }`}
+                                    >
+                                        PR a reps
+                                    </button>
+                                    {repTarget && (
+                                        <div className="flex items-center gap-0.5 bg-neutral-950/80 border border-neutral-800 rounded-full px-1 py-0.5">
+                                            <button
+                                                onClick={() => setRepTarget(Math.max(1, repTarget - 1))}
+                                                className="p-1 text-neutral-400 hover:text-white active:scale-90 transition-all"
+                                            >
+                                                <Minus size={11} strokeWidth={3} />
+                                            </button>
+                                            <span className="text-[11px] font-black text-white min-w-[34px] text-center">{repTarget}+ <span className="text-[8px] text-neutral-500">REPS</span></span>
+                                            <button
+                                                onClick={() => setRepTarget(Math.min(30, repTarget + 1))}
+                                                className="p-1 text-neutral-400 hover:text-white active:scale-90 transition-all"
+                                            >
+                                                <Plus size={11} strokeWidth={3} />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
@@ -252,7 +301,7 @@ export const ExerciseHistoryModal: React.FC<ExerciseHistoryModalProps> = ({
                                     </div>
 
                                     {/* Column headers */}
-                                    <div className="grid px-3.5 pt-2 pb-1 text-[8px] font-black text-neutral-500 uppercase tracking-widest" style={{ gridTemplateColumns: `28px repeat(${columns.length}, 1fr) 20px` }}>
+                                    <div className="grid px-3.5 pt-2 pb-1 text-[8px] font-black text-neutral-500 uppercase tracking-widest" style={{ gridTemplateColumns: `28px repeat(${columns.length}, 1fr) 24px` }}>
                                         <span>#</span>
                                         {columns.map(c => <span key={c} className="text-center">{c}</span>)}
                                         <span></span>
@@ -260,19 +309,23 @@ export const ExerciseHistoryModal: React.FC<ExerciseHistoryModalProps> = ({
 
                                     {/* Sets */}
                                     <div className="px-3.5 pb-2.5 space-y-0.5">
-                                        {entry.sets.map((s, i) => (
-                                            <div key={i} className="grid items-center py-1 rounded-lg text-[12px] font-bold" style={{ gridTemplateColumns: `28px repeat(${columns.length}, 1fr) 20px` }}>
-                                                <span className="text-neutral-600 text-[10px] font-black">{s.set_number || i + 1}</span>
-                                                {showWeight && <span className="text-center text-white">{s.weight_kg > 0 ? <>{s.weight_kg}<span className="text-[9px] text-neutral-500 ml-0.5">kg</span></> : <span className="text-neutral-700">—</span>}</span>}
-                                                {showReps && <span className="text-center text-white">{s.reps > 0 ? s.reps : <span className="text-neutral-700">—</span>}</span>}
-                                                {showTime && <span className="text-center text-white">{s.time > 0 ? formatTime(s.time) : <span className="text-neutral-700">—</span>}</span>}
-                                                {showDistance && <span className="text-center text-white">{s.distance > 0 ? <>{s.distance}<span className="text-[9px] text-neutral-500 ml-0.5">m</span></> : <span className="text-neutral-700">—</span>}</span>}
-                                                {showRpe && <span className="text-center text-white">{s.rpe > 0 ? s.rpe : <span className="text-neutral-700">—</span>}</span>}
-                                                <span className="flex justify-center">
-                                                    {s.is_pr && <Trophy size={11} className="text-gym-primary" />}
-                                                </span>
-                                            </div>
-                                        ))}
+                                        {entry.sets.map((s, i) => {
+                                            const medal = medalBySet.get(s);
+                                            const dimmed = repTarget && canUseRepTarget && !qualifies(s);
+                                            return (
+                                                <div key={i} className={`grid items-center py-1 rounded-lg text-[12px] font-bold transition-opacity ${medal ? 'bg-gym-primary/5' : ''} ${dimmed ? 'opacity-30' : ''}`} style={{ gridTemplateColumns: `28px repeat(${columns.length}, 1fr) 24px` }}>
+                                                    <span className="text-neutral-600 text-[10px] font-black">{s.set_number || i + 1}</span>
+                                                    {showWeight && <span className="text-center text-white">{s.weight_kg > 0 ? <>{s.weight_kg}<span className="text-[9px] text-neutral-500 ml-0.5">kg</span></> : <span className="text-neutral-700">—</span>}</span>}
+                                                    {showReps && <span className="text-center text-white">{s.reps > 0 ? s.reps : <span className="text-neutral-700">—</span>}</span>}
+                                                    {showTime && <span className="text-center text-white">{s.time > 0 ? formatTime(s.time) : <span className="text-neutral-700">—</span>}</span>}
+                                                    {showDistance && <span className="text-center text-white">{s.distance > 0 ? <>{s.distance}<span className="text-[9px] text-neutral-500 ml-0.5">m</span></> : <span className="text-neutral-700">—</span>}</span>}
+                                                    {showRpe && <span className="text-center text-white">{s.rpe > 0 ? s.rpe : <span className="text-neutral-700">—</span>}</span>}
+                                                    <span className="flex justify-center items-center text-[11px] leading-none">
+                                                        {medal ? medal : (s.is_pr && <Trophy size={11} className="text-gym-primary" />)}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             ))}
