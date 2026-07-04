@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { X, History, Loader, Trophy, WifiOff, Minus, Plus } from 'lucide-react';
+import { X, History, Loader, Trophy, WifiOff, Minus, Plus, ArrowDownWideNarrow, CalendarRange, Target } from 'lucide-react';
 
 export interface ExerciseHistoryEntry {
     date: string;
@@ -154,173 +154,235 @@ export const ExerciseHistoryModal: React.FC<ExerciseHistoryModalProps> = ({
         showRpe && 'RPE',
     ].filter(Boolean) as string[];
 
+    const hasControls = !loading && !offline && history.length > 0;
+
     return (
-        <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-black/85 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
+        <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-black/90 backdrop-blur-md animate-in fade-in duration-300" onClick={onClose}>
             <div
-                className="bg-gradient-to-b from-neutral-900 to-neutral-950 border border-neutral-800 w-full max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[80vh] animate-in slide-in-from-bottom-4 duration-300"
+                className="exhist-sheet bg-neutral-950 border border-neutral-800/80 w-full max-w-md rounded-t-[2rem] sm:rounded-[2rem] shadow-[0_-20px_80px_rgba(250,204,21,0.07)] flex flex-col max-h-[88vh] overflow-hidden"
                 onClick={e => e.stopPropagation()}
             >
-                {/* Header */}
-                <div className="px-5 pt-4 pb-3 border-b border-white/5 shrink-0">
-                    <div className="flex items-start justify-between">
-                        <div className="min-w-0 pr-2">
-                            <div className="flex items-center gap-1.5 text-gym-primary mb-0.5">
-                                <History size={13} />
-                                <span className="text-[9px] font-black uppercase tracking-widest">Historial</span>
+                {/* ── Header ─────────────────────────────────────────────── */}
+                <div className="relative px-5 pt-5 pb-4 shrink-0 overflow-hidden">
+                    {/* ambient glow */}
+                    <div className="absolute -top-16 -left-16 w-48 h-48 bg-gym-primary/10 rounded-full blur-3xl pointer-events-none exhist-breathe" />
+                    <div className="absolute -top-10 right-10 w-32 h-32 bg-yellow-600/5 rounded-full blur-2xl pointer-events-none" />
+
+                    <div className="relative flex items-start justify-between">
+                        <div className="min-w-0 pr-2 exhist-rise" style={{ animationDelay: '0ms' }}>
+                            <div className="flex items-center gap-1.5 text-gym-primary mb-1">
+                                <span className="w-6 h-6 rounded-lg bg-gym-primary/15 border border-gym-primary/30 flex items-center justify-center">
+                                    <History size={12} />
+                                </span>
+                                <span className="text-[9px] font-black uppercase tracking-[0.25em]">Historial</span>
                             </div>
-                            <h3 className="text-lg font-black italic uppercase text-white leading-tight truncate">{exerciseName}</h3>
+                            <h3 className="text-xl font-black italic uppercase text-white leading-tight truncate">{exerciseName}</h3>
                         </div>
-                        <button onClick={onClose} className="p-2 text-neutral-400 hover:text-white hover:bg-white/5 rounded-full transition-all shrink-0">
-                            <X size={18} />
+                        <button onClick={onClose} className="p-2.5 text-neutral-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-full transition-all active:scale-90 shrink-0">
+                            <X size={16} />
                         </button>
                     </div>
 
-                    {/* Best mark within the selected range (+ rep target when active) */}
+                    {/* ── Best mark HERO ─────────────────────────────────── */}
                     {!loading && !offline && (bestMarkText || (repTarget && canUseRepTarget)) && (
-                        <div className="mt-2 flex items-center gap-1.5 bg-gym-primary/10 border border-gym-primary/25 rounded-xl px-3 py-1.5 w-fit">
-                            <Trophy size={12} className="text-gym-primary shrink-0" />
-                            <span className="text-[11px] font-black text-white">
+                        <div className="relative mt-3 exhist-rise" style={{ animationDelay: '60ms' }}>
+                            <div className="exhist-hero relative overflow-hidden rounded-2xl border border-gym-primary/30 bg-gradient-to-br from-gym-primary/15 via-neutral-900 to-neutral-950 px-4 py-3">
+                                {/* shimmer sweep */}
+                                <div className="exhist-shimmer absolute inset-0 pointer-events-none" />
                                 {bestMarkText ? (
-                                    <>
-                                        Tu mejor {BEST_LABEL[range]}{repTarget && canUseRepTarget ? ` a ${repTarget}+ reps` : ''}: <span className="text-gym-primary">{bestMarkText}</span>
-                                        {bestMark?.entry.date && (
-                                            <span className="text-neutral-500 font-bold"> — {new Date(bestMark.entry.date).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}</span>
-                                        )}
-                                    </>
+                                    <div className="relative flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-gym-primary/20 border border-gym-primary/40 flex items-center justify-center exhist-trophy-glow shrink-0">
+                                            <Trophy size={18} className="text-gym-primary" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-[8px] font-black uppercase tracking-[0.2em] text-gym-primary/80">
+                                                Tu mejor {BEST_LABEL[range]}{repTarget && canUseRepTarget ? ` · ${repTarget}+ reps` : ''}
+                                            </p>
+                                            <p className="text-xl font-black italic text-white leading-tight">
+                                                {bestMarkText}
+                                                {bestMark?.entry.date && (
+                                                    <span className="text-[10px] text-neutral-500 font-bold not-italic ml-2">
+                                                        {new Date(bestMark.entry.date).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
+                                                    </span>
+                                                )}
+                                            </p>
+                                        </div>
+                                    </div>
                                 ) : (
-                                    <span className="text-neutral-400">Sin series de {repTarget}+ reps en este período</span>
+                                    <div className="relative flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-neutral-800 border border-neutral-700 flex items-center justify-center shrink-0">
+                                            <Target size={18} className="text-neutral-500" />
+                                        </div>
+                                        <p className="text-[11px] font-bold text-neutral-400">Sin series de {repTarget}+ reps en este período</p>
+                                    </div>
                                 )}
-                            </span>
+                            </div>
                         </div>
                     )}
+                </div>
 
-                    {/* Sort + Range controls */}
-                    {!loading && !offline && history.length > 0 && (
-                        <div className="mt-2.5 space-y-1.5">
-                            <div className="flex gap-1.5">
+                {/* ── Combinable filters — clearly separated groups ─────── */}
+                {hasControls && (
+                    <div className="px-5 pb-3 space-y-2.5 shrink-0">
+                        {/* Group 1: SORT */}
+                        <div className="exhist-rise" style={{ animationDelay: '120ms' }}>
+                            <div className="flex items-center gap-1.5 mb-1 ml-0.5">
+                                <ArrowDownWideNarrow size={10} className="text-gym-primary" />
+                                <span className="text-[8px] font-black uppercase tracking-[0.25em] text-neutral-400">Ordenar por</span>
+                            </div>
+                            <div className="grid w-full p-1 bg-black/70 border border-neutral-800/80 rounded-2xl" style={{ gridTemplateColumns: `repeat(${sortOptions.length}, 1fr)` }}>
                                 {sortOptions.map(opt => (
                                     <button
                                         key={opt.key}
                                         onClick={() => setSortBy(opt.key)}
-                                        className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider transition-all border ${sortBy === opt.key
-                                            ? 'bg-gym-primary text-black border-gym-primary'
-                                            : 'bg-transparent text-neutral-400 border-neutral-800 hover:border-neutral-600 hover:text-white'
+                                        className={`py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 ${sortBy === opt.key
+                                            ? 'bg-gradient-to-r from-gym-primary to-yellow-400 text-black shadow-[0_0_16px_rgba(250,204,21,0.35)] scale-[1.02]'
+                                            : 'text-neutral-500 hover:text-white active:scale-95'
                                         }`}
                                     >
                                         {opt.label}
                                     </button>
                                 ))}
                             </div>
-                            <div className="flex gap-1.5">
+                        </div>
+
+                        {/* Group 2: RANGE */}
+                        <div className="exhist-rise" style={{ animationDelay: '180ms' }}>
+                            <div className="flex items-center gap-1.5 mb-1 ml-0.5">
+                                <CalendarRange size={10} className="text-sky-400" />
+                                <span className="text-[8px] font-black uppercase tracking-[0.25em] text-neutral-400">Período</span>
+                            </div>
+                            <div className="grid grid-cols-4 w-full p-1 bg-black/70 border border-neutral-800/80 rounded-2xl">
                                 {(Object.keys(RANGE_LABELS) as RangeKey[]).map(r => (
                                     <button
                                         key={r}
                                         onClick={() => setRange(r)}
-                                        className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider transition-all border ${range === r
-                                            ? 'bg-white/10 text-white border-white/30'
-                                            : 'bg-transparent text-neutral-500 border-neutral-800 hover:border-neutral-600 hover:text-white'
+                                        className={`py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 ${range === r
+                                            ? 'bg-gradient-to-r from-sky-500 to-cyan-400 text-black shadow-[0_0_16px_rgba(56,189,248,0.35)] scale-[1.02]'
+                                            : 'text-neutral-500 hover:text-white active:scale-95'
                                         }`}
                                     >
                                         {RANGE_LABELS[r]}
                                     </button>
                                 ))}
                             </div>
+                        </div>
 
-                            {/* Rep-max target: "my best weight doing at least N reps" */}
-                            {canUseRepTarget && (
-                                <div className="flex items-center gap-1.5">
+                        {/* Group 3: REP TARGET (strength only) */}
+                        {canUseRepTarget && (
+                            <div className="exhist-rise" style={{ animationDelay: '240ms' }}>
+                                <div className="flex items-center gap-1.5 mb-1 ml-0.5">
+                                    <Target size={10} className="text-emerald-400" />
+                                    <span className="text-[8px] font-black uppercase tracking-[0.25em] text-neutral-400">Objetivo de reps</span>
+                                </div>
+                                <div className="flex w-full p-1 bg-black/70 border border-neutral-800/80 rounded-2xl gap-1">
                                     <button
                                         onClick={() => setRepTarget(repTarget ? null : 8)}
-                                        className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider transition-all border ${repTarget
-                                            ? 'bg-gym-primary/20 text-gym-primary border-gym-primary/50'
-                                            : 'bg-transparent text-neutral-500 border-neutral-800 hover:border-neutral-600 hover:text-white'
+                                        className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 ${repTarget
+                                            ? 'bg-gradient-to-r from-emerald-500 to-teal-400 text-black shadow-[0_0_16px_rgba(16,185,129,0.35)]'
+                                            : 'text-neutral-500 hover:text-white active:scale-95'
                                         }`}
                                     >
-                                        PR a reps
+                                        {repTarget ? `PR a ${repTarget}+ reps` : 'Desactivado'}
                                     </button>
                                     {repTarget && (
-                                        <div className="flex items-center gap-0.5 bg-neutral-950/80 border border-neutral-800 rounded-full px-1 py-0.5">
+                                        <div className="flex items-center gap-0.5 animate-in slide-in-from-right-2 fade-in duration-300">
                                             <button
                                                 onClick={() => setRepTarget(Math.max(1, repTarget - 1))}
-                                                className="p-1 text-neutral-400 hover:text-white active:scale-90 transition-all"
+                                                className="w-9 h-9 flex items-center justify-center rounded-xl bg-neutral-900 border border-neutral-800 text-neutral-300 hover:text-white hover:border-neutral-600 active:scale-90 transition-all"
                                             >
-                                                <Minus size={11} strokeWidth={3} />
+                                                <Minus size={13} strokeWidth={3} />
                                             </button>
-                                            <span className="text-[11px] font-black text-white min-w-[34px] text-center">{repTarget}+ <span className="text-[8px] text-neutral-500">REPS</span></span>
                                             <button
                                                 onClick={() => setRepTarget(Math.min(30, repTarget + 1))}
-                                                className="p-1 text-neutral-400 hover:text-white active:scale-90 transition-all"
+                                                className="w-9 h-9 flex items-center justify-center rounded-xl bg-neutral-900 border border-neutral-800 text-neutral-300 hover:text-white hover:border-neutral-600 active:scale-90 transition-all"
                                             >
-                                                <Plus size={11} strokeWidth={3} />
+                                                <Plus size={13} strokeWidth={3} />
                                             </button>
                                         </div>
                                     )}
                                 </div>
-                            )}
-                        </div>
-                    )}
-                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
 
-                {/* Body */}
-                <div className="flex-1 overflow-y-auto px-5 py-4 custom-scrollbar">
+                {/* ── Body ───────────────────────────────────────────────── */}
+                <div className="flex-1 overflow-y-auto px-5 pb-6 pt-1 custom-scrollbar">
                     {loading ? (
-                        <div className="flex flex-col items-center justify-center py-12 gap-3">
-                            <Loader className="animate-spin text-gym-primary" size={28} />
+                        <div className="flex flex-col items-center justify-center py-14 gap-3">
+                            <div className="relative">
+                                <div className="absolute inset-0 bg-gym-primary/20 rounded-full blur-xl exhist-breathe" />
+                                <Loader className="relative animate-spin text-gym-primary" size={30} />
+                            </div>
                             <p className="text-neutral-500 text-xs font-bold uppercase tracking-wider">Cargando historial…</p>
                         </div>
                     ) : offline ? (
-                        <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
-                            <WifiOff className="text-neutral-600" size={32} />
-                            <p className="text-neutral-400 text-sm font-bold">Sin conexión</p>
-                            <p className="text-neutral-600 text-xs max-w-[240px]">Abre el historial de este ejercicio una vez con internet y quedará guardado para verlo sin conexión. Tus series de hoy se guardan igual.</p>
+                        <div className="flex flex-col items-center justify-center py-14 gap-3 text-center exhist-rise">
+                            <WifiOff className="text-neutral-600" size={34} />
+                            <p className="text-neutral-300 text-sm font-black uppercase">Sin conexión</p>
+                            <p className="text-neutral-600 text-xs max-w-[250px] leading-relaxed">Abre el historial de este ejercicio una vez con internet y quedará guardado para verlo sin conexión. Tus series de hoy se guardan igual.</p>
                         </div>
                     ) : history.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
-                            <History className="text-neutral-700" size={32} />
-                            <p className="text-neutral-400 text-sm font-bold">Sin registros todavía</p>
-                            <p className="text-neutral-600 text-xs max-w-[240px]">Cuando completes series de este ejercicio, aparecerán aquí para que te compares.</p>
+                        <div className="flex flex-col items-center justify-center py-14 gap-3 text-center exhist-rise">
+                            <History className="text-neutral-700" size={34} />
+                            <p className="text-neutral-300 text-sm font-black uppercase">Sin registros todavía</p>
+                            <p className="text-neutral-600 text-xs max-w-[250px] leading-relaxed">Cuando completes series de este ejercicio, aparecerán aquí para que te compares.</p>
                         </div>
                     ) : visibleHistory.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
-                            <History className="text-neutral-700" size={32} />
-                            <p className="text-neutral-400 text-sm font-bold">Nada en este período</p>
-                            <p className="text-neutral-600 text-xs max-w-[240px]">No entrenaste este ejercicio en {RANGE_LABELS[range].toLowerCase() === 'todo' ? 'este rango' : `la última ${RANGE_LABELS[range].toLowerCase()}`}. Prueba con otro rango.</p>
+                        <div className="flex flex-col items-center justify-center py-14 gap-3 text-center exhist-rise">
+                            <CalendarRange className="text-neutral-700" size={34} />
+                            <p className="text-neutral-300 text-sm font-black uppercase">Nada en este período</p>
+                            <p className="text-neutral-600 text-xs max-w-[250px] leading-relaxed">No entrenaste este ejercicio en este rango. Prueba con otro período.</p>
                         </div>
                     ) : (
-                        <div className="space-y-4">
-                            {visibleHistory.map(entry => (
-                                <div key={entry.sessionId} className="bg-neutral-950/60 border border-neutral-800/60 rounded-2xl overflow-hidden">
+                        <div className="space-y-3.5">
+                            {visibleHistory.map((entry, entryIdx) => (
+                                <div
+                                    key={entry.sessionId}
+                                    className="exhist-card bg-gradient-to-b from-neutral-900/80 to-neutral-950/90 border border-neutral-800/70 rounded-2xl overflow-hidden"
+                                    style={{ animationDelay: `${Math.min(entryIdx, 8) * 55}ms` }}
+                                >
                                     {/* Session date */}
-                                    <div className="px-3.5 py-2 bg-white/[0.03] border-b border-neutral-800/60 flex items-center justify-between">
+                                    <div className="px-4 py-2.5 bg-gradient-to-r from-gym-primary/10 via-transparent to-transparent border-b border-neutral-800/70 flex items-center justify-between">
                                         <span className="text-[10px] font-black uppercase tracking-wider text-gym-primary">
                                             {entry.date
                                                 ? new Date(entry.date).toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
                                                 : 'Fecha desconocida'}
                                         </span>
-                                        <span className="text-[9px] font-bold text-neutral-600 uppercase">{entry.sets.length} serie{entry.sets.length !== 1 ? 's' : ''}</span>
+                                        <span className="text-[9px] font-black text-neutral-600 uppercase bg-black/40 px-2 py-0.5 rounded-full border border-neutral-800">
+                                            {entry.sets.length} serie{entry.sets.length !== 1 ? 's' : ''}
+                                        </span>
                                     </div>
 
                                     {/* Column headers */}
-                                    <div className="grid px-3.5 pt-2 pb-1 text-[8px] font-black text-neutral-500 uppercase tracking-widest" style={{ gridTemplateColumns: `28px repeat(${columns.length}, 1fr) 24px` }}>
+                                    <div className="grid px-4 pt-2.5 pb-1 text-[8px] font-black text-neutral-500 uppercase tracking-[0.2em]" style={{ gridTemplateColumns: `26px repeat(${columns.length}, 1fr) 26px` }}>
                                         <span>#</span>
                                         {columns.map(c => <span key={c} className="text-center">{c}</span>)}
                                         <span></span>
                                     </div>
 
                                     {/* Sets */}
-                                    <div className="px-3.5 pb-2.5 space-y-0.5">
+                                    <div className="px-4 pb-3 space-y-1">
                                         {entry.sets.map((s, i) => {
                                             const medal = medalBySet.get(s);
                                             const dimmed = repTarget && canUseRepTarget && !qualifies(s);
                                             return (
-                                                <div key={i} className={`grid items-center py-1 rounded-lg text-[12px] font-bold transition-opacity ${medal ? 'bg-gym-primary/5' : ''} ${dimmed ? 'opacity-30' : ''}`} style={{ gridTemplateColumns: `28px repeat(${columns.length}, 1fr) 24px` }}>
+                                                <div
+                                                    key={i}
+                                                    className={`grid items-center py-1.5 px-1 rounded-xl text-[13px] font-bold transition-all duration-300 ${medal
+                                                        ? 'bg-gradient-to-r from-gym-primary/15 to-transparent ring-1 ring-gym-primary/25'
+                                                        : 'hover:bg-white/[0.03]'
+                                                    } ${dimmed ? 'opacity-25' : ''}`}
+                                                    style={{ gridTemplateColumns: `26px repeat(${columns.length}, 1fr) 26px` }}
+                                                >
                                                     <span className="text-neutral-600 text-[10px] font-black">{s.set_number || i + 1}</span>
                                                     {showWeight && <span className="text-center text-white">{s.weight_kg > 0 ? <>{s.weight_kg}<span className="text-[9px] text-neutral-500 ml-0.5">kg</span></> : <span className="text-neutral-700">—</span>}</span>}
                                                     {showReps && <span className="text-center text-white">{s.reps > 0 ? s.reps : <span className="text-neutral-700">—</span>}</span>}
                                                     {showTime && <span className="text-center text-white">{s.time > 0 ? formatTime(s.time) : <span className="text-neutral-700">—</span>}</span>}
                                                     {showDistance && <span className="text-center text-white">{s.distance > 0 ? <>{s.distance}<span className="text-[9px] text-neutral-500 ml-0.5">m</span></> : <span className="text-neutral-700">—</span>}</span>}
                                                     {showRpe && <span className="text-center text-white">{s.rpe > 0 ? s.rpe : <span className="text-neutral-700">—</span>}</span>}
-                                                    <span className="flex justify-center items-center text-[11px] leading-none">
+                                                    <span className={`flex justify-center items-center text-[13px] leading-none ${medal ? 'exhist-medal' : ''}`}>
                                                         {medal ? medal : (s.is_pr && <Trophy size={11} className="text-gym-primary" />)}
                                                     </span>
                                                 </div>
@@ -333,6 +395,58 @@ export const ExerciseHistoryModal: React.FC<ExerciseHistoryModalProps> = ({
                     )}
                 </div>
             </div>
+
+            <style>{`
+                .exhist-sheet {
+                    animation: exhistSlideUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+                }
+                @keyframes exhistSlideUp {
+                    from { transform: translateY(60px); opacity: 0; }
+                    to   { transform: translateY(0);    opacity: 1; }
+                }
+                .exhist-rise {
+                    animation: exhistRise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+                }
+                @keyframes exhistRise {
+                    from { transform: translateY(14px); opacity: 0; }
+                    to   { transform: translateY(0);    opacity: 1; }
+                }
+                .exhist-card {
+                    animation: exhistRise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+                }
+                .exhist-shimmer {
+                    background: linear-gradient(105deg, transparent 40%, rgba(250,204,21,0.12) 50%, transparent 60%);
+                    background-size: 220% 100%;
+                    animation: exhistShimmer 2.8s ease-in-out infinite;
+                }
+                @keyframes exhistShimmer {
+                    0%   { background-position: 130% 0; }
+                    55%  { background-position: -70% 0; }
+                    100% { background-position: -70% 0; }
+                }
+                .exhist-trophy-glow {
+                    animation: exhistGlow 2.2s ease-in-out infinite;
+                }
+                @keyframes exhistGlow {
+                    0%, 100% { box-shadow: 0 0 8px rgba(250,204,21,0.25); }
+                    50%      { box-shadow: 0 0 22px rgba(250,204,21,0.55); }
+                }
+                .exhist-breathe {
+                    animation: exhistBreathe 3.5s ease-in-out infinite;
+                }
+                @keyframes exhistBreathe {
+                    0%, 100% { opacity: 0.6; transform: scale(1); }
+                    50%      { opacity: 1;   transform: scale(1.15); }
+                }
+                .exhist-medal {
+                    animation: exhistMedalPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+                    filter: drop-shadow(0 0 6px rgba(250,204,21,0.4));
+                }
+                @keyframes exhistMedalPop {
+                    from { transform: scale(0); }
+                    to   { transform: scale(1); }
+                }
+            `}</style>
         </div>
     );
 };
