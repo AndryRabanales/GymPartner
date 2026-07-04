@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { X, History, Loader, Trophy, WifiOff } from 'lucide-react';
 
 export interface ExerciseHistoryEntry {
@@ -15,6 +15,22 @@ interface ExerciseHistoryModalProps {
     offline?: boolean;
     onClose: () => void;
 }
+
+type SortKey = 'recent' | 'weight' | 'reps' | 'time' | 'distance';
+type RangeKey = 'week' | 'month' | 'year' | 'all';
+
+const RANGE_LABELS: Record<RangeKey, string> = { week: 'Semana', month: 'Mes', year: 'Año', all: 'Todo' };
+const RANGE_MS: Record<Exclude<RangeKey, 'all'>, number> = {
+    week: 7 * 24 * 60 * 60 * 1000,
+    month: 30 * 24 * 60 * 60 * 1000,
+    year: 365 * 24 * 60 * 60 * 1000,
+};
+const BEST_LABEL: Record<RangeKey, string> = {
+    week: 'de la semana',
+    month: 'del mes',
+    year: 'del año',
+    all: 'histórico',
+};
 
 const formatTime = (secs: number) => {
     if (secs >= 60) {
@@ -44,6 +60,81 @@ export const ExerciseHistoryModal: React.FC<ExerciseHistoryModalProps> = ({
     const showDistance = (metrics?.distance ?? false) || anyData('distance');
     const showRpe = (metrics?.rpe ?? false) || anyData('rpe');
 
+    // Cardio exercises sort by time/distance; strength by weight/reps
+    const isCardio = (showTime || showDistance) && !showWeight;
+    const sortOptions: { key: SortKey; label: string }[] = [
+        { key: 'recent', label: 'Reciente' },
+        ...(isCardio
+            ? ([
+                ...(showTime ? [{ key: 'time' as SortKey, label: 'Tiempo' }] : []),
+                ...(showDistance ? [{ key: 'distance' as SortKey, label: 'Distancia' }] : []),
+            ])
+            : ([
+                ...(showWeight ? [{ key: 'weight' as SortKey, label: 'Peso' }] : []),
+                ...(showReps ? [{ key: 'reps' as SortKey, label: 'Reps' }] : []),
+            ])),
+    ];
+
+    const [sortBy, setSortBy] = useState<SortKey>('recent');
+    const [range, setRange] = useState<RangeKey>('all');
+
+    // Best value of a metric within one session (sessions are ranked by their best set)
+    const sessionBest = (entry: ExerciseHistoryEntry, key: 'weight_kg' | 'reps' | 'time' | 'distance') =>
+        entry.sets.reduce((max, s) => Math.max(max, Number((s as any)[key]) || 0), 0);
+
+    const visibleHistory = useMemo(() => {
+        let filtered = history;
+        if (range !== 'all') {
+            const cutoff = Date.now() - RANGE_MS[range];
+            filtered = history.filter(h => h.date && new Date(h.date).getTime() >= cutoff);
+        }
+        const sorted = filtered.slice();
+        switch (sortBy) {
+            case 'weight':
+                sorted.sort((a, b) => sessionBest(b, 'weight_kg') - sessionBest(a, 'weight_kg'));
+                break;
+            case 'reps':
+                sorted.sort((a, b) => sessionBest(b, 'reps') - sessionBest(a, 'reps'));
+                break;
+            case 'time':
+                sorted.sort((a, b) => sessionBest(b, 'time') - sessionBest(a, 'time'));
+                break;
+            case 'distance':
+                sorted.sort((a, b) => sessionBest(b, 'distance') - sessionBest(a, 'distance'));
+                break;
+            default: // recent
+                sorted.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        }
+        return sorted;
+    }, [history, sortBy, range]);
+
+    // Best mark WITHIN the selected range (self-comparison anchor)
+    const bestMark = useMemo(() => {
+        let best: { entry: ExerciseHistoryEntry; set: ExerciseHistoryEntry['sets'][0] } | null = null;
+        const primaryKey = isCardio ? (showTime ? 'time' : 'distance') : 'weight_kg';
+        for (const entry of visibleHistory) {
+            for (const s of entry.sets) {
+                const val = Number((s as any)[primaryKey]) || 0;
+                if (val <= 0) continue;
+                if (!best) { best = { entry, set: s }; continue; }
+                const bestVal = Number((best.set as any)[primaryKey]) || 0;
+                // Tiebreak strength by reps at the same weight
+                if (val > bestVal || (val === bestVal && !isCardio && s.reps > best.set.reps)) {
+                    best = { entry, set: s };
+                }
+            }
+        }
+        return best;
+    }, [visibleHistory, isCardio, showTime]);
+
+    const bestMarkText = bestMark
+        ? isCardio
+            ? (showTime && bestMark.set.time > 0
+                ? `${formatTime(bestMark.set.time)}${bestMark.set.distance > 0 ? ` · ${bestMark.set.distance} m` : ''}`
+                : `${bestMark.set.distance} m`)
+            : `${bestMark.set.weight_kg} kg${bestMark.set.reps > 0 ? ` × ${bestMark.set.reps}` : ''}`
+        : null;
+
     const columns = [
         showWeight && 'PESO',
         showReps && 'REPS',
@@ -59,17 +150,66 @@ export const ExerciseHistoryModal: React.FC<ExerciseHistoryModalProps> = ({
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="px-5 pt-4 pb-3 border-b border-white/5 flex items-start justify-between shrink-0">
-                    <div className="min-w-0 pr-2">
-                        <div className="flex items-center gap-1.5 text-gym-primary mb-0.5">
-                            <History size={13} />
-                            <span className="text-[9px] font-black uppercase tracking-widest">Historial</span>
+                <div className="px-5 pt-4 pb-3 border-b border-white/5 shrink-0">
+                    <div className="flex items-start justify-between">
+                        <div className="min-w-0 pr-2">
+                            <div className="flex items-center gap-1.5 text-gym-primary mb-0.5">
+                                <History size={13} />
+                                <span className="text-[9px] font-black uppercase tracking-widest">Historial</span>
+                            </div>
+                            <h3 className="text-lg font-black italic uppercase text-white leading-tight truncate">{exerciseName}</h3>
                         </div>
-                        <h3 className="text-lg font-black italic uppercase text-white leading-tight truncate">{exerciseName}</h3>
+                        <button onClick={onClose} className="p-2 text-neutral-400 hover:text-white hover:bg-white/5 rounded-full transition-all shrink-0">
+                            <X size={18} />
+                        </button>
                     </div>
-                    <button onClick={onClose} className="p-2 text-neutral-400 hover:text-white hover:bg-white/5 rounded-full transition-all shrink-0">
-                        <X size={18} />
-                    </button>
+
+                    {/* Best mark within the selected range */}
+                    {!loading && !offline && bestMarkText && (
+                        <div className="mt-2 flex items-center gap-1.5 bg-gym-primary/10 border border-gym-primary/25 rounded-xl px-3 py-1.5 w-fit">
+                            <Trophy size={12} className="text-gym-primary shrink-0" />
+                            <span className="text-[11px] font-black text-white">
+                                Tu mejor {BEST_LABEL[range]}: <span className="text-gym-primary">{bestMarkText}</span>
+                                {bestMark?.entry.date && (
+                                    <span className="text-neutral-500 font-bold"> — {new Date(bestMark.entry.date).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}</span>
+                                )}
+                            </span>
+                        </div>
+                    )}
+
+                    {/* Sort + Range controls */}
+                    {!loading && !offline && history.length > 0 && (
+                        <div className="mt-2.5 space-y-1.5">
+                            <div className="flex gap-1.5">
+                                {sortOptions.map(opt => (
+                                    <button
+                                        key={opt.key}
+                                        onClick={() => setSortBy(opt.key)}
+                                        className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider transition-all border ${sortBy === opt.key
+                                            ? 'bg-gym-primary text-black border-gym-primary'
+                                            : 'bg-transparent text-neutral-400 border-neutral-800 hover:border-neutral-600 hover:text-white'
+                                        }`}
+                                    >
+                                        {opt.label}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="flex gap-1.5">
+                                {(Object.keys(RANGE_LABELS) as RangeKey[]).map(r => (
+                                    <button
+                                        key={r}
+                                        onClick={() => setRange(r)}
+                                        className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider transition-all border ${range === r
+                                            ? 'bg-white/10 text-white border-white/30'
+                                            : 'bg-transparent text-neutral-500 border-neutral-800 hover:border-neutral-600 hover:text-white'
+                                        }`}
+                                    >
+                                        {RANGE_LABELS[r]}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Body */}
@@ -91,9 +231,15 @@ export const ExerciseHistoryModal: React.FC<ExerciseHistoryModalProps> = ({
                             <p className="text-neutral-400 text-sm font-bold">Sin registros todavía</p>
                             <p className="text-neutral-600 text-xs max-w-[240px]">Cuando completes series de este ejercicio, aparecerán aquí para que te compares.</p>
                         </div>
+                    ) : visibleHistory.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
+                            <History className="text-neutral-700" size={32} />
+                            <p className="text-neutral-400 text-sm font-bold">Nada en este período</p>
+                            <p className="text-neutral-600 text-xs max-w-[240px]">No entrenaste este ejercicio en {RANGE_LABELS[range].toLowerCase() === 'todo' ? 'este rango' : `la última ${RANGE_LABELS[range].toLowerCase()}`}. Prueba con otro rango.</p>
+                        </div>
                     ) : (
                         <div className="space-y-4">
-                            {history.map(entry => (
+                            {visibleHistory.map(entry => (
                                 <div key={entry.sessionId} className="bg-neutral-950/60 border border-neutral-800/60 rounded-2xl overflow-hidden">
                                     {/* Session date */}
                                     <div className="px-3.5 py-2 bg-white/[0.03] border-b border-neutral-800/60 flex items-center justify-between">
