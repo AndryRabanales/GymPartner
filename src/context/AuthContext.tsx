@@ -3,7 +3,16 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 import { userService } from '../services/UserService';
 import { pushService } from '../services/PushService';
-import { profileCache } from '../lib/offlineCache';
+import { profileCache, nativeStore } from '../lib/offlineCache';
+
+// ── Session persistence keys (native Preferences / localStorage) ────────────
+// The Supabase access token expires (~1h) and refreshing it REQUIRES network.
+// To guarantee the session NEVER dies except by explicit user sign-out, we
+// cache the last authenticated user and restore it whenever Supabase reports
+// "no session" (expired token offline, failed refresh, cold start without
+// internet, app update, etc.).
+const CACHED_USER_KEY = 'ginx_cached_auth_user';
+const SIGNED_OUT_FLAG_KEY = 'ginx_user_signed_out';
 import { workoutService } from '../services/WorkoutService';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
@@ -243,8 +252,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // We do NOT call getSession() separately to avoid race conditions.
         // ─────────────────────────────────────────────────────────────
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-            setSession(newSession);
-            setUser(newSession?.user ?? null);
+            if (newSession?.user) {
+                setSession(newSession);
+                setUser(newSession.user);
+                // Persist the user so the session can ALWAYS be restored offline.
+                nativeStore.set(CACHED_USER_KEY, JSON.stringify(newSession.user)).catch(() => {});
+                nativeStore.remove(SIGNED_OUT_FLAG_KEY).catch(() => {});
+            } else {
+                // Supabase reports "no session" (expired token without network,
+                // failed refresh, cold start offline, etc.). NEVER log the user
+                // out here — only an explicit sign-out (flag below) does that.
+                setSession(null);
+                const signedOut = await nativeStore.get(SIGNED_OUT_FLAG_KEY).catch(() => null);
+                const cachedRaw = signedOut ? null : await nativeStore.get(CACHED_USER_KEY).catch(() => null);
+                if (cachedRaw) {
+                    try {
+                        const cachedUser = JSON.parse(cachedRaw) as User;
+                        console.warn('🔒 [Auth] No live session — restored cached user (offline mode). Session will refresh silently when internet returns.');
+                        setUser(prev => prev ?? cachedUser);
+                    } catch {
+                        setUser(null);
+                    }
+                } else {
+                    setUser(null);
+                }
+            }
 
             // Unblock the UI on the very first event (INITIAL_SESSION, SIGNED_IN, etc.)
             if (!hasInitialized.current) {
@@ -279,10 +311,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         // Safety net: if onAuthStateChange never fires (e.g. Supabase SDK issue),
         // unblock the UI after 5 seconds so user isn't stuck on a blank screen.
-        const safetyNet = setTimeout(() => {
+        const safetyNet = setTimeout(async () => {
             if (!hasInitialized.current) {
                 console.warn('⏰ [Auth] Safety net triggered after 5s. Unblocking UI.');
                 hasInitialized.current = true;
+                // Restore cached user so the app still works if the SDK hung
+                // (e.g. cold start offline with an expired token).
+                try {
+                    const signedOut = await nativeStore.get(SIGNED_OUT_FLAG_KEY);
+                    if (!signedOut) {
+                        const raw = await nativeStore.get(CACHED_USER_KEY);
+                        if (raw) {
+                            const cachedUser = JSON.parse(raw) as User;
+                            console.warn('🔒 [Auth] Safety net restored cached user (offline mode).');
+                            setUser(prev => prev ?? cachedUser);
+                        }
+                    }
+                } catch { /* ignore */ }
                 setLoading(false);
             }
         }, 5000);
@@ -419,6 +464,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const handleAgeDecline = () => {
         // User cancelled or failed age check — sign them out cleanly.
+        // Mark as user-initiated so the offline restorer doesn't resurrect them.
+        nativeStore.set(SIGNED_OUT_FLAG_KEY, '1').catch(() => {});
+        nativeStore.remove(CACHED_USER_KEY).catch(() => {});
         pendingNewUserRef.current = null;
         setNeedsAgeVerification(false);
         setUser(null);
@@ -511,6 +559,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             }
         }
         pushService.clearToken().catch(() => { });
+
+        // 0. Mark the sign-out as USER-INITIATED so the offline session
+        // restorer never resurrects this user. Must be set BEFORE the
+        // SIGNED_OUT event fires from supabase.auth.signOut() below.
+        try {
+            await nativeStore.set(SIGNED_OUT_FLAG_KEY, '1');
+            await nativeStore.remove(CACHED_USER_KEY);
+        } catch { /* ignore */ }
 
         // 1. Clear state immediately so UI reflects logout right away
         setUser(null);
