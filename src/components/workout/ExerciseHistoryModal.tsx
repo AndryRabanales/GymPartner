@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { X, History, Loader, Trophy, WifiOff, Minus, Plus, ArrowDownWideNarrow, CalendarRange, Target } from 'lucide-react';
+import { X, History, Loader, Trophy, WifiOff, Minus, Plus, ArrowDownWideNarrow, CalendarRange, Target, ChevronDown } from 'lucide-react';
 
 export interface ExerciseHistoryEntry {
     date: string;
@@ -85,9 +85,32 @@ export const ExerciseHistoryModal: React.FC<ExerciseHistoryModalProps> = ({
     const qualifies = (s: ExerciseHistoryEntry['sets'][0]) =>
         !repTarget || !canUseRepTarget || s.reps >= repTarget;
 
-    // Best value of a metric within one session (sessions are ranked by their best set)
-    const sessionBest = (entry: ExerciseHistoryEntry, key: 'weight_kg' | 'reps' | 'time' | 'distance') =>
-        entry.sets.reduce((max, s) => Math.max(max, Number((s as any)[key]) || 0), 0);
+    // The metric the current combination is "searching for": the sort metric,
+    // or the exercise's primary metric when sorting by date.
+    const headlineKey: 'weight_kg' | 'reps' | 'time' | 'distance' =
+        sortBy === 'weight' ? 'weight_kg'
+        : sortBy === 'reps' ? 'reps'
+        : sortBy === 'time' ? 'time'
+        : sortBy === 'distance' ? 'distance'
+        : (isCardio ? (showTime ? 'time' : 'distance') : 'weight_kg');
+
+    // The single set a session card shows collapsed: its best QUALIFYING set
+    // for the headline metric (tiebreak by the complementary metric).
+    const sessionHeadlineSet = (entry: ExerciseHistoryEntry): ExerciseHistoryEntry['sets'][0] | null => {
+        let best: ExerciseHistoryEntry['sets'][0] | null = null;
+        for (const s of entry.sets) {
+            if (!qualifies(s)) continue;
+            const val = Number((s as any)[headlineKey]) || 0;
+            if (val <= 0) continue;
+            if (!best) { best = s; continue; }
+            const bestVal = Number((best as any)[headlineKey]) || 0;
+            const tie = headlineKey === 'weight_kg' ? s.reps - best.reps
+                : headlineKey === 'reps' ? s.weight_kg - best.weight_kg
+                : 0;
+            if (val > bestVal || (val === bestVal && tie > 0)) best = s;
+        }
+        return best;
+    };
 
     const visibleHistory = useMemo(() => {
         let filtered = history;
@@ -95,40 +118,40 @@ export const ExerciseHistoryModal: React.FC<ExerciseHistoryModalProps> = ({
             const cutoff = Date.now() - RANGE_MS[range];
             filtered = history.filter(h => h.date && new Date(h.date).getTime() >= cutoff);
         }
+        // Only sessions that actually have the searched data (a qualifying set
+        // with a value for the headline metric) are listed.
+        filtered = filtered.filter(h => sessionHeadlineSet(h) !== null);
+
+        const bestVal = (entry: ExerciseHistoryEntry) =>
+            Number((sessionHeadlineSet(entry) as any)?.[headlineKey]) || 0;
+
         const sorted = filtered.slice();
-        switch (sortBy) {
-            case 'weight':
-                sorted.sort((a, b) => sessionBest(b, 'weight_kg') - sessionBest(a, 'weight_kg'));
-                break;
-            case 'reps':
-                sorted.sort((a, b) => sessionBest(b, 'reps') - sessionBest(a, 'reps'));
-                break;
-            case 'time':
-                sorted.sort((a, b) => sessionBest(b, 'time') - sessionBest(a, 'time'));
-                break;
-            case 'distance':
-                sorted.sort((a, b) => sessionBest(b, 'distance') - sessionBest(a, 'distance'));
-                break;
-            default: // recent
-                sorted.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        if (sortBy === 'recent') {
+            sorted.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        } else {
+            sorted.sort((a, b) => bestVal(b) - bestVal(a));
         }
         return sorted;
-    }, [history, sortBy, range]);
+    }, [history, sortBy, range, repTarget, canUseRepTarget, headlineKey]);
 
     // Best mark WITHIN the selected range (self-comparison anchor), respecting
     // the rep target when active. Also ranks the podium: top-3 sets 🥇🥈🥉.
     const { bestMark, medalBySet } = useMemo(() => {
-        const primaryKey = isCardio ? (showTime ? 'time' : 'distance') : 'weight_kg';
+        // Rank by the SAME metric the combination is searching for, so the
+        // banner, medals and card headlines always tell one coherent story.
         const ranked: { entry: ExerciseHistoryEntry; set: ExerciseHistoryEntry['sets'][0]; val: number }[] = [];
         for (const entry of visibleHistory) {
             for (const s of entry.sets) {
                 if (!qualifies(s)) continue;
-                const val = Number((s as any)[primaryKey]) || 0;
+                const val = Number((s as any)[headlineKey]) || 0;
                 if (val <= 0) continue;
                 ranked.push({ entry, set: s, val });
             }
         }
-        ranked.sort((a, b) => b.val - a.val || (isCardio ? 0 : b.set.reps - a.set.reps));
+        ranked.sort((a, b) => b.val - a.val ||
+            (headlineKey === 'weight_kg' ? b.set.reps - a.set.reps
+            : headlineKey === 'reps' ? b.set.weight_kg - a.set.weight_kg
+            : 0));
         const medals = new Map<ExerciseHistoryEntry['sets'][0], string>();
         const MEDAL_ICONS = ['🥇', '🥈', '🥉'];
         ranked.slice(0, 3).forEach((r, i) => medals.set(r.set, MEDAL_ICONS[i]));
@@ -136,15 +159,35 @@ export const ExerciseHistoryModal: React.FC<ExerciseHistoryModalProps> = ({
             bestMark: ranked.length > 0 ? { entry: ranked[0].entry, set: ranked[0].set } : null,
             medalBySet: medals,
         };
-    }, [visibleHistory, isCardio, showTime, repTarget, canUseRepTarget]);
+    }, [visibleHistory, headlineKey, repTarget, canUseRepTarget]);
 
-    const bestMarkText = bestMark
-        ? isCardio
-            ? (showTime && bestMark.set.time > 0
-                ? `${formatTime(bestMark.set.time)}${bestMark.set.distance > 0 ? ` · ${bestMark.set.distance} m` : ''}`
-                : `${bestMark.set.distance} m`)
-            : `${bestMark.set.weight_kg} kg${bestMark.set.reps > 0 ? ` × ${bestMark.set.reps}` : ''}`
-        : null;
+    // Expanded cards (click to reveal the full set breakdown)
+    const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+    const toggleExpanded = (sessionId: string) => {
+        setExpandedIds(prev => {
+            const next = new Set(prev);
+            if (next.has(sessionId)) next.delete(sessionId);
+            else next.add(sessionId);
+            return next;
+        });
+    };
+
+    // Compact one-line summary of a set for the collapsed card, phrased
+    // around the searched metric first.
+    const headlineText = (s: ExerciseHistoryEntry['sets'][0]) => {
+        switch (headlineKey) {
+            case 'weight_kg':
+                return <>{s.weight_kg} <span className="text-[10px] text-neutral-400">kg</span>{s.reps > 0 && <span className="text-neutral-300"> × {s.reps}</span>}</>;
+            case 'reps':
+                return <>{s.reps} <span className="text-[10px] text-neutral-400">reps</span>{s.weight_kg > 0 && <span className="text-neutral-300"> · {s.weight_kg} kg</span>}</>;
+            case 'time':
+                return <>{formatTime(s.time)}{s.distance > 0 && <span className="text-neutral-300"> · {s.distance} m</span>}</>;
+            case 'distance':
+                return <>{s.distance} <span className="text-[10px] text-neutral-400">m</span>{s.time > 0 && <span className="text-neutral-300"> · {formatTime(s.time)}</span>}</>;
+        }
+    };
+
+    const bestMarkText = bestMark ? headlineText(bestMark.set) : null;
 
     const columns = [
         showWeight && 'PESO',
@@ -336,61 +379,84 @@ export const ExerciseHistoryModal: React.FC<ExerciseHistoryModalProps> = ({
                             <p className="text-neutral-600 text-xs max-w-[250px] leading-relaxed">No entrenaste este ejercicio en este rango. Prueba con otro período.</p>
                         </div>
                     ) : (
-                        <div className="space-y-3.5">
-                            {visibleHistory.map((entry, entryIdx) => (
-                                <div
-                                    key={entry.sessionId}
-                                    className="exhist-card bg-gradient-to-b from-neutral-900/80 to-neutral-950/90 border border-neutral-800/70 rounded-2xl overflow-hidden"
-                                    style={{ animationDelay: `${Math.min(entryIdx, 8) * 55}ms` }}
-                                >
-                                    {/* Session date */}
-                                    <div className="px-4 py-2.5 bg-gradient-to-r from-gym-primary/10 via-transparent to-transparent border-b border-neutral-800/70 flex items-center justify-between">
-                                        <span className="text-[10px] font-black uppercase tracking-wider text-gym-primary">
-                                            {entry.date
-                                                ? new Date(entry.date).toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
-                                                : 'Fecha desconocida'}
-                                        </span>
-                                        <span className="text-[9px] font-black text-neutral-600 uppercase bg-black/40 px-2 py-0.5 rounded-full border border-neutral-800">
-                                            {entry.sets.length} serie{entry.sets.length !== 1 ? 's' : ''}
-                                        </span>
-                                    </div>
+                        <div className="space-y-2.5">
+                            {visibleHistory.map((entry, entryIdx) => {
+                                const headline = sessionHeadlineSet(entry)!;
+                                const medal = medalBySet.get(headline);
+                                const isExpanded = expandedIds.has(entry.sessionId);
+                                return (
+                                    <div
+                                        key={entry.sessionId}
+                                        className={`exhist-card bg-gradient-to-b from-neutral-900/80 to-neutral-950/90 border rounded-2xl overflow-hidden transition-all duration-300 ${medal === '🥇'
+                                            ? 'border-gym-primary/40 shadow-[0_0_20px_rgba(250,204,21,0.08)]'
+                                            : 'border-neutral-800/70'
+                                        }`}
+                                        style={{ animationDelay: `${Math.min(entryIdx, 8) * 55}ms` }}
+                                    >
+                                        {/* Collapsed row: date + THE searched value. Tap to expand. */}
+                                        <button
+                                            onClick={() => toggleExpanded(entry.sessionId)}
+                                            className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left active:bg-white/[0.03] transition-colors"
+                                        >
+                                            <div className="min-w-0">
+                                                <p className="text-[9px] font-black uppercase tracking-wider text-neutral-500 mb-0.5">
+                                                    {entry.date
+                                                        ? new Date(entry.date).toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+                                                        : 'Fecha desconocida'}
+                                                </p>
+                                                <p className="text-lg font-black italic text-white leading-tight flex items-center gap-2">
+                                                    {medal && <span className="exhist-medal text-[16px] not-italic">{medal}</span>}
+                                                    <span>{headlineText(headline)}</span>
+                                                    {!medal && headline.is_pr && <Trophy size={12} className="text-gym-primary" />}
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center gap-2 shrink-0">
+                                                <span className="text-[8px] font-black text-neutral-600 uppercase bg-black/40 px-2 py-0.5 rounded-full border border-neutral-800">
+                                                    {entry.sets.length} serie{entry.sets.length !== 1 ? 's' : ''}
+                                                </span>
+                                                <ChevronDown size={16} className={`text-neutral-500 transition-transform duration-300 ${isExpanded ? 'rotate-180 text-gym-primary' : ''}`} />
+                                            </div>
+                                        </button>
 
-                                    {/* Column headers */}
-                                    <div className="grid px-4 pt-2.5 pb-1 text-[8px] font-black text-neutral-500 uppercase tracking-[0.2em]" style={{ gridTemplateColumns: `26px repeat(${columns.length}, 1fr) 26px` }}>
-                                        <span>#</span>
-                                        {columns.map(c => <span key={c} className="text-center">{c}</span>)}
-                                        <span></span>
-                                    </div>
-
-                                    {/* Sets */}
-                                    <div className="px-4 pb-3 space-y-1">
-                                        {entry.sets.map((s, i) => {
-                                            const medal = medalBySet.get(s);
-                                            const dimmed = repTarget && canUseRepTarget && !qualifies(s);
-                                            return (
-                                                <div
-                                                    key={i}
-                                                    className={`grid items-center py-1.5 px-1 rounded-xl text-[13px] font-bold transition-all duration-300 ${medal
-                                                        ? 'bg-gradient-to-r from-gym-primary/15 to-transparent ring-1 ring-gym-primary/25'
-                                                        : 'hover:bg-white/[0.03]'
-                                                    } ${dimmed ? 'opacity-25' : ''}`}
-                                                    style={{ gridTemplateColumns: `26px repeat(${columns.length}, 1fr) 26px` }}
-                                                >
-                                                    <span className="text-neutral-600 text-[10px] font-black">{s.set_number || i + 1}</span>
-                                                    {showWeight && <span className="text-center text-white">{s.weight_kg > 0 ? <>{s.weight_kg}<span className="text-[9px] text-neutral-500 ml-0.5">kg</span></> : <span className="text-neutral-700">—</span>}</span>}
-                                                    {showReps && <span className="text-center text-white">{s.reps > 0 ? s.reps : <span className="text-neutral-700">—</span>}</span>}
-                                                    {showTime && <span className="text-center text-white">{s.time > 0 ? formatTime(s.time) : <span className="text-neutral-700">—</span>}</span>}
-                                                    {showDistance && <span className="text-center text-white">{s.distance > 0 ? <>{s.distance}<span className="text-[9px] text-neutral-500 ml-0.5">m</span></> : <span className="text-neutral-700">—</span>}</span>}
-                                                    {showRpe && <span className="text-center text-white">{s.rpe > 0 ? s.rpe : <span className="text-neutral-700">—</span>}</span>}
-                                                    <span className={`flex justify-center items-center text-[13px] leading-none ${medal ? 'exhist-medal' : ''}`}>
-                                                        {medal ? medal : (s.is_pr && <Trophy size={11} className="text-gym-primary" />)}
-                                                    </span>
+                                        {/* Expanded breakdown: full sets table */}
+                                        {isExpanded && (
+                                            <div className="border-t border-neutral-800/70 animate-in fade-in slide-in-from-top-2 duration-300">
+                                                <div className="grid px-4 pt-2.5 pb-1 text-[8px] font-black text-neutral-500 uppercase tracking-[0.2em]" style={{ gridTemplateColumns: `26px repeat(${columns.length}, 1fr) 26px` }}>
+                                                    <span>#</span>
+                                                    {columns.map(c => <span key={c} className="text-center">{c}</span>)}
+                                                    <span></span>
                                                 </div>
-                                            );
-                                        })}
+                                                <div className="px-4 pb-3 space-y-1">
+                                                    {entry.sets.map((s, i) => {
+                                                        const setMedal = medalBySet.get(s);
+                                                        const dimmed = repTarget && canUseRepTarget && !qualifies(s);
+                                                        return (
+                                                            <div
+                                                                key={i}
+                                                                className={`grid items-center py-1.5 px-1 rounded-xl text-[13px] font-bold transition-all duration-300 ${setMedal
+                                                                    ? 'bg-gradient-to-r from-gym-primary/15 to-transparent ring-1 ring-gym-primary/25'
+                                                                    : 'hover:bg-white/[0.03]'
+                                                                } ${dimmed ? 'opacity-25' : ''}`}
+                                                                style={{ gridTemplateColumns: `26px repeat(${columns.length}, 1fr) 26px` }}
+                                                            >
+                                                                <span className="text-neutral-600 text-[10px] font-black">{s.set_number || i + 1}</span>
+                                                                {showWeight && <span className="text-center text-white">{s.weight_kg > 0 ? <>{s.weight_kg}<span className="text-[9px] text-neutral-500 ml-0.5">kg</span></> : <span className="text-neutral-700">—</span>}</span>}
+                                                                {showReps && <span className="text-center text-white">{s.reps > 0 ? s.reps : <span className="text-neutral-700">—</span>}</span>}
+                                                                {showTime && <span className="text-center text-white">{s.time > 0 ? formatTime(s.time) : <span className="text-neutral-700">—</span>}</span>}
+                                                                {showDistance && <span className="text-center text-white">{s.distance > 0 ? <>{s.distance}<span className="text-[9px] text-neutral-500 ml-0.5">m</span></> : <span className="text-neutral-700">—</span>}</span>}
+                                                                {showRpe && <span className="text-center text-white">{s.rpe > 0 ? s.rpe : <span className="text-neutral-700">—</span>}</span>}
+                                                                <span className={`flex justify-center items-center text-[13px] leading-none ${setMedal ? 'exhist-medal' : ''}`}>
+                                                                    {setMedal ? setMedal : (s.is_pr && <Trophy size={11} className="text-gym-primary" />)}
+                                                                </span>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </div>
