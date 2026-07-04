@@ -1832,6 +1832,84 @@ class WorkoutService {
         return { recovered, stillPending };
     }
 
+    /**
+     * Full training history for ONE exercise (matched by name across ID systems),
+     * grouped by session, newest first. Used by the in-workout "Historial" button
+     * so the user can self-compare while training.
+     */
+    async getExerciseHistory(userId: string, exerciseName: string, equipmentId?: string): Promise<{
+        date: string;
+        sessionId: string;
+        sets: { set_number: number; weight_kg: number; reps: number; time: number; distance: number; rpe: number; is_pr: boolean }[];
+    }[]> {
+        try {
+            // 1. Collect candidate exercise IDs: logs are keyed by `exercises.id`
+            // (resolved by name at finalize) but legacy/gym flows may use the
+            // gym_equipment UUID directly.
+            const candidateIds = new Set<string>();
+            if (equipmentId && !equipmentId.startsWith('virtual-') && !equipmentId.startsWith('manifest-')) {
+                candidateIds.add(equipmentId);
+            }
+            const { data: exRows } = await supabase
+                .from('exercises')
+                .select('id')
+                .ilike('name', exerciseName.trim());
+            (exRows || []).forEach((r: any) => candidateIds.add(r.id));
+
+            if (candidateIds.size === 0) return [];
+
+            // 2. All of this user's logs for those IDs
+            const { data: logs, error: logsError } = await supabase
+                .from('workout_logs')
+                .select('session_id, set_number, weight_kg, reps, time, distance, rpe, is_pr, created_at')
+                .in('exercise_id', Array.from(candidateIds))
+                .eq('owner_id', userId)
+                .order('created_at', { ascending: false })
+                .limit(400);
+
+            if (logsError || !logs || logs.length === 0) return [];
+
+            // 3. Resolve session dates in one query
+            const sessionIds = Array.from(new Set(logs.map(l => l.session_id)));
+            const { data: sessions } = await supabase
+                .from('workout_sessions')
+                .select('id, started_at')
+                .in('id', sessionIds);
+
+            const dateBySession = new Map<string, string>();
+            (sessions || []).forEach((s: any) => dateBySession.set(s.id, s.started_at));
+
+            // 4. Group by session, newest session first, sets in order
+            const bySession = new Map<string, any[]>();
+            logs.forEach(l => {
+                if (!bySession.has(l.session_id)) bySession.set(l.session_id, []);
+                bySession.get(l.session_id)!.push(l);
+            });
+
+            return Array.from(bySession.entries())
+                .map(([sessionId, sessionLogs]) => ({
+                    sessionId,
+                    date: dateBySession.get(sessionId) || sessionLogs[0]?.created_at || '',
+                    sets: sessionLogs
+                        .slice()
+                        .sort((a, b) => (a.set_number ?? 0) - (b.set_number ?? 0))
+                        .map(l => ({
+                            set_number: l.set_number ?? 0,
+                            weight_kg: Number(l.weight_kg) || 0,
+                            reps: Number(l.reps) || 0,
+                            time: Number(l.time) || 0,
+                            distance: Number(l.distance) || 0,
+                            rpe: Number(l.rpe) || 0,
+                            is_pr: !!l.is_pr,
+                        })),
+                }))
+                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        } catch (err) {
+            console.error('Error fetching exercise history:', err);
+            return [];
+        }
+    }
+
     // Fetch ALL user routines (no gym filter) and save to global cache.
     // Called on login to seed offline cache — ensures gym-specific routines
     // are available offline regardless of GPS / gymId resolution.

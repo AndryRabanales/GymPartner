@@ -21,7 +21,8 @@ import { normalizeText, getMuscleGroup } from '../utils/inventoryUtils';
 
 // Interface NumpadTarget removed
 // BattleTimer removed
-import { Loader2, ArrowLeft, ChevronLeft, Image as ImageIcon, MapPin, Search, Plus, Save, Activity, Layers, Tag, Battery, MapIcon, Check, Settings as SettingsIcon, Swords, Trash2, X, RotateCcw, Lock, Play, Loader, MoreVertical, Pause, LockOpen, LogOut, Award } from 'lucide-react';
+import { Loader2, ArrowLeft, ChevronLeft, Image as ImageIcon, MapPin, Search, Plus, Save, Activity, Layers, Tag, Battery, MapIcon, Check, Settings as SettingsIcon, Swords, Trash2, X, RotateCcw, Lock, Play, Loader, MoreVertical, Pause, LockOpen, LogOut, Award, History } from 'lucide-react';
+import { ExerciseHistoryModal, type ExerciseHistoryEntry } from '../components/workout/ExerciseHistoryModal';
 import { getCurrentPosition, haversineDistance } from '../utils/geolocationUtils';
 import type { GymPlace, Database } from '../types/database';
 import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
@@ -4831,6 +4832,31 @@ export const WorkoutSession = () => {
 
     // startSessionInternal removed
 
+    // --- EXERCISE HISTORY MODAL (self-comparison while training) ---
+    const [historyExercise, setHistoryExercise] = useState<WorkoutExercise | null>(null);
+    const [historyEntries, setHistoryEntries] = useState<ExerciseHistoryEntry[]>([]);
+    const [historyLoading, setHistoryLoading] = useState(false);
+    const [historyOffline, setHistoryOffline] = useState(false);
+
+    const openExerciseHistory = async (exercise: WorkoutExercise) => {
+        setHistoryExercise(exercise);
+        setHistoryEntries([]);
+        if (!navigator.onLine) {
+            setHistoryOffline(true);
+            setHistoryLoading(false);
+            return;
+        }
+        setHistoryOffline(false);
+        setHistoryLoading(true);
+        const entries = await workoutService.getExerciseHistory(
+            user!.id,
+            exercise.equipmentName,
+            exercise.equipmentId
+        );
+        setHistoryEntries(entries);
+        setHistoryLoading(false);
+    };
+
     // --- FINISH FLOW STATE ---
     const [showRoutineModal, setShowRoutineModal] = useState(false);
     const [showLocationModal, setShowLocationModal] = useState(false);
@@ -5855,6 +5881,14 @@ export const WorkoutSession = () => {
                                     {/* Header */}
                                     <div className="p-4 flex justify-between items-center bg-white/5 border-b border-white/5 shrink-0 gap-3">
                                         <div className="flex-1 min-w-0">
+                                            {/* Historial — self-comparison of past weights/reps for THIS exercise */}
+                                            <button
+                                                onClick={() => openExerciseHistory(exercise)}
+                                                className="mb-1.5 flex items-center gap-1 w-fit px-2.5 py-1 rounded-full bg-gym-primary/10 border border-gym-primary/25 text-gym-primary hover:bg-gym-primary/20 active:scale-95 transition-all"
+                                            >
+                                                <History size={10} strokeWidth={2.5} />
+                                                <span className="text-[9px] font-black uppercase tracking-widest">Historial</span>
+                                            </button>
                                             {/* Exercise name — full name including variant, no change-variant button.
                                                 Variants are selected in the catalog. During training the name is fixed. */}
                                             <h3 className={`font-black italic uppercase text-white leading-tight line-clamp-2 ${exercise.equipmentName.length > 22 ? 'text-base' : 'text-xl'}`}>
@@ -6427,6 +6461,18 @@ export const WorkoutSession = () => {
                         else { setShowAddModal(false); }
                     }}
                     onConfirm={handleBatchAdd}
+                />
+            )}
+
+            {/* Exercise History Modal — self-comparison while training */}
+            {historyExercise && (
+                <ExerciseHistoryModal
+                    exerciseName={historyExercise.equipmentName}
+                    metrics={historyExercise.metrics as any}
+                    history={historyEntries}
+                    loading={historyLoading}
+                    offline={historyOffline}
+                    onClose={() => setHistoryExercise(null)}
                 />
             )}
 
