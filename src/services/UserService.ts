@@ -843,7 +843,10 @@ class UserService {
     // Upload avatar to Supabase Storage
     async uploadAvatar(userId: string, file: File): Promise<{ success: boolean; publicUrl?: string; error?: string }> {
         try {
-            const fileExt = file.name.split('.').pop();
+            // Android camera captures can produce names without extension —
+            // derive it from the MIME type in that case.
+            const nameExt = file.name.includes('.') ? file.name.split('.').pop() : '';
+            const fileExt = (nameExt || file.type.split('/').pop() || 'jpg').toLowerCase();
             const fileName = `${userId}-${Math.random()}.${fileExt}`;
             const filePath = `avatars/${fileName}`;
 
@@ -851,7 +854,8 @@ class UserService {
                 .from('avatars') // Make sure this bucket exists in Supabase
                 .upload(filePath, file, {
                     cacheControl: '3600',
-                    upsert: false
+                    upsert: false,
+                    contentType: file.type || 'image/jpeg'
                 });
 
             if (uploadError) throw uploadError;
@@ -870,7 +874,8 @@ class UserService {
     // Upload banner to Supabase Storage
     async uploadBanner(userId: string, file: File): Promise<{ success: boolean; publicUrl?: string; error?: string }> {
         try {
-            const fileExt = file.name.split('.').pop();
+            const nameExt = file.name.includes('.') ? file.name.split('.').pop() : '';
+            const fileExt = (nameExt || file.type.split('/').pop() || 'jpg').toLowerCase();
             const fileName = `banner-${userId}-${Math.random()}.${fileExt}`;
             const filePath = `avatars/${fileName}`;
 
@@ -878,7 +883,8 @@ class UserService {
                 .from('avatars')
                 .upload(filePath, file, {
                     cacheControl: '3600',
-                    upsert: false
+                    upsert: false,
+                    contentType: file.type || 'image/jpeg'
                 });
 
             if (uploadError) throw uploadError;

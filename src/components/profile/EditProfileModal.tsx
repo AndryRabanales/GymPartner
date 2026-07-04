@@ -122,16 +122,27 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     };
 
     const handleSave = async () => {
+        // Editing profile requires network (photo upload + DB write)
+        if (!navigator.onLine) {
+            alert('📡 Sin conexión — necesitas internet para guardar cambios de perfil.');
+            return;
+        }
         setLoading(true);
         try {
             let newAvatarUrl = currentAvatarUrl;
             let newBannerUrl = currentBannerUrl;
 
-            // 1. Upload new avatar if selected
+            // 1. Upload new avatar if selected.
+            // On failure ABORT — silently keeping the old photo made users think
+            // the upload worked when it didn't.
             if (avatarFile) {
                 const uploadResult = await userService.uploadAvatar(user.id, avatarFile);
                 if (uploadResult.success && uploadResult.publicUrl) {
                     newAvatarUrl = uploadResult.publicUrl;
+                } else {
+                    alert('Error al subir la foto de perfil: ' + (uploadResult.error || 'desconocido') + '\nIntenta de nuevo.');
+                    setLoading(false);
+                    return;
                 }
             }
 
@@ -140,6 +151,10 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                 const bannerResult = await userService.uploadBanner(user.id, bannerFile);
                 if (bannerResult.success && bannerResult.publicUrl) {
                     newBannerUrl = bannerResult.publicUrl;
+                } else {
+                    alert('Error al subir la portada: ' + (bannerResult.error || 'desconocido') + '\nIntenta de nuevo.');
+                    setLoading(false);
+                    return;
                 }
             }
 
