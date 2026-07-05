@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { X, History, Loader, Trophy, WifiOff, Minus, Plus, ArrowDownWideNarrow, CalendarRange, Target, ChevronDown } from 'lucide-react';
+import { nativeStore } from '../../lib/offlineCache';
 
 export interface ExerciseHistoryEntry {
     date: string;
@@ -104,8 +105,25 @@ export const ExerciseHistoryModal: React.FC<ExerciseHistoryModalProps> = ({
         return oldest?.unit === 'lb' ? 'lb' : 'kg';
     }, [history]);
 
+    // The user's last choice is PERMANENT per exercise (saved on toggle,
+    // restored on open). The first-record default only applies when the user
+    // has never toggled the unit for this exercise.
+    const unitPrefKey = `ginx_exhist_unit_${exerciseName.trim().toLowerCase()}`;
     const [unitOverride, setUnitOverride] = useState<'kg' | 'lb' | null>(null);
     const displayUnit: 'kg' | 'lb' = unitOverride ?? defaultUnit;
+
+    useEffect(() => {
+        nativeStore.get(unitPrefKey)
+            .then(saved => {
+                if (saved === 'kg' || saved === 'lb') setUnitOverride(saved);
+            })
+            .catch(() => {});
+    }, [unitPrefKey]);
+
+    const chooseUnit = (u: 'kg' | 'lb') => {
+        setUnitOverride(u);
+        nativeStore.set(unitPrefKey, u).catch(() => {});
+    };
 
     // No decimals on conversions. A set shown in its own logged unit keeps the
     // typed value (lb round-trips exactly through the kg conversion).
@@ -302,7 +320,7 @@ export const ExerciseHistoryModal: React.FC<ExerciseHistoryModalProps> = ({
                                     {(['kg', 'lb'] as const).map(u => (
                                         <button
                                             key={u}
-                                            onClick={() => setUnitOverride(u)}
+                                            onClick={() => chooseUnit(u)}
                                             className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all duration-300 ${displayUnit === u
                                                 ? 'bg-white text-black shadow'
                                                 : 'text-neutral-500 hover:text-white active:scale-95'
