@@ -4,8 +4,10 @@ import { X, History, Loader, Trophy, WifiOff, Minus, Plus, ArrowDownWideNarrow, 
 export interface ExerciseHistoryEntry {
     date: string;
     sessionId: string;
-    sets: { set_number: number; weight_kg: number; reps: number; time: number; distance: number; rpe: number; is_pr: boolean }[];
+    sets: { set_number: number; weight_kg: number; reps: number; time: number; distance: number; rpe: number; is_pr: boolean; unit?: 'kg' | 'lb'; created_at?: string }[];
 }
+
+const KG_TO_LB = 2.20462;
 
 interface ExerciseHistoryModalProps {
     exerciseName: string;
@@ -84,6 +86,33 @@ export const ExerciseHistoryModal: React.FC<ExerciseHistoryModalProps> = ({
 
     const qualifies = (s: ExerciseHistoryEntry['sets'][0]) =>
         !repTarget || !canUseRepTarget || s.reps >= repTarget;
+
+    // ── Weight display unit ──────────────────────────────────────────────────
+    // Default = the unit of the FIRST set ever logged for this exercise
+    // (weights are stored in kg; the original unit travels in set.unit).
+    // The user can toggle from the modal; conversions show no decimals.
+    const defaultUnit = useMemo<'kg' | 'lb'>(() => {
+        let oldest: ExerciseHistoryEntry['sets'][0] | null = null;
+        let oldestTime = Infinity;
+        for (const entry of history) {
+            for (const s of entry.sets) {
+                if (!(Number(s.weight_kg) > 0)) continue;
+                const t = new Date(s.created_at || entry.date || 0).getTime() || 0;
+                if (t < oldestTime) { oldestTime = t; oldest = s; }
+            }
+        }
+        return oldest?.unit === 'lb' ? 'lb' : 'kg';
+    }, [history]);
+
+    const [unitOverride, setUnitOverride] = useState<'kg' | 'lb' | null>(null);
+    const displayUnit: 'kg' | 'lb' = unitOverride ?? defaultUnit;
+
+    // No decimals on conversions. A set shown in its own logged unit keeps the
+    // typed value (lb round-trips exactly through the kg conversion).
+    const displayWeight = (s: ExerciseHistoryEntry['sets'][0]): number => {
+        if (displayUnit === 'lb') return Math.round(s.weight_kg * KG_TO_LB);
+        return s.unit === 'lb' ? Math.round(s.weight_kg) : s.weight_kg;
+    };
 
     // The metric the current combination is "searching for": the sort metric,
     // or the exercise's primary metric when sorting by date.
@@ -177,9 +206,9 @@ export const ExerciseHistoryModal: React.FC<ExerciseHistoryModalProps> = ({
     const headlineText = (s: ExerciseHistoryEntry['sets'][0]) => {
         switch (headlineKey) {
             case 'weight_kg':
-                return <>{s.weight_kg} <span className="text-[10px] text-neutral-400">kg</span>{s.reps > 0 && <span className="text-neutral-300"> × {s.reps}</span>}</>;
+                return <>{displayWeight(s)} <span className="text-[10px] text-neutral-400">{displayUnit}</span>{s.reps > 0 && <span className="text-neutral-300"> × {s.reps}</span>}</>;
             case 'reps':
-                return <>{s.reps} <span className="text-[10px] text-neutral-400">reps</span>{s.weight_kg > 0 && <span className="text-neutral-300"> · {s.weight_kg} kg</span>}</>;
+                return <>{s.reps} <span className="text-[10px] text-neutral-400">reps</span>{s.weight_kg > 0 && <span className="text-neutral-300"> · {displayWeight(s)} {displayUnit}</span>}</>;
             case 'time':
                 return <>{formatTime(s.time)}{s.distance > 0 && <span className="text-neutral-300"> · {s.distance} m</span>}</>;
             case 'distance':
@@ -251,7 +280,7 @@ export const ExerciseHistoryModal: React.FC<ExerciseHistoryModalProps> = ({
                 {/* ── Combinable filters — clearly separated groups ─────── */}
                 {hasControls && (
                     <div className="px-4 pb-2 space-y-1.5 shrink-0">
-                        {/* Group 1: SORT */}
+                        {/* Group 1: SORT (+ kg/lb display unit toggle) */}
                         <div className="exhist-rise flex items-center gap-2" style={{ animationDelay: '120ms' }}>
                             <ArrowDownWideNarrow size={11} className="text-gym-primary shrink-0" />
                             <div className="grid flex-1 p-0.5 bg-black/70 border border-neutral-800/80 rounded-xl" style={{ gridTemplateColumns: `repeat(${sortOptions.length}, 1fr)` }}>
@@ -268,6 +297,22 @@ export const ExerciseHistoryModal: React.FC<ExerciseHistoryModalProps> = ({
                                     </button>
                                 ))}
                             </div>
+                            {showWeight && (
+                                <div className="flex p-0.5 bg-black/70 border border-neutral-800/80 rounded-xl shrink-0">
+                                    {(['kg', 'lb'] as const).map(u => (
+                                        <button
+                                            key={u}
+                                            onClick={() => setUnitOverride(u)}
+                                            className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all duration-300 ${displayUnit === u
+                                                ? 'bg-white text-black shadow'
+                                                : 'text-neutral-500 hover:text-white active:scale-95'
+                                            }`}
+                                        >
+                                            {u}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                         {/* Group 2: RANGE */}
@@ -415,7 +460,7 @@ export const ExerciseHistoryModal: React.FC<ExerciseHistoryModalProps> = ({
                                                                 style={{ gridTemplateColumns: `26px repeat(${columns.length}, 1fr) 26px` }}
                                                             >
                                                                 <span className="text-neutral-600 text-[10px] font-black">{s.set_number || i + 1}</span>
-                                                                {showWeight && <span className="text-center text-white">{s.weight_kg > 0 ? <>{s.weight_kg}<span className="text-[9px] text-neutral-500 ml-0.5">kg</span></> : <span className="text-neutral-700">—</span>}</span>}
+                                                                {showWeight && <span className="text-center text-white">{s.weight_kg > 0 ? <>{displayWeight(s)}<span className="text-[9px] text-neutral-500 ml-0.5">{displayUnit}</span></> : <span className="text-neutral-700">—</span>}</span>}
                                                                 {showReps && <span className="text-center text-white">{s.reps > 0 ? s.reps : <span className="text-neutral-700">—</span>}</span>}
                                                                 {showTime && <span className="text-center text-white">{s.time > 0 ? formatTime(s.time) : <span className="text-neutral-700">—</span>}</span>}
                                                                 {showDistance && <span className="text-center text-white">{s.distance > 0 ? <>{s.distance}<span className="text-[9px] text-neutral-500 ml-0.5">m</span></> : <span className="text-neutral-700">—</span>}</span>}

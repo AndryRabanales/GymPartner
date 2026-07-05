@@ -1844,7 +1844,7 @@ class WorkoutService {
     async getExerciseHistory(userId: string, exerciseName: string, equipmentId?: string): Promise<{
         date: string;
         sessionId: string;
-        sets: { set_number: number; weight_kg: number; reps: number; time: number; distance: number; rpe: number; is_pr: boolean }[];
+        sets: { set_number: number; weight_kg: number; reps: number; time: number; distance: number; rpe: number; is_pr: boolean; unit?: 'kg' | 'lb'; created_at?: string }[];
     }[]> {
         const cacheKey = this._exHistoryCacheKey(userId, exerciseName);
 
@@ -1875,10 +1875,11 @@ class WorkoutService {
 
             if (candidateIds.size === 0) return [];
 
-            // 2. All of this user's logs for those IDs
+            // 2. All of this user's logs for those IDs (metrics_data carries the
+            // unit the set was originally typed in: _weight_unit === 'lb')
             const { data: logs, error: logsError } = await supabase
                 .from('workout_logs')
-                .select('session_id, set_number, weight_kg, reps, time, distance, rpe, is_pr, created_at')
+                .select('session_id, set_number, weight_kg, reps, time, distance, rpe, is_pr, created_at, metrics_data')
                 .in('exercise_id', Array.from(candidateIds))
                 .eq('owner_id', userId)
                 .order('created_at', { ascending: false })
@@ -1918,6 +1919,8 @@ class WorkoutService {
                             distance: Number(l.distance) || 0,
                             rpe: Number(l.rpe) || 0,
                             is_pr: !!l.is_pr,
+                            unit: ((l as any).metrics_data?._weight_unit === 'lb' ? 'lb' : 'kg') as 'kg' | 'lb',
+                            created_at: l.created_at || '',
                         })),
                 }))
                 .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
