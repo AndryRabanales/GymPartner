@@ -205,58 +205,42 @@ export const ExerciseHistoryModal: React.FC<ExerciseHistoryModalProps> = ({
                 className="exhist-sheet bg-neutral-950 border border-neutral-800/80 w-full max-w-md rounded-t-[2rem] sm:rounded-[2rem] shadow-[0_-20px_80px_rgba(250,204,21,0.07)] flex flex-col max-h-[88vh] overflow-hidden"
                 onClick={e => e.stopPropagation()}
             >
-                {/* ── Header ─────────────────────────────────────────────── */}
-                <div className="relative px-5 pt-5 pb-4 shrink-0 overflow-hidden">
+                {/* ── Header (compact) ───────────────────────────────────── */}
+                <div className="relative px-4 pt-3 pb-2 shrink-0 overflow-hidden">
                     {/* ambient glow */}
-                    <div className="absolute -top-16 -left-16 w-48 h-48 bg-gym-primary/10 rounded-full blur-3xl pointer-events-none exhist-breathe" />
-                    <div className="absolute -top-10 right-10 w-32 h-32 bg-yellow-600/5 rounded-full blur-2xl pointer-events-none" />
+                    <div className="absolute -top-16 -left-16 w-40 h-40 bg-gym-primary/10 rounded-full blur-3xl pointer-events-none exhist-breathe" />
 
-                    <div className="relative flex items-start justify-between">
-                        <div className="min-w-0 pr-2 exhist-rise" style={{ animationDelay: '0ms' }}>
-                            <div className="flex items-center gap-1.5 text-gym-primary mb-1">
-                                <span className="w-6 h-6 rounded-lg bg-gym-primary/15 border border-gym-primary/30 flex items-center justify-center">
-                                    <History size={12} />
-                                </span>
-                                <span className="text-[9px] font-black uppercase tracking-[0.25em]">Historial</span>
-                            </div>
-                            <h3 className="text-xl font-black italic uppercase text-white leading-tight truncate">{exerciseName}</h3>
-                        </div>
-                        <button onClick={onClose} className="p-2.5 text-neutral-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-full transition-all active:scale-90 shrink-0">
-                            <X size={16} />
+                    <div className="relative flex items-center justify-between gap-2">
+                        <h3 className="text-base font-black italic uppercase text-white leading-tight truncate exhist-rise">{exerciseName}</h3>
+                        <button onClick={onClose} className="p-1.5 text-neutral-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-full transition-all active:scale-90 shrink-0">
+                            <X size={14} />
                         </button>
                     </div>
 
-                    {/* ── Best mark HERO ─────────────────────────────────── */}
+                    {/* ── Best mark (compact single row) ─────────────────── */}
                     {!loading && !offline && (bestMarkText || (repTarget && canUseRepTarget)) && (
-                        <div className="relative mt-3 exhist-rise" style={{ animationDelay: '60ms' }}>
-                            <div className="exhist-hero relative overflow-hidden rounded-2xl border border-gym-primary/30 bg-gradient-to-br from-gym-primary/15 via-neutral-900 to-neutral-950 px-4 py-3">
-                                {/* shimmer sweep */}
+                        <div className="relative mt-1.5 exhist-rise" style={{ animationDelay: '60ms' }}>
+                            <div className="relative overflow-hidden rounded-xl border border-gym-primary/30 bg-gradient-to-br from-gym-primary/15 via-neutral-900 to-neutral-950 px-3 py-1.5">
                                 <div className="exhist-shimmer absolute inset-0 pointer-events-none" />
                                 {bestMarkText ? (
-                                    <div className="relative flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-gym-primary/20 border border-gym-primary/40 flex items-center justify-center exhist-trophy-glow shrink-0">
-                                            <Trophy size={18} className="text-gym-primary" />
-                                        </div>
-                                        <div className="min-w-0">
-                                            <p className="text-[8px] font-black uppercase tracking-[0.2em] text-gym-primary/80">
-                                                Tu mejor {BEST_LABEL[range]}{repTarget && canUseRepTarget ? ` · ${repTarget}+ reps` : ''}
-                                            </p>
-                                            <p className="text-xl font-black italic text-white leading-tight">
-                                                {bestMarkText}
-                                                {bestMark?.entry.date && (
-                                                    <span className="text-[10px] text-neutral-500 font-bold not-italic ml-2">
-                                                        {new Date(bestMark.entry.date).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
-                                                    </span>
-                                                )}
-                                            </p>
-                                        </div>
+                                    <div className="relative flex items-center gap-2">
+                                        <Trophy size={14} className="text-gym-primary shrink-0 exhist-trophy-glow rounded-full" />
+                                        <p className="text-base font-black italic text-white leading-tight truncate">
+                                            {bestMarkText}
+                                            {repTarget && canUseRepTarget && (
+                                                <span className="text-[9px] text-gym-primary/80 font-black not-italic ml-1.5">{repTarget}+ REPS</span>
+                                            )}
+                                            {bestMark?.entry.date && (
+                                                <span className="text-[9px] text-neutral-500 font-bold not-italic ml-1.5">
+                                                    {new Date(bestMark.entry.date).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
+                                                </span>
+                                            )}
+                                        </p>
                                     </div>
                                 ) : (
-                                    <div className="relative flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-neutral-800 border border-neutral-700 flex items-center justify-center shrink-0">
-                                            <Target size={18} className="text-neutral-500" />
-                                        </div>
-                                        <p className="text-[11px] font-bold text-neutral-400">Sin series de {repTarget}+ reps en este período</p>
+                                    <div className="relative flex items-center gap-2">
+                                        <Target size={14} className="text-neutral-500 shrink-0" />
+                                        <p className="text-[10px] font-bold text-neutral-400">Sin series de {repTarget}+ reps en este período</p>
                                     </div>
                                 )}
                             </div>
@@ -266,20 +250,17 @@ export const ExerciseHistoryModal: React.FC<ExerciseHistoryModalProps> = ({
 
                 {/* ── Combinable filters — clearly separated groups ─────── */}
                 {hasControls && (
-                    <div className="px-5 pb-3 space-y-2.5 shrink-0">
+                    <div className="px-4 pb-2 space-y-1.5 shrink-0">
                         {/* Group 1: SORT */}
-                        <div className="exhist-rise" style={{ animationDelay: '120ms' }}>
-                            <div className="flex items-center gap-1.5 mb-1 ml-0.5">
-                                <ArrowDownWideNarrow size={10} className="text-gym-primary" />
-                                <span className="text-[8px] font-black uppercase tracking-[0.25em] text-neutral-400">Ordenar por</span>
-                            </div>
-                            <div className="grid w-full p-1 bg-black/70 border border-neutral-800/80 rounded-2xl" style={{ gridTemplateColumns: `repeat(${sortOptions.length}, 1fr)` }}>
+                        <div className="exhist-rise flex items-center gap-2" style={{ animationDelay: '120ms' }}>
+                            <ArrowDownWideNarrow size={11} className="text-gym-primary shrink-0" />
+                            <div className="grid flex-1 p-0.5 bg-black/70 border border-neutral-800/80 rounded-xl" style={{ gridTemplateColumns: `repeat(${sortOptions.length}, 1fr)` }}>
                                 {sortOptions.map(opt => (
                                     <button
                                         key={opt.key}
                                         onClick={() => setSortBy(opt.key)}
-                                        className={`py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 ${sortBy === opt.key
-                                            ? 'bg-gradient-to-r from-gym-primary to-yellow-400 text-black shadow-[0_0_16px_rgba(250,204,21,0.35)] scale-[1.02]'
+                                        className={`py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all duration-300 ${sortBy === opt.key
+                                            ? 'bg-gradient-to-r from-gym-primary to-yellow-400 text-black shadow-[0_0_12px_rgba(250,204,21,0.3)]'
                                             : 'text-neutral-500 hover:text-white active:scale-95'
                                         }`}
                                     >
@@ -290,18 +271,15 @@ export const ExerciseHistoryModal: React.FC<ExerciseHistoryModalProps> = ({
                         </div>
 
                         {/* Group 2: RANGE */}
-                        <div className="exhist-rise" style={{ animationDelay: '180ms' }}>
-                            <div className="flex items-center gap-1.5 mb-1 ml-0.5">
-                                <CalendarRange size={10} className="text-sky-400" />
-                                <span className="text-[8px] font-black uppercase tracking-[0.25em] text-neutral-400">Período</span>
-                            </div>
-                            <div className="grid grid-cols-4 w-full p-1 bg-black/70 border border-neutral-800/80 rounded-2xl">
+                        <div className="exhist-rise flex items-center gap-2" style={{ animationDelay: '160ms' }}>
+                            <CalendarRange size={11} className="text-sky-400 shrink-0" />
+                            <div className="grid grid-cols-4 flex-1 p-0.5 bg-black/70 border border-neutral-800/80 rounded-xl">
                                 {(Object.keys(RANGE_LABELS) as RangeKey[]).map(r => (
                                     <button
                                         key={r}
                                         onClick={() => setRange(r)}
-                                        className={`py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 ${range === r
-                                            ? 'bg-gradient-to-r from-sky-500 to-cyan-400 text-black shadow-[0_0_16px_rgba(56,189,248,0.35)] scale-[1.02]'
+                                        className={`py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all duration-300 ${range === r
+                                            ? 'bg-gradient-to-r from-sky-500 to-cyan-400 text-black shadow-[0_0_12px_rgba(56,189,248,0.3)]'
                                             : 'text-neutral-500 hover:text-white active:scale-95'
                                         }`}
                                     >
@@ -313,34 +291,31 @@ export const ExerciseHistoryModal: React.FC<ExerciseHistoryModalProps> = ({
 
                         {/* Group 3: REP TARGET (strength only) */}
                         {canUseRepTarget && (
-                            <div className="exhist-rise" style={{ animationDelay: '240ms' }}>
-                                <div className="flex items-center gap-1.5 mb-1 ml-0.5">
-                                    <Target size={10} className="text-emerald-400" />
-                                    <span className="text-[8px] font-black uppercase tracking-[0.25em] text-neutral-400">Objetivo de reps</span>
-                                </div>
-                                <div className="flex w-full p-1 bg-black/70 border border-neutral-800/80 rounded-2xl gap-1">
+                            <div className="exhist-rise flex items-center gap-2" style={{ animationDelay: '200ms' }}>
+                                <Target size={11} className="text-emerald-400 shrink-0" />
+                                <div className="flex flex-1 p-0.5 bg-black/70 border border-neutral-800/80 rounded-xl gap-1">
                                     <button
                                         onClick={() => setRepTarget(repTarget ? null : 8)}
-                                        className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 ${repTarget
-                                            ? 'bg-gradient-to-r from-emerald-500 to-teal-400 text-black shadow-[0_0_16px_rgba(16,185,129,0.35)]'
+                                        className={`flex-1 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all duration-300 ${repTarget
+                                            ? 'bg-gradient-to-r from-emerald-500 to-teal-400 text-black shadow-[0_0_12px_rgba(16,185,129,0.3)]'
                                             : 'text-neutral-500 hover:text-white active:scale-95'
                                         }`}
                                     >
-                                        {repTarget ? `PR a ${repTarget}+ reps` : 'Desactivado'}
+                                        {repTarget ? `PR a ${repTarget}+ reps` : 'Objetivo de reps: off'}
                                     </button>
                                     {repTarget && (
                                         <div className="flex items-center gap-0.5 animate-in slide-in-from-right-2 fade-in duration-300">
                                             <button
                                                 onClick={() => setRepTarget(Math.max(1, repTarget - 1))}
-                                                className="w-9 h-9 flex items-center justify-center rounded-xl bg-neutral-900 border border-neutral-800 text-neutral-300 hover:text-white hover:border-neutral-600 active:scale-90 transition-all"
+                                                className="w-6 h-6 flex items-center justify-center rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300 hover:text-white hover:border-neutral-600 active:scale-90 transition-all"
                                             >
-                                                <Minus size={13} strokeWidth={3} />
+                                                <Minus size={11} strokeWidth={3} />
                                             </button>
                                             <button
                                                 onClick={() => setRepTarget(Math.min(30, repTarget + 1))}
-                                                className="w-9 h-9 flex items-center justify-center rounded-xl bg-neutral-900 border border-neutral-800 text-neutral-300 hover:text-white hover:border-neutral-600 active:scale-90 transition-all"
+                                                className="w-6 h-6 flex items-center justify-center rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300 hover:text-white hover:border-neutral-600 active:scale-90 transition-all"
                                             >
-                                                <Plus size={13} strokeWidth={3} />
+                                                <Plus size={11} strokeWidth={3} />
                                             </button>
                                         </div>
                                     )}
