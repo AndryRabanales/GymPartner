@@ -1,7 +1,10 @@
 import { useRef, useState, useEffect } from 'react';
 import html2canvas from 'html2canvas';
-import { Share2, Download, X, Image as ImageIcon, Zap, Plus, Scaling, Settings, Check, Trophy } from 'lucide-react';
+import { Share2, Download, X, Image as ImageIcon, Zap, Plus, Scaling, Settings, Check, Trophy, Flame, Sparkles, BarChart3 } from 'lucide-react';
 import { MuscleRadarChart } from './MuscleRadarChart';
+import { Capacitor } from '@capacitor/core';
+import { Share } from '@capacitor/share';
+import { Filesystem, Directory } from '@capacitor/filesystem';
 
 interface ShareOverlayProps {
     stats: any;
@@ -11,7 +14,10 @@ interface ShareOverlayProps {
 }
 
 // Granular Sticker Types
-type StickerType = 'volume' | 'workouts' | 'time' | 'radar' | 'logo' | 'date' | 'avg' | 'pr' | 'consistency' | 'hype_weight' | 'hype_legday' | 'hype_pr' | 'stamp_gym';
+type StickerType =
+    | 'volume' | 'workouts' | 'time' | 'radar' | 'logo' | 'date' | 'avg' | 'pr' | 'consistency' | 'stamp_gym'
+    | 'hype_weight' | 'hype_legday' | 'hype_pr' | 'hype_beast' | 'hype_nopain' | 'hype_grind'
+    | 'deco_flame' | 'deco_laurel' | 'deco_barbell';
 
 interface StickerState {
     id: StickerType;
@@ -68,6 +74,12 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
         { id: 'hype_weight', label: 'Light Weight', x: 120, y: 450, scale: 0.8, visible: false },
         { id: 'hype_legday', label: 'Leg Day', x: 120, y: 450, scale: 0.8, visible: false },
         { id: 'hype_pr', label: 'New PR', x: 120, y: 450, scale: 0.8, visible: false },
+        { id: 'hype_beast', label: 'Beast Mode', x: 80, y: 420, scale: 0.9, visible: false },
+        { id: 'hype_nopain', label: 'No Pain No Gain', x: 60, y: 440, scale: 0.9, visible: false },
+        { id: 'hype_grind', label: 'The Grind', x: 90, y: 430, scale: 0.9, visible: false },
+        { id: 'deco_flame', label: 'Racha 🔥', x: 230, y: 380, scale: 1, visible: false },
+        { id: 'deco_laurel', label: 'Top 1%', x: 100, y: 60, scale: 1, visible: false },
+        { id: 'deco_barbell', label: 'Divisor Barra', x: 60, y: 350, scale: 1, visible: false },
         { id: 'pr', label: 'Lista Récords', x: 20, y: 150, scale: 1, visible: false },
         { id: 'consistency', label: 'Heatmap', x: 20, y: 400, scale: 0.8, visible: false },
         { id: 'avg', label: 'Promedio/Sesión', x: 20, y: 250, scale: 1, visible: false },
@@ -214,50 +226,124 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
         }
     };
 
-    const handleShare = async () => {
-        if (!cardRef.current) return;
-        setDownloading(true);
+    // Render the card to a high-res PNG data URL
+    const renderCard = async (): Promise<string | null> => {
+        if (!cardRef.current) return null;
         setSelectedId(null);
+        // Let the selection ring/handles unmount before capturing
+        await new Promise(r => setTimeout(r, 350));
+        if (!cardRef.current) return null;
 
         const width = 320;
         const height = cardHeight;
 
-        setTimeout(async () => {
-            try {
-                if (!cardRef.current) return;
-
-                const canvas = await html2canvas(cardRef.current, {
-                    backgroundColor: null,
-                    scale: 6,
-                    width: width,
-                    height: height,
-                    useCORS: true,
-                    allowTaint: true,
-                    logging: false,
-                    scrollX: 0,
-                    scrollY: 0,
-                    windowWidth: width,
-                    windowHeight: height,
-                    onclone: (clonedDoc) => {
-                        const el = clonedDoc.getElementById('export-card');
-                        if (el) {
-                            el.style.boxShadow = 'none';
-                            el.style.borderRadius = '0';
-                        }
-                    }
-                });
-
-                const image = canvas.toDataURL("image/png", 1.0);
-                const link = document.createElement('a');
-                link.href = image;
-                link.download = `Ginx_Story_${new Date().toISOString().slice(0, 10)}.png`;
-                link.click();
-            } catch (err) {
-                console.error("Error", err);
-            } finally {
-                setDownloading(false);
+        const canvas = await html2canvas(cardRef.current, {
+            backgroundColor: null,
+            scale: 6,
+            width,
+            height,
+            useCORS: true,
+            allowTaint: true,
+            logging: false,
+            scrollX: 0,
+            scrollY: 0,
+            windowWidth: width,
+            windowHeight: height,
+            onclone: (clonedDoc) => {
+                const el = clonedDoc.getElementById('export-card');
+                if (el) {
+                    el.style.boxShadow = 'none';
+                    el.style.borderRadius = '0';
+                }
             }
-        }, 500);
+        });
+        return canvas.toDataURL('image/png', 1.0);
+    };
+
+    const fileName = () => `Ginx_Story_${new Date().toISOString().slice(0, 10)}.png`;
+
+    const downloadViaLink = (dataUrl: string) => {
+        const link = document.createElement('a');
+        link.href = dataUrl;
+        link.download = fileName();
+        link.click();
+    };
+
+    // SHARE: opens the native share sheet (Instagram / WhatsApp / Facebook /
+    // Stories / save). On web uses the Web Share API with the image file,
+    // falling back to a plain download when unsupported (desktop browsers).
+    const [sharing, setSharing] = useState(false);
+    const handleShare = async () => {
+        if (sharing || downloading) return;
+        setSharing(true);
+        try {
+            const dataUrl = await renderCard();
+            if (!dataUrl) return;
+
+            if (Capacitor.isNativePlatform()) {
+                // Native (iOS/Android): write to cache and hand the FILE to the
+                // OS share sheet — required for Instagram/WhatsApp to accept it.
+                const base64 = dataUrl.split(',')[1];
+                const file = await Filesystem.writeFile({
+                    path: fileName(),
+                    data: base64,
+                    directory: Directory.Cache,
+                });
+                await Share.share({
+                    title: 'Mis Stats GINX',
+                    text: `💪 Mi progreso en GINX — ${stats.totalWorkouts} sesiones, ${(stats.totalVolume / 1000).toFixed(1)}k de volumen.`,
+                    files: [file.uri],
+                    dialogTitle: 'Compartir tus stats',
+                });
+                return;
+            }
+
+            // Web: try Web Share API with the file (mobile browsers)
+            const blob = await (await fetch(dataUrl)).blob();
+            const file = new File([blob], fileName(), { type: 'image/png' });
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({ files: [file], title: 'Mis Stats GINX' });
+                return;
+            }
+            // Desktop fallback: download
+            downloadViaLink(dataUrl);
+        } catch (err: any) {
+            // User dismissing the share sheet throws — that's not an error
+            if (err?.message?.includes('cancel') || err?.name === 'AbortError') return;
+            console.error('Error sharing:', err);
+            alert('No se pudo compartir. Intenta con el botón de descarga.');
+        } finally {
+            setSharing(false);
+        }
+    };
+
+    // DOWNLOAD: save the image to the device
+    const handleDownload = async () => {
+        if (sharing || downloading) return;
+        setDownloading(true);
+        try {
+            const dataUrl = await renderCard();
+            if (!dataUrl) return;
+
+            if (Capacitor.isNativePlatform()) {
+                // Native: the OS share sheet is the reliable way to reach
+                // "Guardar imagen" / Fotos / Galería from a WebView.
+                const base64 = dataUrl.split(',')[1];
+                const file = await Filesystem.writeFile({
+                    path: fileName(),
+                    data: base64,
+                    directory: Directory.Cache,
+                });
+                await Share.share({ files: [file.uri], dialogTitle: 'Guardar imagen' });
+                return;
+            }
+            downloadViaLink(dataUrl);
+        } catch (err: any) {
+            if (err?.message?.includes('cancel') || err?.name === 'AbortError') return;
+            console.error('Error downloading:', err);
+        } finally {
+            setDownloading(false);
+        }
     };
 
     const StickerWrapper = ({ id, children, w }: { id: StickerType, children: React.ReactNode, w?: string }) => {
@@ -472,6 +558,68 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                             </div>
                         </StickerWrapper>
 
+                        <StickerWrapper id="hype_beast">
+                            <div className="pointer-events-none transform -rotate-3 drop-shadow-[0_6px_16px_rgba(0,0,0,1)]">
+                                <div className="relative">
+                                    <h2 className="text-4xl font-black italic tracking-tighter leading-none text-transparent bg-clip-text bg-gradient-to-b from-red-400 via-red-500 to-red-800"
+                                        style={{ WebkitTextStroke: '1px rgba(0,0,0,0.6)' }}>
+                                        BEAST
+                                    </h2>
+                                    <h2 className="text-4xl font-black italic tracking-tighter leading-none text-white -mt-1 ml-6"
+                                        style={{ WebkitTextStroke: '1px black' }}>
+                                        MODE
+                                    </h2>
+                                    <div className="absolute -right-3 -top-2 text-2xl">😤</div>
+                                </div>
+                            </div>
+                        </StickerWrapper>
+
+                        <StickerWrapper id="hype_nopain">
+                            <div className="pointer-events-none drop-shadow-[0_5px_15px_rgba(0,0,0,1)]">
+                                <div className="border-y-2 border-white/70 py-1.5 px-2 transform rotate-2">
+                                    <p className="text-lg font-black text-white uppercase tracking-[0.25em] leading-none text-center">No Pain</p>
+                                    <p className="text-lg font-black text-gym-primary uppercase tracking-[0.25em] leading-none text-center mt-1">No Gain</p>
+                                </div>
+                            </div>
+                        </StickerWrapper>
+
+                        <StickerWrapper id="hype_grind">
+                            <div className="pointer-events-none transform -rotate-6 drop-shadow-[0_5px_15px_rgba(0,0,0,1)]">
+                                <p className="text-[9px] font-bold text-white/70 uppercase tracking-[0.5em] mb-0.5">Trust</p>
+                                <h2 className="text-4xl font-black text-white italic tracking-tighter leading-none">THE</h2>
+                                <h2 className="text-5xl font-black italic tracking-tighter leading-none text-transparent bg-clip-text bg-gradient-to-r from-gym-primary via-amber-400 to-orange-500">GRIND</h2>
+                            </div>
+                        </StickerWrapper>
+
+                        <StickerWrapper id="deco_flame">
+                            <div className="pointer-events-none flex flex-col items-center drop-shadow-[0_0_18px_rgba(249,115,22,0.6)]">
+                                <span className="text-5xl leading-none">🔥</span>
+                                <span className="text-xl font-black text-white italic leading-none -mt-1">{stats.totalWorkouts}</span>
+                                <span className="text-[7px] font-black text-orange-400 uppercase tracking-[0.3em]">On Fire</span>
+                            </div>
+                        </StickerWrapper>
+
+                        <StickerWrapper id="deco_laurel">
+                            <div className="pointer-events-none flex items-center gap-1 drop-shadow-[0_4px_10px_rgba(0,0,0,0.9)]">
+                                <span className="text-3xl -scale-x-100">🌿</span>
+                                <div className="flex flex-col items-center">
+                                    <span className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-200 to-amber-500 italic leading-none">TOP 1%</span>
+                                    <span className="text-[7px] font-black text-white/70 uppercase tracking-[0.3em]">Gym Rats</span>
+                                </div>
+                                <span className="text-3xl">🌿</span>
+                            </div>
+                        </StickerWrapper>
+
+                        <StickerWrapper id="deco_barbell" w="200px">
+                            <div className="pointer-events-none flex items-center gap-1.5 drop-shadow-[0_4px_8px_rgba(0,0,0,0.9)]">
+                                <div className="w-2.5 h-6 bg-gradient-to-b from-neutral-300 to-neutral-600 rounded-sm" />
+                                <div className="w-1.5 h-8 bg-gradient-to-b from-neutral-200 to-neutral-500 rounded-sm" />
+                                <div className="flex-1 h-1.5 bg-gradient-to-r from-neutral-400 via-white to-neutral-400 rounded-full" />
+                                <div className="w-1.5 h-8 bg-gradient-to-b from-neutral-200 to-neutral-500 rounded-sm" />
+                                <div className="w-2.5 h-6 bg-gradient-to-b from-neutral-300 to-neutral-600 rounded-sm" />
+                            </div>
+                        </StickerWrapper>
+
                         <StickerWrapper id="avg">
                             <div className="pointer-events-none flex flex-col items-center drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)]">
                                 <Scaling className="text-white w-6 h-6 mb-1" />
@@ -549,41 +697,33 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                     </div>
                 </div>
 
-                <div className="p-4 bg-neutral-900 border-t border-neutral-800 z-50 shrink-0 pb-8 md:pb-4">
-                    <div className="flex items-center gap-3">
+                <div className="p-4 bg-neutral-900 border-t border-neutral-800 z-50 shrink-0 pb-8 md:pb-4 space-y-3">
+                    <div className="flex items-center gap-2.5">
                         <button
                             onClick={() => setShowAddMenu(!showAddMenu)}
-                            className={`flex flex-col items-center justify-center w-16 h-14 rounded-xl border border-neutral-700 transition-colors ${showAddMenu ? 'bg-gym-primary text-black border-gym-primary' : 'bg-neutral-800 text-white hover:bg-neutral-700'}`}
+                            className={`flex flex-col items-center justify-center w-16 h-12 rounded-xl border transition-all active:scale-95 ${showAddMenu ? 'bg-gym-primary text-black border-gym-primary shadow-[0_0_16px_rgba(250,204,21,0.35)]' : 'bg-neutral-800 text-white border-neutral-700 hover:bg-neutral-700'}`}
                         >
-                            <Plus size={20} className="mb-1" />
-                            <span className="text-[9px] font-bold uppercase">Stickers</span>
+                            <Sparkles size={16} className="mb-0.5" />
+                            <span className="text-[8px] font-black uppercase tracking-wider">Stickers</span>
                         </button>
 
-                        <div className="flex-1 flex gap-2 bg-neutral-800 p-1.5 rounded-xl border border-neutral-700">
-                            <button onClick={() => { setSelectedBg('gradient'); setCardHeight(568); }} className={`flex-1 rounded-lg text-[10px] font-bold transition-colors ${selectedBg === 'gradient' ? 'bg-neutral-600 text-white' : 'text-neutral-500 hover:text-neutral-300'}`}>
+                        <div className="flex-1 flex gap-1 bg-black/60 p-1 rounded-xl border border-neutral-800">
+                            <button onClick={() => { setSelectedBg('gradient'); setCardHeight(568); }} className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${selectedBg === 'gradient' ? 'bg-gradient-to-r from-neutral-600 to-neutral-700 text-white shadow' : 'text-neutral-500 hover:text-white'}`}>
                                 Gradiente
                             </button>
-                            <button onClick={() => { setSelectedBg('black'); setCardHeight(568); }} className={`flex-1 rounded-lg text-[10px] font-bold transition-colors ${selectedBg === 'black' ? 'bg-black text-white' : 'text-neutral-500 hover:text-neutral-300'}`}>
+                            <button onClick={() => { setSelectedBg('black'); setCardHeight(568); }} className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${selectedBg === 'black' ? 'bg-white text-black shadow' : 'text-neutral-500 hover:text-white'}`}>
                                 Negro
                             </button>
-                            <label className={`flex-1 rounded-lg text-[10px] font-bold flex items-center justify-center cursor-pointer gap-1 transition-colors ${selectedBg === 'image' ? 'bg-neutral-600 text-white' : 'text-neutral-500 hover:text-neutral-300'}`}>
-                                <ImageIcon size={12} />
+                            <label className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center justify-center cursor-pointer gap-1 transition-all ${selectedBg === 'image' ? 'bg-gradient-to-r from-sky-600 to-blue-600 text-white shadow' : 'text-neutral-500 hover:text-white'}`}>
+                                <ImageIcon size={11} />
                                 Foto
                                 <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
                             </label>
                         </div>
-
-                        <button
-                            onClick={handleShare}
-                            disabled={downloading}
-                            className="w-14 h-14 bg-gym-primary text-black rounded-xl hover:bg-yellow-400 transition-colors flex items-center justify-center border border-yellow-500"
-                        >
-                            {downloading ? <Zap size={24} className="animate-spin" /> : <Download size={24} />}
-                        </button>
                     </div>
 
-                    <div className="mt-3 flex items-center gap-3 px-1">
-                        <span className="text-[10px] text-neutral-500 font-bold uppercase w-16">Oscuridad</span>
+                    <div className="flex items-center gap-3 px-1">
+                        <span className="text-[9px] text-neutral-500 font-black uppercase tracking-wider w-16">Oscuridad</span>
                         <input
                             type="range"
                             min="0"
@@ -594,24 +734,89 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                             className="flex-1 accent-gym-primary h-1 bg-neutral-700 rounded-lg appearance-none cursor-pointer"
                         />
                     </div>
+
+                    {/* Primary actions: SHARE (native sheet → IG/WhatsApp/FB) + download */}
+                    <div className="flex items-center gap-2.5">
+                        <button
+                            onClick={handleShare}
+                            disabled={sharing || downloading}
+                            className="relative flex-1 h-13 py-3.5 bg-gradient-to-r from-gym-primary via-yellow-400 to-amber-500 text-black font-black uppercase tracking-wider text-sm rounded-2xl transition-all hover:scale-[1.01] active:scale-[0.97] disabled:opacity-60 flex items-center justify-center gap-2 shadow-[0_8px_28px_rgba(250,204,21,0.35)] overflow-hidden"
+                        >
+                            <div className="absolute inset-0 share-shimmer pointer-events-none" />
+                            {sharing ? <Zap size={18} className="animate-spin" /> : <Share2 size={18} strokeWidth={2.5} />}
+                            {sharing ? 'Generando…' : 'Compartir'}
+                        </button>
+                        <button
+                            onClick={handleDownload}
+                            disabled={sharing || downloading}
+                            className="w-13 h-13 p-3.5 bg-neutral-800 border border-neutral-700 text-white rounded-2xl hover:bg-neutral-700 hover:border-neutral-500 active:scale-90 transition-all flex items-center justify-center disabled:opacity-60"
+                            title="Guardar imagen"
+                        >
+                            {downloading ? <Zap size={18} className="animate-spin" /> : <Download size={18} />}
+                        </button>
+                    </div>
+                    <p className="text-center text-[8px] text-neutral-600 font-bold uppercase tracking-widest -mt-1">Instagram · WhatsApp · Facebook · Stories</p>
+
+                    <style>{`
+                        .share-shimmer {
+                            background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.45) 50%, transparent 60%);
+                            background-size: 220% 100%;
+                            animation: shareShimmer 2.6s ease-in-out infinite;
+                        }
+                        @keyframes shareShimmer {
+                            0%   { background-position: 140% 0; }
+                            60%  { background-position: -60% 0; }
+                            100% { background-position: -60% 0; }
+                        }
+                    `}</style>
                 </div>
 
                 {showAddMenu && (
-                    <div className="absolute bottom-32 left-4 right-4 bg-neutral-800/95 backdrop-blur-xl border border-neutral-700 rounded-2xl p-4 shadow-2xl z-[60] grid grid-cols-2 gap-2 animate-in zoom-in-95 slide-in-from-bottom-5 duration-200">
-                        <div className="col-span-2 flex justify-between items-center mb-2 pb-2 border-b border-white/5">
-                            <span className="text-xs font-bold text-white uppercase tracking-wider">Agregar Elemento</span>
-                            <button onClick={() => setShowAddMenu(false)} className="text-neutral-400 hover:text-white"><X size={14} /></button>
+                    <div className="absolute bottom-36 left-4 right-4 max-h-[55vh] overflow-y-auto custom-scrollbar bg-neutral-900/95 backdrop-blur-2xl border border-white/10 rounded-3xl p-4 shadow-[0_25px_80px_rgba(0,0,0,0.9)] z-[60] animate-in zoom-in-95 slide-in-from-bottom-5 duration-300" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-center mb-3 pb-2 border-b border-white/10">
+                            <span className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+                                <Sparkles size={13} className="text-gym-primary" /> Stickers
+                            </span>
+                            <button onClick={() => setShowAddMenu(false)} className="p-1.5 rounded-full bg-white/5 text-neutral-400 hover:text-white transition-colors"><X size={13} /></button>
                         </div>
-                        {stickers.map(s => (
-                            <button
-                                key={s.id}
-                                onClick={() => toggleSticker(s.id)}
-                                className={`flex items-center justify-between p-3 rounded-xl text-xs font-bold transition-all border ${s.visible ? 'bg-gym-primary/20 text-gym-primary border-gym-primary/50' : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:bg-neutral-700 hover:border-neutral-600'}`}
-                            >
-                                <span className="flex items-center gap-2">{s.label}</span>
-                                {s.visible && <div className="w-2 h-2 bg-gym-primary rounded-full shadow-[0_0_8px_rgba(234,179,8,0.5)]" />}
-                            </button>
-                        ))}
+
+                        {/* Category: Tus Datos */}
+                        <div className="flex items-center gap-1.5 mb-2">
+                            <BarChart3 size={11} className="text-sky-400" />
+                            <span className="text-[9px] font-black text-neutral-400 uppercase tracking-[0.25em]">Tus Datos</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-1.5 mb-4">
+                            {stickers.filter(s => !s.id.startsWith('hype_') && !s.id.startsWith('deco_')).map((s, i) => (
+                                <button
+                                    key={s.id}
+                                    onClick={() => toggleSticker(s.id)}
+                                    className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-[11px] font-bold transition-all border animate-in fade-in slide-in-from-bottom-1 ${s.visible ? 'bg-sky-500/15 text-sky-300 border-sky-500/40' : 'bg-black/40 text-neutral-400 border-neutral-800 hover:border-neutral-600 hover:text-white'}`}
+                                    style={{ animationDelay: `${i * 30}ms` }}
+                                >
+                                    <span>{s.label}</span>
+                                    {s.visible && <Check size={12} className="text-sky-400 shrink-0" />}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Category: Hype & Deco */}
+                        <div className="flex items-center gap-1.5 mb-2">
+                            <Flame size={11} className="text-orange-400" />
+                            <span className="text-[9px] font-black text-neutral-400 uppercase tracking-[0.25em]">Hype & Deco</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-1.5">
+                            {stickers.filter(s => s.id.startsWith('hype_') || s.id.startsWith('deco_')).map((s, i) => (
+                                <button
+                                    key={s.id}
+                                    onClick={() => toggleSticker(s.id)}
+                                    className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-[11px] font-bold transition-all border animate-in fade-in slide-in-from-bottom-1 ${s.visible ? 'bg-gym-primary/15 text-gym-primary border-gym-primary/40' : 'bg-black/40 text-neutral-400 border-neutral-800 hover:border-neutral-600 hover:text-white'}`}
+                                    style={{ animationDelay: `${i * 30}ms` }}
+                                >
+                                    <span>{s.label}</span>
+                                    {s.visible && <Check size={12} className="text-gym-primary shrink-0" />}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 )}
 
