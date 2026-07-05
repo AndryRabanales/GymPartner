@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { userService } from '../services/UserService';
+import { workoutService } from '../services/WorkoutService';
 import { routineCache } from '../lib/offlineCache';
 import { CURATED_EXERCISES } from '../data/exerciseCatalog';
 import { CatalogModal } from '../components/workout/CatalogModal';
@@ -143,36 +143,29 @@ export const RoutineBuilder = () => {
             return;
         }
 
-        const { data: routine, error } = await supabase
-            .from('routines')
-            .insert({ user_id: user.id, name: name.trim(), is_public: true })
-            .select()
-            .single();
-
-        if (error) { alert('Error al crear la rutina: ' + error.message); return; }
-
-        const exercisesToInsert = selectedExercises.map((ex, i) => ({
-            routine_id: routine.id,
-            exercise_id: ex.exercise_id,
+        // createRoutine resolves virtual-* IDs to real gym_equipment UUIDs
+        // (exercise_id is a uuid FK — inserting raw virtual IDs failed the
+        // whole batch silently and produced routines with 0 exercises) and
+        // queues locally when offline.
+        const richPayload = selectedExercises.map(ex => ({
+            id: ex.exercise_id,
             name: ex.name,
-            order_index: i,
             track_weight: ex.track_weight,
             track_reps: ex.track_reps,
             track_time: ex.track_time,
+            track_pr: ex.track_pr,
             target_sets: ex.target_sets,
-            target_reps_text: ex.target_reps_text
+            target_reps_text: ex.target_reps_text,
+            custom_metric: ex.custom_metric || null
         }));
 
-        const { error: exError } = await supabase.from('routine_exercises').insert(exercisesToInsert);
+        const result: any = await workoutService.createRoutine(user.id, name.trim(), richPayload, null);
 
-        if (exError) {
-            console.error(exError);
-            alert('Error al guardar ejercicios: ' + exError.message);
-            // Delete the empty routine to avoid orphans
-            await supabase.from('routines').delete().eq('id', routine.id);
-        } else {
-            navigate(-1);
+        if (result?.error || !result?.data) {
+            alert('Error al crear la rutina: ' + (result?.error?.message || 'desconocido'));
+            return;
         }
+        navigate(-1);
     };
 
     return (

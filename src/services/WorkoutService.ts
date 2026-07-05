@@ -1301,7 +1301,7 @@ class WorkoutService {
                         ...config
                     };
                 });
-                await this.linkRichExercisesToRoutine(routineData.id, richPayload);
+                await this.linkRichExercisesToRoutine(routineData.id, richPayload, userId);
             }
         }
 
@@ -1371,7 +1371,7 @@ class WorkoutService {
                 // Legacy string mode
                 await this.linkEquipmentToRoutine(routineId, equipmentData as string[]); // Fallback to defaults
             } else {
-                // Rich config mode
+                // Rich config mode (owner resolved internally from the routine row)
                 const { error: linkError } = await this.linkRichExercisesToRoutine(routineId, equipmentData);
                 if (linkError) return { error: linkError };
             }
@@ -1380,30 +1380,112 @@ class WorkoutService {
         return { success: true };
     }
 
-    // NEW Helper for Rich Config
-    private async linkRichExercisesToRoutine(routineId: string, exercises: any[]) {
+    private _isUuid(v: unknown): boolean {
+        return typeof v === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+    }
 
-        const exerciseRows = exercises.map((ex, idx) => ({
-            routine_id: routineId,
-            exercise_id: ex.id, // Use ID from config
-            name: ex.name || 'Ejercicio Personalizado', // Snapshot Name!
-            // icon: ex.icon, // [REMOVED] Schema doesn't support this yet
-            order_index: idx,
-            track_weight: ex.track_weight !== undefined ? ex.track_weight : true,
-            track_reps: ex.track_reps !== undefined ? ex.track_reps : true,
-            track_time: ex.track_time !== undefined ? ex.track_time : false,
-            track_pr: ex.track_pr !== undefined ? ex.track_pr : false,
-            track_distance: ex.track_distance !== undefined ? ex.track_distance : false,
-            track_rpe: ex.track_rpe !== undefined ? ex.track_rpe : false,
-            custom_metric: ex.custom_metric !== undefined ? ex.custom_metric : null,
-            // Add other fields when DB supports them fully
-            // target_sets: ex.target_sets,
-        }));
+    // routine_exercises.exercise_id has a FK to gym_equipment(id) — resolve an
+    // exercise NAME to a real gym_equipment UUID (find by name, create a
+    // personal row if missing). virtual-*/manifest-* IDs are NOT valid here.
+    private async _resolveEquipmentIdByName(name: string, ownerId?: string): Promise<string | null> {
+        if (!name?.trim()) return null;
+        const { data: existing } = await supabase
+            .from('gym_equipment')
+            .select('id')
+            .ilike('name', name.trim())
+            .limit(1)
+            .maybeSingle();
+        if (existing?.id) return existing.id;
+
+        if (!ownerId) return null;
+        const { data: created, error } = await supabase
+            .from('gym_equipment')
+            .insert({
+                name: name.trim(),
+                category: 'FREE_WEIGHT',
+                gym_id: null,
+                verified_by: ownerId,
+                condition: 'GOOD',
+                quantity: 1,
+                metrics: { weight: true, reps: true, time: false, distance: false, rpe: false }
+            })
+            .select('id')
+            .single();
+        if (error) {
+            console.error(`[linkRich] Could not create equipment for "${name}":`, error.message);
+            return null;
+        }
+        return created?.id ?? null;
+    }
+
+    // NEW Helper for Rich Config
+    // CRITICAL FIX: exercise_id is a uuid column with FK to gym_equipment.
+    // Previously virtual-*/manifest-* IDs poisoned the batch insert and the
+    // WHOLE routine silently saved with 0 exercises. Now every ID is resolved
+    // to a real gym_equipment UUID first, and a per-row retry ensures one bad
+    // exercise can't wipe out the rest.
+    private async linkRichExercisesToRoutine(routineId: string, exercises: any[], userId?: string) {
+        // Owner is needed to create missing gym_equipment rows
+        let ownerId = userId;
+        if (!ownerId) {
+            const { data: r } = await supabase.from('routines').select('user_id').eq('id', routineId).maybeSingle();
+            ownerId = r?.user_id;
+        }
+
+        const exerciseRows: any[] = [];
+        for (let idx = 0; idx < exercises.length; idx++) {
+            const ex = exercises[idx];
+            let finalId: string | null = ex.id;
+
+            if (!this._isUuid(finalId)) {
+                const rawName = ex.name
+                    || (typeof ex.id === 'string' && ex.id.startsWith('virtual-') ? ex.id.slice('virtual-'.length) : '');
+                finalId = await this._resolveEquipmentIdByName(rawName, ownerId);
+            }
+            if (!finalId) {
+                console.error(`[linkRich] Skipping unresolvable exercise "${ex.name || ex.id}"`);
+                continue;
+            }
+
+            exerciseRows.push({
+                routine_id: routineId,
+                exercise_id: finalId,
+                name: ex.name || 'Ejercicio Personalizado', // Snapshot Name!
+                order_index: idx,
+                track_weight: ex.track_weight !== undefined ? ex.track_weight : true,
+                track_reps: ex.track_reps !== undefined ? ex.track_reps : true,
+                track_time: ex.track_time !== undefined ? ex.track_time : false,
+                track_pr: ex.track_pr !== undefined ? ex.track_pr : false,
+                track_distance: ex.track_distance !== undefined ? ex.track_distance : false,
+                track_rpe: ex.track_rpe !== undefined ? ex.track_rpe : false,
+                custom_metric: ex.custom_metric !== undefined ? ex.custom_metric : null,
+                target_sets: ex.target_sets ?? null,
+                target_reps_text: ex.target_reps_text ?? null,
+            });
+        }
+
+        if (exerciseRows.length === 0) {
+            return { error: { message: 'No se pudo resolver ningún ejercicio de la rutina.' } };
+        }
 
         const { error } = await supabase.from('routine_exercises').insert(exerciseRows);
         if (error) {
-            console.error("Error saving rich exercises:", error);
-            return { error };
+            console.error('Error saving rich exercises (batch), retrying row by row:', error.message);
+            // Per-row fallback: one bad row must not wipe out the whole routine.
+            let saved = 0;
+            for (const row of exerciseRows) {
+                let { error: rowErr } = await supabase.from('routine_exercises').insert(row);
+                if (rowErr && row.name) {
+                    // FK failure (e.g. stale UUID): re-resolve by name and retry once
+                    const resolved = await this._resolveEquipmentIdByName(row.name, ownerId);
+                    if (resolved && resolved !== row.exercise_id) {
+                        ({ error: rowErr } = await supabase.from('routine_exercises').insert({ ...row, exercise_id: resolved }));
+                    }
+                }
+                if (!rowErr) saved++;
+                else console.error(`[linkRich] Row failed for "${row.name}":`, rowErr.message);
+            }
+            if (saved === 0) return { error };
         }
         return { error: null };
     }
