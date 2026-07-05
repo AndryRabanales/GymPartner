@@ -9,7 +9,7 @@ import { notificationService } from '../../services/NotificationService';
 import { haversineDistance, isAccuracyUsable } from '../../utils/geolocationUtils';
 import type { UserPrimaryGym } from '../../services/UserService';
 import { useNavigate } from 'react-router-dom';
-import { Lock, Star, Search, Loader, MapPin, Heart } from 'lucide-react';
+import { Lock, Star, Search, Loader, MapPin, Heart, Crosshair, Dumbbell, X, Navigation } from 'lucide-react';
 import { PlayerProfileModal } from '../profile/PlayerProfileModal';
 
 interface GymMarker {
@@ -466,6 +466,13 @@ export const GymMap = () => {
 
 
 
+    // Fly back to the user's position with a smooth zoom
+    const recenterOnUser = () => {
+        if (!map || !userLocation) return;
+        map.panTo({ lat: userLocation.lat, lng: userLocation.lng });
+        map.setZoom(16);
+    };
+
     if (!API_KEY) {
         return (
             <div className="w-full h-[500px] flex flex-col items-center justify-center bg-neutral-900 text-white p-6 rounded-xl border border-neutral-800">
@@ -505,14 +512,14 @@ export const GymMap = () => {
     return (
         <div className="w-full h-[calc(100vh-100px)] md:h-[calc(100vh-120px)] rounded-none md:rounded-3xl overflow-hidden shadow-2xl border-0 md:border border-neutral-800 relative bg-neutral-900 group">
 
-            {/* CEO Upgrade: Animated HUD Header (CLEANED UP) */}
+            {/* ── HUD: floating search capsule ─────────────────────────── */}
             <div className="absolute top-0 left-0 w-full p-4 z-20 pointer-events-none flex flex-col items-center justify-start">
-
-                {/* SEARCH BAR */}
-                <div className="mt-1.5 w-full max-w-sm mx-auto pointer-events-auto relative">
-                    <div className="flex gap-1.5">
-                        <div className="relative flex-1" id="tut-map-search-input">
-                            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 z-20" />
+                <div className="mt-1.5 w-full max-w-sm mx-auto pointer-events-auto relative gmap-rise" style={{ animationDelay: '80ms' }}>
+                    <div className="relative group/search">
+                        {/* glow aura on focus */}
+                        <div className="absolute -inset-1 bg-gradient-to-r from-yellow-400/0 via-yellow-400/25 to-yellow-400/0 rounded-full blur-md opacity-0 group-focus-within/search:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                        <div className="relative flex items-center bg-neutral-950/85 backdrop-blur-2xl border border-white/10 group-focus-within/search:border-yellow-400/60 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.6)] transition-all duration-300 overflow-hidden" id="tut-map-search-input">
+                            <Search size={15} className="absolute left-4 text-neutral-500 group-focus-within/search:text-yellow-400 transition-colors duration-300" />
                             <input
                                 type="text"
                                 placeholder="Busca tu gimnasio..."
@@ -523,58 +530,52 @@ export const GymMap = () => {
                                 }}
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter') handleSearch();
-                                    if (e.key === 'Escape') {
-                                        setShowSuggestions(false);
-                                    }
+                                    if (e.key === 'Escape') setShowSuggestions(false);
                                 }}
                                 onFocus={() => {
                                     if (suggestions.length > 0) setShowSuggestions(true);
                                 }}
-                                className="w-full bg-neutral-950/80 backdrop-blur-xl border border-white/10 rounded-full pl-10 pr-4 py-2 text-white placeholder-neutral-400 focus:outline-none focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400/30 transition-all text-[16px] relative z-10 shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
+                                className="flex-1 bg-transparent pl-11 pr-2 py-2.5 text-white placeholder-neutral-500 focus:outline-none text-[16px] min-w-0"
                             />
+                            <button
+                                onClick={() => handleSearch()}
+                                disabled={isSearching || !searchQuery.trim()}
+                                className="m-1 shrink-0 bg-gradient-to-r from-yellow-400 to-amber-500 disabled:from-neutral-800 disabled:to-neutral-800 disabled:text-neutral-600 text-black font-black w-9 h-9 rounded-full transition-all duration-300 flex items-center justify-center shadow-[0_0_14px_rgba(250,204,21,0.4)] disabled:shadow-none hover:scale-105 active:scale-90"
+                            >
+                                {isSearching ? <Loader size={14} className="animate-spin" /> : <Navigation size={14} strokeWidth={2.5} />}
+                            </button>
+                        </div>
 
-                            {/* Autocomplete Suggestions Dropdown */}
-                            {showSuggestions && suggestions.length > 0 && (
-                                <div className="absolute top-full left-0 right-0 mt-1.5 bg-neutral-950/95 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden shadow-[0_15px_40px_rgba(0,0,0,0.8)] z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                                    {suggestions.map((suggestion) => (
-                                        <button
-                                            key={suggestion.place_id}
-                                            onClick={() => {
-                                                setSearchQuery(suggestion.structured_formatting.main_text);
-                                                handleSearch(suggestion.structured_formatting.main_text);
-                                            }}
-                                            className="w-full text-left px-3.5 py-2.5 hover:bg-white/5 transition-colors border-b border-white/5 last:border-b-0 group"
-                                        >
-                                            <div className="flex items-center gap-2.5">
-                                                <div className="w-6 h-6 rounded-lg bg-yellow-400/10 flex items-center justify-center shrink-0 group-hover:bg-yellow-400/20 transition-colors">
-                                                    <MapPin size={12} className="text-yellow-400" />
+                        {/* Autocomplete Suggestions Dropdown */}
+                        {showSuggestions && suggestions.length > 0 && (
+                            <div className="absolute top-full left-0 right-0 mt-2 bg-neutral-950/95 backdrop-blur-2xl border border-white/10 rounded-2xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.85)] z-50 animate-in fade-in slide-in-from-top-2 duration-300">
+                                {suggestions.map((suggestion, sIdx) => (
+                                    <button
+                                        key={suggestion.place_id}
+                                        onClick={() => {
+                                            setSearchQuery(suggestion.structured_formatting.main_text);
+                                            handleSearch(suggestion.structured_formatting.main_text);
+                                        }}
+                                        className="w-full text-left px-4 py-3 hover:bg-yellow-400/5 active:bg-yellow-400/10 transition-colors border-b border-white/5 last:border-b-0 group gmap-rise"
+                                        style={{ animationDelay: `${sIdx * 50}ms` }}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-7 h-7 rounded-xl bg-yellow-400/10 border border-yellow-400/20 flex items-center justify-center shrink-0 group-hover:bg-yellow-400/25 group-hover:scale-110 transition-all duration-300">
+                                                <MapPin size={13} className="text-yellow-400" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="text-white font-bold text-xs truncate group-hover:text-yellow-400 transition-colors">
+                                                    {suggestion.structured_formatting.main_text}
                                                 </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="text-white font-bold text-xs truncate group-hover:text-yellow-400 transition-colors">
-                                                        {suggestion.structured_formatting.main_text}
-                                                    </div>
-                                                    <div className="text-[10px] text-neutral-400 truncate">
-                                                        {suggestion.structured_formatting.secondary_text}
-                                                    </div>
+                                                <div className="text-[10px] text-neutral-500 truncate">
+                                                    {suggestion.structured_formatting.secondary_text}
                                                 </div>
                                             </div>
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                        <button
-                            onClick={() => handleSearch()}
-                            disabled={isSearching || !searchQuery.trim()}
-                            className="bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-300 hover:to-yellow-400 disabled:from-neutral-800 disabled:to-neutral-900 disabled:text-neutral-500 disabled:cursor-not-allowed text-black font-black px-4 py-2 rounded-full transition-all duration-300 flex items-center justify-center gap-1.5 shadow-[0_0_15px_rgba(250,204,21,0.3)] disabled:shadow-none hover:scale-[1.02] active:scale-[0.98] text-xs"
-                        >
-                            {isSearching ? (
-                                <Loader size={14} className="animate-spin" />
-                            ) : (
-                                <Search size={14} strokeWidth={2.5} />
-                            )}
-                            <span className="hidden md:inline">BUSCAR</span>
-                        </button>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -596,17 +597,52 @@ export const GymMap = () => {
                 />
             )}
 
-            {/* Radar Pulse CSS Style */}
+            {/* ── Map FX keyframes ─────────────────────────────────────── */}
             <style>{`
-                @keyframes scan {
-                    0% { left: 0%; opacity: 0; }
-                    10% { opacity: 1; }
-                    90% { opacity: 1; }
-                    100% { left: 100%; opacity: 0; }
+                @keyframes gmapRing {
+                    0%   { transform: scale(0.5); opacity: 0.65; }
+                    100% { transform: scale(3.2); opacity: 0; }
                 }
-                @keyframes pulse-ring {
-                    0% { transform: scale(0.8); opacity: 0.5; }
-                    100% { transform: scale(2.5); opacity: 0; }
+                @keyframes gmapDrop {
+                    0%   { transform: translateY(-26px) scale(0.4); opacity: 0; }
+                    60%  { transform: translateY(3px) scale(1.08); opacity: 1; }
+                    100% { transform: translateY(0) scale(1); opacity: 1; }
+                }
+                @keyframes gmapFloat {
+                    0%, 100% { transform: translateY(0); }
+                    50%      { transform: translateY(-4px); }
+                }
+                @keyframes gmapSpin {
+                    to { transform: rotate(360deg); }
+                }
+                @keyframes gmapGlow {
+                    0%, 100% { box-shadow: 0 0 10px rgba(250,204,21,0.45); }
+                    50%      { box-shadow: 0 0 26px rgba(250,204,21,0.85); }
+                }
+                @keyframes gmapRise {
+                    from { transform: translateY(-12px); opacity: 0; }
+                    to   { transform: translateY(0); opacity: 1; }
+                }
+                @keyframes gmapSheet {
+                    from { transform: translateY(70px); opacity: 0; }
+                    to   { transform: translateY(0); opacity: 1; }
+                }
+                @keyframes gmapShimmer {
+                    0%   { background-position: 140% 0; }
+                    60%  { background-position: -60% 0; }
+                    100% { background-position: -60% 0; }
+                }
+                @keyframes gmapKen {
+                    from { transform: scale(1); }
+                    to   { transform: scale(1.12); }
+                }
+                .gmap-rise  { animation: gmapRise 0.5s cubic-bezier(0.22,1,0.36,1) both; }
+                .gmap-drop  { animation: gmapDrop 0.55s cubic-bezier(0.34,1.56,0.64,1) both; }
+                .gmap-sheet { animation: gmapSheet 0.45s cubic-bezier(0.22,1,0.36,1) both; }
+                .gmap-shimmer {
+                    background: linear-gradient(105deg, transparent 42%, rgba(255,255,255,0.25) 50%, transparent 58%);
+                    background-size: 220% 100%;
+                    animation: gmapShimmer 2.6s ease-in-out infinite;
                 }
             `}</style>
 
@@ -617,245 +653,238 @@ export const GymMap = () => {
                 disableDefaultUI={true}
                 zoomControl={false} // Clean immersive view
                 mapId="4504f8b37365c3d0"
-                styles={[
-                    {
-                        "featureType": "all",
-                        "elementType": "labels.text.fill",
-                        "stylers": [{ "saturation": 36 }, { "color": "#000000" }, { "lightness": 40 }]
-                    },
-                    {
-                        "featureType": "all",
-                        "elementType": "labels.text.stroke",
-                        "stylers": [{ "visibility": "on" }, { "color": "#000000" }, { "lightness": 16 }]
-                    },
-                    {
-                        "featureType": "all",
-                        "elementType": "labels.icon",
-                        "stylers": [{ "visibility": "off" }]
-                    },
-                    {
-                        "featureType": "administrative",
-                        "elementType": "geometry.fill",
-                        "stylers": [{ "color": "#000000" }, { "lightness": 20 }]
-                    },
-                    {
-                        "featureType": "administrative",
-                        "elementType": "geometry.stroke",
-                        "stylers": [{ "color": "#000000" }, { "lightness": 17 }, { "weight": 1.2 }]
-                    },
-                    {
-                        "featureType": "landscape",
-                        "elementType": "geometry",
-                        "stylers": [{ "color": "#000000" }, { "lightness": 20 }]
-                    },
-                    {
-                        "featureType": "poi",
-                        "elementType": "geometry",
-                        "stylers": [{ "color": "#000000" }, { "lightness": 21 }]
-                    },
-                    {
-                        "featureType": "road.highway",
-                        "elementType": "geometry.fill",
-                        "stylers": [{ "color": "#000000" }, { "lightness": 17 }]
-                    },
-                    {
-                        "featureType": "road.highway",
-                        "elementType": "geometry.stroke",
-                        "stylers": [{ "color": "#000000" }, { "lightness": 29 }, { "weight": 0.2 }]
-                    },
-                    {
-                        "featureType": "road.arterial",
-                        "elementType": "geometry",
-                        "stylers": [{ "color": "#000000" }, { "lightness": 18 }]
-                    },
-                    {
-                        "featureType": "road.local",
-                        "elementType": "geometry",
-                        "stylers": [{ "color": "#000000" }, { "lightness": 16 }]
-                    },
-                    {
-                        "featureType": "transit",
-                        "elementType": "geometry",
-                        "stylers": [{ "color": "#000000" }, { "lightness": 19 }]
-                    },
-                    {
-                        "featureType": "water",
-                        "elementType": "geometry",
-                        "stylers": [{ "color": "#0f172a" }, { "lightness": 17 }]
-                    }
-                ]}
+                // With a mapId, inline `styles` are IGNORED by Google Maps — the
+                // dark look must come from colorScheme (or cloud style config).
+                colorScheme={'DARK' as any}
             >
-                {/* User Current Location Radar */}
+                {/* ── User location: living radar ─────────────────────── */}
                 {userLocation && (
                     <AdvancedMarker position={{ lat: userLocation.lat, lng: userLocation.lng }}>
-                        <div className="relative flex items-center justify-center">
-                            <div className="absolute inset-0 w-4 h-4 bg-blue-500 rounded-full animate-ping opacity-75"></div>
-                            <div className="relative w-4 h-4 bg-blue-600 border-2 border-white rounded-full shadow-[0_0_15px_rgba(37,99,235,0.8)] z-10"></div>
-                            <div className="absolute inset-0 w-full h-full border border-blue-500/50 rounded-full animate-[pulse-ring_2s_cubic-bezier(0.215,0.61,0.355,1)_infinite]"></div>
+                        <div className="relative flex items-center justify-center w-6 h-6">
+                            {/* triple staggered radar rings */}
+                            <div className="absolute inset-0 rounded-full bg-sky-400/40" style={{ animation: 'gmapRing 2.4s cubic-bezier(0.215,0.61,0.355,1) infinite' }} />
+                            <div className="absolute inset-0 rounded-full bg-sky-400/30" style={{ animation: 'gmapRing 2.4s cubic-bezier(0.215,0.61,0.355,1) 0.8s infinite' }} />
+                            <div className="absolute inset-0 rounded-full bg-sky-400/20" style={{ animation: 'gmapRing 2.4s cubic-bezier(0.215,0.61,0.355,1) 1.6s infinite' }} />
+                            {/* gradient core */}
+                            <div className="relative w-5 h-5 rounded-full bg-gradient-to-br from-sky-300 to-blue-600 border-[2.5px] border-white shadow-[0_0_18px_rgba(56,189,248,0.9)] z-10 flex items-center justify-center">
+                                <div className="w-1.5 h-1.5 rounded-full bg-white/90" />
+                            </div>
                         </div>
                     </AdvancedMarker>
                 )}
 
+                {/* ── Gym markers ───────────────────────────────────────── */}
                 {displayGyms.map((gym, index) => (
                     <AdvancedMarker
                         key={gym.id}
                         position={{ lat: gym.lat, lng: gym.lng }}
-                        className={`transition-all duration-500 hover:scale-110 z-10`}
-                        style={{ animationDelay: `${index * 50}ms` }}
                         onClick={() => setSelectedGym(gym)}
                     >
-                        {gym.is_unlocked ? (
-                            <div className="relative group flex flex-col items-center">
-                                <div className="relative">
-                                    <div className={`w-9 h-9 ${gym.is_home_base ? 'bg-yellow-500 border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.6)] text-black' : 'bg-blue-600 border-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.6)] text-white'} rounded-full border-2 flex items-center justify-center transition-all duration-300 hover:scale-110 cursor-pointer`}>
-                                        <MapPin size={16} strokeWidth={2.5} />
-                                    </div>
-                                    
-                                    {/* Embedded Heart Badge - Tightly aligned to top-right of the circle! */}
-                                    {(gym.favorites_count && gym.favorites_count > 0) ? (
-                                        <div className="absolute -top-1.5 -right-2 bg-neutral-950/95 border border-red-500/60 text-red-500 text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-[0_2px_8px_rgba(239,68,68,0.3)] flex items-center gap-0.5 z-20">
-                                            <Heart size={8} fill="currentColor" className="shrink-0" />
-                                            <span>{gym.favorites_count}</span>
+                        <div className="gmap-drop" style={{ animationDelay: `${Math.min(index, 12) * 45}ms` }}>
+                            {gym.is_unlocked ? (
+                                <div className="relative flex flex-col items-center cursor-pointer group" style={gym.is_home_base ? { animation: 'gmapFloat 3s ease-in-out infinite' } : undefined}>
+                                    {/* SEDE crown tag */}
+                                    {gym.is_home_base && (
+                                        <div className="absolute -top-7 bg-gradient-to-r from-yellow-400 to-amber-500 text-black text-[9px] font-black px-2 py-0.5 rounded-full shadow-[0_2px_12px_rgba(250,204,21,0.6)] uppercase tracking-widest z-30 flex items-center gap-1">
+                                            <Star size={8} fill="currentColor" /> SEDE
                                         </div>
-                                    ) : null}
-                                </div>
-                                <div className={`w-2 h-2 ${gym.is_home_base ? 'bg-yellow-400' : 'bg-blue-400'} rotate-45 -mt-1`}></div>
-
-                                {gym.is_home_base && <div className="absolute -top-7 bg-yellow-500 text-black text-[9px] font-black px-1.5 py-0.5 rounded shadow-lg uppercase tracking-wider animate-bounce z-30">SEDE</div>}
-                            </div>
-                        ) : (
-                            <div className="relative group flex flex-col items-center">
-                                <div className="relative">
-                                    <div className={`w-9 h-9 bg-neutral-950/95 backdrop-blur-md rounded-full border-2 ${tutorialStep === 5 ? 'border-yellow-500 shadow-[0_0_15px_rgba(250,204,21,0.6)]' : 'border-neutral-700 shadow-[0_0_12px_rgba(0,0,0,0.6)]'} flex items-center justify-center transition-all duration-300 hover:scale-110 cursor-pointer`}>
-                                        <Lock size={14} className={tutorialStep === 5 ? 'text-yellow-500 animate-pulse' : 'text-neutral-400'} />
-                                    </div>
-
-                                    {/* Embedded Heart Badge for Locked Gyms */}
-                                    {(gym.favorites_count && gym.favorites_count > 0) ? (
-                                        <div className="absolute -top-1.5 -right-2 bg-neutral-950/95 border border-red-500/60 text-red-500 text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-[0_2px_8px_rgba(239,68,68,0.3)] flex items-center gap-0.5 z-20">
-                                            <Heart size={8} fill="currentColor" className="shrink-0" />
-                                            <span>{gym.favorites_count}</span>
+                                    )}
+                                    <div className="relative">
+                                        {/* rotating conic ring for home base */}
+                                        {gym.is_home_base && (
+                                            <div className="absolute -inset-1.5 rounded-full opacity-80" style={{
+                                                background: 'conic-gradient(from 0deg, transparent 0%, rgba(250,204,21,0.9) 18%, transparent 40%)',
+                                                animation: 'gmapSpin 3.2s linear infinite'
+                                            }} />
+                                        )}
+                                        <div
+                                            className={`relative w-10 h-10 rounded-full border-2 flex items-center justify-center transition-transform duration-300 group-hover:scale-125 group-active:scale-95 ${gym.is_home_base
+                                                ? 'bg-gradient-to-br from-yellow-300 to-amber-500 border-yellow-200 text-black'
+                                                : 'bg-gradient-to-br from-sky-400 to-blue-700 border-sky-300 text-white shadow-[0_0_16px_rgba(59,130,246,0.65)]'
+                                            }`}
+                                            style={gym.is_home_base ? { animation: 'gmapGlow 2.4s ease-in-out infinite' } : undefined}
+                                        >
+                                            <Dumbbell size={17} strokeWidth={2.5} />
                                         </div>
-                                    ) : null}
+                                        {(gym.favorites_count && gym.favorites_count > 0) ? (
+                                            <div className="absolute -top-1.5 -right-2.5 bg-neutral-950/95 border border-red-500/60 text-red-400 text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-[0_2px_10px_rgba(239,68,68,0.4)] flex items-center gap-0.5 z-20">
+                                                <Heart size={8} fill="currentColor" className="shrink-0" />
+                                                <span>{gym.favorites_count}</span>
+                                            </div>
+                                        ) : null}
+                                    </div>
+                                    {/* stem */}
+                                    <div className={`w-2 h-2 rotate-45 -mt-1 ${gym.is_home_base ? 'bg-amber-500' : 'bg-blue-600'}`} />
+                                    <div className="w-4 h-1 rounded-full bg-black/50 blur-[2px] mt-0.5" />
                                 </div>
-                                <div className={`w-2 h-2 ${tutorialStep === 5 ? 'bg-yellow-500' : 'bg-neutral-700'} rotate-45 -mt-1`}></div>
-                            </div>
-                        )}
+                            ) : (
+                                <div className="relative flex flex-col items-center cursor-pointer group">
+                                    <div className="relative">
+                                        <div className={`relative w-9 h-9 rounded-full border-2 flex items-center justify-center overflow-hidden backdrop-blur-md transition-transform duration-300 group-hover:scale-125 group-active:scale-95 ${tutorialStep === 5
+                                            ? 'bg-neutral-950/95 border-yellow-400 shadow-[0_0_16px_rgba(250,204,21,0.6)]'
+                                            : 'bg-neutral-950/90 border-neutral-700 shadow-[0_4px_14px_rgba(0,0,0,0.7)]'
+                                        }`}>
+                                            <div className="absolute inset-0 gmap-shimmer opacity-30" />
+                                            <Lock size={14} className={tutorialStep === 5 ? 'text-yellow-400 animate-pulse' : 'text-neutral-400'} />
+                                        </div>
+                                        {(gym.favorites_count && gym.favorites_count > 0) ? (
+                                            <div className="absolute -top-1.5 -right-2.5 bg-neutral-950/95 border border-red-500/60 text-red-400 text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-[0_2px_10px_rgba(239,68,68,0.4)] flex items-center gap-0.5 z-20">
+                                                <Heart size={8} fill="currentColor" className="shrink-0" />
+                                                <span>{gym.favorites_count}</span>
+                                            </div>
+                                        ) : null}
+                                    </div>
+                                    <div className={`w-2 h-2 rotate-45 -mt-1 ${tutorialStep === 5 ? 'bg-yellow-400' : 'bg-neutral-700'}`} />
+                                    <div className="w-4 h-1 rounded-full bg-black/50 blur-[2px] mt-0.5" />
+                                </div>
+                            )}
+                        </div>
                     </AdvancedMarker>
                 ))}
             </Map>
 
-            {/* Unlock/Enter Modal - CEO Glassmorphism Upgrade */}
+            {/* ── Locate-me FAB ─────────────────────────────────────────── */}
+            {userLocation && (
+                <button
+                    onClick={recenterOnUser}
+                    className="absolute bottom-24 right-4 z-20 w-12 h-12 rounded-2xl bg-neutral-950/85 backdrop-blur-xl border border-white/10 text-sky-400 flex items-center justify-center shadow-[0_8px_24px_rgba(0,0,0,0.6)] hover:border-sky-400/60 hover:text-sky-300 hover:scale-110 active:scale-90 transition-all duration-300 gmap-rise"
+                    style={{ animationDelay: '200ms' }}
+                    aria-label="Centrar en mi ubicación"
+                >
+                    <Crosshair size={20} strokeWidth={2.5} />
+                </button>
+            )}
+
+            {/* ── Gym bottom sheet ──────────────────────────────────────── */}
             {selectedGym && (
-                <div className="absolute inset-0 z-50 flex items-end sm:items-center justify-center p-0 pb-32 sm:p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
-                    <div className="bg-neutral-900/90 border-t sm:border border-white/10 w-full max-w-sm sm:rounded-3xl rounded-t-3xl overflow-hidden shadow-[0_-10px_40px_rgba(0,0,0,0.8)] animate-in slide-in-from-bottom-10 duration-300 relative">
+                <div className="absolute inset-0 z-50 flex items-end sm:items-center justify-center p-0 pb-28 sm:p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-300" onClick={() => setSelectedGym(null)}>
+                    <div className="gmap-sheet bg-neutral-950 border-t sm:border border-white/10 w-full max-w-sm sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-[0_-20px_80px_rgba(0,0,0,0.9)] relative" onClick={e => e.stopPropagation()}>
 
-                        {/* Decorative Top Line */}
-                        <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/20 rounded-full sm:hidden"></div>
+                        {/* Drag handle */}
+                        <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/25 rounded-full sm:hidden z-20"></div>
 
+                        {/* Close Button */}
+                        <button
+                            onClick={() => setSelectedGym(null)}
+                            className="absolute top-3.5 right-3.5 z-20 bg-black/60 backdrop-blur-xl p-2 rounded-full text-white/70 hover:text-white border border-white/10 hover:scale-110 active:scale-90 transition-all"
+                        >
+                            <X size={16} />
+                        </button>
+
+                        {/* Header: photo with ken-burns, or gradient */}
                         {selectedGym.photoUrl ? (
-                            <div className="h-48 w-full relative">
-                                <img src={selectedGym.photoUrl} alt={selectedGym.name} className="w-full h-full object-cover" />
-                                <div className="absolute inset-0 bg-gradient-to-t from-neutral-900 via-neutral-900/50 to-transparent"></div>
-                                <div className="absolute bottom-4 left-6">
-                                    <h3 className="text-2xl font-black text-white leading-none tracking-tight uppercase italic dropshadow-lg line-clamp-2">{selectedGym.name}</h3>
+                            <div className="h-44 w-full relative overflow-hidden">
+                                <img src={selectedGym.photoUrl} alt={selectedGym.name} className="w-full h-full object-cover" style={{ animation: 'gmapKen 9s ease-out forwards' }} />
+                                <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/40 to-transparent"></div>
+                                <div className="absolute bottom-3 left-5 right-5 gmap-rise" style={{ animationDelay: '120ms' }}>
+                                    <h3 className="text-2xl font-black text-white leading-none tracking-tight uppercase italic drop-shadow-lg line-clamp-2">{selectedGym.name}</h3>
                                     {selectedGym.rating && (
-                                        <div className="flex items-center gap-1 text-yellow-500 text-xs font-bold mt-1">
-                                            <Star size={12} fill="currentColor" />
+                                        <div className="flex items-center gap-1 text-yellow-400 text-xs font-bold mt-1.5">
+                                            <Star size={11} fill="currentColor" />
                                             <span>{selectedGym.rating} / 5.0</span>
                                         </div>
                                     )}
                                 </div>
                             </div>
                         ) : (
-                            <div className="h-32 w-full bg-gradient-to-br from-neutral-800 to-black relative flex items-end p-6">
-                                <div>
+                            <div className="h-28 w-full relative flex items-end p-5 overflow-hidden bg-gradient-to-br from-neutral-900 to-black">
+                                <div className={`absolute -top-10 -right-10 w-40 h-40 rounded-full blur-3xl ${selectedGym.is_unlocked ? 'bg-blue-600/20' : 'bg-yellow-500/10'}`} />
+                                <div className="gmap-rise" style={{ animationDelay: '120ms' }}>
                                     <h3 className="text-2xl font-black text-white leading-none tracking-tight uppercase italic line-clamp-2">{selectedGym.name}</h3>
-                                    <p className="text-neutral-500 text-xs font-bold mt-1">Gimnasio Desconocido</p>
                                 </div>
                             </div>
                         )}
 
-                        <div className="p-6 pt-2 relative space-y-6">
-                            {/* Close Button */}
-                            <button
-                                onClick={() => setSelectedGym(null)}
-                                className="absolute top-4 right-4 z-10 bg-black/40 backdrop-blur p-2 rounded-full text-white/70 hover:text-white border border-white/5 transition-colors"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-                            </button>
+                        <div className="p-5 pt-3 relative space-y-4">
+                            {/* Status + address + distance chips */}
+                            <div className="flex flex-wrap items-center gap-1.5 gmap-rise" style={{ animationDelay: '180ms' }}>
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${selectedGym.is_unlocked
+                                    ? 'bg-blue-500/10 border-blue-500/40 text-blue-400'
+                                    : 'bg-neutral-900 border-neutral-700 text-neutral-400'
+                                }`}>
+                                    {selectedGym.is_unlocked
+                                        ? <><span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" /> Conquistado</>
+                                        : <><Lock size={9} /> Bloqueado</>}
+                                </span>
+                                {selectedGym.lat && userLocation && (() => {
+                                    const dist = haversineDistance(userLocation.lat, userLocation.lng, selectedGym.lat, selectedGym.lng);
+                                    const distDisplay = dist >= 1000 ? `${(dist / 1000).toFixed(1)} km` : `${Math.round(dist)} m`;
+                                    return (
+                                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${!selectedGym.is_unlocked && dist > 90
+                                            ? 'bg-red-500/10 border-red-500/40 text-red-400'
+                                            : 'bg-white/5 border-white/10 text-neutral-300'
+                                        }`}>
+                                            <MapPin size={9} /> {distDisplay}
+                                        </span>
+                                    );
+                                })()}
+                                {selectedGym.id && selectedGym.is_unlocked && favoriteCount > 0 && (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-red-500/10 border border-red-500/30 text-red-400">
+                                        <Heart size={9} fill="currentColor" /> {favoriteCount}
+                                    </span>
+                                )}
+                            </div>
 
-                            <div className="space-y-4">
-                                <div className="flex items-start gap-3">
-                                    <div className={`p-2 rounded-lg shrink-0 ${selectedGym.is_unlocked ? 'bg-blue-500/20 text-blue-400' : 'bg-neutral-800/50 text-gym-primary'}`}>
-                                        {selectedGym.is_unlocked ? <div className="w-5 h-5 bg-blue-500 rounded-full animate-pulse shadow-[0_0_10px_#3b82f6]"></div> : <Lock size={20} />}
-                                    </div>
-                                    <div>
-                                        <h4 className="text-white font-bold text-sm">{selectedGym.is_unlocked ? 'Territorio Conquistado' : 'Territorio Bloqueado'}</h4>
-                                        <p className="text-neutral-400 text-xs leading-relaxed mt-1">
-                                            {selectedGym.address || 'Ubicación remota.'}
-                                        </p>
-                                    </div>
-                                </div>
+                            {selectedGym.address && (
+                                <p className="text-neutral-500 text-xs leading-relaxed gmap-rise" style={{ animationDelay: '220ms' }}>{selectedGym.address}</p>
+                            )}
 
+                            <div className="space-y-2.5 gmap-rise" style={{ animationDelay: '260ms' }}>
                                 {selectedGym.is_unlocked ? (
                                     <>
                                         <button
                                             onClick={() => navigate(`/territory/${selectedGym.id}`)}
-                                            className="w-full bg-blue-600 text-white font-black text-lg italic py-4 rounded-2xl hover:bg-blue-500 transition-all hover:scale-[1.02] flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(37,99,235,0.4)]"
+                                            className="relative w-full bg-gradient-to-r from-blue-600 to-sky-500 text-white font-black text-base italic py-4 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.97] flex items-center justify-center gap-2 shadow-[0_8px_28px_rgba(37,99,235,0.45)] overflow-hidden"
                                         >
+                                            <div className="absolute inset-0 gmap-shimmer" />
+                                            <Dumbbell size={18} strokeWidth={2.5} />
                                             ENTRAR AL TERRITORIO
                                         </button>
 
-                                        {/* Set Home Base Option */}
-                                        {selectedGym.is_home_base ? (
-                                            <div className="flex items-center justify-center gap-2 py-2 text-yellow-500 font-bold text-xs uppercase tracking-widest bg-yellow-500/10 rounded-xl border border-yellow-500/20">
-                                                <Star size={12} fill="currentColor" />
-                                                Actualmente Sede Principal
-                                            </div>
-                                        ) : (
-                                            <button
-                                                onClick={handleSetHomeBase}
-                                                className="w-full py-3 text-neutral-400 font-bold text-xs uppercase tracking-widest hover:text-white hover:bg-white/5 rounded-xl transition-all flex items-center justify-center gap-2"
-                                            >
-                                                <Star size={12} />
-                                                Establecer como Principal
-                                            </button>
-                                        )}
+                                        <div className="flex gap-2">
+                                            {selectedGym.is_home_base ? (
+                                                <div className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-yellow-400 font-black text-[10px] uppercase tracking-widest bg-yellow-500/10 rounded-xl border border-yellow-500/25">
+                                                    <Star size={11} fill="currentColor" />
+                                                    Sede Principal
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    onClick={handleSetHomeBase}
+                                                    className="flex-1 py-2.5 text-neutral-400 font-black text-[10px] uppercase tracking-widest hover:text-yellow-400 bg-white/[0.03] hover:bg-yellow-500/5 rounded-xl border border-white/10 hover:border-yellow-500/30 transition-all flex items-center justify-center gap-1.5 active:scale-95"
+                                                >
+                                                    <Star size={11} />
+                                                    Hacer Sede
+                                                </button>
+                                            )}
+                                            {/* FAVORITE — spec §1.5: only for already-visited gyms */}
+                                            {selectedGym.id && (
+                                                <button
+                                                    onClick={handleToggleFavorite}
+                                                    className={`w-11 flex items-center justify-center rounded-xl border transition-all active:scale-90 ${isFavorite
+                                                        ? 'bg-red-500/15 border-red-500/50 text-red-400'
+                                                        : 'bg-white/[0.03] border-white/10 text-neutral-400 hover:text-red-400 hover:border-red-500/30'
+                                                    }`}
+                                                    title={isFavorite ? 'Quitar de Favoritos' : 'Añadir a Favoritos'}
+                                                >
+                                                    <Heart size={15} fill={isFavorite ? 'currentColor' : 'none'} className={isFavorite ? 'animate-in zoom-in-50 duration-300' : ''} />
+                                                </button>
+                                            )}
+                                        </div>
                                     </>
                                 ) : (
                                     <button
                                         onClick={handleUnlock}
-                                        className="w-full bg-gym-primary text-black font-black text-lg italic py-4 rounded-2xl hover:bg-yellow-400 transition-all hover:scale-[1.02] flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(250,204,21,0.3)] bg-neutral-800"
+                                        className="relative w-full bg-gradient-to-r from-yellow-400 to-amber-500 text-black font-black text-base italic py-4 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.97] flex items-center justify-center gap-2 shadow-[0_8px_28px_rgba(250,204,21,0.4)] overflow-hidden"
                                         id="tut-add-gym-btn"
                                     >
-                                        <Lock size={20} strokeWidth={2.5} />
+                                        <div className="absolute inset-0 gmap-shimmer" />
+                                        <Lock size={18} strokeWidth={2.5} />
                                         AÑADIR A MI MAPA
                                     </button>
                                 )}
 
-                                {/* FAVORITE SECTION — spec §1.5: el "me gusta" (❤) SOLO existe para
-                                    gimnasios YA VISITADOS (en "Mis Gimnasios" / pasaporte personal),
-                                    nunca para territorios bloqueados que el usuario aún no ha pisado. */}
-                                {selectedGym.id && selectedGym.is_unlocked && (
-                                    <div className="pt-2 border-t border-white/10 flex items-center justify-between">
-                                        <div className="flex items-center gap-2 text-xs text-neutral-400">
-                                            <Heart size={14} className={isFavorite ? "text-red-500 fill-red-500" : ""} />
-                                            <span>{favoriteCount} {favoriteCount === 1 ? 'persona lo prefiere' : 'personas lo prefieren'}</span>
-                                        </div>
-                                        <button 
-                                            onClick={handleToggleFavorite}
-                                            className={`p-2 rounded-full border transition-all ${isFavorite ? 'bg-red-500/10 border-red-500/50 text-red-500 hover:bg-red-500/20' : 'bg-white/5 border-white/10 text-white hover:bg-white/10'}`}
-                                            title={isFavorite ? "Quitar de Favoritos" : "Añadir a Favoritos"}
-                                        >
-                                            <Heart size={16} fill={isFavorite ? "currentColor" : "none"} />
-                                        </button>
-                                    </div>
-                                )}
-
                                 {selectedGym.lat && userLocation && (() => {
                                     const dist = haversineDistance(userLocation.lat, userLocation.lng, selectedGym.lat, selectedGym.lng);
-                                    const distDisplay = dist >= 1000 ? `${(dist / 1000).toFixed(1)}km` : `${Math.round(dist)}m`;
                                     const accuracyTag = !userLocation.isFresh
                                         ? ' · GPS en caché'
                                         : !isAccuracyUsable(userLocation.accuracy)
@@ -863,15 +892,8 @@ export const GymMap = () => {
                                         : '';
                                     if (!selectedGym.is_unlocked && dist > 90) {
                                         return (
-                                            <p className="text-red-500 text-xs text-center font-bold mt-2">
-                                                📍 A {distDisplay} · necesitas ≤90m{accuracyTag}
-                                            </p>
-                                        );
-                                    }
-                                    if (selectedGym.is_unlocked) {
-                                        return (
-                                            <p className="text-neutral-500 text-xs text-center mt-2">
-                                                📍 {distDisplay} de distancia
+                                            <p className="text-red-400/90 text-[10px] text-center font-bold">
+                                                Acércate a menos de 90 m para desbloquearlo{accuracyTag}
                                             </p>
                                         );
                                     }
@@ -883,20 +905,22 @@ export const GymMap = () => {
                 </div>
             )}
 
-            {/* Legend Overlay - Tactical Top Right Widget (Transparent) */}
-            <div className="absolute top-[60px] right-4 z-20 flex flex-col gap-2 p-2 select-none text-right items-end drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)] pointer-events-none animate-in fade-in duration-300">
-                <div className="flex items-center gap-2">
-                    <span className="text-[8px] font-black text-white uppercase tracking-widest">Sede Principal</span>
-                    <div className="w-2 h-2 rounded-full bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.9)] animate-pulse"></div>
-                </div>
-                <div className="flex items-center gap-2">
-                    <span className="text-[8px] font-black text-white uppercase tracking-widest">Desbloqueado</span>
-                    <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.9)]"></div>
-                </div>
-                <div className="flex items-center gap-2">
-                    <span className="text-[8px] font-black text-neutral-400 uppercase tracking-widest">Bloqueado</span>
-                    <div className="w-2 h-2 rounded-full bg-neutral-900 border border-neutral-700 flex items-center justify-center">
-                        <Lock size={6} className="text-neutral-500" />
+            {/* ── Legend: glass chip card ───────────────────────────────── */}
+            <div className="absolute top-[64px] right-3 z-20 select-none pointer-events-none gmap-rise" style={{ animationDelay: '160ms' }}>
+                <div className="bg-neutral-950/70 backdrop-blur-xl border border-white/10 rounded-2xl px-3 py-2.5 flex flex-col gap-2 shadow-[0_8px_24px_rgba(0,0,0,0.5)]">
+                    <div className="flex items-center gap-2 justify-end">
+                        <span className="text-[8px] font-black text-yellow-400 uppercase tracking-widest">Sede</span>
+                        <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-br from-yellow-300 to-amber-500 shadow-[0_0_8px_rgba(250,204,21,0.9)] animate-pulse"></div>
+                    </div>
+                    <div className="flex items-center gap-2 justify-end">
+                        <span className="text-[8px] font-black text-sky-300 uppercase tracking-widest">Conquistado</span>
+                        <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-br from-sky-400 to-blue-600 shadow-[0_0_8px_rgba(59,130,246,0.9)]"></div>
+                    </div>
+                    <div className="flex items-center gap-2 justify-end">
+                        <span className="text-[8px] font-black text-neutral-500 uppercase tracking-widest">Bloqueado</span>
+                        <div className="w-2.5 h-2.5 rounded-full bg-neutral-900 border border-neutral-600 flex items-center justify-center">
+                            <Lock size={6} className="text-neutral-500" />
+                        </div>
                     </div>
                 </div>
             </div>
