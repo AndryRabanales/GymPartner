@@ -510,7 +510,20 @@ export const GymMap = () => {
     }
 
     return (
-        <div className="w-full h-[calc(100vh-100px)] md:h-[calc(100vh-120px)] rounded-none md:rounded-3xl overflow-hidden shadow-2xl border-0 md:border border-neutral-800 relative bg-neutral-900 group">
+        <div className="w-full h-[calc(100vh-100px)] md:h-[calc(100vh-120px)] p-2.5 sm:p-4 bg-black">
+            {/* ── Framed map card: layered border + ambient glow ───────── */}
+            <div className="relative w-full h-full rounded-[1.75rem] sm:rounded-[2rem] group gmap-frame-in">
+                {/* Outer ambient glow ring (breathing) */}
+                <div className="absolute -inset-[3px] rounded-[1.9rem] sm:rounded-[2.15rem] bg-gradient-to-br from-yellow-400/40 via-sky-500/20 to-transparent opacity-60 blur-md gmap-frame-glow pointer-events-none" />
+                {/* Crisp border frame */}
+                <div className="absolute inset-0 rounded-[1.75rem] sm:rounded-[2rem] border-2 border-white/15 pointer-events-none z-30" />
+                {/* Corner accent ticks */}
+                <div className="absolute top-3 left-3 w-5 h-5 border-t-2 border-l-2 border-yellow-400/70 rounded-tl-xl pointer-events-none z-30" />
+                <div className="absolute top-3 right-3 w-5 h-5 border-t-2 border-r-2 border-yellow-400/70 rounded-tr-xl pointer-events-none z-30" />
+                <div className="absolute bottom-3 left-3 w-5 h-5 border-b-2 border-l-2 border-sky-400/50 rounded-bl-xl pointer-events-none z-30" />
+                <div className="absolute bottom-3 right-3 w-5 h-5 border-b-2 border-r-2 border-sky-400/50 rounded-br-xl pointer-events-none z-30" />
+
+                <div className="relative w-full h-full rounded-[1.6rem] sm:rounded-[1.85rem] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.8)] bg-neutral-900">
 
             {/* ── HUD: floating search capsule ─────────────────────────── */}
             <div className="absolute top-0 left-0 w-full p-4 z-20 pointer-events-none flex flex-col items-center justify-start">
@@ -636,6 +649,16 @@ export const GymMap = () => {
                     from { transform: scale(1); }
                     to   { transform: scale(1.12); }
                 }
+                @keyframes gmapFrameIn {
+                    from { opacity: 0; transform: scale(0.97); }
+                    to   { opacity: 1; transform: scale(1); }
+                }
+                @keyframes gmapFrameGlow {
+                    0%, 100% { opacity: 0.45; }
+                    50%      { opacity: 0.85; }
+                }
+                .gmap-frame-in   { animation: gmapFrameIn 0.5s cubic-bezier(0.22,1,0.36,1) both; }
+                .gmap-frame-glow { animation: gmapFrameGlow 4s ease-in-out infinite; }
                 .gmap-rise  { animation: gmapRise 0.5s cubic-bezier(0.22,1,0.36,1) both; }
                 .gmap-drop  { animation: gmapDrop 0.55s cubic-bezier(0.34,1.56,0.64,1) both; }
                 .gmap-sheet { animation: gmapSheet 0.45s cubic-bezier(0.22,1,0.36,1) both; }
@@ -951,6 +974,8 @@ export const GymMap = () => {
                     nonBlocking={true}
                 />
             )}
-        </div >
+                </div>
+            </div>
+        </div>
     );
 };
