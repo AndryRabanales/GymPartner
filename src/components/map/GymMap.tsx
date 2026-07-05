@@ -510,7 +510,7 @@ export const GymMap = () => {
     }
 
     return (
-        <div className="w-full h-[calc(100vh-100px)] md:h-[calc(100vh-120px)] p-2.5 sm:p-4 bg-black">
+        <div className="w-full h-full p-2.5 sm:p-4 bg-black">
             {/* ── Framed map card: layered border + ambient glow ───────── */}
             <div className="relative w-full h-full rounded-[1.75rem] sm:rounded-[2rem] group gmap-frame-in">
                 {/* Outer ambient glow ring (breathing) */}
@@ -928,21 +928,21 @@ export const GymMap = () => {
                 </div>
             )}
 
-            {/* ── Legend: glass chip card ───────────────────────────────── */}
-            <div className="absolute top-[64px] right-3 z-20 select-none pointer-events-none gmap-rise" style={{ animationDelay: '160ms' }}>
-                <div className="bg-neutral-950/70 backdrop-blur-xl border border-white/10 rounded-2xl px-3 py-2.5 flex flex-col gap-2 shadow-[0_8px_24px_rgba(0,0,0,0.5)]">
-                    <div className="flex items-center gap-2 justify-end">
-                        <span className="text-[8px] font-black text-yellow-400 uppercase tracking-widest">Sede</span>
-                        <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-br from-yellow-300 to-amber-500 shadow-[0_0_8px_rgba(250,204,21,0.9)] animate-pulse"></div>
+            {/* ── Legend: compact glass chip card, tucked in the top-right corner ── */}
+            <div className="absolute top-[92px] right-2 z-20 select-none pointer-events-none gmap-rise" style={{ animationDelay: '160ms' }}>
+                <div className="bg-neutral-950/70 backdrop-blur-xl border border-white/10 rounded-xl px-2 py-1.5 flex flex-col gap-1 shadow-[0_6px_18px_rgba(0,0,0,0.5)]">
+                    <div className="flex items-center gap-1.5 justify-end">
+                        <span className="text-[7px] font-black text-yellow-400 uppercase tracking-wider">Sede</span>
+                        <div className="w-2 h-2 rounded-full bg-gradient-to-br from-yellow-300 to-amber-500 shadow-[0_0_6px_rgba(250,204,21,0.9)] animate-pulse"></div>
                     </div>
-                    <div className="flex items-center gap-2 justify-end">
-                        <span className="text-[8px] font-black text-sky-300 uppercase tracking-widest">Conquistado</span>
-                        <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-br from-sky-400 to-blue-600 shadow-[0_0_8px_rgba(59,130,246,0.9)]"></div>
+                    <div className="flex items-center gap-1.5 justify-end">
+                        <span className="text-[7px] font-black text-sky-300 uppercase tracking-wider">Conquistado</span>
+                        <div className="w-2 h-2 rounded-full bg-gradient-to-br from-sky-400 to-blue-600 shadow-[0_0_6px_rgba(59,130,246,0.9)]"></div>
                     </div>
-                    <div className="flex items-center gap-2 justify-end">
-                        <span className="text-[8px] font-black text-neutral-500 uppercase tracking-widest">Bloqueado</span>
-                        <div className="w-2.5 h-2.5 rounded-full bg-neutral-900 border border-neutral-600 flex items-center justify-center">
-                            <Lock size={6} className="text-neutral-500" />
+                    <div className="flex items-center gap-1.5 justify-end">
+                        <span className="text-[7px] font-black text-neutral-500 uppercase tracking-wider">Bloqueado</span>
+                        <div className="w-2 h-2 rounded-full bg-neutral-900 border border-neutral-600 flex items-center justify-center">
+                            <Lock size={5} className="text-neutral-500" />
                         </div>
                     </div>
                 </div>
