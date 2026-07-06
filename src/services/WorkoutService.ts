@@ -558,6 +558,25 @@ class WorkoutService {
             .select()
             .single();
 
+        // Duplicate blocked by the workout_logs_unique_set index (double-tap
+        // finalize, concurrent queue flush, retry after a lost response...).
+        // The set already exists — treat as success and return the existing row
+        // so callers set db_id and nothing gets re-queued for retry.
+        if (error?.code === '23505') {
+            console.warn('[WS] ⚠ Duplicate set blocked by unique index — reusing existing row:', { sessionId: setData.session_id, exerciseId: setData.exercise_id, setNumber: setData.set_number });
+            let existingQuery = supabase
+                .from('workout_logs')
+                .select()
+                .eq('session_id', safePayload.session_id)
+                .eq('exercise_id', safePayload.exercise_id)
+                .eq('set_number', safePayload.set_number);
+            existingQuery = safePayload.owner_id
+                ? existingQuery.eq('owner_id', safePayload.owner_id)
+                : existingQuery.is('owner_id', null);
+            const { data: existing } = await existingQuery.maybeSingle();
+            if (existing) return { data: existing };
+        }
+
         if (error) console.error('[WS] logSet failed:', error.message, { sessionId: setData.session_id, exerciseId: setData.exercise_id, setNumber: setData.set_number });
         else console.log('[WS] ✓ Set logged:', { sessionId: setData.session_id, exerciseId: setData.exercise_id, setNumber: setData.set_number, weight: safePayload.weight_kg, reps: safePayload.reps });
 
@@ -1770,7 +1789,22 @@ class WorkoutService {
     // (created without connectivity) by creating the Supabase row and remapping
     // payloads before flushing. Safe to call repeatedly — on app start AND on
     // every 'online' event.
+    // Concurrency guard: app mount, the 'online' event and visibilitychange can
+    // all trigger a flush within the same instant — running two flushes over the
+    // same localStorage queue double-inserts every payload.
+    private _isFlushing = false;
+
     async flushPendingSets(): Promise<{ recovered: number; stillPending: number }> {
+        if (this._isFlushing) return { recovered: 0, stillPending: 0 };
+        this._isFlushing = true;
+        try {
+            return await this._flushPendingSetsInternal();
+        } finally {
+            this._isFlushing = false;
+        }
+    }
+
+    private async _flushPendingSetsInternal(): Promise<{ recovered: number; stillPending: number }> {
         // Flush offline routines first (they don't depend on session IDs)
         await this._flushOfflineRoutines();
 

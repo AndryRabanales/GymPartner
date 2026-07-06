@@ -4863,6 +4863,12 @@ export const WorkoutSession = () => {
     const [locationName, setLocationName] = useState('');
     const [isSavingFlow, setIsSavingFlow] = useState(false);
     const [isFinalizing, setIsFinalizing] = useState(false);
+    // Synchronous re-entry guard for handleFinalizeSession. The isFinalizing
+    // STATE check is not enough: two rapid taps (double-tap on GUARDAR/NO
+    // GUARDAR/FINALIZAR) both capture isFinalizing=false in their closures and
+    // both run the full pre-save, duplicating every set in the DB (confirmed
+    // in prod: identical rows ~300-500ms apart). A ref flips instantly.
+    const finalizingGuardRef = useRef(false);
 
     /** Cancel finishing: go back to the active workout from the routine modal */
     const handleCancelFinish = () => {
@@ -5027,7 +5033,9 @@ export const WorkoutSession = () => {
 
     // 5. Finalize (The original handleFinish)
     const handleFinalizeSession = async () => {
-        if (isFinalizing) return;
+        // Ref check FIRST: synchronous, immune to stale closures / double-tap
+        if (isFinalizing || finalizingGuardRef.current) return;
+        finalizingGuardRef.current = true;
         setIsFinalizing(true);
         // setIsFinished(true); // Already stopped
         let finalSessionId = sessionId;
@@ -5069,6 +5077,7 @@ export const WorkoutSession = () => {
                     setIsFinished(true);
                     setLoading(false);
                     setIsFinalizing(false);
+                    finalizingGuardRef.current = false;
                     isLeavingPageRef.current = true;
                     navigate('/');
                     return;
@@ -5609,12 +5618,14 @@ export const WorkoutSession = () => {
                 setLoading(false);
                 setIsFinished(false);
                 setIsFinalizing(false);
+                finalizingGuardRef.current = false;
             }
         } catch (error) {
             console.error('❌ Exception terminando sesión:', error);
             setLoading(false);
             setIsFinished(false);
             setIsFinalizing(false);
+            finalizingGuardRef.current = false;
         }
     };
 
