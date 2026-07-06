@@ -58,14 +58,21 @@ export const Radar = () => {
     const currentUser = nearbyUsers[currentIndex];
 
     useEffect(() => {
-        if (scanComplete && nearbyUsers.length > 0) {
+        if (scanComplete && nearbyUsers.length > 0 && authUser?.id) {
+            // Play the swipe tutorial (NOPE/MATCH demo) ONCE per user, ever.
+            // The key was previously removed on radar restart but never set,
+            // so the animation replayed on every single visit.
+            const tutorialKey = `radar_swipe_tutorial_seen_${authUser.id}`;
+            if (localStorage.getItem(tutorialKey)) return;
+            localStorage.setItem(tutorialKey, '1');
+
             setIsPlayingTutorial(true);
             const timer = setTimeout(() => {
                 setIsPlayingTutorial(false);
             }, 3000);
             return () => clearTimeout(timer);
         }
-    }, [scanComplete, nearbyUsers.length]);
+    }, [scanComplete, nearbyUsers.length, authUser?.id]);
 
     useEffect(() => {
         if (currentUser) {
@@ -606,11 +613,10 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
                         <h2 className="text-2xl font-black text-white italic mb-3 uppercase tracking-tighter">Radar Despejado</h2>
                         <p className="text-neutral-500 max-w-xs text-sm font-medium leading-relaxed">No hay más guerreros en tu zona por ahora. ¡Vuelve más tarde para nuevos desafíos!</p>
                         <button 
-                            onClick={() => { 
-                                setCurrentIndex(0); 
-                                setScanComplete(false); 
-                                localStorage.removeItem('radar_swipe_tutorial_seen_v4');
-                                loadNearbyUsers(); 
+                            onClick={() => {
+                                setCurrentIndex(0);
+                                setScanComplete(false);
+                                loadNearbyUsers();
                             }}
                             className="mt-10 bg-white text-black px-10 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-gym-primary transition-all active:scale-95 shadow-2xl"
                         >
