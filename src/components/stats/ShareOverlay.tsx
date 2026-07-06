@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import html2canvas from 'html2canvas';
-import { Share2, Download, X, Image as ImageIcon, Zap, Plus, Scaling, Settings, Check, Trophy, Flame, Sparkles, BarChart3 } from 'lucide-react';
+import { Share2, Download, X, Image as ImageIcon, Zap, Plus, Scaling, Settings, Check, Trophy, Flame, Sparkles, BarChart3, Palette, RotateCcw } from 'lucide-react';
 import { MuscleRadarChart } from './MuscleRadarChart';
 import { Capacitor } from '@capacitor/core';
 import { Share } from '@capacitor/share';
@@ -26,7 +26,11 @@ interface StickerState {
     y: number;
     scale: number;
     visible: boolean;
+    color?: string; // custom override for the sticker's text/number color
 }
+
+// Quick palette offered for sticker text/number recoloring
+const STICKER_COLOR_SWATCHES = ['#ffffff', '#eab308', '#ef4444', '#3b82f6', '#22c55e', '#a855f7', '#f472b6', '#22d3ee', '#f97316', '#000000'];
 
 export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverlayProps) => {
     const cardRef = useRef<HTMLDivElement>(null);
@@ -58,6 +62,7 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
     // UI State
     const [showAddMenu, setShowAddMenu] = useState(false);
     const [showPrSelector, setShowPrSelector] = useState(false);
+    const [showColorPicker, setShowColorPicker] = useState(false);
 
     // Custom Data State
     const [selectedPrs, setSelectedPrs] = useState<string[]>([]);
@@ -91,11 +96,13 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
         }
     }, [stats.oneRepMaxes]);
 
-    const interactionMode = useRef<'drag' | 'resize' | null>(null);
+    const interactionMode = useRef<'drag' | 'resize' | 'pinch' | null>(null);
     const startPos = useRef({ x: 0, y: 0 });
     const startStickerState = useRef<{ x: number, y: number, scale: number } | null>(null);
     const dragElementRef = useRef<HTMLDivElement | null>(null);
     const currentDragTransform = useRef<{ x: number, y: number, scale: number } | null>(null);
+    // Two-finger pinch-to-scale: distance between the two touch points at gesture start
+    const pinchStartDistance = useRef(0);
 
     const handleTouchStart = (e: React.TouchEvent | React.MouseEvent, id: StickerType, mode: 'drag' | 'resize', element: HTMLDivElement) => {
         e.preventDefault();
@@ -103,6 +110,7 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
 
         setSelectedId(id);
         setShowAddMenu(false);
+        setShowColorPicker(false);
         interactionMode.current = mode;
         dragElementRef.current = element;
 
@@ -118,8 +126,42 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
         }
     };
 
+    // Two-finger pinch on the sticker body itself — lets users resize with the
+    // same gesture they already know from photos, no need to hunt for the handle.
+    const handlePinchStart = (e: React.TouchEvent, id: StickerType, element: HTMLDivElement) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        setSelectedId(id);
+        setShowAddMenu(false);
+        setShowColorPicker(false);
+        interactionMode.current = 'pinch';
+        dragElementRef.current = element;
+
+        const [t1, t2] = [e.touches[0], e.touches[1]];
+        pinchStartDistance.current = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+
+        const sticker = stickers.find(s => s.id === id);
+        if (sticker) {
+            startStickerState.current = { x: sticker.x, y: sticker.y, scale: sticker.scale };
+            currentDragTransform.current = { x: sticker.x, y: sticker.y, scale: sticker.scale };
+        }
+    };
+
     const handleMove = (e: TouchEvent | MouseEvent) => {
         if (!interactionMode.current || !selectedId || !startStickerState.current || !dragElementRef.current || !currentDragTransform.current) return;
+
+        if (interactionMode.current === 'pinch') {
+            if (!('touches' in e) || e.touches.length < 2) return;
+            e.preventDefault();
+            const [t1, t2] = [e.touches[0], e.touches[1]];
+            const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+            const ratio = dist / (pinchStartDistance.current || 1);
+            const newScale = Math.max(0.3, Math.min(5.0, startStickerState.current.scale * ratio));
+            currentDragTransform.current = { ...currentDragTransform.current, scale: newScale };
+            dragElementRef.current.style.transform = `translate3d(${currentDragTransform.current.x}px, ${currentDragTransform.current.y}px, 0) scale(${newScale})`;
+            return;
+        }
 
         const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
         const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
@@ -191,6 +233,20 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
             s.id === selectedId ? { ...s, visible: false } : s
         ));
         setSelectedId(null);
+    };
+
+    // Applies (or clears, when color is null) a custom text color to a sticker's content
+    const setStickerColor = (id: StickerType, color: string | null) => {
+        setStickers(prev => prev.map(s => s.id === id ? { ...s, color: color ?? undefined } : s));
+    };
+
+    // Inline style to recolor a sticker's text/numbers. Works for both plain
+    // white text and gradient (bg-clip-text) text — WebkitTextFillColor
+    // overrides the transparent gradient fill when a custom color is set.
+    const textColorStyle = (id: StickerType): React.CSSProperties | undefined => {
+        const color = stickers.find(s => s.id === id)?.color;
+        if (!color) return undefined;
+        return { color, WebkitTextFillColor: color };
     };
 
     const togglePrSelection = (name: string) => {
@@ -363,15 +419,27 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                     width: w || 'auto'
                 }}
                 onMouseDown={(e) => elementRef.current && handleTouchStart(e, id, 'drag', elementRef.current)}
-                onTouchStart={(e) => elementRef.current && handleTouchStart(e, id, 'drag', elementRef.current)}
+                onTouchStart={(e) => {
+                    if (!elementRef.current) return;
+                    // Two fingers on the sticker body = pinch to resize.
+                    // One finger = normal drag.
+                    if (e.touches.length === 2) handlePinchStart(e, id, elementRef.current);
+                    else handleTouchStart(e, id, 'drag', elementRef.current);
+                }}
             >
-                <div className={`relative transition-all ${isSelected ? 'ring-1 ring-white/50 bg-white/10 rounded-lg' : ''}`}>
+                <div className={`relative transition-all ${isSelected ? 'sticker-selection-box rounded-xl' : ''}`}>
                     {children}
                     {isSelected && (
                         <>
+                            {/* Viewfinder corner brackets — replaces the old flat white ring */}
+                            <div className="absolute -top-1.5 -left-1.5 w-3.5 h-3.5 border-t-2 border-l-2 border-gym-primary rounded-tl-md pointer-events-none" />
+                            <div className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 border-t-2 border-r-2 border-gym-primary rounded-tr-md pointer-events-none" />
+                            <div className="absolute -bottom-1.5 -left-1.5 w-3.5 h-3.5 border-b-2 border-l-2 border-gym-primary rounded-bl-md pointer-events-none" />
+                            <div className="absolute -bottom-1.5 -right-1.5 w-3.5 h-3.5 border-b-2 border-r-2 border-gym-primary rounded-br-md pointer-events-none" />
+
                             {(id === 'pr' || id === 'radar') && (
                                 <div
-                                    className="absolute -top-3 left-1/2 -translate-x-1/2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white shadow-md cursor-pointer z-50 hover:bg-blue-600"
+                                    className="absolute -top-3.5 left-1/2 -translate-x-1/2 w-7 h-7 bg-gradient-to-br from-sky-400 to-blue-600 rounded-full flex items-center justify-center text-white shadow-[0_4px_14px_rgba(59,130,246,0.5)] cursor-pointer z-50 active:scale-90 transition-transform"
                                     onMouseDown={(e) => {
                                         e.stopPropagation();
                                         if (id === 'pr') setShowPrSelector(true);
@@ -383,25 +451,65 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                                         if (id === 'radar') setShowRadarSelector(true);
                                     }}
                                 >
-                                    <Settings size={12} />
+                                    <Settings size={13} />
+                                </div>
+                            )}
+
+                            {/* Recolor text/numbers — every sticker except the radar (which
+                                already has full color controls) and the barbell (no text) */}
+                            {id !== 'radar' && id !== 'deco_barbell' && (
+                                <div
+                                    className="absolute -top-3.5 -left-3.5 w-7 h-7 bg-gradient-to-br from-fuchsia-400 to-purple-600 rounded-full flex items-center justify-center text-white shadow-[0_4px_14px_rgba(168,85,247,0.5)] cursor-pointer z-50 active:scale-90 transition-transform"
+                                    onMouseDown={(e) => { e.stopPropagation(); setShowColorPicker(prev => !prev); }}
+                                    onTouchStart={(e) => { e.stopPropagation(); setShowColorPicker(prev => !prev); }}
+                                >
+                                    <Palette size={13} />
                                 </div>
                             )}
 
                             <div
-                                className="absolute -top-3 -right-3 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white shadow-md cursor-pointer z-50 hover:bg-red-600"
+                                className="absolute -top-3.5 -right-3.5 w-7 h-7 bg-gradient-to-br from-red-400 to-red-600 rounded-full flex items-center justify-center text-white shadow-[0_4px_14px_rgba(239,68,68,0.5)] cursor-pointer z-50 active:scale-90 transition-transform"
                                 onMouseDown={deleteSelected}
                                 onTouchStart={deleteSelected}
                             >
-                                <X size={12} />
+                                <X size={13} />
                             </div>
 
+                            {/* Color swatch popover */}
+                            {showColorPicker && (
+                                <div
+                                    className="absolute -top-14 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-neutral-900/95 backdrop-blur-xl border border-white/15 rounded-full px-2.5 py-2 shadow-[0_10px_30px_rgba(0,0,0,0.7)] z-[60] whitespace-nowrap"
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                    onTouchStart={(e) => e.stopPropagation()}
+                                >
+                                    <button
+                                        onMouseDown={(e) => { e.stopPropagation(); setStickerColor(id, null); }}
+                                        onTouchStart={(e) => { e.stopPropagation(); setStickerColor(id, null); }}
+                                        className="w-5 h-5 rounded-full bg-neutral-800 border border-neutral-600 flex items-center justify-center shrink-0 active:scale-90 transition-transform"
+                                        title="Restaurar color original"
+                                    >
+                                        <RotateCcw size={9} className="text-neutral-300" />
+                                    </button>
+                                    <div className="w-px h-4 bg-white/15 shrink-0" />
+                                    {STICKER_COLOR_SWATCHES.map(c => (
+                                        <button
+                                            key={c}
+                                            onMouseDown={(e) => { e.stopPropagation(); setStickerColor(id, c); }}
+                                            onTouchStart={(e) => { e.stopPropagation(); setStickerColor(id, c); }}
+                                            className={`w-5 h-5 rounded-full border-2 shrink-0 transition-transform active:scale-90 ${s.color === c ? 'border-white scale-110' : 'border-white/20'}`}
+                                            style={{ backgroundColor: c }}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+
                             <div
-                                className="absolute -bottom-3 -right-3 w-8 h-8 flex items-center justify-center cursor-nwse-resize z-50 touch-none"
+                                className="absolute -bottom-3.5 -right-3.5 w-8 h-8 flex items-center justify-center cursor-nwse-resize z-50 touch-none"
                                 onMouseDown={(e) => elementRef.current && handleTouchStart(e, id, 'resize', elementRef.current)}
                                 onTouchStart={(e) => elementRef.current && handleTouchStart(e, id, 'resize', elementRef.current)}
                             >
-                                <div className="w-5 h-5 bg-white rounded-full shadow-md border-2 border-gym-primary flex items-center justify-center">
-                                    <Scaling size={10} className="text-black" />
+                                <div className="w-6 h-6 bg-gradient-to-br from-gym-primary to-amber-500 rounded-full shadow-[0_4px_14px_rgba(250,204,21,0.5)] border-2 border-black/20 flex items-center justify-center">
+                                    <Scaling size={11} className="text-black" />
                                 </div>
                             </div>
                         </>
@@ -428,15 +536,21 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-0 md:p-4 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => { setSelectedId(null); setShowAddMenu(false); setShowPrSelector(false); }}>
-            <div className="w-full h-full md:h-auto md:max-w-lg bg-neutral-900 border-neutral-800 md:rounded-3xl overflow-hidden flex flex-col md:max-h-[95vh]" onClick={e => e.stopPropagation()}>
+            {/* Editor frame: layered border + breathing glow, same language as the map/stats */}
+            <div className="relative w-full h-full md:h-auto md:max-w-lg md:max-h-[95vh]">
+                <div className="hidden md:block absolute -inset-[3px] rounded-[1.9rem] bg-gradient-to-br from-gym-primary/35 via-sky-500/15 to-transparent blur-md share-breathe pointer-events-none" />
+                <div className="relative w-full h-full bg-neutral-900 border-0 md:border-2 border-white/10 md:rounded-[1.75rem] overflow-hidden flex flex-col md:max-h-[95vh] shadow-[0_25px_80px_rgba(0,0,0,0.9)]" onClick={e => e.stopPropagation()}>
 
-                <div className="p-4 border-b border-neutral-800 flex items-center justify-between z-50 bg-neutral-900 shrink-0">
-                    <h3 className="text-white font-bold flex items-center gap-2">
-                        <Share2 size={18} className="text-gym-primary" />
+                <div className="relative p-4 border-b border-white/10 flex items-center justify-between z-50 bg-gradient-to-r from-neutral-900 via-neutral-900 to-black shrink-0 overflow-hidden">
+                    <div className="absolute -top-10 left-10 w-32 h-32 bg-gym-primary/10 rounded-full blur-3xl pointer-events-none share-breathe" />
+                    <h3 className="relative text-white font-black uppercase tracking-wider text-sm flex items-center gap-2.5">
+                        <span className="w-8 h-8 rounded-xl bg-gym-primary/15 border border-gym-primary/30 flex items-center justify-center">
+                            <Share2 size={15} className="text-gym-primary" />
+                        </span>
                         Editor Pro
                     </h3>
-                    <button onClick={onClose} className="p-2 rounded-full hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors">
-                        Cerrar
+                    <button onClick={onClose} className="relative p-2 rounded-full bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition-all active:scale-90">
+                        <X size={16} />
                     </button>
                 </div>
 
@@ -478,12 +592,12 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                                     ) : (
                                         <div className="w-6 h-6 rounded-full bg-gym-primary flex items-center justify-center text-[10px] font-black text-black">GP</div>
                                     )}
-                                    <span className="text-white font-bold text-xs tracking-tight">{username}</span>
+                                    <span className="text-white font-bold text-xs tracking-tight" style={textColorStyle('logo')}>{username}</span>
                                     <div className="w-3 h-3 bg-blue-500 rounded-full flex items-center justify-center text-[6px] text-white">✓</div>
                                 </div>
                                 <div className="mt-1 ml-2 flex items-center gap-1">
                                     <div className="w-1.5 h-1.5 bg-gym-primary rounded-full animate-pulse" />
-                                    <span className="text-[8px] font-black text-white/80 uppercase tracking-[0.2em] italic">Ginx Elite</span>
+                                    <span className="text-[8px] font-black text-white/80 uppercase tracking-[0.2em] italic" style={textColorStyle('logo')}>Ginx Elite</span>
                                 </div>
                             </div>
                         </StickerWrapper>
@@ -492,12 +606,12 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                             <div className="pointer-events-none relative group flex flex-col items-start drop-shadow-[0_8px_8px_rgba(0,0,0,0.8)]">
                                 <div className="flex items-baseline gap-1">
                                     <h1 className="text-7xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-white/50 tracking-tighter italic leading-none"
-                                        style={{ WebkitTextStroke: '1px transparent' }}>
+                                        style={{ WebkitTextStroke: '1px transparent', ...textColorStyle('volume') }}>
                                         {(stats.totalVolume / 1000).toFixed(1)}
                                     </h1>
-                                    <span className="text-4xl font-black text-gym-primary italic transform -rotate-12 translate-y-[-10px]">k</span>
+                                    <span className="text-4xl font-black text-gym-primary italic transform -rotate-12 translate-y-[-10px]" style={textColorStyle('volume')}>k</span>
                                 </div>
-                                <div className="px-2 py-0.5 rounded text-[8px] font-bold text-white uppercase tracking-[0.3em] ml-2">
+                                <div className="px-2 py-0.5 rounded text-[8px] font-bold text-white uppercase tracking-[0.3em] ml-2" style={textColorStyle('volume')}>
                                     Volume Load
                                 </div>
                             </div>
@@ -508,8 +622,8 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                                 <div className="flex items-center gap-3">
                                     <Trophy className="text-yellow-400 w-10 h-10 drop-shadow-[0_0_10px_rgba(250,204,21,0.6)]" fill="currentColor" />
                                     <div className="flex flex-col">
-                                        <span className="text-4xl font-black text-white leading-none italic">{stats.totalWorkouts}</span>
-                                        <span className="text-[10px] text-white/80 font-bold uppercase tracking-widest px-1 rounded">Sesiones</span>
+                                        <span className="text-4xl font-black text-white leading-none italic" style={textColorStyle('workouts')}>{stats.totalWorkouts}</span>
+                                        <span className="text-[10px] text-white/80 font-bold uppercase tracking-widest px-1 rounded" style={textColorStyle('workouts')}>Sesiones</span>
                                     </div>
                                 </div>
                             </div>
@@ -517,10 +631,10 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
 
                         <StickerWrapper id="time">
                             <div className="pointer-events-none drop-shadow-[0_4px_10px_rgba(0,0,0,0.8)] flex flex-col items-center">
-                                <div className="text-5xl font-mono font-black text-white tracking-widest leading-none border-b-2 border-gym-primary pb-1">
+                                <div className="text-5xl font-mono font-black text-white tracking-widest leading-none border-b-2 border-gym-primary pb-1" style={textColorStyle('time')}>
                                     {Math.floor(stats.totalTimeMinutes / 60)}<span className="animate-pulse">:</span>{String(Math.round(stats.totalTimeMinutes % 60)).padStart(2, '0')}
                                 </div>
-                                <p className="text-[8px] text-gym-primary font-bold uppercase tracking-[0.4em] mt-1 shadow-black drop-shadow-md">Time Under Tension</p>
+                                <p className="text-[8px] text-gym-primary font-bold uppercase tracking-[0.4em] mt-1 shadow-black drop-shadow-md" style={textColorStyle('time')}>Time Under Tension</p>
                             </div>
                         </StickerWrapper>
 
@@ -528,10 +642,10 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                             <div className="pointer-events-none opacity-80 mix-blend-screen">
                                 <div className="w-24 h-24 border-[3px] border-white/40 rounded-full flex items-center justify-center p-1 transform -rotate-12">
                                     <div className="w-full h-full border border-white/20 rounded-full flex flex-col items-center justify-center text-center">
-                                        <p className="text-[6px] text-white font-bold uppercase tracking-[0.2em] curve-text">Ginx • Worldwide</p>
-                                        <p className="text-2xl font-black text-white/90 italic">GYM</p>
-                                        <p className="text-xs font-bold text-gym-primary uppercase">Rat</p>
-                                        <p className="text-[6px] text-white/60 font-mono mt-1">{new Date().getFullYear()}</p>
+                                        <p className="text-[6px] text-white font-bold uppercase tracking-[0.2em] curve-text" style={textColorStyle('stamp_gym')}>Ginx • Worldwide</p>
+                                        <p className="text-2xl font-black text-white/90 italic" style={textColorStyle('stamp_gym')}>GYM</p>
+                                        <p className="text-xs font-bold text-gym-primary uppercase" style={textColorStyle('stamp_gym')}>Rat</p>
+                                        <p className="text-[6px] text-white/60 font-mono mt-1" style={textColorStyle('stamp_gym')}>{new Date().getFullYear()}</p>
                                     </div>
                                 </div>
                             </div>
@@ -540,24 +654,25 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                         <StickerWrapper id="hype_weight">
                             <div className="pointer-events-none transform -rotate-6 drop-shadow-[0_5px_15px_rgba(0,0,0,1)]">
                                 <h2 className="text-4xl font-black text-white italic tracking-tighter leading-none"
-                                    style={{ WebkitTextStroke: '1px black' }}>
-                                    LIGHT <br /> <span className="text-gym-primary">WEIGHT</span>
+                                    style={{ WebkitTextStroke: '1px black', ...textColorStyle('hype_weight') }}>
+                                    LIGHT <br /> <span className="text-gym-primary" style={textColorStyle('hype_weight')}>WEIGHT</span>
                                 </h2>
                             </div>
                         </StickerWrapper>
 
                         <StickerWrapper id="hype_legday">
                             <div className="pointer-events-none transform rotate-3 drop-shadow-[0_5px_15px_rgba(0,0,0,1)]">
-                                <div className="bg-red-600 text-white px-3 py-1 font-black italic text-2xl uppercase skew-x-[-10deg]">
+                                <div className="bg-red-600 text-white px-3 py-1 font-black italic text-2xl uppercase skew-x-[-10deg]" style={textColorStyle('hype_legday')}>
                                     LEG DAY
                                 </div>
-                                <p className="text-[8px] text-white font-bold uppercase tracking-[0.5em] text-center mt-1">No Skip</p>
+                                <p className="text-[8px] text-white font-bold uppercase tracking-[0.5em] text-center mt-1" style={textColorStyle('hype_legday')}>No Skip</p>
                             </div>
                         </StickerWrapper>
 
                         <StickerWrapper id="hype_pr">
                             <div className="pointer-events-none drop-shadow-[0_0_20px_rgba(234,179,8,0.4)]">
-                                <h2 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600 italic tracking-tighter filter drop-shadow-[0_2px_0_rgba(255,255,255,0.5)]">
+                                <h2 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600 italic tracking-tighter filter drop-shadow-[0_2px_0_rgba(255,255,255,0.5)]"
+                                    style={textColorStyle('hype_pr')}>
                                     NEW PR
                                 </h2>
                             </div>
@@ -567,11 +682,11 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                             <div className="pointer-events-none transform -rotate-3 drop-shadow-[0_6px_16px_rgba(0,0,0,1)]">
                                 <div className="relative">
                                     <h2 className="text-4xl font-black italic tracking-tighter leading-none text-transparent bg-clip-text bg-gradient-to-b from-red-400 via-red-500 to-red-800"
-                                        style={{ WebkitTextStroke: '1px rgba(0,0,0,0.6)' }}>
+                                        style={{ WebkitTextStroke: '1px rgba(0,0,0,0.6)', ...textColorStyle('hype_beast') }}>
                                         BEAST
                                     </h2>
                                     <h2 className="text-4xl font-black italic tracking-tighter leading-none text-white -mt-1 ml-6"
-                                        style={{ WebkitTextStroke: '1px black' }}>
+                                        style={{ WebkitTextStroke: '1px black', ...textColorStyle('hype_beast') }}>
                                         MODE
                                     </h2>
                                     <div className="absolute -right-3 -top-2 text-2xl">😤</div>
@@ -582,25 +697,25 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                         <StickerWrapper id="hype_nopain">
                             <div className="pointer-events-none drop-shadow-[0_5px_15px_rgba(0,0,0,1)]">
                                 <div className="border-y-2 border-white/70 py-1.5 px-2 transform rotate-2">
-                                    <p className="text-lg font-black text-white uppercase tracking-[0.25em] leading-none text-center">No Pain</p>
-                                    <p className="text-lg font-black text-gym-primary uppercase tracking-[0.25em] leading-none text-center mt-1">No Gain</p>
+                                    <p className="text-lg font-black text-white uppercase tracking-[0.25em] leading-none text-center" style={textColorStyle('hype_nopain')}>No Pain</p>
+                                    <p className="text-lg font-black text-gym-primary uppercase tracking-[0.25em] leading-none text-center mt-1" style={textColorStyle('hype_nopain')}>No Gain</p>
                                 </div>
                             </div>
                         </StickerWrapper>
 
                         <StickerWrapper id="hype_grind">
                             <div className="pointer-events-none transform -rotate-6 drop-shadow-[0_5px_15px_rgba(0,0,0,1)]">
-                                <p className="text-[9px] font-bold text-white/70 uppercase tracking-[0.5em] mb-0.5">Trust</p>
-                                <h2 className="text-4xl font-black text-white italic tracking-tighter leading-none">THE</h2>
-                                <h2 className="text-5xl font-black italic tracking-tighter leading-none text-transparent bg-clip-text bg-gradient-to-r from-gym-primary via-amber-400 to-orange-500">GRIND</h2>
+                                <p className="text-[9px] font-bold text-white/70 uppercase tracking-[0.5em] mb-0.5" style={textColorStyle('hype_grind')}>Trust</p>
+                                <h2 className="text-4xl font-black text-white italic tracking-tighter leading-none" style={textColorStyle('hype_grind')}>THE</h2>
+                                <h2 className="text-5xl font-black italic tracking-tighter leading-none text-transparent bg-clip-text bg-gradient-to-r from-gym-primary via-amber-400 to-orange-500" style={textColorStyle('hype_grind')}>GRIND</h2>
                             </div>
                         </StickerWrapper>
 
                         <StickerWrapper id="deco_flame">
                             <div className="pointer-events-none flex flex-col items-center drop-shadow-[0_0_18px_rgba(249,115,22,0.6)]">
                                 <span className="text-5xl leading-none">🔥</span>
-                                <span className="text-xl font-black text-white italic leading-none -mt-1">{stats.totalWorkouts}</span>
-                                <span className="text-[7px] font-black text-orange-400 uppercase tracking-[0.3em]">On Fire</span>
+                                <span className="text-xl font-black text-white italic leading-none -mt-1" style={textColorStyle('deco_flame')}>{stats.totalWorkouts}</span>
+                                <span className="text-[7px] font-black text-orange-400 uppercase tracking-[0.3em]" style={textColorStyle('deco_flame')}>On Fire</span>
                             </div>
                         </StickerWrapper>
 
@@ -608,8 +723,8 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                             <div className="pointer-events-none flex items-center gap-1 drop-shadow-[0_4px_10px_rgba(0,0,0,0.9)]">
                                 <span className="text-3xl -scale-x-100">🌿</span>
                                 <div className="flex flex-col items-center">
-                                    <span className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-200 to-amber-500 italic leading-none">TOP 1%</span>
-                                    <span className="text-[7px] font-black text-white/70 uppercase tracking-[0.3em]">Gym Rats</span>
+                                    <span className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-200 to-amber-500 italic leading-none" style={textColorStyle('deco_laurel')}>TOP 1%</span>
+                                    <span className="text-[7px] font-black text-white/70 uppercase tracking-[0.3em]" style={textColorStyle('deco_laurel')}>Gym Rats</span>
                                 </div>
                                 <span className="text-3xl">🌿</span>
                             </div>
@@ -628,8 +743,8 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                         <StickerWrapper id="avg">
                             <div className="pointer-events-none flex flex-col items-center drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)]">
                                 <Scaling className="text-white w-6 h-6 mb-1" />
-                                <span className="text-3xl font-black text-white italic">{Math.round(stats.totalTimeMinutes / stats.totalWorkouts || 0)}m</span>
-                                <span className="text-[8px] font-bold text-white/60 uppercase tracking-widest">Avg. Session</span>
+                                <span className="text-3xl font-black text-white italic" style={textColorStyle('avg')}>{Math.round(stats.totalTimeMinutes / stats.totalWorkouts || 0)}m</span>
+                                <span className="text-[8px] font-bold text-white/60 uppercase tracking-widest" style={textColorStyle('avg')}>Avg. Session</span>
                             </div>
                         </StickerWrapper>
 
@@ -640,8 +755,8 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                                         <div key={lift.name} className="relative flex items-end gap-3 group">
                                             <div className="w-1 h-8 bg-gym-primary rounded-full shadow-[0_0_10px_rgba(234,179,8,0.8)]" />
                                             <div>
-                                                <p className="text-white/80 text-[10px] font-bold uppercase tracking-wider leading-none mb-0.5">{lift.name}</p>
-                                                <p className="text-3xl font-black text-white italic leading-none">{lift.max}<span className="text-sm font-bold text-gym-primary not-italic ml-0.5">kg</span></p>
+                                                <p className="text-white/80 text-[10px] font-bold uppercase tracking-wider leading-none mb-0.5" style={textColorStyle('pr')}>{lift.name}</p>
+                                                <p className="text-3xl font-black text-white italic leading-none" style={textColorStyle('pr')}>{lift.max}<span className="text-sm font-bold text-gym-primary not-italic ml-0.5" style={textColorStyle('pr')}>kg</span></p>
                                             </div>
                                         </div>
                                     )) : (
@@ -657,7 +772,7 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                             <div className="pointer-events-none p-2 drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)]">
                                 <div className="flex items-center gap-2 mb-2">
                                     <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse box-shadow-[0_0_10px_#22c55e]" />
-                                    <span className="text-white text-[10px] font-bold uppercase tracking-[0.2em] shadow-black drop-shadow-sm">Consistency</span>
+                                    <span className="text-white text-[10px] font-bold uppercase tracking-[0.2em] shadow-black drop-shadow-sm" style={textColorStyle('consistency')}>Consistency</span>
                                 </div>
                                 {renderHeatmapInternal()}
                             </div>
@@ -690,11 +805,11 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                         <StickerWrapper id="date" w="140px">
                             <div className="pointer-events-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                                 <div className="rounded-full px-4 py-1.5 flex items-center justify-between">
-                                    <span className="text-white font-bold text-xs uppercase tracking-widest">
+                                    <span className="text-white font-bold text-xs uppercase tracking-widest" style={textColorStyle('date')}>
                                         {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                                     </span>
                                     <span className="w-[1px] h-3 bg-white/20 mx-2" />
-                                    <span className="text-gym-primary font-black text-xs">{new Date().getFullYear()}</span>
+                                    <span className="text-gym-primary font-black text-xs" style={textColorStyle('date')}>{new Date().getFullYear()}</span>
                                 </div>
                             </div>
                         </StickerWrapper>
@@ -703,42 +818,53 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                     </div>
                 </div>
 
-                <div className="p-4 bg-neutral-900 border-t border-neutral-800 z-50 shrink-0 pb-8 md:pb-4 space-y-3">
-                    <div className="flex items-center gap-2.5">
-                        <button
-                            onClick={() => setShowAddMenu(!showAddMenu)}
-                            className={`flex flex-col items-center justify-center w-16 h-12 rounded-xl border transition-all active:scale-95 ${showAddMenu ? 'bg-gym-primary text-black border-gym-primary shadow-[0_0_16px_rgba(250,204,21,0.35)]' : 'bg-neutral-800 text-white border-neutral-700 hover:bg-neutral-700'}`}
-                        >
-                            <Sparkles size={16} className="mb-0.5" />
-                            <span className="text-[8px] font-black uppercase tracking-wider">Stickers</span>
-                        </button>
+                <div className="relative p-4 bg-gradient-to-b from-neutral-900 to-black border-t-2 border-white/10 z-50 shrink-0 pb-8 md:pb-4 space-y-3.5 overflow-hidden">
+                    {/* Ambient glow line across the top of the toolbar */}
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2/3 h-px bg-gradient-to-r from-transparent via-gym-primary/60 to-transparent" />
+                    <div className="absolute -bottom-10 right-0 w-40 h-40 bg-sky-500/10 rounded-full blur-3xl pointer-events-none share-breathe" />
 
-                        <div className="flex-1 flex gap-1 bg-black/60 p-1 rounded-xl border border-neutral-800">
-                            <button onClick={() => { setSelectedBg('gradient'); setCardHeight(568); }} className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${selectedBg === 'gradient' ? 'bg-gradient-to-r from-neutral-600 to-neutral-700 text-white shadow' : 'text-neutral-500 hover:text-white'}`}>
-                                Gradiente
-                            </button>
-                            <button onClick={() => { setSelectedBg('black'); setCardHeight(568); }} className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${selectedBg === 'black' ? 'bg-white text-black shadow' : 'text-neutral-500 hover:text-white'}`}>
-                                Negro
-                            </button>
-                            <label className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center justify-center cursor-pointer gap-1 transition-all ${selectedBg === 'image' ? 'bg-gradient-to-r from-sky-600 to-blue-600 text-white shadow' : 'text-neutral-500 hover:text-white'}`}>
-                                <ImageIcon size={11} />
-                                Foto
-                                <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-                            </label>
+                    {/* Section: Personaliza — stickers + background, in a bordered panel */}
+                    <div className="relative bg-black/40 border border-white/10 rounded-2xl p-2.5 space-y-2">
+                        <div className="flex items-center gap-1.5 px-0.5">
+                            <Sparkles size={10} className="text-gym-primary" />
+                            <span className="text-[8px] font-black text-neutral-400 uppercase tracking-[0.25em]">Personaliza</span>
                         </div>
-                    </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setShowAddMenu(!showAddMenu)}
+                                className={`flex flex-col items-center justify-center w-16 h-12 rounded-xl border transition-all active:scale-95 shrink-0 ${showAddMenu ? 'bg-gradient-to-br from-gym-primary to-amber-500 text-black border-gym-primary shadow-[0_0_16px_rgba(250,204,21,0.4)]' : 'bg-neutral-800/80 text-white border-neutral-700 hover:bg-neutral-700'}`}
+                            >
+                                <Sparkles size={16} className="mb-0.5" />
+                                <span className="text-[8px] font-black uppercase tracking-wider">Stickers</span>
+                            </button>
 
-                    <div className="flex items-center gap-3 px-3 py-2 bg-black/60 border border-neutral-800 rounded-xl focus-within:border-gym-primary/40 transition-colors">
-                        <span className="text-[9px] text-neutral-500 font-black uppercase tracking-wider w-16">Oscuridad</span>
-                        <input
-                            type="range"
-                            min="0"
-                            max="0.8"
-                            step="0.05"
-                            value={bgOpacity}
-                            onChange={(e) => setBgOpacity(parseFloat(e.target.value))}
-                            className="flex-1 accent-gym-primary h-1 bg-neutral-700 rounded-lg appearance-none cursor-pointer"
-                        />
+                            <div className="flex-1 flex gap-1 bg-black/60 p-1 rounded-xl border border-neutral-800">
+                                <button onClick={() => { setSelectedBg('gradient'); setCardHeight(568); }} className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${selectedBg === 'gradient' ? 'bg-gradient-to-r from-neutral-500 to-neutral-600 text-white shadow' : 'text-neutral-500 hover:text-white'}`}>
+                                    Gradiente
+                                </button>
+                                <button onClick={() => { setSelectedBg('black'); setCardHeight(568); }} className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${selectedBg === 'black' ? 'bg-white text-black shadow' : 'text-neutral-500 hover:text-white'}`}>
+                                    Negro
+                                </button>
+                                <label className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center justify-center cursor-pointer gap-1 transition-all ${selectedBg === 'image' ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow' : 'text-neutral-500 hover:text-white'}`}>
+                                    <ImageIcon size={11} />
+                                    Foto
+                                    <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                                </label>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 px-3 py-2 bg-black/60 border border-neutral-800 rounded-xl focus-within:border-gym-primary/40 transition-colors">
+                            <span className="text-[9px] text-neutral-500 font-black uppercase tracking-wider w-16 shrink-0">Oscuridad</span>
+                            <input
+                                type="range"
+                                min="0"
+                                max="0.8"
+                                step="0.05"
+                                value={bgOpacity}
+                                onChange={(e) => setBgOpacity(parseFloat(e.target.value))}
+                                className="flex-1 accent-gym-primary h-1 bg-neutral-700 rounded-lg appearance-none cursor-pointer"
+                            />
+                        </div>
                     </div>
 
                     {/* Primary actions: SHARE (native sheet → IG/WhatsApp/FB) + download */}
@@ -761,7 +887,7 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                             {downloading ? <Zap size={18} className="animate-spin" /> : <Download size={18} />}
                         </button>
                     </div>
-                    <p className="text-center text-[8px] text-neutral-600 font-bold uppercase tracking-widest -mt-1">Instagram · WhatsApp · Facebook · Stories</p>
+                    <p className="relative text-center text-[8px] text-neutral-600 font-bold uppercase tracking-widest -mt-1">Instagram · WhatsApp · Facebook · Stories</p>
 
                     <style>{`
                         .share-shimmer {
@@ -789,6 +915,17 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                             to   { transform: translateY(0); opacity: 1; }
                         }
                         .share-rise { animation: shareRise 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+                        /* Selected-sticker outline: dashed border + pulsing glow,
+                           replaces the old flat white ring for a proper editor feel */
+                        .sticker-selection-box {
+                            outline: 2px dashed rgba(250,204,21,0.85);
+                            outline-offset: 4px;
+                            animation: stickerGlow 1.6s ease-in-out infinite;
+                        }
+                        @keyframes stickerGlow {
+                            0%, 100% { box-shadow: 0 0 0 1px rgba(250,204,21,0.12), 0 0 10px rgba(250,204,21,0.15); }
+                            50%      { box-shadow: 0 0 0 1px rgba(250,204,21,0.25), 0 0 22px rgba(250,204,21,0.35); }
+                        }
                     `}</style>
                 </div>
 
@@ -973,6 +1110,7 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                     </div>
                 )}
 
+                </div>
             </div>
         </div>
     );
