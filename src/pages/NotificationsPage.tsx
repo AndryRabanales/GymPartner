@@ -31,16 +31,68 @@ const WorkoutNotificationCard = ({ n, setSelectedPlayer, navigate }: WorkoutNoti
     const staticIsLive = n.data?.status === 'started' && !isOld;
     const [isCurrentlyLive, setIsCurrentlyLive] = useState(staticIsLive);
     const [isResolving, setIsResolving] = useState(staticIsLive); // Prevent flash by showing a skeleton during verification
-    const gymLabel = n.data?.gym_name || 'un Gimnasio';
-    const muscles = n.data?.muscles || [];
+
+    // Self-healing stats: older notifications (or ones whose enrichment failed
+    // at creation time) may lack duration/volume/muscles/gym — compute them
+    // from the session itself so the card never shows an empty box.
+    const [fetchedStats, setFetchedStats] = useState<{ duration?: number; volume?: number; muscles?: string[]; gymName?: string } | null>(null);
+
     const IGNORED_TAGS = ['free_weight', 'strength_machine', 'cable', 'pulley', 'polea', 'strength', 'accessory', 'custom', 'other', 'unknown'];
+    const rawGymName = n.data?.gym_name && n.data.gym_name !== 'un Gimnasio' ? n.data.gym_name : (fetchedStats?.gymName || null);
+    const gymLabel = rawGymName || 'Entrenamiento Libre';
+    const isFreeWorkout = !rawGymName;
+    const muscles: string[] = (n.data?.muscles?.length ? n.data.muscles : fetchedStats?.muscles) || [];
     const filteredMuscles = muscles.filter((m: string) => !IGNORED_TAGS.includes(m.toLowerCase()));
-    const duration = n.data?.duration;
-    const volume = n.data?.volume;
+    const duration = n.data?.duration ?? fetchedStats?.duration;
+    const volume = n.data?.volume ?? fetchedStats?.volume;
 
     const [liveSession, setLiveSession] = useState<any | null>(null);
     const [liveExercises, setLiveExercises] = useState<any[]>([]);
     const [showExercisesModal, setShowExercisesModal] = useState(false);
+
+    // Backfill missing workout data for COMPLETED notifications
+    useEffect(() => {
+        const missingData = n.data?.duration == null || n.data?.volume == null || !n.data?.muscles?.length || !n.data?.gym_name || n.data.gym_name === 'un Gimnasio';
+        if (staticIsLive || n.data?.status !== 'finished' || !n.data?.session_id || !missingData) return;
+
+        (async () => {
+            try {
+                const [{ data: session }, { data: logs }] = await Promise.all([
+                    supabase
+                        .from('workout_sessions')
+                        .select('started_at, end_time, finished_at, gym_id, gyms ( name )')
+                        .eq('id', n.data.session_id)
+                        .maybeSingle(),
+                    supabase
+                        .from('workout_logs')
+                        .select('weight_kg, reps, sets, category_snapshot')
+                        .eq('session_id', n.data.session_id),
+                ]);
+
+                let volume = 0;
+                const musclesSet = new Set<string>();
+                (logs || []).forEach((l: any) => {
+                    volume += (l.weight_kg || 0) * (l.reps || 0) * (l.sets || 1);
+                    if (l.category_snapshot) musclesSet.add(l.category_snapshot);
+                });
+
+                let duration: number | undefined;
+                const endTime = session?.end_time || session?.finished_at;
+                if (session?.started_at && endTime) {
+                    duration = Math.max(1, Math.round((new Date(endTime).getTime() - new Date(session.started_at).getTime()) / 60000));
+                }
+
+                setFetchedStats({
+                    duration,
+                    volume: Math.round(volume),
+                    muscles: Array.from(musclesSet),
+                    gymName: (session as any)?.gyms?.name || undefined,
+                });
+            } catch (err) {
+                console.error('Error backfilling workout notification stats:', err);
+            }
+        })();
+    }, [n.data?.session_id]);
 
     // If it is a live workout, subscribe to live session updates in real-time
     useEffect(() => {
@@ -202,7 +254,9 @@ const WorkoutNotificationCard = ({ n, setSelectedPlayer, navigate }: WorkoutNoti
                             >
                                 @{n.sender?.username || n.data?.sender_name || 'Tu amigo'}
                             </span>
-                            {isCurrentlyLive ? `comenzó a entrenar en ${gymLabel}` : `finalizó su entrenamiento en ${gymLabel}`}
+                            {isCurrentlyLive
+                                ? (isFreeWorkout ? 'comenzó un entrenamiento libre' : `comenzó a entrenar en ${gymLabel}`)
+                                : (isFreeWorkout ? 'finalizó un entrenamiento libre' : `finalizó su entrenamiento en ${gymLabel}`)}
                         </p>
 
                         <div 
