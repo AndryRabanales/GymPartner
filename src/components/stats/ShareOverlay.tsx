@@ -456,12 +456,14 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                             )}
 
                             {/* Recolor text/numbers — every sticker except the radar (which
-                                already has full color controls) and the barbell (no text) */}
+                                already has full color controls) and the barbell (no text).
+                                preventDefault on touchstart suppresses the synthetic mousedown
+                                that would immediately re-toggle the picker closed on mobile. */}
                             {id !== 'radar' && id !== 'deco_barbell' && (
                                 <div
                                     className="absolute -top-3.5 -left-3.5 w-7 h-7 bg-gradient-to-br from-fuchsia-400 to-purple-600 rounded-full flex items-center justify-center text-white shadow-[0_4px_14px_rgba(168,85,247,0.5)] cursor-pointer z-50 active:scale-90 transition-transform"
-                                    onMouseDown={(e) => { e.stopPropagation(); setShowColorPicker(prev => !prev); }}
-                                    onTouchStart={(e) => { e.stopPropagation(); setShowColorPicker(prev => !prev); }}
+                                    onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); setShowColorPicker(prev => !prev); }}
+                                    onTouchStart={(e) => { e.stopPropagation(); e.preventDefault(); setShowColorPicker(prev => !prev); }}
                                 >
                                     <Palette size={13} />
                                 </div>
@@ -483,8 +485,8 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                                     onTouchStart={(e) => e.stopPropagation()}
                                 >
                                     <button
-                                        onMouseDown={(e) => { e.stopPropagation(); setStickerColor(id, null); }}
-                                        onTouchStart={(e) => { e.stopPropagation(); setStickerColor(id, null); }}
+                                        onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); setStickerColor(id, null); }}
+                                        onTouchStart={(e) => { e.stopPropagation(); e.preventDefault(); setStickerColor(id, null); }}
                                         className="w-5 h-5 rounded-full bg-neutral-800 border border-neutral-600 flex items-center justify-center shrink-0 active:scale-90 transition-transform"
                                         title="Restaurar color original"
                                     >
@@ -494,8 +496,8 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                                     {STICKER_COLOR_SWATCHES.map(c => (
                                         <button
                                             key={c}
-                                            onMouseDown={(e) => { e.stopPropagation(); setStickerColor(id, c); }}
-                                            onTouchStart={(e) => { e.stopPropagation(); setStickerColor(id, c); }}
+                                            onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); setStickerColor(id, c); }}
+                                            onTouchStart={(e) => { e.stopPropagation(); e.preventDefault(); setStickerColor(id, c); }}
                                             className={`w-5 h-5 rounded-full border-2 shrink-0 transition-transform active:scale-90 ${s.color === c ? 'border-white scale-110' : 'border-white/20'}`}
                                             style={{ backgroundColor: c }}
                                         />
@@ -535,11 +537,17 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
     const displayedPrs = stats.oneRepMaxes.filter((pr: any) => selectedPrs.includes(pr.name));
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-0 md:p-4 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => { setSelectedId(null); setShowAddMenu(false); setShowPrSelector(false); }}>
-            {/* Editor frame: layered border + breathing glow, same language as the map/stats */}
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-2.5 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => { setSelectedId(null); setShowAddMenu(false); setShowPrSelector(false); }}>
+            {/* Editor frame: layered border + breathing glow + corner ticks,
+                same framing language as the gym map */}
             <div className="relative w-full h-full md:h-auto md:max-w-lg md:max-h-[95vh]">
-                <div className="hidden md:block absolute -inset-[3px] rounded-[1.9rem] bg-gradient-to-br from-gym-primary/35 via-sky-500/15 to-transparent blur-md share-breathe pointer-events-none" />
-                <div className="relative w-full h-full bg-neutral-900 border-0 md:border-2 border-white/10 md:rounded-[1.75rem] overflow-hidden flex flex-col md:max-h-[95vh] shadow-[0_25px_80px_rgba(0,0,0,0.9)]" onClick={e => e.stopPropagation()}>
+                <div className="absolute -inset-[3px] rounded-[1.9rem] bg-gradient-to-br from-gym-primary/35 via-sky-500/15 to-transparent blur-md share-breathe pointer-events-none" />
+                {/* Corner accent ticks */}
+                <div className="absolute top-1.5 left-1.5 w-5 h-5 border-t-2 border-l-2 border-gym-primary/70 rounded-tl-xl pointer-events-none z-30" />
+                <div className="absolute top-1.5 right-1.5 w-5 h-5 border-t-2 border-r-2 border-gym-primary/70 rounded-tr-xl pointer-events-none z-30" />
+                <div className="absolute bottom-1.5 left-1.5 w-5 h-5 border-b-2 border-l-2 border-sky-400/50 rounded-bl-xl pointer-events-none z-30" />
+                <div className="absolute bottom-1.5 right-1.5 w-5 h-5 border-b-2 border-r-2 border-sky-400/50 rounded-br-xl pointer-events-none z-30" />
+                <div className="relative w-full h-full bg-neutral-900 border-2 border-white/15 rounded-[1.75rem] overflow-hidden flex flex-col md:max-h-[95vh] shadow-[0_25px_80px_rgba(0,0,0,0.9)]" onClick={e => e.stopPropagation()}>
 
                 <div className="relative p-4 border-b border-white/10 flex items-center justify-between z-50 bg-gradient-to-r from-neutral-900 via-neutral-900 to-black shrink-0 overflow-hidden">
                     <div className="absolute -top-10 left-10 w-32 h-32 bg-gym-primary/10 rounded-full blur-3xl pointer-events-none share-breathe" />
