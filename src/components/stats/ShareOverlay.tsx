@@ -441,6 +441,11 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                 </div>
 
                 <div className="flex-1 overflow-auto relative bg-neutral-950 flex justify-center items-center py-8 select-none" ref={containerRef}>
+                    {/* Marco del lienzo: halo degradado que respira (fuera del export,
+                        html2canvas solo captura #export-card) */}
+                    <div className="relative flex-shrink-0">
+                        <div className="absolute -inset-[3px] rounded-lg bg-gradient-to-br from-gym-primary/35 via-transparent to-sky-500/20 blur-md share-breathe pointer-events-none" />
+                        <div className="absolute -inset-[1px] rounded-md border border-white/15 pointer-events-none z-20" />
                     <div
                         ref={cardRef}
                         id="export-card"
@@ -689,11 +694,12 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                                         {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                                     </span>
                                     <span className="w-[1px] h-3 bg-white/20 mx-2" />
-                                    <span className="text-gym-primary font-black text-xs">2025</span>
+                                    <span className="text-gym-primary font-black text-xs">{new Date().getFullYear()}</span>
                                 </div>
                             </div>
                         </StickerWrapper>
 
+                    </div>
                     </div>
                 </div>
 
@@ -722,7 +728,7 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3 px-1">
+                    <div className="flex items-center gap-3 px-3 py-2 bg-black/60 border border-neutral-800 rounded-xl focus-within:border-gym-primary/40 transition-colors">
                         <span className="text-[9px] text-neutral-500 font-black uppercase tracking-wider w-16">Oscuridad</span>
                         <input
                             type="range"
@@ -768,11 +774,27 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                             60%  { background-position: -60% 0; }
                             100% { background-position: -60% 0; }
                         }
+                        @keyframes shareSheetUp {
+                            from { transform: translateY(70px); opacity: 0; }
+                            to   { transform: translateY(0); opacity: 1; }
+                        }
+                        .share-sheet-up { animation: shareSheetUp 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+                        @keyframes shareBreathe {
+                            0%, 100% { opacity: 0.3; }
+                            50%      { opacity: 0.7; }
+                        }
+                        .share-breathe { animation: shareBreathe 4s ease-in-out infinite; }
+                        @keyframes shareRise {
+                            from { transform: translateY(12px); opacity: 0; }
+                            to   { transform: translateY(0); opacity: 1; }
+                        }
+                        .share-rise { animation: shareRise 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
                     `}</style>
                 </div>
 
                 {showAddMenu && (
-                    <div className="absolute bottom-36 left-4 right-4 max-h-[55vh] overflow-y-auto custom-scrollbar bg-neutral-900/95 backdrop-blur-2xl border border-white/10 rounded-3xl p-4 shadow-[0_25px_80px_rgba(0,0,0,0.9)] z-[60] animate-in zoom-in-95 slide-in-from-bottom-5 duration-300" onClick={e => e.stopPropagation()}>
+                    <div className="absolute bottom-0 left-0 right-0 max-h-[60vh] overflow-y-auto custom-scrollbar bg-neutral-900/95 backdrop-blur-2xl border-t-2 border-white/10 rounded-t-3xl p-4 pb-8 shadow-[0_-25px_80px_rgba(0,0,0,0.9)] z-[60] share-sheet-up" onClick={e => e.stopPropagation()}>
+                        <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-3" />
                         <div className="flex justify-between items-center mb-3 pb-2 border-b border-white/10">
                             <span className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
                                 <Sparkles size={13} className="text-gym-primary" /> Stickers
@@ -821,17 +843,21 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
                 )}
 
                 {showPrSelector && (
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4 max-w-sm bg-neutral-800/95 backdrop-blur-xl border border-neutral-700 rounded-2xl p-4 shadow-2xl z-[70] animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-                        <div className="flex justify-between items-center mb-4 pb-2 border-b border-white/5">
-                            <h4 className="text-sm font-bold text-white uppercase">Elige tus PRs</h4>
-                            <button onClick={() => setShowPrSelector(false)} className="text-neutral-400 hover:text-white"><X size={16} /></button>
+                    <div className="absolute bottom-0 left-0 right-0 bg-neutral-900/95 backdrop-blur-2xl border-t-2 border-white/10 rounded-t-3xl p-4 pb-8 shadow-[0_-25px_80px_rgba(0,0,0,0.9)] z-[70] share-sheet-up" onClick={e => e.stopPropagation()}>
+                        <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-3" />
+                        <div className="flex justify-between items-center mb-4 pb-2 border-b border-white/10">
+                            <h4 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+                                <Trophy size={14} className="text-gym-primary" /> Elige tus PRs
+                            </h4>
+                            <button onClick={() => setShowPrSelector(false)} className="p-1.5 rounded-full bg-white/5 text-neutral-400 hover:text-white transition-colors"><X size={14} /></button>
                         </div>
-                        <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto">
-                            {stats.oneRepMaxes.map((pr: any) => (
+                        <div className="flex flex-col gap-1.5 max-h-[45vh] overflow-y-auto custom-scrollbar">
+                            {stats.oneRepMaxes.map((pr: any, i: number) => (
                                 <button
                                     key={pr.name}
                                     onClick={() => togglePrSelection(pr.name)}
-                                    className={`flex items-center justify-between p-3 rounded-xl text-xs font-bold transition-all border ${selectedPrs.includes(pr.name) ? 'bg-gym-primary/20 text-gym-primary border-gym-primary/50' : 'bg-neutral-900 text-neutral-400 border-neutral-800'}`}
+                                    className={`flex items-center justify-between p-3 rounded-xl text-xs font-bold transition-all border share-rise ${selectedPrs.includes(pr.name) ? 'bg-gym-primary/15 text-gym-primary border-gym-primary/40' : 'bg-black/40 text-neutral-400 border-neutral-800 hover:border-neutral-600 hover:text-white'}`}
+                                    style={{ animationDelay: `${i * 30}ms` }}
                                 >
                                     <span>{pr.name} ({pr.max}kg)</span>
                                     {selectedPrs.includes(pr.name) && <Check size={14} />}
@@ -844,16 +870,17 @@ export const ShareOverlay = ({ stats, onClose, username, avatarUrl }: ShareOverl
 
                 {/* 3. RADAR SELECTOR */}
                 {showRadarSelector && (
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4 max-w-sm bg-neutral-800/95 backdrop-blur-xl border border-neutral-700 rounded-2xl p-4 shadow-2xl z-[70] animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-                        <div className="flex justify-between items-center mb-4 pb-2 border-b border-white/5">
-                            <h4 className="text-sm font-bold text-white uppercase flex items-center gap-2">
+                    <div className="absolute bottom-0 left-0 right-0 bg-neutral-900/95 backdrop-blur-2xl border-t-2 border-white/10 rounded-t-3xl p-4 pb-8 shadow-[0_-25px_80px_rgba(0,0,0,0.9)] z-[70] share-sheet-up" onClick={e => e.stopPropagation()}>
+                        <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-3" />
+                        <div className="flex justify-between items-center mb-4 pb-2 border-b border-white/10">
+                            <h4 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
                                 <Settings size={14} className="text-blue-400" />
                                 Ajustes de Radar
                             </h4>
-                            <button onClick={() => setShowRadarSelector(false)} className="text-neutral-400 hover:text-white"><X size={16} /></button>
+                            <button onClick={() => setShowRadarSelector(false)} className="p-1.5 rounded-full bg-white/5 text-neutral-400 hover:text-white transition-colors"><X size={14} /></button>
                         </div>
 
-                        <div className="space-y-6 max-h-[400px] overflow-y-auto pr-2 pb-4">
+                        <div className="space-y-6 max-h-[50vh] overflow-y-auto custom-scrollbar pr-2 pb-4">
 
                             {/* SECTION: RADAR POLYGON */}
                             <div className="space-y-3">
