@@ -85,6 +85,23 @@ export const Radar = () => {
         setLoading(true);
         try {
             console.log("🛰️ [RADAR] Escaneando guerreros...");
+
+            // 0. TINDER MEMORY: build the exclusion set — anyone already swiped
+            // (skip OR invite), anyone with a pending challenge I sent, and
+            // anyone who is already my training partner (accepted match/chat).
+            // These must NEVER reappear in the deck.
+            const [swipesRes, chatsRes, sentInvitesRes] = await Promise.all([
+                supabase.from('radar_swipes').select('target_id').eq('user_id', authUser.id),
+                supabase.from('chats').select('user_a, user_b').or(`user_a.eq.${authUser.id},user_b.eq.${authUser.id}`),
+                supabase.from('notifications').select('user_id').eq('type', 'invitation').filter('data->>sender_id', 'eq', authUser.id),
+            ]);
+
+            const excludedIds = new Set<string>();
+            (swipesRes.data || []).forEach((s: any) => excludedIds.add(s.target_id));
+            (chatsRes.data || []).forEach((c: any) => excludedIds.add(c.user_a === authUser.id ? c.user_b : c.user_a));
+            (sentInvitesRes.data || []).forEach((n: any) => excludedIds.add(n.user_id));
+            console.log(`🧠 [RADAR] Memoria de swipes: ${excludedIds.size} guerreros excluidos (rechazados/invitados/aliados).`);
+
             // 1. Fetch profiles - PRIORITIZE NEWEST & BOOSTED VIA RPC (with 1.5s resilient timeout fallback!)
             console.log("⚙️ [RADAR] Triggering prioritized scanner...");
             const fetchProfilesPromise = supabase
@@ -113,13 +130,17 @@ export const Radar = () => {
                 fallbackQueryPromise
             ]);
 
-            const profiles = result.data || [];
+            const rawProfiles = result.data || [];
             const pError = result.error;
 
             if (pError) {
                 console.error("❌ [RADAR] Failed to load profiles (Error):", pError);
                 throw pError;
             }
+
+            // TINDER RULE: filter out everyone already swiped/invited/matched
+            const profiles = rawProfiles.filter((p: any) => !excludedIds.has(p.id));
+            console.log(`🃏 [RADAR] Deck: ${profiles.length} candidatos (${rawProfiles.length - profiles.length} filtrados por memoria de swipes).`);
 
             if (result.isFallback) {
                 console.log(`ℹ️ [RADAR] Successfully loaded profiles using the resilient direct select fallback! Count: ${profiles.length}. Error (if any):`, pError);
@@ -468,9 +489,25 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
         }
     };
 
+    // Persist the swipe decision server-side (Tinder memory) so this person
+    // never reappears in the deck — survives reloads and other devices.
+    const recordSwipe = (targetId: string, action: 'skip' | 'invite') => {
+        if (!authUser?.id || !targetId) return;
+        supabase
+            .from('radar_swipes')
+            .upsert(
+                { user_id: authUser.id, target_id: targetId, action },
+                { onConflict: 'user_id,target_id' }
+            )
+            .then(({ error }) => {
+                if (error) console.error('❌ [RADAR] Error guardando swipe:', error.message);
+            });
+    };
+
     const handleSkip = () => {
         const targetId = currentUser?.id;
         if (targetId) {
+            recordSwipe(targetId, 'skip');
             supabase.rpc('increment_profile_skips', { u_id: targetId });
         }
         flyOff('left');
@@ -536,12 +573,14 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
 
     const handleInvite = async () => {
         if (!currentUser || isInviting) return;
+        const targetId = currentUser.id;
+        recordSwipe(targetId, 'invite');
         flyOff('right');
         setIsInviting(true);
         try {
-            const success = await notificationService.sendInvitation(currentUser.id, currentUser.username);
+            const success = await notificationService.sendInvitation(targetId, currentUser.username);
             if (success) {
-                await supabase.rpc('increment_profile_matches', { u_id: currentUser.id });
+                await supabase.rpc('increment_profile_matches', { u_id: targetId });
                 toast.success("Desafío enviado!");
             }
         } catch (error) {
