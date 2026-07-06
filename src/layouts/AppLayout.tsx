@@ -398,6 +398,25 @@ export const AppLayout = () => {
     const [rescueStartedAt, setRescueStartedAt] = useState<string | null>(null);
     const [showRescueModal, setShowRescueModal] = useState<boolean>(false);
 
+    // ── Local workout notifications (rest alarm / ongoing session) ──────────
+    // Tapping any of them deep-links straight back into the active workout.
+    useEffect(() => {
+        let listener: any;
+        (async () => {
+            try {
+                const { Capacitor } = await import('@capacitor/core');
+                if (!Capacitor.isNativePlatform()) return;
+                const { LocalNotifications } = await import('@capacitor/local-notifications');
+                listener = await LocalNotifications.addListener('localNotificationActionPerformed', () => {
+                    navigate('/workout');
+                });
+            } catch (e) {
+                console.warn('[LocalNotif] listener setup failed:', e);
+            }
+        })();
+        return () => { listener?.remove?.(); };
+    }, []);
+
     // ─── Delete Account ────────────────────────────────────────────────────────
     const handleDeleteAccount = async () => {
         if (!user || !supabase) return;

@@ -23,6 +23,9 @@ import { normalizeText, getMuscleGroup } from '../utils/inventoryUtils';
 // BattleTimer removed
 import { Loader2, ArrowLeft, ChevronLeft, Image as ImageIcon, MapPin, Search, Plus, Save, Activity, Layers, Tag, Battery, MapIcon, Check, Settings as SettingsIcon, Swords, Trash2, X, RotateCcw, Lock, Play, Loader, MoreVertical, Pause, LockOpen, LogOut, Award, History } from 'lucide-react';
 import { ExerciseHistoryModal, type ExerciseHistoryEntry } from '../components/workout/ExerciseHistoryModal';
+import { RestCountdownPill } from '../components/workout/RestCountdownPill';
+import { restAlarmService } from '../services/RestAlarmService';
+import { nativeStore } from '../lib/offlineCache';
 import { getCurrentPosition, haversineDistance } from '../utils/geolocationUtils';
 import type { GymPlace, Database } from '../types/database';
 import { InteractiveOverlay } from '../components/onboarding/InteractiveOverlay';
@@ -3824,6 +3827,9 @@ export const WorkoutSession = () => {
                     setRestTimerSetKey(null);
                 }
 
+                // Cancel the global rest countdown + its OS alarm
+                stopGlobalRest();
+
             } else {
                 // MARKING COMPLETE
                 set.completed = true;
@@ -3838,6 +3844,9 @@ export const WorkoutSession = () => {
 
                 // Set Legacy Global Timer (Visual backup)
                 setRestTimerSetKey(`${exerciseIndex}-${setIndex}`);
+
+                // Start the GLOBAL rest countdown (+ OS alarm at the end)
+                startGlobalRest(updated[exerciseIndex].equipmentName);
 
                 // FREEZE PREVIOUS TIMER
                 let prevSetFound = false;
@@ -4172,6 +4181,12 @@ export const WorkoutSession = () => {
                     setRestTimerSetKey(null);
                 }
             }
+        }
+
+        // Global rest countdown — only for MY OWN sets in coop rooms
+        if (targetUserId === user?.id) {
+            if (nextCompleted) startGlobalRest(ex.equipmentName);
+            else stopGlobalRest();
         }
 
         setActiveExercises(prev => {
@@ -4654,6 +4669,10 @@ export const WorkoutSession = () => {
 
     // NEW: Handle Cancel
     const handleCancelSession = async () => {
+        // Session is over — remove rest alarm + ongoing notification
+        restAlarmService.clearAll();
+        setRestEndsAt(null);
+
         if (!sessionId) {
             isLeavingPageRef.current = true;
             navigate('/');
@@ -4869,6 +4888,102 @@ export const WorkoutSession = () => {
     // both run the full pre-save, duplicating every set in the DB (confirmed
     // in prod: identical rows ~300-500ms apart). A ref flips instantly.
     const finalizingGuardRef = useRef(false);
+
+    // ── GLOBAL REST COUNTDOWN (one duration for ALL exercises) ──────────────
+    // Completing any set (re)starts the countdown with the configured target.
+    // At zero: in-app vibration + toast if foreground, and an OS local
+    // notification (works offline and with the app in background/locked).
+    const [restTargetSec, setRestTargetSec] = useState(90);
+    const [restEndsAt, setRestEndsAt] = useState<number | null>(null);
+    const [restExerciseName, setRestExerciseName] = useState('');
+    const restNotifiedRef = useRef(false);
+
+    // Load the persisted global rest duration once
+    useEffect(() => {
+        nativeStore.get('ginx_rest_target_sec').then(v => {
+            const n = parseInt(v || '');
+            if (n >= 15 && n <= 600) setRestTargetSec(n);
+        }).catch(() => { });
+    }, []);
+
+    const startGlobalRest = (exerciseName: string) => {
+        const endsAt = Date.now() + restTargetSec * 1000;
+        restNotifiedRef.current = false;
+        setRestExerciseName(exerciseName);
+        setRestEndsAt(endsAt);
+        restAlarmService.init().then(ok => { if (ok) restAlarmService.scheduleRestEnd(endsAt, exerciseName); });
+    };
+
+    const stopGlobalRest = () => {
+        setRestEndsAt(null);
+        restAlarmService.cancelRestEnd();
+    };
+
+    const addRestSeconds = (s: number) => {
+        if (!restEndsAt) return;
+        const newEnd = Math.max(Date.now() + 1000, restEndsAt + s * 1000);
+        restNotifiedRef.current = false;
+        setRestEndsAt(newEnd);
+        restAlarmService.scheduleRestEnd(newEnd, restExerciseName);
+    };
+
+    const changeRestTarget = (sec: number) => {
+        setRestTargetSec(sec);
+        nativeStore.set('ginx_rest_target_sec', String(sec)).catch(() => { });
+        // If a countdown is running, restart it with the new duration
+        if (restEndsAt) {
+            const newEnd = Date.now() + sec * 1000;
+            restNotifiedRef.current = false;
+            setRestEndsAt(newEnd);
+            restAlarmService.scheduleRestEnd(newEnd, restExerciseName);
+        }
+    };
+
+    // In-app feedback when the countdown reaches zero while the app is open
+    useEffect(() => {
+        if (!restEndsAt) return;
+        const t = setInterval(() => {
+            if (Date.now() >= restEndsAt && !restNotifiedRef.current) {
+                restNotifiedRef.current = true;
+                try { (navigator as any).vibrate?.([300, 120, 300]); } catch { /* ignore */ }
+                import('react-hot-toast').then(({ default: toastLib }) =>
+                    toastLib('⏱️ ¡Descanso terminado! A la siguiente serie 💪', { icon: '🔥', duration: 4000 })
+                );
+                // Auto-dismiss the pill a few seconds after finishing
+                setTimeout(() => {
+                    setRestEndsAt(prev => (prev && Date.now() >= prev) ? null : prev);
+                }, 6000);
+            }
+        }, 300);
+        return () => clearInterval(t);
+    }, [restEndsAt]);
+
+    // ── ONGOING "workout in progress" notification ──────────────────────────
+    // Persistent reminder (Android pins it) updated on real events only
+    // (set completed, exercise added) — never on a per-second tick.
+    const ongoingBodyRef = useRef('');
+    useEffect(() => {
+        if (!sessionId || isFinished || showSummary || activeExercises.length === 0) return;
+        let totalSets = 0, doneSets = 0;
+        activeExercises.forEach(ex => ex.sets.forEach((s: any) => {
+            totalSets++;
+            const mine = s.playerCompleted?.[user?.id || ''] ?? s.completed;
+            if (mine) doneSets++;
+        }));
+        const body = `${currentRoutineName || 'Entrenamiento libre'} · ${activeExercises.length} ejercicio${activeExercises.length !== 1 ? 's' : ''} · ${doneSets}/${totalSets} series ✓`;
+        if (body === ongoingBodyRef.current) return;
+        ongoingBodyRef.current = body;
+        restAlarmService.init().then(ok => { if (ok) restAlarmService.showOngoing(body); });
+    }, [sessionId, activeExercises, currentRoutineName, isFinished, showSummary, user?.id]);
+
+    // Clear all workout notifications the moment the session ends
+    useEffect(() => {
+        if (isFinished || showSummary) {
+            restAlarmService.clearAll();
+            setRestEndsAt(null);
+            ongoingBodyRef.current = '';
+        }
+    }, [isFinished, showSummary]);
 
     /** Cancel finishing: go back to the active workout from the routine modal */
     const handleCancelFinish = () => {
@@ -6471,6 +6586,18 @@ export const WorkoutSession = () => {
                         else { setShowAddModal(false); }
                     }}
                     onConfirm={handleBatchAdd}
+                />
+            )}
+
+            {/* Global rest countdown pill — one timer for all exercises */}
+            {restEndsAt && !isFinished && !showSummary && !showAddModal && (
+                <RestCountdownPill
+                    endsAt={restEndsAt}
+                    targetSec={restTargetSec}
+                    exerciseName={restExerciseName}
+                    onSkip={stopGlobalRest}
+                    onAddSeconds={addRestSeconds}
+                    onChangeTarget={changeRestTarget}
                 />
             )}
 
