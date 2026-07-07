@@ -2931,6 +2931,71 @@ export const WorkoutSession = () => {
                 && navState.forceNewSession !== true; // false or undefined both mean "restore"
             const shouldRestore = active && !isTooOldToRestore && !forceNewSession && (isGuestReturning || !(currentIsMultiplayer && !currentIsInviter));
 
+            // ── OFFLINE / LOCAL SESSION RESTORE (solo) ─────────────────────────
+            // getActiveSession needs the network: offline it returns null even
+            // when a workout is mid-flight, so reopening the app without wifi
+            // dumped the user at the empty catalog with their data "lost".
+            // The local backup (STORAGE_KEY, saved on every change) has
+            // everything needed to resume. Sets are (re)linked to an
+            // offline-queued session so finalize + sync keep working.
+            if (!active && !forceNewSession && !currentIsMultiplayer) {
+                try {
+                    const rawBackup = localStorage.getItem(STORAGE_KEY);
+                    if (rawBackup) {
+                        const backup = JSON.parse(rawBackup);
+                        const bd = backup?.data;
+                        const backupAgeOk = backup?.savedAt && (Date.now() - backup.savedAt) < 4 * 60 * 60 * 1000;
+                        if (backupAgeOk && Array.isArray(bd?.exercises) && bd.exercises.length > 0) {
+                            // Reuse an already-queued offline session if one exists;
+                            // otherwise queue a fresh one with the original start time.
+                            let localId: string | null = null;
+                            try {
+                                const idx: string[] = JSON.parse(localStorage.getItem('ginx_pending_sync_sessions') || '[]');
+                                // Reuse only a still-OPEN offline session (skip ones
+                                // already finalized and just waiting to sync)
+                                localId = idx.find(id =>
+                                    !!localStorage.getItem(`ginx_offline_session_${id}`) &&
+                                    !localStorage.getItem(`ginx_offline_finish_${id}`)
+                                ) || null;
+                            } catch { /* ignore */ }
+
+                            if (!localId) {
+                                localId = crypto.randomUUID();
+                                workoutService.queueOfflineSession(localId, {
+                                    user_id: userId,
+                                    gym_id: bd.gymId || undefined,
+                                    is_multiplayer: false,
+                                    started_at: bd.startTime || new Date().toISOString(),
+                                });
+                            }
+
+                            console.log('💾 [OFFLINE RESTORE] Sesión local recuperada:', localId);
+                            sessionIdRef.current = localId;
+                            setSessionId(localId);
+                            setStartTime(bd.startTime ? new Date(bd.startTime) : new Date());
+                            setActiveExercises(sanitizeRestTimers(bd.exercises));
+                            if (bd.routineName) setCurrentRoutineName(bd.routineName);
+                            if (bd.gymId) {
+                                setResolvedGymId(bd.gymId);
+                                const g = gyms.find(gy => gy.gym_id === bd.gymId);
+                                setDetectedGymName(g?.gym_name || 'Mi Gimnasio');
+                            } else {
+                                setResolvedGymId(null);
+                                setDetectedGymName('Entrenamiento Libre');
+                            }
+                            setIsFinished(false);
+                            setLoading(false);
+                            import('react-hot-toast').then(({ default: t }) =>
+                                t('💾 Sesión recuperada — sigue entrenando, todo se guardará.', { icon: '🔄', duration: 3500 })
+                            );
+                            return; // fully restored locally — skip start modals
+                        }
+                    }
+                } catch (e) {
+                    console.warn('[OFFLINE RESTORE] Falló la restauración local:', e);
+                }
+            }
+
             if (shouldRestore) {
                 setSessionId(active.id);
                 setStartTime(new Date(active.started_at));
@@ -3362,7 +3427,12 @@ export const WorkoutSession = () => {
     };
 
     const loadRoutine = async (routine: any, freshArsenal?: any[]) => {
-        if (!routine.equipment_ids || routine.equipment_ids.length === 0) return;
+        // Accept routines that carry routine_exercises even without equipment_ids
+        // (older offline caches / queued offline routines) — the details path
+        // below builds everything from routine_exercises anyway.
+        const hasIds = Array.isArray(routine.equipment_ids) && routine.equipment_ids.length > 0;
+        const hasDetails = Array.isArray(routine.routine_exercises) && routine.routine_exercises.length > 0;
+        if (!hasIds && !hasDetails) return;
 
         setLoading(true); // Show loading while preparing routine
         const activeArsenal = freshArsenal || arsenal;
@@ -3537,7 +3607,7 @@ export const WorkoutSession = () => {
             });
         } else {
             // Fallback IDs only
-            routine.equipment_ids.forEach((eqId: string) => {
+            (routine.equipment_ids || []).forEach((eqId: string) => {
                 const item = activeArsenal.find(i => i.id === eqId);
                 if (item) {
                     exercisesToAdd.push({
@@ -4709,6 +4779,8 @@ export const WorkoutSession = () => {
         localStorage.removeItem(STORAGE_KEY);
         localStorage.removeItem('ginx_coop_state');
         sessionStorage.removeItem('ginx_temp_exit_active');
+        // Cancelled = never sync it: purge any offline-queue traces
+        workoutService.purgeOfflineSession(oldSessionId);
         setActiveExercises([]);
         setIsFinished(true); // Disable history guard before navigating
         setSessionId(null);  // Disable history guard before navigating
@@ -4770,6 +4842,7 @@ export const WorkoutSession = () => {
             // Clear Local Storage
             localStorage.removeItem(`workout_draft_${sessionId}`);
             localStorage.removeItem(STORAGE_KEY);
+            workoutService.purgeOfflineSession(sessionId);
 
             setLoading(true);
             await workoutService.deleteSession(sessionId);

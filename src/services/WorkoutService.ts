@@ -1745,6 +1745,19 @@ class WorkoutService {
         }
     }
 
+    // Remove every offline-queue trace of a session (cancelled/restarted):
+    // otherwise flushPendingSets would resurrect it in the DB on reconnect.
+    purgeOfflineSession(sessionId: string): void {
+        try {
+            localStorage.removeItem(`ginx_offline_session_${sessionId}`);
+            localStorage.removeItem(`ginx_pending_sets_${sessionId}`);
+            localStorage.removeItem(`ginx_offline_finish_${sessionId}`);
+            const indexKey = 'ginx_pending_sync_sessions';
+            const idx: string[] = JSON.parse(localStorage.getItem(indexKey) || '[]');
+            localStorage.setItem(indexKey, JSON.stringify(idx.filter(id => id !== sessionId)));
+        } catch { /* ignore */ }
+    }
+
     // Store finalization data for a session that could not be finalized online.
     // Picked up by flushPendingSets on reconnect.
     queueOfflineFinish(sessionId: string, meta: OfflineFinishMeta): void {
