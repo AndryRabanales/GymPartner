@@ -10,7 +10,8 @@ import {
     MapPin, 
     Shield,
     ChevronsLeft,
-    ChevronsRight 
+    ChevronsRight,
+    RotateCcw
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { notificationService } from '../services/NotificationService';
@@ -55,7 +56,26 @@ export const Radar = () => {
     const [isInviting, setIsInviting] = useState(false);
     const [userProfile, setUserProfile] = useState<any>(null);
     const [isPlayingTutorial, setIsPlayingTutorial] = useState(false);
+    // Rewind (1 use per cancelled person): the last skipped card + the set of
+    // people already rewound (persisted, so each can be recovered only once).
+    const [lastSkipped, setLastSkipped] = useState<{ index: number; id: string } | null>(null);
+    const rewoundIdsRef = useRef<Set<string>>(new Set());
     const currentUser = nearbyUsers[currentIndex];
+
+    const DECK_KEY = authUser?.id ? `radar_deck_${authUser.id}` : '';
+    const REWOUND_KEY = authUser?.id ? `radar_rewound_${authUser.id}` : '';
+    const DECK_TTL_MS = 6 * 60 * 60 * 1000; // rebuild the deck after 6h to surface new people
+
+    // Persist the UNSEEN tail of the deck so leaving/returning resumes exactly
+    // where you left off (e.g. back on Juan) instead of re-shuffling.
+    const persistDeck = (users: any[], idx: number) => {
+        if (!DECK_KEY) return;
+        try {
+            const ids = users.slice(idx).map(u => u.id);
+            if (ids.length === 0) { localStorage.removeItem(DECK_KEY); return; }
+            localStorage.setItem(DECK_KEY, JSON.stringify({ ids, builtAt: Date.now() }));
+        } catch { /* ignore */ }
+    };
 
     useEffect(() => {
         if (scanComplete && nearbyUsers.length > 0 && authUser?.id) {
@@ -81,8 +101,183 @@ export const Radar = () => {
     }, [currentIndex, nearbyUsers]);
 
     useEffect(() => {
-        loadNearbyUsers();
+        if (!authUser?.id) return;
+        // Restore the rewound-people set (each recoverable only once)
+        try {
+            const raw = localStorage.getItem(`radar_rewound_${authUser.id}`);
+            rewoundIdsRef.current = new Set(raw ? JSON.parse(raw) : []);
+        } catch { rewoundIdsRef.current = new Set(); }
+        loadRadar();
     }, [authUser]);
+
+    // Decide between restoring the saved deck (resume where you left off) and
+    // building a fresh one. Restore only when the saved deck is fresh and still
+    // has unseen cards — otherwise fall through to a full scan.
+    const loadRadar = async () => {
+        if (!authUser?.id) return;
+        try {
+            const raw = DECK_KEY ? localStorage.getItem(DECK_KEY) : null;
+            if (raw) {
+                const saved = JSON.parse(raw);
+                const fresh = saved?.builtAt && (Date.now() - saved.builtAt) < DECK_TTL_MS;
+                if (fresh && Array.isArray(saved.ids) && saved.ids.length > 0) {
+                    const restored = await restoreDeck(saved.ids);
+                    if (restored) return; // resumed exactly where we left off
+                }
+            }
+        } catch (e) {
+            console.warn('[RADAR] restore failed, rebuilding deck:', e);
+        }
+        loadNearbyUsers();
+    };
+
+    // ── HARD FILTERS (Tinder step 1) — build the exclusion set ──────────────
+    // Removes: already swiped (skip/invite), pending challenge I sent, existing
+    // training partners (chats), and blocked users (both directions).
+    // Note: this app has no age/gender/birthdate data, so those Tinder hard
+    // filters don't apply; "distance" is expressed as gym proximity in scoring.
+    const buildExclusionSet = async (): Promise<Set<string>> => {
+        const uid = authUser!.id;
+        const [swipesRes, chatsRes, sentInvitesRes, blocksRes] = await Promise.all([
+            supabase.from('radar_swipes').select('target_id').eq('user_id', uid),
+            supabase.from('chats').select('user_a, user_b').or(`user_a.eq.${uid},user_b.eq.${uid}`),
+            supabase.from('notifications').select('user_id').eq('type', 'invitation').filter('data->>sender_id', 'eq', uid),
+            supabase.from('user_blocks').select('blocked_by, blocked_user').or(`blocked_by.eq.${uid},blocked_user.eq.${uid}`),
+        ]);
+        const excluded = new Set<string>();
+        (swipesRes.data || []).forEach((s: any) => excluded.add(s.target_id));
+        (chatsRes.data || []).forEach((c: any) => excluded.add(c.user_a === uid ? c.user_b : c.user_a));
+        (sentInvitesRes.data || []).forEach((n: any) => excluded.add(n.user_id));
+        (blocksRes.data || []).forEach((b: any) => excluded.add(b.blocked_by === uid ? b.blocked_user : b.blocked_by));
+        return excluded;
+    };
+
+    // ── ENRICH + SCORE (Tinder step 2) ──────────────────────────────────────
+    // Attaches gym passport/favorites/metadata and computes algo_score.
+    // Returns cards in INPUT order (caller decides whether to sort by score or
+    // preserve a saved deck order).
+    const enrichProfiles = async (profiles: any[]): Promise<any[]> => {
+        const profileIds = profiles.map(p => p.id);
+
+        const [{ data: passportsData }, { data: favData }] = await Promise.all([
+            supabase.from('user_gyms').select('user_id, gym_id, is_home_base, gyms ( id, name )').in('user_id', profileIds),
+            supabase.from('gym_favorites').select('user_id, gym_id').in('user_id', profileIds),
+        ]);
+
+        const passportMap: Record<string, { id: string; name: string; is_favorite?: boolean; is_home_base?: boolean }[]> = {};
+        (passportsData || []).forEach((item: any) => {
+            if (!item.gyms) return;
+            (passportMap[item.user_id] ||= []).push({ id: item.gyms.id, name: item.gyms.name, is_favorite: false, is_home_base: item.is_home_base });
+        });
+        const favSet = new Set<string>();
+        (favData || []).forEach((f: any) => favSet.add(`${f.user_id}-${f.gym_id}`));
+        Object.entries(passportMap).forEach(([uid, gyms]) => gyms.forEach(g => { if (favSet.has(`${uid}-${g.id}`)) g.is_favorite = true; }));
+
+        const gymIds = [...new Set(profiles.map(p => p.home_gym_id).filter(Boolean))];
+        let gymMap: any = {};
+        if (gymIds.length > 0) {
+            const { data: gymsData } = await supabase.from('gyms').select('id, name').in('id', gymIds);
+            (gymsData || []).forEach((g: any) => { gymMap[g.id] = { name: g.name }; });
+        }
+
+        const [{ data: myProfile }, { data: myPassportData }] = await Promise.all([
+            supabase.from('profiles').select('home_gym_id').eq('id', authUser!.id).maybeSingle(),
+            supabase.from('user_gyms').select('gym_id').eq('user_id', authUser!.id),
+        ]);
+        const myHomeGymId = myProfile?.home_gym_id;
+        const myGymIds = new Set<string>((myPassportData || []).map((g: any) => g.gym_id));
+
+        const now = new Date();
+        const nowMs = now.getTime();
+
+        // ── ALGORITHM V9: Boost · Activity · Desirability · Gym · Freshness ──
+        const scoreUser = (p: any): number => {
+            const isBoosted = p.boost_until ? new Date(p.boost_until) > now : false;
+            const boostPts = isBoosted ? 50000 : 0;
+
+            // Activity recency — strongest organic signal
+            let activityPts = 0;
+            if (p.last_active_at) {
+                const h = (nowMs - new Date(p.last_active_at).getTime()) / 3600000;
+                if (h < 3) activityPts = 1000; else if (h < 24) activityPts = 700; else if (h < 168) activityPts = 400; else if (h < 720) activityPts = 100;
+            }
+
+            // Desirability (implicit like-rate): matches received + selectivity ratio
+            const matches = p.matches_count || 0;
+            const skips = p.skips_count || 0;
+            const ratio = (matches + skips) > 0 ? matches / (matches + skips) : 0;
+            const desirePts = Math.min(matches * 8, 250) + ratio * 250;
+
+            // Gym proximity (this app's "distance")
+            let gymPts = 0;
+            if (myHomeGymId && p.home_gym_id === myHomeGymId) gymPts += 400;
+            const theirGyms: string[] = (passportMap[p.id] || []).map(g => g.id);
+            gymPts += Math.min(theirGyms.filter(g => myGymIds.has(g) && g !== myHomeGymId).length * 100, 300);
+
+            // Freshness — new accounts (<48h) get a strong temporary visibility boost
+            let freshnessPts = 0;
+            if (p.created_at) {
+                const days = (nowMs - new Date(p.created_at).getTime()) / 86400000;
+                if (days < 2) freshnessPts = 300; else if (days < 7) freshnessPts = 150; else if (days < 30) freshnessPts = 60;
+            }
+
+            return boostPts + activityPts + desirePts + gymPts + freshnessPts + Math.random() * 60;
+        };
+
+        return profiles.map(p => {
+            const settings = (p.custom_settings as any) || {};
+            let gymInfo = gymMap[p.home_gym_id || ''] || { name: '' };
+            if (gymInfo.name.includes('Arsenal Personal')) gymInfo = { name: '' };
+            const isBoosted = p.boost_until ? new Date(p.boost_until) > now : false;
+            return {
+                ...p,
+                gym_name: gymInfo.name,
+                gym_image: p.main_base_image || null,
+                gym_color: p.main_base_color || '#3A2C00',
+                gym_passport: passportMap[p.id] || [],
+                banner_url: settings.banner_url || null,
+                training_days_count: p.checkins_count || 0,
+                followers_count: 0,
+                following_count: 0,
+                is_following: false,
+                stats_loaded: false,
+                bio: p.description || settings.description || settings.bio || '¡Entrenando duro para subir de rango! 💪 🔥',
+                is_pro: isBoosted,
+                algo_score: scoreUser(p),
+            };
+        });
+    };
+
+    // ── RESTORE a saved deck in its exact order (resume where you left off) ──
+    const restoreDeck = async (ids: string[]): Promise<boolean> => {
+        setLoading(true);
+        try {
+            const excluded = await buildExclusionSet();
+            const wantedIds = ids.filter(id => !excluded.has(id));
+            if (wantedIds.length === 0) return false; // nothing left → rebuild fresh
+
+            const { data: profiles } = await supabase
+                .from('profiles').select('*').in('id', wantedIds).not('username', 'is', null);
+            if (!profiles || profiles.length === 0) return false;
+
+            const enriched = await enrichProfiles(profiles);
+            // Preserve the SAVED order (do NOT re-sort) so the current card stays
+            const byId = new Map(enriched.map(u => [u.id, u]));
+            const ordered = wantedIds.map(id => byId.get(id)).filter(Boolean) as any[];
+            if (ordered.length === 0) return false;
+
+            console.log(`♻️ [RADAR] Deck restaurado — ${ordered.length} cartas, resumiendo donde lo dejaste.`);
+            setNearbyUsers(ordered);
+            setCurrentIndex(0);
+            setScanComplete(true);
+            return true;
+        } catch (e) {
+            console.warn('[RADAR] restoreDeck error:', e);
+            return false;
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const loadNearbyUsers = async () => {
         if (!authUser?.id) {
@@ -93,21 +288,9 @@ export const Radar = () => {
         try {
             console.log("🛰️ [RADAR] Escaneando guerreros...");
 
-            // 0. TINDER MEMORY: build the exclusion set — anyone already swiped
-            // (skip OR invite), anyone with a pending challenge I sent, and
-            // anyone who is already my training partner (accepted match/chat).
-            // These must NEVER reappear in the deck.
-            const [swipesRes, chatsRes, sentInvitesRes] = await Promise.all([
-                supabase.from('radar_swipes').select('target_id').eq('user_id', authUser.id),
-                supabase.from('chats').select('user_a, user_b').or(`user_a.eq.${authUser.id},user_b.eq.${authUser.id}`),
-                supabase.from('notifications').select('user_id').eq('type', 'invitation').filter('data->>sender_id', 'eq', authUser.id),
-            ]);
-
-            const excludedIds = new Set<string>();
-            (swipesRes.data || []).forEach((s: any) => excludedIds.add(s.target_id));
-            (chatsRes.data || []).forEach((c: any) => excludedIds.add(c.user_a === authUser.id ? c.user_b : c.user_a));
-            (sentInvitesRes.data || []).forEach((n: any) => excludedIds.add(n.user_id));
-            console.log(`🧠 [RADAR] Memoria de swipes: ${excludedIds.size} guerreros excluidos (rechazados/invitados/aliados).`);
+            // 0. HARD FILTERS: build the exclusion set (swiped / matched / blocked)
+            const excludedIds = await buildExclusionSet();
+            console.log(`🧠 [RADAR] Filtros duros: ${excludedIds.size} guerreros excluidos (rechazados/invitados/aliados/bloqueados).`);
 
             // 1. Fetch profiles - PRIORITIZE NEWEST & BOOSTED VIA RPC (with 1.5s resilient timeout fallback!)
             console.log("⚙️ [RADAR] Triggering prioritized scanner...");
@@ -154,173 +337,21 @@ export const Radar = () => {
             }
 
             if (profiles && profiles.length > 0) {
-                // 2. Fetch ALL Gym Passports for these users in one batch
-                const profileIds = profiles.map(p => p.id);
-                const { data: passportsData, error: passError } = await supabase
-                    .from('user_gyms')
-                    .select(`
-    user_id,
-    gym_id,
-    is_home_base,
-    gyms ( id, name )
-`)
-                    .in('user_id', profileIds);
-
-                if (passError) console.error("🚨 [RADAR] Error fetching passports:", passError);
-
-                // Map passports by user_id
-const passportMap: Record<string, {id: string, name: string, is_favorite?: boolean, is_home_base?: boolean}[]> = {};
-if (passportsData) {
-    passportsData.forEach((item: any) => {
-        if (!passportMap[item.user_id]) passportMap[item.user_id] = [];
-        if (item.gyms) {
-            passportMap[item.user_id].push({
-                id: item.gyms.id,
-                name: item.gyms.name,
-                is_favorite: false, // placeholder, will set later
-                is_home_base: item.is_home_base
-            });
-        }
-    });
-}
-// Fetch favorites to set is_favorite flag
-const { data: favData, error: favError } = await supabase
-    .from('gym_favorites')
-    .select('user_id, gym_id')
-    .in('user_id', profileIds);
-if (favError) console.error('🚨 [RADAR] Error fetching favorites:', favError);
-const favSet = new Set<string>();
-if (favData) {
-    favData.forEach((f: any) => {
-        favSet.add(`${f.user_id}-${f.gym_id}`);
-    });
-}
-// Apply favorite flag
-Object.entries(passportMap).forEach(([uid, gyms]) => {
-    gyms.forEach(g => {
-        if (favSet.has(`${uid}-${g.id}`)) {
-            g.is_favorite = true;
-        }
-    });
-});
-
-                // 3. Fetch Home Gym Metadata
-                const gymIds = [...new Set(profiles.map(p => p.home_gym_id).filter(Boolean))];
-                let gymMap: any = {};
-                
-                if (gymIds.length > 0) {
-                    const { data: gymsData } = await supabase
-                        .from('gyms')
-                        .select('id, name')
-                        .in('id', gymIds);
-
-                    if (gymsData) {
-                        gymMap = gymsData.reduce((acc: any, g) => {
-                            acc[g.id] = { name: g.name };
-                            return acc;
-                        }, {});
-                    }
-                }
-
-                // 4. GET CURRENT USER'S PROFILE + GYM PASSPORT
-                const [{ data: myProfile }, { data: myPassportData }] = await Promise.all([
-                    supabase.from('profiles').select('home_gym_id').eq('id', authUser!.id).maybeSingle(),
-                    supabase.from('user_gyms').select('gym_id').eq('user_id', authUser!.id)
-                ]);
-
-                const myHomeGymId = myProfile?.home_gym_id;
-                const myGymIds = new Set<string>((myPassportData || []).map((g: any) => g.gym_id));
-
-                // ── ALGORITHM V8: Activity · Gym · Freshness · Boost ──────────────
-                //
-                // score = boost(0|50000) + activity(0–1000) + gym(0–500) + freshness(0–200) + jitter(0–80)
-                //
-                // Boost    : paid promotion — always surfaces to top 3–5 slots
-                // Activity : last_active_at recency — most important organic signal
-                // Gym      : same home gym (+400) + shared passport gyms (+100 each, max +300)
-                // Freshness: new accounts get a visibility bonus so they're not buried
-                // Jitter   : small random offset prevents identical order every reload
-
-                const now = new Date();
-                const nowMs = now.getTime();
-
-                const scoreUser = (p: any): number => {
-                    // ── Boost ─────────────────────────────────────────────────────
-                    const boostDate = p.boost_until ? new Date(p.boost_until) : null;
-                    const isBoosted = boostDate ? boostDate > now : false;
-                    const boostPts = isBoosted ? 50000 : 0;
-
-                    // ── Activity ─────────────────────────────────────────────────
-                    let activityPts = 0;
-                    if (p.last_active_at) {
-                        const diffMs = nowMs - new Date(p.last_active_at).getTime();
-                        const diffHours = diffMs / (1000 * 60 * 60);
-                        if (diffHours < 3)        activityPts = 1000;
-                        else if (diffHours < 24)  activityPts = 700;
-                        else if (diffHours < 168) activityPts = 400; // 7 days
-                        else if (diffHours < 720) activityPts = 100; // 30 days
-                    }
-
-                    // ── Gym en común ──────────────────────────────────────────────
-                    let gymPts = 0;
-                    if (myHomeGymId && p.home_gym_id === myHomeGymId) gymPts += 400;
-                    const theirGyms: string[] = (passportMap[p.id] || []).map((g: any) => g.id);
-                    const sharedPassport = theirGyms.filter(gid => myGymIds.has(gid) && gid !== myHomeGymId);
-                    gymPts += Math.min(sharedPassport.length * 100, 300);
-
-                    // ── Novedad en app ────────────────────────────────────────────
-                    let freshnessPts = 0;
-                    if (p.created_at) {
-                        const daysSinceJoin = (nowMs - new Date(p.created_at).getTime()) / (1000 * 60 * 60 * 24);
-                        if (daysSinceJoin < 7)        freshnessPts = 200;
-                        else if (daysSinceJoin < 30)  freshnessPts = 100;
-                        else if (daysSinceJoin < 90)  freshnessPts = 30;
-                    }
-
-                    // ── Jitter ────────────────────────────────────────────────────
-                    const jitter = Math.random() * 80;
-
-                    return boostPts + activityPts + gymPts + freshnessPts + jitter;
-                };
-
-                const enriched = profiles.map((p, idx) => {
-                    const settings = (p.custom_settings as any) || {};
-                    let gymInfo = gymMap[p.home_gym_id || ''] || { name: "" };
-                    if (gymInfo.name.includes('Arsenal Personal')) gymInfo = { name: "" };
-
-                    const isBoosted = p.boost_until ? new Date(p.boost_until) > now : false;
-                    const algo_score = scoreUser(p);
-
-                    return {
-                        ...p,
-                        gym_name: gymInfo.name,
-                        gym_image: p.main_base_image || null,
-                        gym_color: p.main_base_color || '#3A2C00',
-                        gym_passport: passportMap[p.id] || [],
-                        banner_url: settings.banner_url || null,
-                        training_days_count: p.checkins_count || 0,
-                        followers_count: 0,
-                        following_count: 0,
-                        is_following: false,
-                        stats_loaded: false,
-                        bio: p.description || settings.description || settings.bio || "¡Entrenando duro para subir de rango! 💪 🔥",
-                        is_pro: isBoosted,
-                        algo_score,
-                    };
-                });
-
+                // Enrich + score, then sort best-first (Tinder step 2 ranking)
+                const enriched = await enrichProfiles(profiles);
                 const sorted = enriched.sort((a, b) => b.algo_score - a.algo_score);
 
-                console.log("🏆 [RADAR V8] Top 5 (Activity · Gym · Freshness · Boost):");
+                console.log("🏆 [RADAR V9] Top 5 (Boost · Activity · Desirability · Gym · Freshness):");
                 console.table(sorted.slice(0, 5).map(u => ({
                     username: u.username,
                     score: Math.round(u.algo_score),
                     boosted: u.is_pro,
-                    active: u.last_active_at ? Math.round((nowMs - new Date(u.last_active_at).getTime()) / 3600000) + 'h ago' : 'never',
-                    sameGym: u.home_gym_id === myHomeGymId,
+                    matches: u.matches_count || 0,
                 })));
 
                 setNearbyUsers(sorted);
+                setCurrentIndex(0);
+                persistDeck(sorted, 0);
             }
         } catch (error) {
             console.error("Error loading nearby users:", error);
@@ -373,6 +404,14 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
             supabase.from('profiles').select('*').eq('id', authUser.id).maybeSingle().then(({ data }) => setUserProfile(data));
         }
     }, [authUser]);
+
+    // Persist the deck position on every advance/rewind so leaving and
+    // re-entering the Radar resumes on the same card (no re-shuffle).
+    useEffect(() => {
+        if (scanComplete && nearbyUsers.length > 0) {
+            persistDeck(nearbyUsers, currentIndex);
+        }
+    }, [currentIndex, scanComplete]);
 
     const handleBoostConfirm = async () => {
         if (!authUser || isBoosting) return;
@@ -516,8 +555,42 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
         if (targetId) {
             recordSwipe(targetId, 'skip');
             supabase.rpc('increment_profile_skips', { u_id: targetId });
+            // Remember this skip so it can be undone once (Rewind).
+            setLastSkipped({ index: currentIndex, id: targetId });
         }
         flyOff('left');
+    };
+
+    // REWIND — recover the last cancelled (skipped) person. Allowed only ONCE
+    // per person: after using it on someone, that person can never be rewound
+    // again (rewoundIds is persisted).
+    const canRewind = !!lastSkipped
+        && lastSkipped.index === currentIndex - 1
+        && !rewoundIdsRef.current.has(lastSkipped.id);
+
+    const handleRewind = async () => {
+        if (!canRewind || !lastSkipped || dragState !== 'idle') return;
+        const { id, index } = lastSkipped;
+
+        // Mark as used (persist) so this person is never rewindable again
+        rewoundIdsRef.current.add(id);
+        if (REWOUND_KEY) {
+            try { localStorage.setItem(REWOUND_KEY, JSON.stringify([...rewoundIdsRef.current])); } catch { /* ignore */ }
+        }
+
+        // Undo the recorded swipe so they're not excluded on the next scan,
+        // and undo the skip counter we bumped.
+        if (authUser?.id) {
+            supabase.from('radar_swipes').delete().eq('user_id', authUser.id).eq('target_id', id)
+                .then(({ error }) => { if (error) console.error('[RADAR] rewind delete swipe failed:', error.message); });
+            supabase.rpc('decrement_profile_skips', { u_id: id }).then(() => {}, () => {/* rpc optional */});
+        }
+
+        setLastSkipped(null);
+        setDragState('entering');
+        setCurrentIndex(index); // the skipped card is still at this index in nearbyUsers
+        setTimeout(() => setDragState('idle'), 300);
+        toast.success('↩️ Recuperaste esta persona (solo una vez).');
     };
 
     const handleFollow = async () => {
@@ -582,6 +655,7 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
         if (!currentUser || isInviting) return;
         const targetId = currentUser.id;
         recordSwipe(targetId, 'invite');
+        setLastSkipped(null); // inviting clears any pending rewind
         flyOff('right');
         setIsInviting(true);
         try {
@@ -612,8 +686,10 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
                         </div>
                         <h2 className="text-2xl font-black text-white italic mb-3 uppercase tracking-tighter">Radar Despejado</h2>
                         <p className="text-neutral-500 max-w-xs text-sm font-medium leading-relaxed">No hay más guerreros en tu zona por ahora. ¡Vuelve más tarde para nuevos desafíos!</p>
-                        <button 
+                        <button
                             onClick={() => {
+                                // Force a completely fresh scan: drop the saved deck
+                                if (DECK_KEY) localStorage.removeItem(DECK_KEY);
                                 setCurrentIndex(0);
                                 setScanComplete(false);
                                 loadNearbyUsers();
@@ -757,9 +833,21 @@ Object.entries(passportMap).forEach(([uid, gyms]) => {
                             hidePermissions={true}
                             isRadar={true}
                             actions={
-                                <div className="flex items-center justify-center gap-6 px-2 mt-auto pb-4">
+                                <div className="flex items-center justify-center gap-5 px-2 mt-auto pb-4 relative">
+                                    {/* 0. REWIND — recover the last cancelled person (once each).
+                                        Floats above the row so it never shifts the main buttons. */}
+                                    {canRewind && (
+                                        <button
+                                            onClick={handleRewind}
+                                            className="absolute -top-16 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-amber-500 text-black font-black text-[11px] uppercase tracking-wider px-4 py-2.5 rounded-full shadow-[0_8px_24px_rgba(245,158,11,0.4)] active:scale-90 transition-all animate-in slide-in-from-bottom-2 fade-in"
+                                            title="Recuperar (1 vez)"
+                                        >
+                                            <RotateCcw size={15} strokeWidth={3} />
+                                            Regresar
+                                        </button>
+                                    )}
                                     {/* 1. SEGUIR GUERRERO */}
-                                    <button 
+                                    <button
                                         onClick={handleFollow}
                                         className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all active:scale-90 shadow-xl ${
                                             currentUser.is_following 
