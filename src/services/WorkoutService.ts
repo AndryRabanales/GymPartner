@@ -1032,7 +1032,8 @@ class WorkoutService {
 
             supabase
                 .from('user_gyms')
-                .select('id', { count: 'exact' })
+                // user_gyms has NO 'id' column (composite PK user_id+gym_id)
+                .select('gym_id', { count: 'exact' })
                 .eq('user_id', userId)
         ]);
 

@@ -187,7 +187,9 @@ class UserService {
                     since: new Date().toISOString(),
                     is_home_base: isFirstGym
                 }, { onConflict: 'user_id,gym_id', ignoreDuplicates: true })
-                .select('id');
+                // user_gyms has NO 'id' column (composite PK user_id+gym_id) —
+                // selecting a real column still returns rows only when inserted
+                .select('user_id');
 
             if (linkError) throw linkError;
 
