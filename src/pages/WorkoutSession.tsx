@@ -145,6 +145,20 @@ const safeNum = (val: any, fallback = 0): number => {
 // ─── Sanitize ghost rest timers from localStorage/DB ───────────────────────
 // If a set was completed in a previous session that was never properly closed,
 // its restLastStartTime is a stale timestamp from hours ago. This function
+// ── Network-hang guard ──────────────────────────────────────────────────────
+// When wifi was present then lost, navigator.onLine can still report true, so
+// Supabase queries fire and HANG (native NSURLSession waits ~60s for a timeout
+// that never comes). Any awaited request in the init path would then freeze the
+// whole loading screen. Racing every such call against a short timer guarantees
+// the screen ALWAYS loads: on timeout we resolve to a safe offline fallback and
+// continue with cached/local data.
+function withTimeout<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
+    return Promise.race([
+        Promise.resolve(p).catch(() => fallback),
+        new Promise<T>(resolve => setTimeout(() => resolve(fallback), ms)),
+    ]);
+}
+
 // detects those and freezes the timer at the accumulated value, preventing
 // the display from showing "66 minutes" on a brand-new session.
 const sanitizeRestTimers = (exercises: any[]): any[] => {
@@ -2622,7 +2636,18 @@ export const WorkoutSession = () => {
     // Init Logic
     useEffect(() => {
         if (!user) return;
-        initializeBattle(user.id);
+        // WATCHDOG: the loading screen must ALWAYS clear. If any unforeseen await
+        // in initializeBattle hangs (dead connection not flagged by the OS), force
+        // the UI open after 8s so the user can still train offline. If nothing was
+        // loaded yet, the exercise catalog opens so they can start adding.
+        const watchdog = setTimeout(() => {
+            setLoading(false);
+            setShowIntroAnim(false);
+            if (activeExercisesRef.current.length === 0 && !sessionIdRef.current && !isMultiplayerRef.current) {
+                setShowAddModal(true);
+            }
+        }, 8000);
+        initializeBattle(user.id).finally(() => clearTimeout(watchdog));
     }, [user, routeGymId, location.key]);
 
     const initializeBattle = async (userId: string) => {
@@ -2659,7 +2684,7 @@ export const WorkoutSession = () => {
             // This ensures getActiveSession never returns a ghost with stale timer data.
             // We also purge the matching localStorage draft keys so they can't be restored.
             try {
-                const closedIds = await workoutService.cleanOrphanSessions(userId);
+                const closedIds = await withTimeout(workoutService.cleanOrphanSessions(userId), 3500, [] as string[]);
                 if (closedIds.length > 0) {
                     closedIds.forEach(id => {
                         localStorage.removeItem(`workout_draft_${id}`);
@@ -2680,10 +2705,11 @@ export const WorkoutSession = () => {
             }
 
             // 1. PHASE 1: Instant Data Fetch (Settings & Gyms)
+            // Each wrapped so a dead-but-not-flagged connection can never hang init.
             const [gyms, settings, allGyms] = await Promise.all([
-                userService.getUserGyms(userId),
-                equipmentService.getUserSettings(userId),
-                userService.getAllGyms()
+                withTimeout(userService.getUserGyms(userId), 3500, [] as any[]),
+                withTimeout(equipmentService.getUserSettings(userId), 3500, { categories: [], metrics: [] } as any),
+                withTimeout(userService.getAllGyms(), 3500, [] as any[])
             ]);
 
             // Always respect route parameter if explicitly navigated to a gym, otherwise start libre
@@ -2708,13 +2734,15 @@ export const WorkoutSession = () => {
             setResolvedGymId(resolvedInitialGymId);
             setUserSettings(settings);
 
-            // 2. PHASE 2: Fetch Inventory and Routines using predicted gym
+            // 2. PHASE 2: Fetch Inventory and Routines using predicted gym.
+            // getUserRoutines already falls back to cache internally on timeout;
+            // the rest resolve to empty/null so init never blocks offline.
             const [items, localRoutines, activeResult, personalItems, partnerActiveResult] = await Promise.all([
-                equipmentService.getInventory(resolvedInitialGymId || ''),
-                workoutService.getUserRoutines(userId, resolvedInitialGymId),
-                workoutService.getActiveSession(userId),
-                equipmentService.getPersonalInventory(userId),
-                (currentIsMultiplayer && currentPartnerId) ? workoutService.getActiveSession(currentPartnerId) : Promise.resolve({ data: null, error: null })
+                withTimeout(equipmentService.getInventory(resolvedInitialGymId || ''), 3500, [] as any[]),
+                withTimeout(workoutService.getUserRoutines(userId, resolvedInitialGymId), 5000, [] as any[]),
+                withTimeout(workoutService.getActiveSession(userId), 3500, { data: null, error: null } as any),
+                withTimeout(equipmentService.getPersonalInventory(userId), 3500, [] as any[]),
+                (currentIsMultiplayer && currentPartnerId) ? withTimeout(workoutService.getActiveSession(currentPartnerId), 3500, { data: null, error: null } as any) : Promise.resolve({ data: null, error: null })
             ]);
 
             setRoutines(localRoutines);

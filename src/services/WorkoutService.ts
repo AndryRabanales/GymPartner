@@ -1108,6 +1108,21 @@ class WorkoutService {
             return [...offlineRecords, ...cached];
         }
 
+        // Helper: cached + queued routines (used on error OR network timeout).
+        // navigator.onLine can report true while the connection is actually dead,
+        // so the online query below hangs; racing it against a timer lets us fall
+        // back to the cache instead of blocking the caller forever.
+        const cacheFallback = async () => {
+            let cached = await routineCache.load(userId, gymId);
+            if (cached.length === 0 && gymId) cached = await routineCache.load(userId, null);
+            if (cached.length === 0) cached = await routineCache.load(userId, null);
+            const offlineQueue = await offlineRoutineQueue.getAll();
+            const offlineRecords = offlineQueue
+                .filter((r: any) => r.userId === userId && (r.gymId === gymId || (!r.gymId && !gymId)))
+                .map((r: any) => this._buildOfflineRoutineRecord(r));
+            return [...offlineRecords, ...cached];
+        };
+
         // 1. Fetch Routines Base Data
         let query = supabase
             .from('routines')
@@ -1123,16 +1138,20 @@ class WorkoutService {
             query = query.is('gym_id', null);
         }
 
-        const { data: routinesData, error: routinesError } = await query;
+        const TIMED_OUT = Symbol('timeout');
+        const raced: any = await Promise.race([
+            query,
+            new Promise(resolve => setTimeout(() => resolve(TIMED_OUT), 4000)),
+        ]);
+        if (raced === TIMED_OUT) {
+            console.warn('[WS] getUserRoutines timed out — serving cached routines.');
+            return cacheFallback();
+        }
+        const { data: routinesData, error: routinesError } = raced;
 
         if (routinesError) {
             console.error('Error fetching routines:', routinesError);
-            const cached = await routineCache.load(userId, gymId);
-            const offlineQueue = await offlineRoutineQueue.getAll();
-            const offlineRecords = offlineQueue
-                .filter((r: any) => r.userId === userId && (r.gymId === gymId || (!r.gymId && !gymId)))
-                .map((r: any) => this._buildOfflineRoutineRecord(r));
-            return [...offlineRecords, ...cached];
+            return cacheFallback();
         }
 
         if (!routinesData || routinesData.length === 0) {
