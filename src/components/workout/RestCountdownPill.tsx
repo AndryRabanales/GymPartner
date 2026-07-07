@@ -40,10 +40,10 @@ export const RestCountdownPill = ({ endsAt, targetSec, exerciseName, onSkip, onA
     const CIRC = 2 * Math.PI * R;
 
     return (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-40 select-none animate-in slide-in-from-bottom-4 fade-in duration-300">
+        <div className="fixed top-[76px] left-1/2 -translate-x-1/2 z-40 select-none animate-in slide-in-from-top-4 fade-in duration-300">
             {/* Target duration chips */}
             {showTargets && (
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 flex items-center gap-1 bg-neutral-950/95 backdrop-blur-xl border border-white/15 rounded-full px-2 py-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.7)] whitespace-nowrap animate-in fade-in slide-in-from-bottom-1 duration-200">
+                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 flex items-center gap-1 bg-neutral-950/95 backdrop-blur-xl border border-white/15 rounded-full px-2 py-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.7)] whitespace-nowrap animate-in fade-in slide-in-from-top-1 duration-200">
                     {TARGET_OPTIONS.map(sec => (
                         <button
                             key={sec}

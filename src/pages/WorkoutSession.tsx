@@ -21,7 +21,7 @@ import { normalizeText, getMuscleGroup } from '../utils/inventoryUtils';
 
 // Interface NumpadTarget removed
 // BattleTimer removed
-import { Loader2, ArrowLeft, ChevronLeft, Image as ImageIcon, MapPin, Search, Plus, Save, Activity, Layers, Tag, Battery, MapIcon, Check, Settings as SettingsIcon, Swords, Trash2, X, RotateCcw, Lock, Play, Loader, MoreVertical, Pause, LockOpen, LogOut, Award, History } from 'lucide-react';
+import { Loader2, ArrowLeft, ChevronLeft, Image as ImageIcon, MapPin, Search, Plus, Save, Activity, Layers, Tag, Battery, MapIcon, Check, Settings as SettingsIcon, Swords, Trash2, X, RotateCcw, Lock, Play, Loader, MoreVertical, Pause, LockOpen, LogOut, Award, History, Timer } from 'lucide-react';
 import { ExerciseHistoryModal, type ExerciseHistoryEntry } from '../components/workout/ExerciseHistoryModal';
 import { RestCountdownPill } from '../components/workout/RestCountdownPill';
 import { restAlarmService } from '../services/RestAlarmService';
@@ -4896,6 +4896,7 @@ export const WorkoutSession = () => {
     const [restTargetSec, setRestTargetSec] = useState(90);
     const [restEndsAt, setRestEndsAt] = useState<number | null>(null);
     const [restExerciseName, setRestExerciseName] = useState('');
+    const [showRestConfig, setShowRestConfig] = useState(false);
     const restNotifiedRef = useRef(false);
 
     // Load the persisted global rest duration once
@@ -5935,11 +5936,42 @@ export const WorkoutSession = () => {
                                 )}
                             </div>
 
-                            {/* Timer */}
-                            <div className="bg-neutral-900 border border-neutral-800 px-4 py-2 rounded-full flex items-center gap-3 shadow-lg">
-                                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                                <span className="font-mono font-bold text-xl text-white tracking-widest">{elapsedTime}</span>
+                            <div className="flex items-center gap-2">
+                                {/* Global rest duration — configure it up front; every set
+                                    completed from here on auto-starts the countdown at this length */}
+                                <button
+                                    onClick={() => setShowRestConfig(v => !v)}
+                                    className={`flex items-center gap-1.5 border px-3 py-2 rounded-full transition-all active:scale-95 ${showRestConfig ? 'bg-gym-primary text-black border-gym-primary' : 'bg-neutral-900 border-neutral-800 text-neutral-300 hover:text-white'}`}
+                                    title="Duración del descanso"
+                                >
+                                    <Timer size={14} />
+                                    <span className="font-mono font-bold text-xs">{restTargetSec < 60 ? `${restTargetSec}s` : `${Math.floor(restTargetSec / 60)}:${String(restTargetSec % 60).padStart(2, '0')}`}</span>
+                                </button>
+
+                                {/* Timer */}
+                                <div className="bg-neutral-900 border border-neutral-800 px-4 py-2 rounded-full flex items-center gap-3 shadow-lg">
+                                    <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                                    <span className="font-mono font-bold text-xl text-white tracking-widest">{elapsedTime}</span>
+                                </div>
                             </div>
+
+                            {/* Rest duration picker */}
+                            {showRestConfig && (
+                                <div className="absolute top-14 right-0 z-50 bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl p-3 flex flex-col gap-2 animate-in slide-in-from-top-2">
+                                    <span className="text-[9px] font-black text-neutral-500 uppercase tracking-widest px-1">Descanso entre series</span>
+                                    <div className="grid grid-cols-3 gap-1.5">
+                                        {[30, 60, 90, 120, 150, 180].map(sec => (
+                                            <button
+                                                key={sec}
+                                                onClick={() => { changeRestTarget(sec); setShowRestConfig(false); }}
+                                                className={`px-3 py-2 rounded-xl text-xs font-black transition-all active:scale-95 ${restTargetSec === sec ? 'bg-gym-primary text-black' : 'bg-neutral-800 text-neutral-300 hover:text-white'}`}
+                                            >
+                                                {sec < 60 ? `${sec}s` : `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             {/* OPTION MENU OVERLAY */}
                             {showExitMenu && (
@@ -6589,7 +6621,9 @@ export const WorkoutSession = () => {
                 />
             )}
 
-            {/* Global rest countdown pill — one timer for all exercises */}
+            {/* Global rest countdown pill — one timer for all exercises.
+                Anchored near the top (below the header) so it never covers
+                the bottom action bar (ADD EXERCISE / carousel dots). */}
             {restEndsAt && !isFinished && !showSummary && !showAddModal && (
                 <RestCountdownPill
                     endsAt={restEndsAt}
