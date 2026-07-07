@@ -1868,6 +1868,24 @@ class WorkoutService {
                             localStorage.setItem(`ginx_offline_finish_${resolvedId}`, finishMetaRaw);
                             localStorage.removeItem(`ginx_offline_finish_${sessionId}`);
                         }
+                        // Remap the in-progress draft (uncommitted sets) to the new id
+                        // so reopening the session online restores everything — even
+                        // if the WorkoutSession page wasn't mounted during this flush.
+                        const draftRaw = localStorage.getItem(`workout_draft_${sessionId}`);
+                        if (draftRaw) {
+                            localStorage.setItem(`workout_draft_${resolvedId}`, draftRaw);
+                            localStorage.removeItem(`workout_draft_${sessionId}`);
+                            // Persist to the DB too so it survives a cache wipe / other device
+                            try {
+                                const draft = JSON.parse(draftRaw);
+                                if (draft?.exercises?.length > 0) {
+                                    await supabase
+                                        .from('workout_sessions')
+                                        .update({ session_state: draft })
+                                        .eq('id', resolvedId);
+                                }
+                            } catch { /* non-fatal */ }
+                        }
                     } catch {
                         stillPendingSessionIds.push(sessionId);
                         continue;

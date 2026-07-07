@@ -3038,6 +3038,42 @@ export const WorkoutSession = () => {
                 // to prevent losing unsaved exercises/routines currently active in our React state.
                 if (sessionIdRef.current === active.id && activeExercisesRef.current.length > 0) {
                     setLoading(false);
+                } else if ((() => {
+                    // ── AUTHORITATIVE LOCAL BACKUP (solo) ──────────────────────────
+                    // STORAGE_KEY is saved on every change and is the ONLY place that
+                    // holds in-progress (uncommitted) sets. When an offline session is
+                    // promoted to a real DB session on reconnect, its id changes, so
+                    // the per-session draft/DB session_state/logs don't have those sets
+                    // — only this global backup does. Preferring it for solo blinda the
+                    // offline→online transition (workout was being lost). Safe because
+                    // STORAGE_KEY is cleared on finalize/cancel/restart.
+                    if (active.is_multiplayer) return false;
+                    try {
+                        const rawBackup = localStorage.getItem(STORAGE_KEY);
+                        if (!rawBackup) return false;
+                        const backup = JSON.parse(rawBackup);
+                        const bd = backup?.data;
+                        const backupAgeOk = backup?.savedAt && (Date.now() - backup.savedAt) < 4 * 60 * 60 * 1000;
+                        if (backupAgeOk && Array.isArray(bd?.exercises) && bd.exercises.length > 0) {
+                            console.log('💾 [RESTORE] Usando respaldo local (blindaje offline→online):', active.id);
+                            setActiveExercises(sanitizeRestTimers(bd.exercises));
+                            if (bd.routineName) setCurrentRoutineName(bd.routineName);
+                            // Keep the per-session draft in sync under the (possibly new) id
+                            try {
+                                localStorage.setItem(`workout_draft_${active.id}`, JSON.stringify({
+                                    exercises: bd.exercises,
+                                    routineName: bd.routineName || currentRoutineNameRef.current,
+                                    originalIds: originalExerciseIds,
+                                    isRoutineModified: isRoutineModified,
+                                }));
+                            } catch { /* ignore */ }
+                            setLoading(false);
+                            return true;
+                        }
+                    } catch { /* ignore */ }
+                    return false;
+                })()) {
+                    // Restored from the authoritative local backup above.
                 } else {
                     // Hydrate from Draft or DB
                     const savedDraft = localStorage.getItem(`workout_draft_${active.id}`);
