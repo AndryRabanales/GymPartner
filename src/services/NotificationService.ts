@@ -205,18 +205,18 @@ export const notificationService = {
             return false;
         }
 
-        // 🛡️ Anti-saturation: cap of 90 matches per user. The DB enforces this
-        // hard at match formation (enforce_match_cap trigger); here we check the
-        // sender's count up front so they get a clear message instead of a
-        // silent failure when the invite is eventually accepted.
+        // 🛡️ Anti-saturation: daily limit of 90 invitations sent per user (+ any
+        // purchased extras). The DB enforces this hard on insert
+        // (enforce_daily_invite_limit trigger); here we check up front so the
+        // sender gets a clear message instead of a silent failure.
         try {
-            const { data: myMatches } = await supabase.rpc('my_match_count');
-            if ((myMatches ?? 0) >= 90) {
-                toast.error("Has alcanzado el límite de 90 matches. Deshaz alguno para conectar con alguien nuevo.");
+            const { data: sentToday } = await supabase.rpc('my_invites_sent_today');
+            if ((sentToday ?? 0) >= 90) {
+                toast.error("Alcanzaste el límite de 90 invitaciones por hoy. Vuelve mañana o compra invitaciones extra.");
                 return false;
             }
         } catch (capErr) {
-            console.error('Error checking match cap:', capErr);
+            console.error('Error checking daily invite limit:', capErr);
         }
 
         // 🛡️ 0. Check if either user has blocked the other
@@ -421,13 +421,6 @@ export const notificationService = {
                     .or(pairFilter)
                     .maybeSingle();
                 return existing?.id || null;
-            }
-            // Anti-saturation cap (enforce_match_cap trigger): one of the two
-            // users already has 90 matches. Give a clear message instead of a
-            // generic failure.
-            if ((error.message || '').includes('match_cap_reached')) {
-                toast.error("Límite de 90 matches alcanzado. Uno de los dos debe deshacer un match para conectar.");
-                return null;
             }
             console.error('Error creating chat:', error);
             return null;

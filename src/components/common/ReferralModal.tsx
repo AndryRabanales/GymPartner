@@ -161,7 +161,7 @@ export const ReferralModal: React.FC<ReferralModalProps> = ({ isOpen, onClose, u
                         <div className="flex items-center justify-between">
                             <div className="text-left">
                                 <h3 className="text-white font-bold text-sm uppercase tracking-wide">Invitaciones Extra</h3>
-                                <p className="text-neutral-500 text-[10px] font-bold uppercase tracking-widest">Límite diario: 50 + {extraInvites}</p>
+                                <p className="text-neutral-500 text-[10px] font-bold uppercase tracking-widest">Límite diario: 90 + {extraInvites}</p>
                             </div>
                             <div className="text-yellow-500 font-black text-xs bg-yellow-500/10 px-2 py-1 rounded-full border border-yellow-500/20">
                                 {gPoints} G-POINTS
