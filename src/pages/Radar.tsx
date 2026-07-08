@@ -417,13 +417,16 @@ export const Radar = () => {
         if (!authUser || isBoosting) return;
         setIsBoosting(true);
         try {
-            const success = await userService.spendGPoints(authUser.id, 1000, 'profile_boost');
+            // Atomic + server-authoritative boost purchase (1000 G-points → 24h).
+            const { data: success } = await supabase.rpc('activate_profile_boost');
             if (success) {
                 toast.success("🚀 ¡PERFIL DESTACADO EN EL RADAR!");
                 setIsBoostModalOpen(false);
                 // Refresh local profile state
                 const { data } = await supabase.from('profiles').select('*').eq('id', authUser.id).maybeSingle();
                 setUserProfile(data);
+            } else {
+                toast.error("No tienes suficientes G-Points (se requieren 1000).");
             }
         } catch (err) {
             toast.error("Error al activar Boost");

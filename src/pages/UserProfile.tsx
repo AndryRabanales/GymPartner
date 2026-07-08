@@ -93,10 +93,15 @@ export const UserProfile = () => {
         if (!user || isBoosting) return;
         setIsBoosting(true);
         try {
-            const success = await userService.spendGPoints(user.id, 1000, 'profile_boost');
+            // Atomic + server-authoritative: checks 1000 G-points, deducts, and
+            // sets boost_until in one transaction. The profiles economy columns
+            // (incl. boost_until) are no longer client-writable directly.
+            const { data: success } = await supabase.rpc('activate_profile_boost');
             if (success) {
                 setIsBoostModalOpen(false);
                 loadUserData(); // Refetch profile to show new boost_until
+            } else {
+                alert('No tienes suficientes G-Points (se requieren 1000).');
             }
         } catch (err) {
             console.error('Error activating boost:', err);

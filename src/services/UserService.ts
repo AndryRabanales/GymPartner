@@ -310,30 +310,21 @@ class UserService {
     }
 
     /**
-     * Spend G-Points (checks balance)
+     * Spend G-Points on a generic sink (checks balance server-side, caller-scoped).
+     * NOTE: profile boost has its own atomic RPC — activate_profile_boost —
+     * because boost_until is no longer a client-writable column. Do not set
+     * boost_until from the client here.
      */
-    async spendGPoints(userId: string, amount: number, reason: string): Promise<{ success: boolean; error?: string }> {
+    async spendGPoints(_userId: string, amount: number, reason: string): Promise<{ success: boolean; error?: string }> {
         try {
-            console.log(`💸 Spending ${amount} G-Points for ${userId} on ${reason}`);
+            console.log(`💸 Spending ${amount} G-Points on ${reason}`);
+            // spend_g_points ignores any passed id and only debits the caller.
             const { data, error } = await supabase.rpc('spend_g_points', {
-                u_id: userId,
+                u_id: null,
                 amount: amount
             });
 
             if (error) throw error;
-            
-            // If it's a profile boost, we also need to set the boost_until timestamp
-            if (data && reason === 'profile_boost') {
-                const boostDurationHours = 24; // Standard boost duration
-                const boostUntil = new Date();
-                boostUntil.setHours(boostUntil.getHours() + boostDurationHours);
-                
-                await supabase
-                    .from('profiles')
-                    .update({ boost_until: boostUntil.toISOString() })
-                    .eq('id', userId);
-            }
-
             return { success: data }; // RPC returns boolean
         } catch (error: any) {
             console.error('Error spending G-Points:', error);
@@ -911,13 +902,11 @@ class UserService {
             // 5. Delete Routines
             await supabase.from('routines').delete().eq('created_by', userId);
 
-            // 6. Reset Profile Stats
-            await supabase.from('profiles').update({
-                checkins_count: 0,
-                photos_count: 0,
-                home_gym_id: null,
-                custom_settings: {}
-            }).eq('id', userId);
+            // 6. Reset Profile Stats — via a server-side RPC because the economy/
+            // counter columns (checkins_count, gx_points, g_points, matches_count,
+            // etc.) are no longer client-writable. Also zeroes photos_count.
+            await supabase.rpc('reset_my_profile_stats');
+            await supabase.from('profiles').update({ photos_count: 0 }).eq('id', userId);
 
             return { success: true };
         } catch (error: any) {
