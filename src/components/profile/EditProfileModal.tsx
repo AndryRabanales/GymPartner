@@ -177,7 +177,10 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
             if (hasAvatar && hasBio && !alreadyAwarded) {
                 console.log("🎉 First profile completion! Awarding 2 GX points.");
                 updatedSettings.profile_completed_reward_awarded = true;
-                await userService.addGxPoints(user.id, 2, 'first_profile_completion');
+                // +2 GX awarded server-side, once, via a SECURITY DEFINER RPC that
+                // uses auth.uid() and its own dedup flag (the raw increment RPC is
+                // no longer client-callable).
+                await supabase.rpc('award_profile_completion_gx');
             }
 
             const updateResult = await userService.updateProfile(user.id, {

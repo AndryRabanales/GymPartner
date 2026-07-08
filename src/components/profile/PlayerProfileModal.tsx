@@ -500,8 +500,8 @@ export const PlayerProfileModal = ({ player, onClose, onFollowToggle }: PlayerPr
         try {
             const success = await notificationService.sendInvitation(player.id, player.username);
             if (success) {
-                // Track "Match" success (same as Radar)
-                await supabase.rpc('increment_profile_matches', { u_id: player.id });
+                // matches_count is bumped only on a real match (chat creation) by
+                // the on_chat_match_gx trigger — not on sending an invite.
                 alert("¡Desafío de entrenamiento enviado con éxito! Se le ha notificado a tu aliado.");
             }
         } catch (error) {

@@ -413,19 +413,10 @@ export const notificationService = {
         }
 
         if (chat) {
-            // spec §2-B / tabla GX: formar un match otorga +1 GX a CADA uno de los
-            // dos usuarios — solo la primera vez (garantizado porque este bloque
-            // solo se alcanza cuando el chat/match se acaba de CREAR; los
-            // reencuentros retornan antes con el chat existente, sin puntos).
-            try {
-                const { userService } = await import('./UserService');
-                await Promise.all([
-                    userService.addGxPoints(user.id, 1, 'match_formed'),
-                    userService.addGxPoints(senderId, 1, 'match_formed'),
-                ]);
-            } catch (gxErr) {
-                console.error('Could not award match GX:', gxErr);
-            }
+            // spec §2-B / tabla GX: formar un match otorga +1 GX a CADA usuario y
+            // +1 a matches_count — ahora lo hace el trigger on_chat_match_gx sobre
+            // el INSERT de `chats` (server-authoritative, una sola vez por pareja
+            // porque los reencuentros retornan antes con el chat existente).
 
             // 2. Insert System Message (Auto-generated)
             const acceptorName = user.user_metadata?.full_name || user.user_metadata?.username || 'Alguien';

@@ -600,10 +600,9 @@ export const Radar = () => {
         const targetId = currentUser.id;
         const wasFollowing = currentUser.is_following;
 
-        // Track "Match" in background if following
-        if (!wasFollowing) {
-            await supabase.rpc('increment_profile_matches', { u_id: targetId });
-        }
+        // matches_count is maintained server-side by the on_chat_match_gx trigger
+        // when a real match (chat) forms — not on a one-way follow. The old
+        // client-side increment here was removed with the point-security hardening.
 
         // ... existing optimistic update ...
         const updatedUsers = [...nearbyUsers];
@@ -661,7 +660,8 @@ export const Radar = () => {
         try {
             const success = await notificationService.sendInvitation(targetId, currentUser.username);
             if (success) {
-                await supabase.rpc('increment_profile_matches', { u_id: targetId });
+                // matches_count is incremented only on a real match (chat creation)
+                // by the on_chat_match_gx trigger — not on sending an invite.
                 toast.success("Desafío enviado!");
             }
         } catch (error) {

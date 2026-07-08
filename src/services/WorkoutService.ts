@@ -206,69 +206,20 @@ class WorkoutService {
             return { success: true };
         }
 
-        // 3. AWARD G-POINTS & TRAINING CUMULATIVE POINT for Training
+        // 3. AWARD GX + STREAK + CHECKINS — fully server-authoritative.
+        // Everything (duration >= 20 min, first-of-day, +1/+2, streak +1,
+        // checkins +1, single-award dedup) is validated and applied inside the
+        // award_workout_gx SECURITY DEFINER function. The client can no longer
+        // pick the amount or the target, and the raw increment RPC is revoked.
+        // geoVerified is the only client-supplied input (its GPS proximity
+        // claim); false ⇒ no GX/streak, as before.
         try {
-            const { data: session } = await supabase.from('workout_sessions').select('user_id, started_at, is_multiplayer').eq('id', sessionId).single();
-            if (session) {
-                const { userService } = await import('./UserService');
-                
-                // Calculate session duration
-                const startTime = new Date(session.started_at).getTime();
-                const endTime = new Date(now).getTime();
-                const durationMinutes = (endTime - startTime) / (1000 * 60);
-                
-                if (durationMinutes >= 20) {
-                    // Check if they completed another session today
-                    const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
-                    const { data: todaySessions } = await supabase
-                        .from('workout_sessions')
-                        .select('id')
-                        .eq('user_id', session.user_id)
-                        .not('finished_at', 'is', null)
-                        .like('finished_at', `${today}%`);
-
-                    // If this is the only finished session today, it is the first qualified workout of the day!
-                    const isFirstWorkoutToday = !todaySessions || todaySessions.length <= 1;
-
-                    if (isFirstWorkoutToday) {
-                        if (geoVerified === false) {
-                            // Geo check failed — no GX awarded
-                        } else {
-                        const isMulti = session.is_multiplayer || false;
-                        const pointsAwarded = isMulti ? 2 : 1;
-                        const reason = isMulti ? 'workout_finished_coop' : 'workout_finished';
-
-                        // Award GX points
-                        await userService.addGxPoints(session.user_id, pointsAwarded, reason);
-
-                        // Grow the lifetime streak counter (+1/day, never decreases) —
-                        // exact same qualifying condition as the daily training GX above.
-                        try {
-                            const { streakService } = await import('./StreakService');
-                            await streakService.recordTrainingDay(session.user_id);
-                        } catch (streakErr) {
-                            console.error('Could not record streak training day:', streakErr);
-                        }
-
-                        // Increment checkins_count in profile
-                        const { data: profile } = await supabase
-                            .from('profiles')
-                            .select('checkins_count')
-                            .eq('id', session.user_id)
-                            .single();
-                            
-                        const currentCount = profile?.checkins_count || 0;
-                        
-                        await supabase
-                            .from('profiles')
-                            .update({ checkins_count: currentCount + 1 })
-                            .eq('id', session.user_id);
-                        } // end else (geoVerified !== false)
-                    }
-                }
-            }
+            await supabase.rpc('award_workout_gx', {
+                p_session_id: sessionId,
+                p_geo_ok: geoVerified !== false,
+            });
         } catch (e) {
-            console.error('Could not award GX Points or training cumulative point:', e);
+            console.error('Could not award workout GX (award_workout_gx):', e);
         }
 
         // Notify allies that the session has finished
@@ -972,8 +923,6 @@ class WorkoutService {
 
             // 2c. Award GX to each guest + send room_closed notification
             try {
-                const { userService } = await import('./UserService');
-
                 // Get host profile for notification message
                 const { data: hostSession } = await supabase
                     .from('workout_sessions')
@@ -991,20 +940,15 @@ class WorkoutService {
                     // applies to them; skip GX/notifications to avoid double-awarding.
                     if (alreadyFinalizedUserIds.includes(gSess.user_id)) continue;
 
-                    const durationMinutes = (Date.now() - new Date(gSess.started_at).getTime()) / 60000;
-
-                    if (durationMinutes >= 20) {
-                        const today = new Date().toLocaleDateString('en-CA');
-                        const { data: todaySessions } = await supabase
-                            .from('workout_sessions')
-                            .select('id')
-                            .eq('user_id', gSess.user_id)
-                            .not('finished_at', 'is', null)
-                            .like('finished_at', `${today}%`);
-
-                        if (!todaySessions || todaySessions.length <= 1) {
-                            await userService.addGxPoints(gSess.user_id, 2, 'workout_finished_coop');
-                        }
+                    // Coop GX for this guest — server-authoritative & deduped.
+                    // award_workout_gx validates duration/first-of-day/single-award
+                    // itself and authorizes the host via the room relationship.
+                    // (Guest sessions are geo-validated by their own client on join,
+                    // so the host passes p_geo_ok=true here, matching prior behavior.)
+                    try {
+                        await supabase.rpc('award_workout_gx', { p_session_id: gSess.id, p_geo_ok: true });
+                    } catch (gxErr) {
+                        console.error('Could not award coop guest GX:', gxErr);
                     }
 
                     // Send room_closed notification — this wakes up offline guests

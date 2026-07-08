@@ -196,10 +196,11 @@ class UserService {
             // isNewGym is true only if the INSERT actually wrote a new row
             const isNewGym = Array.isArray(insertResult) && insertResult.length > 0;
 
-            // 3. AWARD GX POINTS for Unlocking Gym — only if it's truly new
-            if (isNewGym) {
-                await this.addGxPoints(userId, 3, 'gym_unlocked');
-            }
+            // 3. GX for unlocking a new gym (+3) is awarded by the on_gym_unlock_gx
+            // DB trigger on the user_gyms INSERT — unforgeable and naturally deduped
+            // per (user,gym). The upsert with ignoreDuplicates means the trigger
+            // only fires when a genuinely new row is written, matching isNewGym.
+            void isNewGym;
 
             // 4. Update Profile Cache (if it's home base)
             if (isFirstGym) {
@@ -268,8 +269,10 @@ class UserService {
 
             console.log(`🎁 Processing Referral: ${referrerId} -> ${newUserId}`);
 
-            // Award GX to the referrer (active gamification score, NOT legacy G-Points/XP)
-            await this.addGxPoints(referrerId, 5, 'referral');
+            // Award GX to the referrer server-side (+5, once per referred user).
+            // The referred user (current auth session) authorizes it via auth.uid();
+            // the raw increment RPC is no longer client-callable.
+            await supabase.rpc('award_referral_gx', { p_referrer: referrerId });
 
             // Mark New User as Referred (Prevents duplicates)
             const { error: updateError } = await supabase.auth.updateUser({

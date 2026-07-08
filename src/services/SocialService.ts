@@ -579,23 +579,19 @@ class SocialService {
             console.error("Self-follow prevented.");
             return { error: new Error("No puedes seguirte a ti mismo.") };
         }
-        const res = await supabase.from('follows').insert({ follower_id: followerId, following_id: followingId });
-        if (!res.error) {
-            await userService.addGxPoints(followingId, 1, 'new_follower');
-        }
-        return res;
+        // +1 GX to the followed user is awarded by the on_follow_gx DB trigger
+        // (server-authoritative — the raw increment RPC is no longer client-callable).
+        return await supabase.from('follows').insert({ follower_id: followerId, following_id: followingId });
     }
 
     async unfollowUser(followerId: string, followingId: string) {
-        const res = await supabase
+        // -1 GX to the (un)followed user is handled by the on_follow_gx trigger
+        // on DELETE — no client-side point call needed.
+        return await supabase
             .from('follows')
             .delete()
             .eq('follower_id', followerId)
             .eq('following_id', followingId);
-        if (!res.error) {
-            await userService.addGxPoints(followingId, -1, 'lost_follower');
-        }
-        return res;
     }
 
     async getFollowStatus(followerId: string, followingId: string): Promise<boolean> {

@@ -1,6 +1,5 @@
 
 import { supabase } from '../lib/supabase';
-import { userService } from './UserService';
 
 export interface ChatPreview {
     id: string;
@@ -101,13 +100,14 @@ export const chatService = {
                 const { data: followA } = await supabase.from('follows').select('id').eq('follower_id', user.id).eq('following_id', otherUserId).maybeSingle();
                 const { data: followB } = await supabase.from('follows').select('id').eq('follower_id', otherUserId).eq('following_id', user.id).maybeSingle();
 
+                // Deleting the follow rows fires the on_follow_gx trigger, which
+                // applies the -1 GX to the (un)followed user server-side. No
+                // client-side point call needed (and the raw RPC is revoked).
                 if (followA) {
                     await supabase.from('follows').delete().eq('follower_id', user.id).eq('following_id', otherUserId);
-                    await userService.addGxPoints(otherUserId, -1, 'lost_follower');
                 }
                 if (followB) {
                     await supabase.from('follows').delete().eq('follower_id', otherUserId).eq('following_id', user.id);
-                    await userService.addGxPoints(user.id, -1, 'lost_follower');
                 }
 
                 // B. Delete match invitations from both sides' notifications to reset match state
