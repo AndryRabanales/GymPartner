@@ -21,7 +21,7 @@ interface ExerciseDetail {
         completedAt?: number;
         restDuration?: number;
         restStatus?: string;
-        weightUnit?: 'kg' | 'lb';
+        weightUnit?: 'kg' | 'lb' | 'plates';
     }[];
     metrics?: {
         hasWeight: boolean;
@@ -71,6 +71,16 @@ interface WorkoutDetail {
     // Display name of the viewing user (never "Yo")
     my_name?: string;
 }
+
+// Stored weight is ALWAYS in kg (see WorkoutSession's toInternalWeight) — the
+// unit tag only controls how it's displayed. "plates" reuses the kg number
+// (no conversion), same as during the live session; only "lb" needs math.
+const formatWeightDisplay = (kgVal: number, unit?: string): string => {
+    if (!kgVal) return '0';
+    if (unit === 'lb') return Math.round(kgVal * 2.20462).toString();
+    return parseFloat(kgVal.toFixed(1)).toString();
+};
+const displayUnitLabel = (unit?: string): string => (unit === 'lb' ? 'lb' : 'kg');
 
 export default function WorkoutDetailPage() {
     const { sessionId } = useParams<{ sessionId: string }>();
@@ -896,7 +906,7 @@ export default function WorkoutDetailPage() {
                                                             <div key={p.id} className="flex flex-col items-center justify-center py-0.5">
                                                                 {hasVal ? (
                                                                     <div className="flex flex-col items-center">
-                                                                        {w > 0 && <span className={`${wTextSize} font-black leading-none tracking-tight ${isMe ? 'text-yellow-400' : 'text-white'}`}>{w}<span className={`${wUnitSize} font-bold text-neutral-400 ml-0.5`}>{unit}</span></span>}
+                                                                        {w > 0 && <span className={`${wTextSize} font-black leading-none tracking-tight ${isMe ? 'text-yellow-400' : 'text-white'}`}>{formatWeightDisplay(w, unit)}<span className={`${wUnitSize} font-bold text-neutral-400 ml-0.5`}>{displayUnitLabel(unit)}</span></span>}
                                                                         {r > 0 && <span className={`${detailTextSize} text-neutral-400 leading-none font-bold mt-0.5`}>{r}r</span>}
                                                                         {t > 0 && <span className={`${detailTextSize} text-neutral-400 leading-none font-bold mt-0.5`}>{t}s</span>}
                                                                         {dist > 0 && <span className={`${detailTextSize} text-neutral-400 leading-none font-bold mt-0.5`}>{dist}m</span>}
@@ -970,7 +980,7 @@ export default function WorkoutDetailPage() {
                                                     <div className={`${rowTextSize} text-yellow-500/40 font-black italic leading-none`}>#{s.setNumber}</div>
                                                     <div className="text-center leading-none">
                                                         {w > 0
-                                                            ? <span className={`${wTextSize} font-black text-yellow-400 leading-none`}>{w}<span className={`${wUnitSize} font-bold text-neutral-400 ml-0.5`}>{unit}</span></span>
+                                                            ? <span className={`${wTextSize} font-black text-yellow-400 leading-none`}>{formatWeightDisplay(w, unit)}<span className={`${wUnitSize} font-bold text-neutral-400 ml-0.5`}>{displayUnitLabel(unit)}</span></span>
                                                             : <span className={`text-neutral-700 ${rowTextSize} font-bold leading-none`}>—</span>}
                                                     </div>
                                                     <div className="text-center leading-none">
