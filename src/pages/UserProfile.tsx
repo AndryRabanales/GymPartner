@@ -202,33 +202,40 @@ export const UserProfile = () => {
             .substring(0, 30);
         const defaultAvatar = user?.user_metadata?.avatar_url || '';
 
-        // Offline: load from native cache immediately so the profile renders without network
-        if (!navigator.onLine) {
-            const cached = await profileCache.load();
-            if (cached) {
-                setProfile(cached as any);
-                console.log('📦 [loadUserData] Loaded profile from offline cache.');
-            }
+        // ── CACHE-FIRST, DB-NEVER-BLOCKS ────────────────────────────────────
+        // navigator.onLine is NOT trusted here — it can report true while the
+        // connection is actually dead, which used to send us straight into an
+        // unbounded `await supabase...` that hung instead of showing the
+        // profile the user already has saved on this device. Always render
+        // the cache first (instant, zero network), then race a short-timeout
+        // fetch in the background to refresh it. If the network never
+        // responds in time, the cached render already satisfied the user —
+        // nothing else needs to happen.
+        const cachedProfile = await profileCache.load().catch(() => null);
+        if (cachedProfile) {
+            setProfile(cachedProfile as any);
             setLoading(false);
-            return;
+            console.log('📦 [loadUserData] Rendered cached profile instantly.');
         }
 
-        // Keep loading=true until real DB data arrives - prevents the flash of incomplete content
         try {
-            let { data, error } = await supabase!
-                .from('profiles')
-                .select('*')
-                .eq('id', user!.id)
-                .maybeSingle();
+            const TIMED_OUT = Symbol('timeout');
+            const raced: any = await Promise.race([
+                supabase!.from('profiles').select('*').eq('id', user!.id).maybeSingle(),
+                new Promise(resolve => setTimeout(() => resolve(TIMED_OUT), 4000)),
+            ]);
+
+            if (raced === TIMED_OUT) {
+                console.warn('⏱️ [loadUserData] DB timed out — staying on cached profile (or empty if none cached yet).');
+                setLoading(false);
+                return;
+            }
+
+            const { data, error } = raced;
 
             if (error) {
                 console.error("❌ [loadUserData Error] Supabase profiles fetch failed:", error);
-                // Network failed even though navigator.onLine was true — use cache
-                const cached = await profileCache.load();
-                if (cached) {
-                    setProfile(cached as any);
-                    console.log('📦 [loadUserData] Fallback to cache after network error.');
-                }
+                // Already rendered cache above if we had it; nothing more to do.
                 setLoading(false);
                 return;
             }

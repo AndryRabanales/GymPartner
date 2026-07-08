@@ -17,6 +17,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import { COMMON_EQUIPMENT_SEEDS } from '../services/GymEquipmentService';
 import { notificationService } from '../services/NotificationService';
 import { workoutService } from '../services/WorkoutService';
+import { withTimeout } from '../lib/networkGuard';
 
 const CoopInviteToast = ({
     newNotification,
@@ -397,6 +398,7 @@ export const AppLayout = () => {
     const [rescueGymId, setRescueGymId] = useState<string | null>(null);
     const [rescueStartedAt, setRescueStartedAt] = useState<string | null>(null);
     const [showRescueModal, setShowRescueModal] = useState<boolean>(false);
+    const [rescueOfflineMode, setRescueOfflineMode] = useState<boolean>(false);
 
     // ── Local workout notifications (rest alarm / ongoing session) ──────────
     // Tapping any of them deep-links straight back into the active workout.
@@ -552,12 +554,14 @@ export const AppLayout = () => {
                 // (finished_at != null), stamp end_time immediately so the session
                 // appears in Historial. The 5-hour fallback below catches anything
                 // that resolveOrphanedCoopSession can't resolve (e.g. RLS blocks).
-                const { data: softFinalized } = await supabase
-                    .from('workout_sessions')
-                    .select('id')
-                    .eq('user_id', user.id)
-                    .not('finished_at', 'is', null)
-                    .is('end_time', null);
+                // These are best-effort cleanup only — never let them hang the check
+                // (native NSURLSession can wait 60s+ for a timeout that never comes).
+                const softFinalized = await withTimeout(
+                    supabase.from('workout_sessions').select('id')
+                        .eq('user_id', user.id).not('finished_at', 'is', null).is('end_time', null)
+                        .then(r => r.data),
+                    3500, null
+                );
 
                 if (softFinalized && softFinalized.length > 0) {
                     await Promise.all(softFinalized.map((s: any) => workoutService.resolveOrphanedCoopSession(s.id)));
@@ -566,24 +570,45 @@ export const AppLayout = () => {
                 // Hard fallback: if a session is still stuck after 5 hours (matches
                 // the room max duration), force-close it regardless of other participants.
                 const fiveHoursAgo = new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString();
-                const { data: timedOut } = await supabase
-                    .from('workout_sessions')
-                    .select('id')
-                    .eq('user_id', user.id)
-                    .not('finished_at', 'is', null)
-                    .is('end_time', null)
-                    .lt('finished_at', fiveHoursAgo);
+                const timedOut = await withTimeout(
+                    supabase.from('workout_sessions').select('id')
+                        .eq('user_id', user.id).not('finished_at', 'is', null).is('end_time', null)
+                        .lt('finished_at', fiveHoursAgo)
+                        .then(r => r.data),
+                    3500, null
+                );
 
                 if (timedOut && timedOut.length > 0) {
                     await Promise.all(timedOut.map((s: any) => workoutService.markSessionFinished(s.id)));
                 }
 
-                const { data: session } = await workoutService.getActiveSession(user.id);
+                // ─── DB-NEVER-BLOCKS: race the real "is there an active session?"
+                // check against a short timeout. If the DB never answers (offline,
+                // dead wifi that still reports navigator.onLine === true, etc.),
+                // fall back to local storage instead of silently assuming "no
+                // session" — that assumption is what made the rescue prompt (and
+                // therefore the whole recovery path back into /workout) unreachable
+                // while offline.
+                const DB_TIMED_OUT = Symbol('db_timed_out');
+                const raced = await Promise.race([
+                    workoutService.getActiveSession(user.id).catch(() => ({ data: null, dbFailed: true })),
+                    new Promise<typeof DB_TIMED_OUT>(resolve => setTimeout(() => resolve(DB_TIMED_OUT), 4000)),
+                ]);
+
+                const dbUnreachable = raced === DB_TIMED_OUT || (raced as any)?.dbFailed === true;
+                const session = dbUnreachable ? null : (raced as any)?.data;
 
                 if (!session) {
-                    setShowRescueModal(false);
+                    if (dbUnreachable) {
+                        checkOfflineRescue();
+                    } else {
+                        setRescueOfflineMode(false);
+                        setShowRescueModal(false);
+                    }
                     return;
                 }
+
+                setRescueOfflineMode(false);
 
                 // ─── POSTPONE / SNOOZE ─────────────────────────────────────────
                 // The rescue prompt is mandatory — users can't permanently dismiss an
@@ -643,7 +668,55 @@ export const AppLayout = () => {
                 setRescueStartedAt(session.started_at);
                 setShowRescueModal(true);
             } catch (err) {
-                console.warn('⚠️ [Rescue Check] Failed to check active session:', err);
+                console.warn('⚠️ [Rescue Check] Failed to check active session, falling back to local storage:', err);
+                checkOfflineRescue();
+            }
+        };
+
+        // ─── OFFLINE FALLBACK ──────────────────────────────────────────────────
+        // The DB couldn't tell us whether there's an active session (offline, or
+        // navigator.onLine lying about a dead connection). The local draft that
+        // WorkoutSession debounce-saves on every change (STORAGE_KEY, cleared on
+        // finalize/cancel/restart) is the only remaining source of truth: if it
+        // still holds real exercise data, there is an unfinished workout the user
+        // must be able to get back to WITHOUT internet.
+        const checkOfflineRescue = () => {
+            const isTempExit = sessionStorage.getItem('ginx_temp_exit_active') === 'true';
+            if (isTempExit) {
+                setShowRescueModal(false);
+                return;
+            }
+            try {
+                const raw = localStorage.getItem('ginx_active_session');
+                if (!raw) {
+                    setShowRescueModal(false);
+                    return;
+                }
+                const parsed = JSON.parse(raw);
+                const data = parsed?.data;
+                if (!data || !Array.isArray(data.exercises) || data.exercises.length === 0) {
+                    setShowRescueModal(false);
+                    return;
+                }
+
+                const snoozeKey = 'ginx_rescue_snooze_offline-local';
+                const snoozeUntilRaw = localStorage.getItem(snoozeKey);
+                if (snoozeUntilRaw) {
+                    const snoozeUntil = parseInt(snoozeUntilRaw, 10);
+                    if (!isNaN(snoozeUntil) && Date.now() < snoozeUntil) {
+                        setShowRescueModal(false);
+                        return;
+                    }
+                    localStorage.removeItem(snoozeKey);
+                }
+
+                setRescueOfflineMode(true);
+                setRescueSessionId('offline-local');
+                setRescueGymId(data.gymId || null);
+                setRescueStartedAt(data.startTime || new Date(parsed.savedAt || Date.now()).toISOString());
+                setShowRescueModal(true);
+            } catch {
+                setShowRescueModal(false);
             }
         };
 
@@ -935,7 +1008,7 @@ const notificationSeen = useRef<Set<string>>(new Set());
     const isReelsPage = location.pathname === '/reels';
     const isArsenalPage = location.pathname === '/arsenal';
     const isLoginPage = location.pathname === '/login';
-    const isWorkoutPage = location.pathname === '/workout' || location.pathname.includes('/territory/');
+    const isWorkoutPage = location.pathname.startsWith('/workout') || location.pathname.includes('/territory/');
     
     const shouldHideHeader = isRadarPage || isRankingPage || isChatPage || isReelsPage || isArsenalPage || isWorkoutPage || isLoginPage;
 
@@ -1090,6 +1163,7 @@ const notificationSeen = useRef<Set<string>>(new Set());
                 sessionId={rescueSessionId || ''}
                 gymId={rescueGymId}
                 startedAt={rescueStartedAt || ''}
+                offlineMode={rescueOfflineMode}
                 onResolve={() => setShowRescueModal(false)}
             />
             {shouldShowBottomNav && <BottomNav onUploadClick={() => setIsUploadModalOpen(true)} />}

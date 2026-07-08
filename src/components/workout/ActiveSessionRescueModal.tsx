@@ -16,6 +16,11 @@ interface ActiveSessionRescueModalProps {
   gymId: string | null;
   startedAt: string;
   onResolve: () => void;
+  // True when this rescue was detected purely from local storage because the
+  // database was unreachable (offline). There is no real DB session id to
+  // query in this case — skip every DB call (room detection, gym name,
+  // deletion) and only offer resume/dismiss against local storage.
+  offlineMode?: boolean;
 }
 
 export const ActiveSessionRescueModal: React.FC<ActiveSessionRescueModalProps> = ({
@@ -23,7 +28,8 @@ export const ActiveSessionRescueModal: React.FC<ActiveSessionRescueModalProps> =
   sessionId,
   gymId,
   startedAt,
-  onResolve
+  onResolve,
+  offlineMode = false
 }) => {
   // NOTE: all hooks must run unconditionally — early return is at the bottom of the render
   const navigate = useNavigate();
@@ -41,6 +47,7 @@ export const ActiveSessionRescueModal: React.FC<ActiveSessionRescueModalProps> =
   const [isHost, setIsHost] = useState<boolean>(false);
 
   useEffect(() => {
+    if (offlineMode) return; // No DB access offline — keep the default gym name.
     if (!gymId || gymId === 'virtual' || gymId === 'personal') {
       setGymName('Entrenamiento Personal');
       return;
@@ -50,9 +57,15 @@ export const ActiveSessionRescueModal: React.FC<ActiveSessionRescueModalProps> =
       if (active && data?.name) setGymName(data.name);
     });
     return () => { active = false; };
-  }, [gymId]);
+  }, [gymId, offlineMode]);
 
   useEffect(() => {
+    if (offlineMode) {
+      // Can't reach the DB to detect room/coop state — treat as a resumable
+      // solo session restored purely from local storage.
+      setRoomStatus('solo');
+      return;
+    }
     if (!sessionId) return;
     let active = true;
 
@@ -108,7 +121,7 @@ export const ActiveSessionRescueModal: React.FC<ActiveSessionRescueModalProps> =
 
     detectRoom();
     return () => { active = false; };
-  }, [sessionId]);
+  }, [sessionId, offlineMode]);
 
   // Elapsed timer
   useEffect(() => {
@@ -209,6 +222,13 @@ export const ActiveSessionRescueModal: React.FC<ActiveSessionRescueModalProps> =
     clearSnooze();
     onResolve();
     sessionStorage.removeItem('ginx_temp_exit_active');
+    if (offlineMode) {
+      // No real DB session id to hand off — WorkoutSession's own init already
+      // falls back to the local STORAGE_KEY draft when no active DB session
+      // is found, so just route there without a (fake) sessionId.
+      navigate(`/workout/${gymId || 'personal'}`, { state: { forceNewSession: false } });
+      return;
+    }
     navigate(`/workout/${gymId || 'personal'}`, { state: { sessionId, forceNewSession: false } });
   };
 
@@ -231,7 +251,9 @@ export const ActiveSessionRescueModal: React.FC<ActiveSessionRescueModalProps> =
     if (!window.confirm('¿Eliminar este entrenamiento? Todo el progreso se perderá.')) return;
     setLoadingAction(true);
     try {
-      await workoutService.deleteSession(sessionId);
+      if (!offlineMode) {
+        await workoutService.deleteSession(sessionId);
+      }
       localStorage.removeItem(`workout_draft_${sessionId}`);
       localStorage.removeItem('ginx_active_session');
       sessionStorage.removeItem('ginx_temp_exit_active');
