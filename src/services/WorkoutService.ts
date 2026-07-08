@@ -443,6 +443,26 @@ class WorkoutService {
     // IMPORTANT: NEVER deletes workout_logs. Sessions with logs are finalized (finished_at set),
     // not deleted, so historical data is always preserved.
     async deleteSession(sessionId: string): Promise<{ success: boolean; error?: any }> {
+        // If this session belongs to a coop room, tell the OTHER participants
+        // BEFORE deleting. Without this, a guest who cancels from OUTSIDE the
+        // workout screen (e.g. the rescue modal's "Eliminar entrenamiento")
+        // silently vanishes: the host's UI keeps their column editable and the
+        // host can keep filling sets for someone who already cancelled.
+        // (WorkoutSession's in-screen cancel already broadcasts this event via
+        // its live channel — this covers every OTHER path, using the same
+        // short-lived-channel pattern as broadcastSessionFinished.)
+        try {
+            const { data: sess } = await supabase
+                .from('workout_sessions')
+                .select('user_id, is_multiplayer, partner_session_id')
+                .eq('id', sessionId)
+                .maybeSingle();
+            if (sess && (sess.is_multiplayer || sess.partner_session_id)) {
+                const roomId = sess.partner_session_id || sessionId;
+                await this.broadcastParticipantCancelled(roomId, sess.user_id);
+            }
+        } catch { /* best-effort — never block the actual cancellation */ }
+
         // Safety check: only delete if the session has no logged sets.
         // If sets exist, finalize instead of delete to avoid permanent data loss.
         const { count } = await supabase
@@ -466,6 +486,44 @@ class WorkoutService {
             return { success: false, error };
         }
         return { success: true };
+    }
+
+    /**
+     * Opens a short-lived realtime channel for the room and broadcasts
+     * `participant_cancelled` so every connected participant strips the
+     * canceller's column/data immediately (WorkoutSession already has the
+     * complete handler for this event). Best-effort: failures never block
+     * the cancellation itself.
+     */
+    private async broadcastParticipantCancelled(roomId: string, cancellerUserId: string): Promise<void> {
+        let channel: ReturnType<typeof supabase.channel> | null = null;
+        try {
+            channel = supabase.channel(`coop-workout-${roomId}`);
+            await new Promise<void>((resolve) => {
+                let settled = false;
+                const finish = () => { if (!settled) { settled = true; resolve(); } };
+                channel!.subscribe((status) => {
+                    if (status === 'SUBSCRIBED') {
+                        channel!.send({
+                            type: 'broadcast',
+                            event: 'participant_cancelled',
+                            payload: { sender: cancellerUserId }
+                        }).finally(finish);
+                    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+                        finish();
+                    }
+                });
+                setTimeout(finish, 4000); // never hang the cancel flow
+            });
+            // Brief grace so connected clients receive it before the row disappears.
+            await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (e) {
+            console.error('deleteSession: failed to broadcast participant_cancelled (non-fatal):', e);
+        } finally {
+            if (channel) {
+                try { await supabase.removeChannel(channel); } catch { /* ignore */ }
+            }
+        }
     }
 
     // Failsafe Cleanup for Orphaned/Ghost Sessions
