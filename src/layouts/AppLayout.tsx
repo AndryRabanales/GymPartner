@@ -100,10 +100,26 @@ const CoopInviteToast = ({
                         const senderId = newNotification.data?.sender_id;
                         if (!senderId) return;
 
+                        // TD-02: expiration + liveness guard. The toast can sit on screen
+                        // while the inviter finishes/cancels their workout — never navigate
+                        // the guest into a dead room.
+                        const inviteAge = Date.now() - new Date(newNotification.created_at || Date.now()).getTime();
+                        if (inviteAge > 2 * 60 * 1000) {
+                            toast.error("⚠️ Esta invitación ya caducó (máximo 2 minutos).");
+                            await notificationService.updateInvitationStatus(newNotification, 'rejected');
+                            return;
+                        }
+                        const { data: inviterSession } = await workoutService.getActiveSession(senderId);
+                        if (!inviterSession) {
+                            toast.error("⚠️ Quien te invitó ya no está entrenando. La invitación quedó sin efecto.");
+                            await notificationService.updateInvitationStatus(newNotification, 'rejected');
+                            return;
+                        }
+
                         await notificationService.updateInvitationStatus(newNotification, 'accepted');
-                        
+
                         const mode = newNotification.data?.mode || 'conjunto';
-                        
+
                         // Notify the inviter so their app automatically pulls them into the session
                         const accepterName = user.user_metadata?.full_name || user.user_metadata?.username || 'Tu compañero';
                         await supabase.from('notifications').insert({
@@ -808,10 +824,36 @@ export const AppLayout = () => {
         };
         document.addEventListener('visibilitychange', handleVisibility);
 
+        // TD-04: on native (Capacitor), visibilitychange/beforeunload are NOT
+        // reliable — iOS may not fire them when the app is backgrounded, and
+        // beforeunload never fires at all. Capacitor's appStateChange is the
+        // authoritative resume/background signal on mobile, so presence
+        // recording is guaranteed there too.
+        let removeAppStateListener: (() => void) | null = null;
+        (async () => {
+            try {
+                const { Capacitor } = await import('@capacitor/core');
+                if (!Capacitor.isNativePlatform()) return;
+                const { App: CapApp } = await import('@capacitor/app');
+                const handle = await CapApp.addListener('appStateChange', ({ isActive }) => {
+                    const isWorkoutPage = location.pathname.includes('/workout');
+                    if (isActive) {
+                        updateActiveStatus(new Date().toISOString());
+                    } else if (!isWorkoutPage) {
+                        handleUnload();
+                    }
+                });
+                removeAppStateListener = () => { handle.remove(); };
+            } catch (e) {
+                console.warn('appStateChange listener unavailable:', e);
+            }
+        })();
+
         return () => {
             clearInterval(interval);
             window.removeEventListener('beforeunload', handleUnload);
             document.removeEventListener('visibilitychange', handleVisibility);
+            removeAppStateListener?.();
             // On unmount (e.g. navigation out of layout/logout), set offline too
             handleUnload();
         };

@@ -692,15 +692,25 @@ class WorkoutService {
         }
     }
 
-    /** Returns whether the room (host's session) is still open. */
+    /** Returns whether the room (host's session) is still open.
+     *  A room past the 5-hour lifetime is reported CLOSED even if the DB row
+     *  hasn't been stamped yet (host abandoned, cron cleanup hasn't ticked) —
+     *  guests must never be told a zombie room is joinable. */
     async isRoomOpen(roomId: string): Promise<boolean> {
         const { data } = await supabase
             .from('workout_sessions')
-            .select('id')
+            .select('id, started_at')
             .eq('id', roomId)
             .is('end_time', null)
             .maybeSingle();
-        return !!data;
+        if (!data) return false;
+        const ROOM_MAX_MS = 5 * 60 * 60 * 1000;
+        if (Date.now() - new Date(data.started_at).getTime() > ROOM_MAX_MS) {
+            // Opportunistically trigger the server-side cleanup (fire & forget)
+            supabase.rpc('close_zombie_sessions').then(() => {}, () => {});
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -1837,6 +1847,83 @@ class WorkoutService {
         }
     }
 
+    // TD-03: automatic PR detection. Stamps is_pr=true on the single best set
+    // per exercise (variant) in this session that beats the user's all-time
+    // estimated 1RM (Epley: weight × (1 + reps/30)), and emits ONE progress
+    // notification (spec §5) if any new PR was achieved. Per spec §1.6 each
+    // exercise variant competes only against its own history (exercise_id is
+    // already variant-scoped). Non-critical: errors are swallowed.
+    async detectAndMarkPRs(sessionId: string, userId: string): Promise<number> {
+        try {
+            const { data: currentSets } = await supabase
+                .from('workout_logs')
+                .select('id, exercise_id, weight_kg, reps, exercise:exercises(name)')
+                .eq('session_id', sessionId)
+                .eq('owner_id', userId)
+                .gt('weight_kg', 0);
+
+            if (!currentSets || currentSets.length === 0) return 0;
+
+            const exerciseIds = [...new Set(currentSets.map((s: any) => s.exercise_id as string))];
+
+            const { data: hist } = await supabase
+                .from('workout_logs')
+                .select('exercise_id, weight_kg, reps')
+                .in('exercise_id', exerciseIds)
+                .eq('owner_id', userId)
+                .neq('session_id', sessionId)
+                .gt('weight_kg', 0);
+
+            const epley = (w: number, r: number) => (w || 0) * (1 + ((r || 1) / 30));
+
+            const histMax = new Map<string, number>();
+            for (const s of (hist || [])) {
+                const e1rm = epley(s.weight_kg, s.reps);
+                if (e1rm > (histMax.get(s.exercise_id) ?? 0)) histMax.set(s.exercise_id, e1rm);
+            }
+
+            const bestSet = new Map<string, { id: string; e1rm: number; name: string }>();
+            for (const s of currentSets as any[]) {
+                const e1rm = epley(s.weight_kg, s.reps);
+                const prev = bestSet.get(s.exercise_id);
+                if (!prev || e1rm > prev.e1rm) {
+                    bestSet.set(s.exercise_id, { id: s.id, e1rm, name: s.exercise?.name || 'un ejercicio' });
+                }
+            }
+
+            const prIds: string[] = [];
+            const prNames: string[] = [];
+            for (const [exId, { id, e1rm, name }] of bestSet) {
+                // Only a PR when there IS previous history to beat — a first-ever
+                // log of an exercise is a baseline, not a record.
+                const prevBest = histMax.get(exId);
+                if (prevBest !== undefined && e1rm > prevBest) {
+                    prIds.push(id);
+                    prNames.push(name);
+                }
+            }
+
+            if (prIds.length > 0) {
+                await supabase.from('workout_logs').update({ is_pr: true }).in('id', prIds);
+                // spec §5 — progress notification: "logra un nuevo récord personal (PR)"
+                try {
+                    await supabase.from('notifications').insert({
+                        user_id: userId,
+                        type: 'system',
+                        title: '🏆 ¡Nuevo récord personal!',
+                        message: prNames.length === 1
+                            ? `Superaste tu mejor marca en ${prNames[0]}.`
+                            : `Superaste tu mejor marca en ${prNames.length} ejercicios: ${prNames.slice(0, 3).join(', ')}${prNames.length > 3 ? '…' : ''}.`,
+                        data: { type: 'new_pr', session_id: sessionId, exercise_names: prNames }
+                    });
+                } catch { /* notification is best-effort */ }
+            }
+            return prIds.length;
+        } catch {
+            return 0;
+        }
+    }
+
     private async _flushPendingSetsInternal(): Promise<{ recovered: number; stillPending: number }> {
         // Flush offline routines first (they don't depend on session IDs)
         await this._flushOfflineRoutines();
@@ -1966,6 +2053,14 @@ class WorkoutService {
                     stillPending += remaining.length;
                 } else {
                     localStorage.removeItem(key);
+                    // TD-03: sets that were logged offline skipped PR detection at
+                    // finalize time (nothing was in the DB yet). Now that the whole
+                    // session is synced, run it — the ownerId comes from the queued
+                    // payloads themselves.
+                    const ownerId = queued.find(q => q.owner_id)?.owner_id;
+                    if (queued.length > 0 && ownerId) {
+                        this.detectAndMarkPRs(resolvedId, ownerId).catch(() => {});
+                    }
                 }
 
                 // ── Finalize if queued ─────────────────────────────────────────────

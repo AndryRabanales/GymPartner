@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, Send, MoreVertical, Loader, ShieldAlert, Trash2, UserX, Ban } from 'lucide-react';
+import { ArrowLeft, Send, MoreVertical, Loader, ShieldAlert, Trash2, UserX, Ban, Flag } from 'lucide-react';
 import { chatService } from '../services/ChatService';
 import { pushService } from '../services/PushService';
 
@@ -26,8 +26,18 @@ export const ChatPage = () => {
 
     // Dynamic Menu & Modal States
     const [showMenu, setShowMenu] = useState(false);
-    const [confirmAction, setConfirmAction] = useState<'clear' | 'delete' | 'block' | null>(null);
+    const [confirmAction, setConfirmAction] = useState<'clear' | 'delete' | 'block' | 'report' | null>(null);
     const [actionLoading, setActionLoading] = useState(false);
+    const [reportReason, setReportReason] = useState<string | null>(null);
+    const [reportSent, setReportSent] = useState(false);
+
+    const REPORT_REASONS = [
+        'Contenido inapropiado',
+        'Acoso o insultos',
+        'Spam o publicidad',
+        'Perfil falso',
+        'Otro',
+    ];
 
     // Auto-scroll ref
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -79,6 +89,29 @@ export const ChatPage = () => {
         const success = await chatService.blockUser(otherUser.id);
         if (success) {
             navigate('/inbox');
+        }
+        setActionLoading(false);
+    };
+
+    // Store-compliance (Apple 1.2 / Play UGC): report a user for review by the
+    // GINX team. Independent from Bloquear — reporting does NOT block.
+    const handleReportUser = async () => {
+        if (!otherUser?.id || !user?.id || !reportReason) return;
+        setActionLoading(true);
+        try {
+            const { error } = await supabase.from('user_reports').insert({
+                reporter_id: user.id,
+                reported_id: otherUser.id,
+                reason: reportReason,
+                context: 'chat',
+            });
+            if (!error) {
+                setReportSent(true);
+            } else {
+                console.error('Error submitting report:', error);
+            }
+        } catch (err) {
+            console.error('Error submitting report:', err);
         }
         setActionLoading(false);
     };
@@ -286,6 +319,18 @@ export const ChatPage = () => {
                                 </button>
                                 <button
                                     onClick={() => {
+                                        setReportReason(null);
+                                        setReportSent(false);
+                                        setConfirmAction('report');
+                                        setShowMenu(false);
+                                    }}
+                                    className="w-full px-4 py-3 text-left text-xs font-bold text-orange-400 hover:bg-orange-500/10 flex items-center gap-2.5 transition-colors border-t border-white/5"
+                                >
+                                    <Flag size={14} />
+                                    Reportar Persona
+                                </button>
+                                <button
+                                    onClick={() => {
                                         setConfirmAction('block');
                                         setShowMenu(false);
                                     }}
@@ -368,20 +413,52 @@ export const ChatPage = () => {
                                 {confirmAction === 'clear' && <Trash2 className="text-yellow-500" size={20} />}
                                 {confirmAction === 'delete' && <UserX className="text-gym-primary" size={20} />}
                                 {confirmAction === 'block' && <Ban className="text-red-500" size={20} />}
+                                {confirmAction === 'report' && <Flag className="text-orange-400" size={20} />}
                             </div>
 
                             <h3 className="text-base font-black uppercase italic tracking-widest text-white">
                                 {confirmAction === 'clear' && '¿Borrar Mensajes?'}
                                 {confirmAction === 'delete' && '¿Cancelar Chat / Match?'}
                                 {confirmAction === 'block' && '¿Bloquear Guerrero?'}
+                                {confirmAction === 'report' && (reportSent ? 'Reporte Enviado' : '¿Reportar Persona?')}
                             </h3>
 
                             <p className="text-xs text-neutral-400 font-medium leading-relaxed">
                                 {confirmAction === 'clear' && 'Se eliminará todo el historial de conversación en este chat localmente, pero mantendrás tu match activo.'}
                                 {confirmAction === 'delete' && 'Esta acción cancelará tu chat/match, eliminará permanentemente esta sala de chat y todo su historial.'}
                                 {confirmAction === 'block' && `Bloquearás permanentemente a @${otherUser?.username || 'este usuario'}. Se cancelará el match y no podrán interactuar de nuevo.`}
+                                {confirmAction === 'report' && !reportSent && `El equipo de GINX revisará el comportamiento de @${otherUser?.username || 'este usuario'}. Tu reporte es confidencial — la otra persona no será notificada. Si quieres cortar el contacto de inmediato, usa también "Bloquear".`}
+                                {confirmAction === 'report' && reportSent && 'Gracias por avisarnos. El equipo de GINX revisará este reporte. Nadie sabrá que fuiste tú.'}
                             </p>
 
+                            {confirmAction === 'report' && !reportSent && (
+                                <div className="w-full flex flex-col gap-1.5">
+                                    {REPORT_REASONS.map(reason => (
+                                        <button
+                                            key={reason}
+                                            onClick={() => setReportReason(reason)}
+                                            className={`w-full py-2.5 px-4 rounded-xl text-left text-[11px] font-bold transition-all border ${
+                                                reportReason === reason
+                                                    ? 'bg-orange-500/15 border-orange-500/50 text-orange-300'
+                                                    : 'bg-neutral-950 border-white/5 text-neutral-400 hover:text-white hover:bg-white/5'
+                                            }`}
+                                        >
+                                            {reason}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+
+                            {confirmAction === 'report' && reportSent ? (
+                                <div className="mt-4 w-full">
+                                    <button
+                                        onClick={() => { setConfirmAction(null); setReportSent(false); setReportReason(null); }}
+                                        className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-gym-primary to-yellow-500 text-neutral-950 font-black text-[10px] uppercase tracking-wider shadow-lg transition-all active:scale-95"
+                                    >
+                                        Entendido
+                                    </button>
+                                </div>
+                            ) : (
                             <div className="mt-4 flex items-center gap-3 w-full">
                                 <button
                                     disabled={actionLoading}
@@ -391,11 +468,12 @@ export const ChatPage = () => {
                                     Cancelar
                                 </button>
                                 <button
-                                    disabled={actionLoading}
+                                    disabled={actionLoading || (confirmAction === 'report' && !reportReason)}
                                     onClick={() => {
                                         if (confirmAction === 'clear') handleClearChat();
                                         if (confirmAction === 'delete') handleDeleteChat();
                                         if (confirmAction === 'block') handleBlockUser();
+                                        if (confirmAction === 'report') handleReportUser();
                                     }}
                                     className={`flex-1 py-3 px-4 rounded-xl font-black text-[10px] uppercase tracking-wider shadow-lg transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-1.5 ${
                                         confirmAction === 'block' 
@@ -412,6 +490,7 @@ export const ChatPage = () => {
                                     )}
                                 </button>
                             </div>
+                            )}
                         </div>
                     </div>
                 </div>

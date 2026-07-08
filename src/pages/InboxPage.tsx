@@ -6,6 +6,7 @@ import { chatService } from '../services/ChatService';
 import type { ChatPreview } from '../services/ChatService';
 import { FadeInImage } from '../components/ui/FadeInImage';
 import { notificationService } from '../services/NotificationService';
+import { workoutService } from '../services/WorkoutService';
 import toast from 'react-hot-toast';
 export const InboxPage = () => {
     const [chats, setChats] = useState<ChatPreview[]>([]);
@@ -159,6 +160,18 @@ export const InboxPage = () => {
                 const isExpired = (new Date().getTime() - new Date(notification.created_at).getTime()) > 2 * 60 * 1000;
                 if (isExpired) {
                     alert("⚠️ Esta invitación de entrenamiento ha caducado (duración máxima: 2 minutos).");
+                    await notificationService.updateInvitationStatus(notification, 'rejected');
+                    loadData();
+                    setProcessingId(null);
+                    return;
+                }
+
+                // TD-02: the inviter may have finished/cancelled their workout after
+                // sending this invite. Never navigate the guest into a dead room —
+                // verify the inviter still has an active session RIGHT NOW.
+                const { data: inviterSession } = await workoutService.getActiveSession(senderId);
+                if (!inviterSession) {
+                    toast.error("⚠️ Quien te invitó ya no está entrenando. La invitación quedó sin efecto.");
                     await notificationService.updateInvitationStatus(notification, 'rejected');
                     loadData();
                     setProcessingId(null);

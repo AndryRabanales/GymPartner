@@ -257,52 +257,11 @@ const sanitizeRestTimers = (exercises: any[]): any[] => {
     }));
 };
 
-// Detect and stamp is_pr=true on the single best set per exercise that beats
-// the user's all-time estimated 1RM (Epley: weight × (1 + reps/30)).
-// Non-critical: errors are silently swallowed.
+// TD-03: PR detection now lives in workoutService.detectAndMarkPRs (shared
+// with the offline-queue flush, and emits the spec §5 progress notification).
+// This thin wrapper keeps existing call sites unchanged.
 const detectAndMarkPRs = async (sessionId: string, userId: string): Promise<void> => {
-    try {
-        const { data: currentSets } = await supabase
-            .from('workout_logs')
-            .select('id, exercise_id, weight_kg, reps')
-            .eq('session_id', sessionId)
-            .eq('owner_id', userId)
-            .gt('weight_kg', 0);
-
-        if (!currentSets || currentSets.length === 0) return;
-
-        const exerciseIds = [...new Set(currentSets.map((s: any) => s.exercise_id as string))];
-
-        const { data: hist } = await supabase
-            .from('workout_logs')
-            .select('exercise_id, weight_kg, reps')
-            .in('exercise_id', exerciseIds)
-            .eq('owner_id', userId)
-            .neq('session_id', sessionId)
-            .gt('weight_kg', 0);
-
-        const histMax = new Map<string, number>();
-        for (const s of (hist || [])) {
-            const e1rm = (s.weight_kg || 0) * (1 + ((s.reps || 1) / 30));
-            if (e1rm > (histMax.get(s.exercise_id) ?? 0)) histMax.set(s.exercise_id, e1rm);
-        }
-
-        const bestSet = new Map<string, { id: string; e1rm: number }>();
-        for (const s of currentSets as any[]) {
-            const e1rm = (s.weight_kg || 0) * (1 + ((s.reps || 1) / 30));
-            const prev = bestSet.get(s.exercise_id);
-            if (!prev || e1rm > prev.e1rm) bestSet.set(s.exercise_id, { id: s.id, e1rm });
-        }
-
-        const prIds: string[] = [];
-        for (const [exId, { id, e1rm }] of bestSet) {
-            if (e1rm > (histMax.get(exId) ?? 0)) prIds.push(id);
-        }
-
-        if (prIds.length > 0) {
-            await supabase.from('workout_logs').update({ is_pr: true }).in('id', prIds);
-        }
-    } catch { /* non-critical */ }
+    await workoutService.detectAndMarkPRs(sessionId, userId);
 };
 
 // Helper Component for Rest Timer
