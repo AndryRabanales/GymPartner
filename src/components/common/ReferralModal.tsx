@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Share2, Copy, Check, Users, Trophy, X, PlusCircle, Coins } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
-import { userService } from '../../services/UserService';
 import { supabase } from '../../lib/supabase';
 
 interface ReferralModalProps {
@@ -64,21 +63,21 @@ export const ReferralModal: React.FC<ReferralModalProps> = ({ isOpen, onClose, u
 
         setIsBuying(true);
         try {
-            const success = await userService.spendGPoints(user.id, 500, 'extra_invites');
+            // Atomic + server-authoritative: checks the balance, deducts 500, and
+            // grants 10 invites in one transaction (auth.uid()-scoped). Prevents
+            // the previous "paid but got nothing" bug where the two RPC calls
+            // could partially fail.
+            const { data: success, error } = await supabase.rpc('buy_extra_invites');
+            if (error) throw error;
             if (success) {
-                // Update profile record
-                await supabase.rpc('increment_extra_invites', { 
-                    u_id: user.id, 
-                    amount: 10 
-                });
-                
                 alert("¡Has comprado 10 invitaciones extra!");
                 fetchUserData();
             } else {
-                alert("Error al procesar la compra.");
+                alert("No tienes suficientes G-Points (se requieren 500).");
             }
         } catch (err) {
             console.error(err);
+            alert("Error al procesar la compra.");
         } finally {
             setIsBuying(false);
         }

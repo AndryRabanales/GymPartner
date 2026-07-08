@@ -292,41 +292,21 @@ class UserService {
     }
 
     /**
-     * Add G-Points to a user
+     * DEPRECATED / DISABLED. Direct point mutation from the client is a forgery
+     * vector and the underlying increment_g_points RPC is now REVOKED. Points
+     * are awarded exclusively server-side (DB triggers + the award_* SECURITY
+     * DEFINER functions). This shim exists only so any stray caller fails safe
+     * instead of hitting a blocked RPC. Do not reintroduce client-side awards.
      */
-    async addGPoints(userId: string, amount: number, reason: string): Promise<{ success: boolean; error?: string }> {
-        try {
-            console.log(`🪙 Adding ${amount} G-Points to ${userId} for ${reason}`);
-            const { error } = await supabase.rpc('increment_g_points', {
-                u_id: userId,
-                amount: amount
-            });
-
-            if (error) throw error;
-            return { success: true };
-        } catch (error: any) {
-            console.error('Error adding G-Points:', error);
-            return { success: false, error: error.message };
-        }
+    async addGPoints(_userId: string, _amount: number, _reason: string): Promise<{ success: boolean; error?: string }> {
+        console.warn('addGPoints is disabled — points are awarded server-side only.');
+        return { success: false, error: 'disabled: server-authoritative points' };
     }
 
-    /**
-     * Add GX Points to a user (Gamification score)
-     */
-    async addGxPoints(userId: string, amount: number, reason: string): Promise<{ success: boolean; error?: string }> {
-        try {
-            console.log(`⚡ Adding ${amount} GX Points to ${userId} for ${reason}`);
-            const { error } = await supabase.rpc('increment_gx_points', {
-                u_id: userId,
-                amount
-            });
-
-            if (error) throw error;
-            return { success: true };
-        } catch (error: any) {
-            console.error('Error adding GX Points:', error);
-            return { success: false, error: error.message };
-        }
+    /** DEPRECATED / DISABLED — see addGPoints. GX is awarded server-side only. */
+    async addGxPoints(_userId: string, _amount: number, _reason: string): Promise<{ success: boolean; error?: string }> {
+        console.warn('addGxPoints is disabled — GX is awarded server-side only.');
+        return { success: false, error: 'disabled: server-authoritative GX' };
     }
 
     /**
