@@ -6053,42 +6053,40 @@ export const WorkoutSession = () => {
                         {/* BATTLE HEADER & TIMER */}
                         <div className="flex items-center justify-between mb-2 px-4 shrink-0 relative">
                             {/* Replaced Title with Menu Options */}
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2 min-w-0">
                                 <button
                                     onClick={() => setShowExitMenu(!showExitMenu)}
-                                    className="bg-neutral-900 p-2 rounded-full border border-neutral-800 text-neutral-400 hover:text-white transition-colors"
+                                    className="bg-neutral-900 p-2 rounded-full border border-neutral-800 text-neutral-400 hover:text-white transition-colors shrink-0"
                                 >
-                                    {showExitMenu ? <X size={20} /> : <MoreVertical size={20} />}
+                                    {showExitMenu ? <X size={18} /> : <MoreVertical size={18} />}
                                 </button>
-                                <span className="text-[10px] text-neutral-500 font-bold uppercase leading-tight max-w-[80px]">
-                                    Cancelar / Reiniciar
+                                <span className="text-[8px] text-neutral-500 font-bold uppercase leading-tight whitespace-nowrap shrink-0">
+                                    Cancelar/<br />Reiniciar
                                 </span>
 
                                 {!showExitMenu && (
-                                    <div className="flex items-center gap-2">
-                                        <h2 className="text-lg font-black italic uppercase tracking-tighter text-white">
-                                            {currentExerciseIndex + 1} / {displayedExercises.length}
-                                        </h2>
-                                    </div>
+                                    <h2 className="text-sm font-black italic uppercase tracking-tighter text-white whitespace-nowrap shrink-0 ml-1">
+                                        {currentExerciseIndex + 1}/{displayedExercises.length}
+                                    </h2>
                                 )}
                             </div>
 
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5 shrink-0">
                                 {/* Global rest duration — configure it up front; every set
                                     completed from here on auto-starts the countdown at this length */}
                                 <button
                                     onClick={() => setShowRestConfig(v => !v)}
-                                    className={`flex items-center gap-1.5 border px-3 py-2 rounded-full transition-all active:scale-95 ${showRestConfig ? 'bg-gym-primary text-black border-gym-primary' : 'bg-neutral-900 border-neutral-800 text-neutral-300 hover:text-white'}`}
+                                    className={`flex items-center gap-1 border px-2 py-1.5 rounded-full transition-all active:scale-95 ${showRestConfig ? 'bg-gym-primary text-black border-gym-primary' : 'bg-neutral-900 border-neutral-800 text-neutral-300 hover:text-white'}`}
                                     title="Duración del descanso"
                                 >
-                                    <Timer size={14} />
-                                    <span className="font-mono font-bold text-xs">{restTargetSec < 60 ? `${restTargetSec}s` : `${Math.floor(restTargetSec / 60)}:${String(restTargetSec % 60).padStart(2, '0')}`}</span>
+                                    <Timer size={12} />
+                                    <span className="font-mono font-bold text-[10px]">{restTargetSec < 60 ? `${restTargetSec}s` : `${Math.floor(restTargetSec / 60)}:${String(restTargetSec % 60).padStart(2, '0')}`}</span>
                                 </button>
 
                                 {/* Timer */}
-                                <div className="bg-neutral-900 border border-neutral-800 px-4 py-2 rounded-full flex items-center gap-3 shadow-lg">
-                                    <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                                    <span className="font-mono font-bold text-xl text-white tracking-widest">{elapsedTime}</span>
+                                <div className="bg-neutral-900 border border-neutral-800 px-2.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shrink-0" />
+                                    <span className="font-mono font-bold text-xs text-white tracking-widest">{elapsedTime}</span>
                                 </div>
                             </div>
 
@@ -6185,7 +6183,7 @@ export const WorkoutSession = () => {
                                             </button>
                                             {/* Exercise name — full name including variant, no change-variant button.
                                                 Variants are selected in the catalog. During training the name is fixed. */}
-                                            <h3 className={`font-black italic uppercase text-white leading-tight line-clamp-2 ${exercise.equipmentName.length > 22 ? 'text-base' : 'text-xl'}`}>
+                                            <h3 className={`font-black italic uppercase text-white leading-tight line-clamp-2 ${exercise.equipmentName.length > 22 ? 'text-sm' : 'text-base'}`}>
                                                 {exercise.equipmentName}
                                             </h3>
                                             {canModifyStructure && (() => {
@@ -6208,7 +6206,7 @@ export const WorkoutSession = () => {
                                         {(() => {
                                             const imgUrl = getExerciseImageUrl(exercise.equipmentId, exercise.equipmentName);
                                             return imgUrl ? (
-                                                <div className="shrink-0 w-24 h-24 rounded-full border-2 border-gym-primary/40 bg-neutral-800 overflow-hidden shadow-[0_0_16px_rgba(250,204,21,0.2)]">
+                                                <div className="shrink-0 w-16 h-16 rounded-full border-2 border-gym-primary/40 bg-neutral-800 overflow-hidden shadow-[0_0_16px_rgba(250,204,21,0.2)]">
                                                     <img
                                                         src={imgUrl}
                                                         alt={exercise.equipmentName}
