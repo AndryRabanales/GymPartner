@@ -14,6 +14,8 @@ export const ReferralModal: React.FC<ReferralModalProps> = ({ isOpen, onClose, u
     const [isBuying, setIsBuying] = useState(false);
     const [gPoints, setGPoints] = useState<number>(0);
     const [extraInvites, setExtraInvites] = useState<number>(0);
+    const [remaining, setRemaining] = useState<number>(90);
+    const [cooldownUntil, setCooldownUntil] = useState<string | null>(null);
 
     useEffect(() => {
         if (isOpen && user) {
@@ -27,12 +29,28 @@ export const ReferralModal: React.FC<ReferralModalProps> = ({ isOpen, onClose, u
             .select('g_points, extra_invites_today')
             .eq('id', user.id)
             .single();
-        
+
         if (data) {
             setGPoints(data.g_points || 0);
             setExtraInvites(data.extra_invites_today || 0);
         }
+
+        // Invitation quota + cooldown (Option 2: 24h timer starts when you hit 90).
+        const { data: status } = await supabase.rpc('my_invite_status');
+        if (status) {
+            setRemaining(status.remaining ?? 90);
+            setCooldownUntil(status.cooldown_until ?? null);
+        }
     };
+
+    const cooldownText = (() => {
+        if (!cooldownUntil) return null;
+        const msLeft = new Date(cooldownUntil).getTime() - Date.now();
+        if (msLeft <= 0) return null;
+        const h = Math.floor(msLeft / 3600000);
+        const m = Math.floor((msLeft % 3600000) / 60000);
+        return h > 0 ? `${h}h ${m}m` : `${m}m`;
+    })();
 
     if (!isOpen) return null;
     if (!user) return null; // Safety Guard
@@ -161,7 +179,11 @@ export const ReferralModal: React.FC<ReferralModalProps> = ({ isOpen, onClose, u
                         <div className="flex items-center justify-between">
                             <div className="text-left">
                                 <h3 className="text-white font-bold text-sm uppercase tracking-wide">Invitaciones Extra</h3>
-                                <p className="text-neutral-500 text-[10px] font-bold uppercase tracking-widest">Límite diario: 90 + {extraInvites}</p>
+                                {cooldownText ? (
+                                    <p className="text-orange-400 text-[10px] font-bold uppercase tracking-widest">Agotadas — se recargan en {cooldownText}</p>
+                                ) : (
+                                    <p className="text-neutral-500 text-[10px] font-bold uppercase tracking-widest">Te quedan {remaining} de 90{extraInvites > 0 ? ` (+${extraInvites})` : ''}</p>
+                                )}
                             </div>
                             <div className="text-yellow-500 font-black text-xs bg-yellow-500/10 px-2 py-1 rounded-full border border-yellow-500/20">
                                 {gPoints} G-POINTS

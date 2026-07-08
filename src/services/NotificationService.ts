@@ -205,18 +205,24 @@ export const notificationService = {
             return false;
         }
 
-        // 🛡️ Anti-saturation: daily limit of 90 invitations sent per user (+ any
-        // purchased extras). The DB enforces this hard on insert
-        // (enforce_daily_invite_limit trigger); here we check up front so the
-        // sender gets a clear message instead of a silent failure.
+        // 🛡️ Anti-saturation: 90 invitations, then a 24h cooldown that starts
+        // when you hit the limit (+ any purchased extras raise it). The DB
+        // enforces this hard on insert (enforce_daily_invite_limit trigger);
+        // here we check up front so the sender gets a clear countdown message.
         try {
-            const { data: sentToday } = await supabase.rpc('my_invites_sent_today');
-            if ((sentToday ?? 0) >= 90) {
-                toast.error("Alcanzaste el límite de 90 invitaciones por hoy. Vuelve mañana o compra invitaciones extra.");
+            const { data: status } = await supabase.rpc('my_invite_status');
+            const remaining = status?.remaining ?? 90;
+            const cooldownUntil = status?.cooldown_until as string | null;
+            if (remaining <= 0 && cooldownUntil) {
+                const msLeft = new Date(cooldownUntil).getTime() - Date.now();
+                const h = Math.max(0, Math.floor(msLeft / 3600000));
+                const m = Math.max(0, Math.floor((msLeft % 3600000) / 60000));
+                const when = h > 0 ? `${h}h ${m}m` : `${m}m`;
+                toast.error(`Agotaste tus 90 invitaciones. Se recargan en ${when} (o compra invitaciones extra).`);
                 return false;
             }
         } catch (capErr) {
-            console.error('Error checking daily invite limit:', capErr);
+            console.error('Error checking invite limit:', capErr);
         }
 
         // 🛡️ 0. Check if either user has blocked the other
