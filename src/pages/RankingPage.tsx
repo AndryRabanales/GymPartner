@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Trophy, Shield, MapPin, Swords, ChevronLeft, ChevronRight, Zap, UserPlus } from 'lucide-react';
+import { Trophy, Shield, MapPin, Swords, ChevronLeft, ChevronRight, Zap, UserPlus, Info, X } from 'lucide-react';
 import { PublicTeaser } from '../components/common/PublicTeaser';
 import { userService } from '../services/UserService';
 import type { UserPrimaryGym } from '../services/UserService';
@@ -37,6 +37,7 @@ export const RankingPage = () => {
     const { user } = useAuth();
     const [leaderboard, setLeaderboard] = useState<RankedUser[]>([]);
     const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
+    const [showGxInfo, setShowGxInfo] = useState(false);
 
 
     // Gym Switcher State
@@ -161,6 +162,13 @@ export const RankingPage = () => {
                     <h1 className="flex items-center gap-2">
                         <Trophy className="text-yellow-500" size={22} />
                         <span className="text-xl font-black text-white italic uppercase tracking-tighter">Ranking</span>
+                        <button
+                            onClick={() => setShowGxInfo(true)}
+                            title="¿Qué son los GX?"
+                            className="p-1 rounded-full text-neutral-500 hover:text-gym-primary hover:bg-white/5 transition-colors active:scale-90"
+                        >
+                            <Info size={16} />
+                        </button>
                     </h1>
 
                     {userGyms.length > 0 && (
@@ -217,6 +225,63 @@ export const RankingPage = () => {
                     </button>
                 ))}
             </div>
+
+            {/* GX INFO MODAL — explica cómo se ganan los puntos (tabla GX, spec §3) */}
+            {showGxInfo && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-5 animate-in fade-in duration-200">
+                    <div className="absolute inset-0 bg-black/85 backdrop-blur-md" onClick={() => setShowGxInfo(false)} />
+                    <div className="relative z-10 w-full max-w-sm max-h-[85vh] overflow-y-auto bg-neutral-900 border border-yellow-500/25 rounded-3xl shadow-[0_0_50px_rgba(250,204,21,0.15)] animate-in zoom-in-95 duration-200">
+                        <div className="sticky top-0 bg-neutral-900/95 backdrop-blur-xl px-5 pt-5 pb-3 border-b border-white/5 flex items-center justify-between">
+                            <h2 className="text-base font-black italic uppercase tracking-tight text-white flex items-center gap-2">
+                                <Zap size={18} className="text-gym-primary fill-gym-primary/30" />
+                                ¿Qué son los GX?
+                            </h2>
+                            <button onClick={() => setShowGxInfo(false)} className="p-1.5 rounded-full text-neutral-400 hover:text-white hover:bg-white/10 transition-colors">
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <div className="p-5 space-y-4">
+                            <p className="text-xs text-neutral-400 font-medium leading-relaxed">
+                                GX es tu <span className="text-gym-primary font-bold">puntaje de progreso</span> — no es una moneda.
+                                Define tu posición en el ranking de cada gimnasio. Así se gana:
+                            </p>
+
+                            <div className="space-y-1.5">
+                                {[
+                                    ['🏋️', 'Entrenamiento individual (20+ min en tu gym, 1 vez al día)', '+1'],
+                                    ['🤝', 'Entrenamiento en grupo / Co-op (mismo requisito — cada uno recibe el monto completo)', '+2'],
+                                    ['👤', 'Conseguir un nuevo seguidor', '+1'],
+                                    ['⚡', 'Formar un match (solo la primera vez con esa persona)', '+1'],
+                                    ['📲', 'Que alguien nuevo se registre con tu enlace de invitación', '+5'],
+                                    ['⏱️', 'Usar la app 5 minutos al día', '+1'],
+                                    ['📸', 'Completar tu primera foto y descripción de perfil', '+2'],
+                                    ['🗺️', 'Desbloquear un gimnasio nuevo', '+3'],
+                                ].map(([icon, label, pts]) => (
+                                    <div key={label} className="flex items-center gap-3 bg-black/40 border border-white/5 rounded-xl px-3 py-2.5">
+                                        <span className="text-base shrink-0">{icon}</span>
+                                        <span className="flex-1 text-[11px] text-neutral-300 font-semibold leading-snug">{label}</span>
+                                        <span className="shrink-0 text-xs font-black text-gym-primary italic">{pts} GX</span>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="bg-gradient-to-r from-yellow-500/15 to-transparent border border-yellow-500/25 rounded-xl px-3 py-3 flex items-center gap-3">
+                                <span className="text-base shrink-0">🔥</span>
+                                <p className="flex-1 text-[11px] text-yellow-200/90 font-semibold leading-snug">
+                                    <span className="font-black text-gym-primary">×2 PERMANENTE:</span> al acumular 10 días de racha
+                                    (entrenar 20+ min), todo lo que ganes se duplica — para siempre.
+                                </p>
+                            </div>
+
+                            <p className="text-[10px] text-neutral-500 font-medium leading-relaxed">
+                                El entrenamiento requiere GPS activo dentro del gimnasio para validar los puntos.
+                                Sin GPS puedes entrenar normal, pero esa sesión no suma GX ni racha.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* PREMIUM PROFILE MODAL */}
             {selectedPlayer && (

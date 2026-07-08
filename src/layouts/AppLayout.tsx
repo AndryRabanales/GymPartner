@@ -859,6 +859,47 @@ export const AppLayout = () => {
         };
     }, [user]);
 
+    // ── GX: +1 por 5 minutos de uso diario (tabla GX, spec §3) ─────────────
+    // Acumula segundos con la app abierta (persistidos por día en localStorage,
+    // así cerrar/reabrir la app no reinicia el conteo) y al llegar a 5 minutos
+    // llama al RPC award_daily_usage_gx — idempotente en el servidor por
+    // (user_id, día), de modo que reintentos o múltiples dispositivos nunca
+    // duplican el punto.
+    useEffect(() => {
+        if (!user) return;
+
+        const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+        const secondsKey = `ginx_usage_seconds_${user.id}_${today}`;
+        const awardedKey = `ginx_usage_awarded_${user.id}_${today}`;
+        const TARGET_SECONDS = 5 * 60;
+        const TICK_SECONDS = 15;
+
+        if (localStorage.getItem(awardedKey) === 'true') return;
+
+        const tick = setInterval(async () => {
+            if (localStorage.getItem(awardedKey) === 'true') {
+                clearInterval(tick);
+                return;
+            }
+            const accumulated = (parseInt(localStorage.getItem(secondsKey) || '0', 10) || 0) + TICK_SECONDS;
+            localStorage.setItem(secondsKey, String(accumulated));
+
+            if (accumulated >= TARGET_SECONDS) {
+                try {
+                    const { data: awarded } = await supabase.rpc('award_daily_usage_gx');
+                    if (awarded === true) {
+                        console.log('⚡ +1 GX por 5 minutos de uso diario');
+                    }
+                    // awarded === false → ya se otorgó hoy (otro dispositivo/reintento) — igual dejamos de contar
+                    localStorage.setItem(awardedKey, 'true');
+                    clearInterval(tick);
+                } catch { /* sin conexión — reintenta en el siguiente tick */ }
+            }
+        }, TICK_SECONDS * 1000);
+
+        return () => clearInterval(tick);
+    }, [user?.id]);
+
     // Preload all exercise catalog images for instant rendering without delays
     useEffect(() => {
         COMMON_EQUIPMENT_SEEDS.forEach(seed => {
