@@ -93,9 +93,44 @@ interface WorkoutExercise {
     };
     sets: WorkoutSet[];
     // NEW: Per-exercise Weight Unit
-    weightUnit?: 'kg' | 'lb';
+    weightUnit?: 'kg' | 'lb' | 'plates';
     category?: string; // SNAPSHOT: For history persistence
 }
+
+// ── Weight unit persistence (per exercise) ──────────────────────────────────
+// Each exercise (identified by its equipmentId) remembers the unit the user
+// last picked for it. localStorage key is scoped per equipmentId so switching
+// units on "Press Banca" never affects "Sentadilla". `ginx_weight_unit`
+// (no suffix) remains the GLOBAL last-used unit, applied only to exercises
+// that have never been trained before (no per-exercise preference saved yet).
+const weightUnitKeyFor = (equipmentId: string) => `ginx_weight_unit_ex_${equipmentId}`;
+
+const getSavedUnitForEquipment = (equipmentId?: string): 'kg' | 'lb' | 'plates' | null => {
+    if (!equipmentId) return null;
+    const saved = localStorage.getItem(weightUnitKeyFor(equipmentId));
+    return saved === 'kg' || saved === 'lb' || saved === 'plates' ? saved : null;
+};
+
+// Standard Olympic barbell + plate set, used only to render the "PLACAS"
+// breakdown — the underlying stored value is always the real weight in kg.
+const BAR_WEIGHT_KG = 20;
+const PLATE_SET_KG = [25, 20, 15, 10, 5, 2.5, 1.25];
+
+const getPlateBreakdown = (totalKg: number): string => {
+    const perSide = (totalKg - BAR_WEIGHT_KG) / 2;
+    if (perSide <= 0) return 'Solo barra';
+    let remaining = perSide;
+    const counts: string[] = [];
+    for (const plate of PLATE_SET_KG) {
+        const n = Math.floor(remaining / plate + 1e-6);
+        if (n > 0) {
+            counts.push(`${n}×${plate}`);
+            remaining = Math.round((remaining - n * plate) * 100) / 100;
+        }
+    }
+    if (counts.length === 0) return 'Solo barra';
+    return counts.join(' + ') + ' /lado';
+};
 
 // Resolve exercise image from IMAGE_MANIFEST by equipmentId or name fallback
 const getExerciseImageUrl = (equipmentId: string, equipmentName: string): string | null => {
@@ -1299,7 +1334,7 @@ export const WorkoutSession = () => {
                                     metrics_data: {
                                         ...(set.custom || {}),
                                         ...(isCompleted ? { _checklist_timestamp: set.playerCompletedAt?.[myId] || Date.now() } : {}),
-                                        ...(exercise.weightUnit === 'lb' ? { _weight_unit: 'lb' } : {}),
+                                        ...(exercise.weightUnit && exercise.weightUnit !== 'kg' ? { _weight_unit: exercise.weightUnit } : {}),
                                         _rest_duration_ms: restDuration,
                                         _rest_status: restStatus === 'running' ? 'completed' : restStatus
                                     } as any,
@@ -2040,13 +2075,14 @@ export const WorkoutSession = () => {
     const [restTimerSetKey, setRestTimerSetKey] = useState<string | null>(null); // "exerciseIdx-setIdx" to show only under specific set
 
     // NEW: Weight Unit State (Global Default Only)
-    // We only use this to initialize new exercises. Exercises themselves hold their state.
-    const [defaultWeightUnit, setDefaultWeightUnit] = useState<'kg' | 'lb'>('kg');
+    // We only use this to initialize exercises with no per-exercise preference
+    // saved yet. Once an exercise has been toggled, it uses its own saved unit.
+    const [defaultWeightUnit, setDefaultWeightUnit] = useState<'kg' | 'lb' | 'plates'>('kg');
 
     // Load Default Weight Unit on Mount
     useEffect(() => {
         const savedUnit = localStorage.getItem('ginx_weight_unit');
-        if (savedUnit === 'lb') setDefaultWeightUnit('lb');
+        if (savedUnit === 'lb' || savedUnit === 'plates') setDefaultWeightUnit(savedUnit);
     }, []);
 
     // Reset Scroll when filters change
@@ -2075,31 +2111,38 @@ export const WorkoutSession = () => {
         setSelectedCatalogItems(toMark);
     }, [showAddModal]); // Only re-run when modal opens/closes, not on every exercise change
 
-    // Helpers for Unit Conversion
-    const toDisplayWeight = (kgVal: number, unit: 'kg' | 'lb' = 'kg'): string => {
+    // Helpers for Unit Conversion. "plates" stores/displays the exact same
+    // number as "kg" — it only changes the label and adds a plate breakdown
+    // (see getPlateBreakdown) underneath the input.
+    const toDisplayWeight = (kgVal: number, unit: 'kg' | 'lb' | 'plates' = 'kg'): string => {
         if (!kgVal) return '';
-        if (unit === 'kg') {
-            return parseFloat(kgVal.toFixed(1)).toString();
+        if (unit === 'lb') {
+            // lb: always integer — no decimals ever
+            return Math.round(kgVal * 2.20462).toString();
         }
-        // lb: always integer — no decimals ever
-        return Math.round(kgVal * 2.20462).toString();
+        return parseFloat(kgVal.toFixed(1)).toString();
     };
 
-    const toInternalWeight = (inputVal: string, unit: 'kg' | 'lb' = 'kg'): number => {
+    const toInternalWeight = (inputVal: string, unit: 'kg' | 'lb' | 'plates' = 'kg'): number => {
         const num = parseFloat(inputVal.replace(',', '.'));
         if (isNaN(num)) return 0;
         const maxInput = unit === 'lb' ? 1999 : 999;
         const capped = Math.min(num, maxInput);
-        if (unit === 'kg') return capped;
-        // lb: round to integer first, then store as precise kg
-        return Math.round(capped) / 2.20462;
+        if (unit === 'lb') {
+            // lb: round to integer first, then store as precise kg
+            return Math.round(capped) / 2.20462;
+        }
+        return capped;
     };
 
-    // Toggle Unit for Specific Exercise
+    // Toggle Unit for Specific Exercise — cycles kg → lb → placas → kg.
+    // The choice is remembered per exercise (by equipmentId), so each
+    // exercise keeps its own default the next time it's trained.
     const toggleExerciseUnit = (exerciseIndex: number) => {
-        // Read the current unit from the last rendered state (NOT via mutation)
-        const currentUnit = activeExercises[exerciseIndex]?.weightUnit || 'kg';
-        const newUnit: 'kg' | 'lb' = currentUnit === 'kg' ? 'lb' : 'kg';
+        const exercise = activeExercises[exerciseIndex];
+        const currentUnit = exercise?.weightUnit || 'kg';
+        const cycle: Record<'kg' | 'lb' | 'plates', 'kg' | 'lb' | 'plates'> = { kg: 'lb', lb: 'plates', plates: 'kg' };
+        const newUnit = cycle[currentUnit];
 
         // Use functional update so React gets a fully immutable new state.
         // Mutating the existing object (shallow copy) caused React to see stale
@@ -2110,7 +2153,12 @@ export const WorkoutSession = () => {
             )
         );
 
-        // Save as new default for future added exercises
+        // Remember this unit for THIS exercise specifically, so it's the
+        // default again next time the user trains it — and as the global
+        // fallback for exercises trained for the very first time.
+        if (exercise?.equipmentId) {
+            localStorage.setItem(weightUnitKeyFor(exercise.equipmentId), newUnit);
+        }
         localStorage.setItem('ginx_weight_unit', newUnit);
         setDefaultWeightUnit(newUnit);
     };
@@ -2333,7 +2381,9 @@ export const WorkoutSession = () => {
                     { id: Math.random().toString(), weight: 0, reps: 0, completed: false }
                 ],
                 category: equipment.target_muscle_group || equipment.category || 'Custom',
-                weightUnit: defaultWeightUnit
+                // Per-exercise remembered unit takes priority; only exercises
+                // never trained before fall back to the global last-used unit.
+                weightUnit: getSavedUnitForEquipment(equipment.id) || defaultWeightUnit
             } as WorkoutExercise;
         });
 
@@ -5442,7 +5492,7 @@ export const WorkoutSession = () => {
                         const extendedMetrics = {
                             ...(set.custom || {}),
                             ...(isCompletedToSave ? { _checklist_timestamp: (set.playerCompletedAt?.[myId]) || Date.now() } : {}),
-                            ...(exercise.weightUnit === 'lb' ? { _weight_unit: 'lb' } : {}),
+                            ...(exercise.weightUnit && exercise.weightUnit !== 'kg' ? { _weight_unit: exercise.weightUnit } : {}),
                             _rest_duration_ms: finalRestDuration,
                             _rest_status: activeRestStatus === 'running' ? 'completed' : activeRestStatus
                         } as any;
@@ -5492,7 +5542,7 @@ export const WorkoutSession = () => {
                         const extendedMetrics = {
                             ...(set.custom || {}),
                             ...(isCompletedToSave ? { _checklist_timestamp: (set.playerCompletedAt?.[myId]) || Date.now() } : {}),
-                            ...(exercise.weightUnit === 'lb' ? { _weight_unit: 'lb' } : {}),
+                            ...(exercise.weightUnit && exercise.weightUnit !== 'kg' ? { _weight_unit: exercise.weightUnit } : {}),
                             _rest_duration_ms: finalRestDuration,
                             _rest_status: activeRestStatus === 'running' ? 'completed' : activeRestStatus
                         } as any;
@@ -6265,7 +6315,7 @@ export const WorkoutSession = () => {
                                                                     )}
                                                                     {exercise.metrics.weight && (
                                                                         <div className="min-w-[70px] w-[70px] text-center cursor-pointer hover:text-gym-primary transition-colors" onClick={() => !isReadOnly && toggleExerciseUnit(mapIndex)}>
-                                                                            PESO ({(exercise.weightUnit || 'kg').toUpperCase()})
+                                                                            PESO ({exercise.weightUnit === 'plates' ? 'PLACAS' : (exercise.weightUnit || 'kg').toUpperCase()})
                                                                         </div>
                                                                     )}
                                                                     {exercise.metrics.reps && (
@@ -6384,6 +6434,11 @@ export const WorkoutSession = () => {
                                                                                             className={`w-full bg-neutral-800 text-center font-black text-[16px] rounded-lg py-2 focus:ring-2 focus:ring-gym-primary outline-none transition-all ${rowCompleted ? 'text-neutral-500 bg-neutral-900/40' : 'text-white'} ${rowLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                                             placeholder="0"
                                                                                         />
+                                                                                    )}
+                                                                                    {exercise.weightUnit === 'plates' && rowWeight > 0 && (
+                                                                                        <div className="text-[7px] text-center text-gym-primary/70 font-bold leading-tight mt-0.5 px-0.5">
+                                                                                            {getPlateBreakdown(rowWeight)}
+                                                                                        </div>
                                                                                     )}
                                                                                 </div>
                                                                             )}
@@ -7294,13 +7349,16 @@ export const WorkoutSession = () => {
                                                                     const hasVal = w > 0 || r > 0 || t > 0 || d > 0;
                                                                     const isMe = p.id === myId;
                                                                     const unit = ex.weightUnit || 'kg';
+                                                                    // "plates" stores the same value as kg — label it kg here (the
+                                                                    // per-set plate breakdown is only shown on the input row itself).
+                                                                    const unitLabel = unit === 'plates' ? 'kg' : unit;
                                                                     // Convert stored kg → display value (integer for lb, 1 decimal for kg)
                                                                     const wDisplay = w > 0 ? toDisplayWeight(w, unit) : '';
                                                                     return (
                                                                         <div key={p.id} className="flex flex-col items-center justify-center py-0.5">
                                                                             {hasVal ? (
                                                                                 <div className="flex flex-col items-center">
-                                                                                    {w > 0 && <span className={`${wTextSize} font-black leading-none tracking-tight ${isMe ? 'text-yellow-400' : 'text-white'}`}>{wDisplay}<span className={`${wUnitSize} font-bold text-neutral-400 ml-0.5`}>{unit}</span></span>}
+                                                                                    {w > 0 && <span className={`${wTextSize} font-black leading-none tracking-tight ${isMe ? 'text-yellow-400' : 'text-white'}`}>{wDisplay}<span className={`${wUnitSize} font-bold text-neutral-400 ml-0.5`}>{unitLabel}</span></span>}
                                                                                     {r > 0 && <span className={`${detailTextSize} text-neutral-400 leading-none font-bold mt-0.5`}>{r}r</span>}
                                                                                     {t > 0 && <span className={`${detailTextSize} text-neutral-400 leading-none font-bold mt-0.5`}>{t}s</span>}
                                                                                     {d > 0 && <span className={`${detailTextSize} text-neutral-400 leading-none font-bold mt-0.5`}>{d}{ex.distanceUnit || 'm'}</span>}
@@ -7367,13 +7425,14 @@ export const WorkoutSession = () => {
                                                         const t = _t(s);
                                                         const d = _d(s);
                                                         const unit2 = ex.weightUnit || 'kg';
+                                                        const unit2Label = unit2 === 'plates' ? 'kg' : unit2;
                                                         // Convert stored kg → display value (integer for lb, 1 decimal for kg)
                                                         const wDisplay2 = w > 0 ? toDisplayWeight(w, unit2) : '';
                                                         return (
                                                             <div key={s.id} className={`grid ${hasTimeOrDistance ? 'grid-cols-4' : 'grid-cols-3'} ${rowPadding} border-b border-black/20 last:border-0 items-center bg-black/10 hover:bg-black/20 transition-colors`}>
                                                                 <div className={`${rowTextSize} text-yellow-500/40 font-black italic leading-none`}>#{s.idx + 1}</div>
                                                                 <div className="text-center leading-none">
-                                                                    {w > 0 ? <span className={`${wTextSize} font-black text-yellow-400 leading-none`}>{wDisplay2}<span className={`${wUnitSize} font-bold text-neutral-400 ml-0.5`}>{unit2}</span></span> : <span className={`text-neutral-700 ${rowTextSize} font-bold leading-none`}>—</span>}
+                                                                    {w > 0 ? <span className={`${wTextSize} font-black text-yellow-400 leading-none`}>{wDisplay2}<span className={`${wUnitSize} font-bold text-neutral-400 ml-0.5`}>{unit2Label}</span></span> : <span className={`text-neutral-700 ${rowTextSize} font-bold leading-none`}>—</span>}
                                                                 </div>
                                                                 <div className="text-center leading-none">
                                                                     {r > 0 ? <span className={`${wTextSize} font-black text-white leading-none`}>{r}</span> : <span className={`text-neutral-700 ${rowTextSize} font-bold leading-none`}>—</span>}
