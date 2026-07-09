@@ -264,6 +264,70 @@ const detectAndMarkPRs = async (sessionId: string, userId: string): Promise<void
     await workoutService.detectAndMarkPRs(sessionId, userId);
 };
 
+// ── iOS-style scroll wheel for the rest duration ───────────────────────────
+// A single vertical snap-wheel (15s … 5min in 5s steps). Scrolling settles on
+// the centered value and reports it via onChange; the caller persists it so it
+// stays configured for every future set until the user changes it again.
+const REST_STEP = 5;
+const REST_MIN = 15;
+const REST_MAX = 300;
+const REST_VALUES = Array.from({ length: (REST_MAX - REST_MIN) / REST_STEP + 1 }, (_, i) => REST_MIN + i * REST_STEP);
+const fmtRest = (s: number) => (s < 60 ? `${s}s` : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`);
+
+const RestWheelPicker = ({ value, onChange }: { value: number; onChange: (s: number) => void }) => {
+    const ITEM_H = 44;
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const settleRef = useRef<number | undefined>(undefined);
+
+    // Center the current value on open (nearest step if it isn't on the grid).
+    useEffect(() => {
+        const nearest = REST_VALUES.reduce((a, b) => (Math.abs(b - value) < Math.abs(a - value) ? b : a), REST_VALUES[0]);
+        const idx = REST_VALUES.indexOf(nearest);
+        if (idx >= 0 && scrollRef.current) scrollRef.current.scrollTop = idx * ITEM_H;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const handleScroll = () => {
+        if (settleRef.current) window.clearTimeout(settleRef.current);
+        settleRef.current = window.setTimeout(() => {
+            const el = scrollRef.current;
+            if (!el) return;
+            const idx = Math.max(0, Math.min(REST_VALUES.length - 1, Math.round(el.scrollTop / ITEM_H)));
+            el.scrollTo({ top: idx * ITEM_H, behavior: 'smooth' });
+            const sec = REST_VALUES[idx];
+            if (sec !== value) onChange(sec);
+        }, 110);
+    };
+
+    return (
+        <div className="relative" style={{ height: ITEM_H * 5 }}>
+            {/* Center highlight band */}
+            <div className="absolute left-0 right-0 pointer-events-none z-10" style={{ top: ITEM_H * 2, height: ITEM_H }}>
+                <div className="mx-1 h-full rounded-xl bg-gym-primary/10 border-y border-gym-primary/40" />
+            </div>
+            {/* Fade top/bottom for the wheel effect */}
+            <div className="absolute inset-x-0 top-0 h-[88px] bg-gradient-to-b from-neutral-900 to-transparent pointer-events-none z-10" />
+            <div className="absolute inset-x-0 bottom-0 h-[88px] bg-gradient-to-t from-neutral-900 to-transparent pointer-events-none z-10" />
+            <div
+                ref={scrollRef}
+                onScroll={handleScroll}
+                className="h-full overflow-y-auto snap-y snap-mandatory [&::-webkit-scrollbar]:hidden"
+                style={{ scrollbarWidth: 'none', scrollSnapType: 'y mandatory' }}
+            >
+                <div style={{ height: ITEM_H * 2 }} />
+                {REST_VALUES.map(sec => (
+                    <div key={sec} className="snap-center flex items-center justify-center" style={{ height: ITEM_H }}>
+                        <span className={`font-mono font-black transition-all ${sec === value ? 'text-gym-primary text-xl' : 'text-neutral-500 text-sm'}`}>
+                            {fmtRest(sec)}
+                        </span>
+                    </div>
+                ))}
+                <div style={{ height: ITEM_H * 2 }} />
+            </div>
+        </div>
+    );
+};
+
 // Helper Component for Rest Timer
 const RestTimerDisplay = ({ status, accumulated, lastStartTime, isGold }: { status: 'running' | 'paused' | 'completed', accumulated: number, lastStartTime?: number | string, isGold?: boolean }) => {
     const [elapsed, setElapsed] = useState(0);
@@ -6099,21 +6163,19 @@ export const WorkoutSession = () => {
                                 </div>
                             </div>
 
-                            {/* Rest duration picker */}
+                            {/* Rest duration picker — iOS-style scroll wheel.
+                                The chosen value persists (changeRestTarget saves it),
+                                so every future set uses it until changed again. */}
                             {showRestConfig && (
-                                <div className="absolute top-14 right-0 z-50 bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl p-3 flex flex-col gap-2 animate-in slide-in-from-top-2">
-                                    <span className="text-[9px] font-black text-neutral-500 uppercase tracking-widest px-1">Descanso entre series</span>
-                                    <div className="grid grid-cols-3 gap-1.5">
-                                        {[30, 60, 90, 120, 150, 180].map(sec => (
-                                            <button
-                                                key={sec}
-                                                onClick={() => { changeRestTarget(sec); setShowRestConfig(false); }}
-                                                className={`px-3 py-2 rounded-xl text-xs font-black transition-all active:scale-95 ${restTargetSec === sec ? 'bg-gym-primary text-black' : 'bg-neutral-800 text-neutral-300 hover:text-white'}`}
-                                            >
-                                                {sec < 60 ? `${sec}s` : `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`}
-                                            </button>
-                                        ))}
-                                    </div>
+                                <div className="absolute top-14 right-0 z-50 w-40 bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl p-3 flex flex-col gap-2 animate-in slide-in-from-top-2">
+                                    <span className="text-[9px] font-black text-neutral-500 uppercase tracking-widest px-1 text-center">Descanso entre series</span>
+                                    <RestWheelPicker value={restTargetSec} onChange={changeRestTarget} />
+                                    <button
+                                        onClick={() => setShowRestConfig(false)}
+                                        className="w-full py-2 rounded-xl text-xs font-black bg-gym-primary text-black active:scale-95 transition-all"
+                                    >
+                                        LISTO · {fmtRest(restTargetSec)}
+                                    </button>
                                 </div>
                             )}
 
