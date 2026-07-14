@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* GINX design tokens exposed as CSS custom properties. */
+:root {
+  --gym-primary: #ffd700;
+  --gym-dark: #121212;
+  --gym-card: #1e1e1e;
+  --gym-text: #e0e0e0;
+  --gym-accent: #ff4d4d;
+
+  --gym-radius-md: 0.75rem;
+  --gym-radius-lg: 1rem;
+  --gym-radius-full: 9999px;
+}

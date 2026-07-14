@@ -10,6 +10,7 @@
     "dev": "vite",
     "catalog": "node scripts/generateCatalog.mjs",
     "build": "node scripts/generateCatalog.mjs && vite build",
+    "build:ds": "vite build --config vite.ds.config.ts",
     "lint": "eslint .",
     "preview": "vite preview",
     "start": "node server.js",
