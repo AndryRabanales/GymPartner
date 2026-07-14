@@ -1,0 +1,15 @@
+{
+  "projectId": "cfca63d7-2dfe-4b2a-a7c4-2ea4d7c98ce1",
+  "shape": "package",
+  "pkg": "@ginx/design-system",
+  "globalName": "GinxDS",
+  "buildCmd": "npm run build:ds",
+  "entry": "./dist-designsystem/ginx-ds.es.js",
+  "srcDir": "../src/design-system",
+  "cssEntry": "./ginx-ds.css",
+  "readmeHeader": ".design-sync/conventions.md",
+  "overrides": {
+    "Modal": { "cardMode": "single", "primaryStory": "Open", "viewport": "460x340" },
+    "Card": { "cardMode": "column" }
+  }
+}

@@ -11,6 +11,13 @@ node_modules
 dist
 dist-designsystem
 dist-ssr
+
+# design-sync scratch (durable inputs under .design-sync/ are committed)
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules
 *.local
 android/
 ios/
