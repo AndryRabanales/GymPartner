@@ -81,6 +81,9 @@ workflows:
           sed -i '' 's/DEVELOPMENT_TEAM = "";/DEVELOPMENT_TEAM = CDZRQL6QF6;/g' "$PROJECT"
           sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' "$PROJECT"
           sed -i '' 's/PRODUCT_BUNDLE_IDENTIFIER = .*;/PRODUCT_BUNDLE_IDENTIFIER = com.ginx.app;/g' "$PROJECT"
+          # iPhone-only (device family "1"): avoids the iPad screenshot requirement
+          # and the risk of an iPad-experience rejection for a phone-designed UI.
+          sed -i '' 's/TARGETED_DEVICE_FAMILY = "1,2";/TARGETED_DEVICE_FAMILY = "1";/g' "$PROJECT"
           sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = 14.0;/IPHONEOS_DEPLOYMENT_TARGET = 16.0;/g' "$PROJECT"
           sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = 13.0;/IPHONEOS_DEPLOYMENT_TARGET = 16.0;/g' "$PROJECT"
 
