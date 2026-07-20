@@ -12,8 +12,6 @@ import { StatsPage } from './pages/StatsPage';
 import { HistoryPage } from './pages/HistoryPage';
 import WorkoutDetailPage from './pages/WorkoutDetailPage';
 import { RankingPage } from './pages/RankingPage';
-import { CommunityPage } from './pages/CommunityPage';
-import { ReelsPage } from './pages/ReelsPage';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { Radar } from './pages/Radar';
 import { ChatPage } from './pages/ChatPage';
@@ -44,7 +42,6 @@ function App() {
 
             <Route path="/" element={<AppLayout />}>
               <Route index element={<UserProfile />} />
-              <Route path="reels" element={<ReelsPage />} />
               <Route path="login" element={<LoginPage />} />
               <Route path="map" element={<MapPage />} />
               <Route path="arsenal" element={<MyArsenal />} />
@@ -54,7 +51,6 @@ function App() {
               <Route path="territory/:gymId" element={<GymProfile />} />
               <Route path="builder" element={<RoutineBuilder />} />
               <Route path="ranking" element={<RankingPage />} />
-              <Route path="community" element={<CommunityPage />} />
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="stats" element={<StatsPage />} />
               <Route path="radar" element={<Radar />} />

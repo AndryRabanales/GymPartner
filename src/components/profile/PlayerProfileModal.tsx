@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, Swords, MapPin, UserPlus, UserCheck, Star, ExternalLink, Lock, Calendar, Clock, Dumbbell, History, Loader, Activity } from 'lucide-react';
-import { FeedViewerOverlay } from '../social/FeedViewerOverlay';
 import { useAuth } from '../../context/AuthContext';
 import { userService } from '../../services/UserService';
-import { socialService, type Post } from '../../services/SocialService';
+import { socialService } from '../../services/SocialService';
 import { RoutineViewModal } from './RoutineViewModal';
 import { useBottomNav } from '../../context/BottomNavContext';
 import { cloudinaryService } from '../../services/CloudinaryService';
@@ -51,14 +50,11 @@ export const PlayerProfileModal = ({ player, onClose, onFollowToggle }: PlayerPr
 
     // Social State
     const [stats, setStats] = useState<any>({ followersCount: 0, followingCount: 0, totalLikes: 0, workoutsCount: 0 });
-    const [viewedPostId, setViewedPostId] = useState<string | null>(null);
     const [isFollowing, setIsFollowing] = useState(false);
     const [isInviting, setIsInviting] = useState(false);
-    // HIDDEN: Community Features - defaulting to routines
-    const [activeTab, setActiveTab] = useState<'grid' | 'reels' | 'routines' | 'history'>('routines');
+    const [activeTab, setActiveTab] = useState<'routines' | 'history'>('routines');
 
     // Content State
-    const [posts, setPosts] = useState<Post[]>([]);
     const [publicRoutines, setPublicRoutines] = useState<any[]>([]);
     const [publicGyms, setPublicGyms] = useState<any[]>([]);
     const [viewRoutine, setViewRoutine] = useState<any | null>(null);
@@ -285,13 +281,9 @@ export const PlayerProfileModal = ({ player, onClose, onFollowToggle }: PlayerPr
         checkAccess();
     }, [player.id, user, customSettings]);
 
-    // Fetch Posts/Routines when tab changes
+    // Fetch Routines/History when tab changes
     useEffect(() => {
-        if (activeTab === 'grid') {
-            socialService.getUserPosts(player.id, undefined, user?.id).then(setPosts);
-        } else if (activeTab === 'reels') {
-            socialService.getUserPosts(player.id, 'video', user?.id).then(setPosts);
-        } else if (activeTab === 'routines') {
+        if (activeTab === 'routines') {
             userService.getUserPublicRoutines(player.id, user?.id).then(setPublicRoutines);
             userService.getUserGyms(player.id).then(gyms => setPublicGyms(gyms.sort((a, b) => (a.is_home_base ? -1 : 1))));
         } else if (activeTab === 'history') {
@@ -1240,16 +1232,6 @@ export const PlayerProfileModal = ({ player, onClose, onFollowToggle }: PlayerPr
                     </div>
                 )}
             </div>
-
-            {/* Feed Viewer Overlay */}
-            {viewedPostId && (
-                <FeedViewerOverlay
-                    initialPostId={viewedPostId}
-                    posts={posts}
-                    onClose={() => setViewedPostId(null)}
-                    variant={activeTab === 'reels' ? 'reel' : 'feed'}
-                />
-            )}
         </div>
     );
 };

@@ -2,7 +2,6 @@ import { MapPin, LogIn, LogOut, Trash2, AlertTriangle } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { UploadModal } from '../components/social/UploadModal';
 import { BottomNav } from '../components/navigation/BottomNav';
 import { useBottomNav } from '../context/BottomNavContext';
 import { NotificationBell } from '../components/ui/NotificationBell';
@@ -404,7 +403,6 @@ export const AppLayout = () => {
     useAutoCheckin();
     const { user, signOut } = useAuth();
     const { isBottomNavVisible } = useBottomNav();
-    const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -1088,12 +1086,11 @@ const notificationSeen = useRef<Set<string>>(new Set());
     const isRadarPage = location.pathname === '/radar';
     const isRankingPage = location.pathname === '/ranking';
     const isChatPage = location.pathname === '/inbox' || location.pathname.startsWith('/chat/');
-    const isReelsPage = location.pathname === '/reels';
     const isArsenalPage = location.pathname === '/arsenal';
     const isLoginPage = location.pathname === '/login';
     const isWorkoutPage = location.pathname.startsWith('/workout') || location.pathname.includes('/territory/');
-    
-    const shouldHideHeader = isRadarPage || isRankingPage || isChatPage || isReelsPage || isArsenalPage || isWorkoutPage || isLoginPage;
+
+    const shouldHideHeader = isRadarPage || isRankingPage || isChatPage || isArsenalPage || isWorkoutPage || isLoginPage;
 
     // Hide BottomNav during workout sessions, gym territory pages, arsenal, stats, history, and single chat pages
     const isContentPage = location.pathname === '/arsenal' || location.pathname === '/stats' || location.pathname === '/history' || location.pathname.startsWith('/history/');
@@ -1239,7 +1236,6 @@ const notificationSeen = useRef<Set<string>>(new Set());
                 <Outlet />
             </main>
 
-            {isUploadModalOpen && <UploadModal onClose={() => setIsUploadModalOpen(false)} onSuccess={() => setIsUploadModalOpen(false)} />}
             <ActiveWorkoutBubble />
             <ActiveSessionRescueModal
                 isOpen={showRescueModal && !!rescueSessionId && !!rescueStartedAt}
@@ -1249,7 +1245,7 @@ const notificationSeen = useRef<Set<string>>(new Set());
                 offlineMode={rescueOfflineMode}
                 onResolve={() => setShowRescueModal(false)}
             />
-            {shouldShowBottomNav && <BottomNav onUploadClick={() => setIsUploadModalOpen(true)} />}
+            {shouldShowBottomNav && <BottomNav />}
             <Toaster position="top-center" reverseOrder={false} toastOptions={{ duration: 3000 }} />
 
             {/* ── Delete Account Confirmation Modal ─────────────────────────────── */}

@@ -3,11 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Home, Radar, Trophy, MessageCircle, Users } from 'lucide-react';
 import { notificationService } from '../../services/NotificationService';
 
-interface BottomNavProps {
-    onUploadClick: () => void;
-}
-
-export const BottomNav: React.FC<BottomNavProps> = ({ onUploadClick: _ }) => {
+export const BottomNav: React.FC = () => {
     const location = useLocation();
     const isActive = (path: string) => location.pathname === path;
     const [hasUnread, setHasUnread] = useState(false);

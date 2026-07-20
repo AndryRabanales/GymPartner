@@ -385,7 +385,7 @@ export const FriendsPage = () => {
                 )}
             </div>
 
-            <BottomNav onUploadClick={() => {}} />
+            <BottomNav />
         </div>
     );
 };
